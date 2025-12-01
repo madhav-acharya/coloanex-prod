@@ -47,7 +47,7 @@ enum ActivityAction {
 
 model Role {
   id          BigInt   @id @default(autoincrement())
-  name        String
+  name        String   @unique
   isSystem    Boolean  @default(false) @map("is_system")
   description String?
   tenantId    String?  @map("tenant_id")
@@ -58,7 +58,6 @@ model Role {
   users       UserRole[]
   tenant      Tenant?          @relation(fields: [tenantId], references: [id])
 
-  @@unique([name, tenantId])
   @@index([tenantId])
   @@map("roles")
   @@schema("auth")
