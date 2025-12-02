@@ -12,10 +12,31 @@ import type { UsersQueryInterface } from './interfaces/users.query.interface';
 import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { BorrowersService } from '../borrowers/borrowers.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from '../activity-logs/entities/activity-log.entity';
+
+interface CreateUserForSignupDto {
+  email: string;
+  phone: string;
+  password: string;
+  fullName: string;
+  tenantId?: string;
+  role?: string;
+}
+
+export type { CreateUserForSignupDto };
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogsService: ActivityLogsService,
+    private readonly borrowersService: BorrowersService,
+  ) {}
 
   async create(createUserDto: CreateUserDto, currentUser: JwtPayload) {
     if (!createUserDto.email && !createUserDto.phone) {
@@ -139,10 +160,12 @@ export class UsersService {
 
     if (createUserDto.permissionIds && createUserDto.permissionIds.length > 0) {
       await this.prisma.userPermission.createMany({
-        data: createUserDto.permissionIds.map((permissionId) => ({
-          userId: user.id,
-          permissionId,
-        })),
+        data: createUserDto.permissionIds
+          .filter((permissionId) => permissionId !== undefined)
+          .map((permissionId) => ({
+            userId: user.id,
+            permissionId: permissionId,
+          })),
       });
     }
 
@@ -158,6 +181,182 @@ export class UsersService {
     );
 
     return this.findOne(user.id, currentUser);
+  }
+
+  async createUserForSignup(
+    createUserDto: CreateUserForSignupDto,
+    ipAddress?: string,
+    userAgent?: string,
+    actorUserId?: string,
+  ) {
+    const { email, phone, password, fullName, tenantId, role } = createUserDto;
+
+    // Check if user already exists
+    const existingUserByEmail = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUserByEmail) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    const existingUserByPhone = await this.prisma.user.findUnique({
+      where: { phone },
+    });
+
+    if (existingUserByPhone) {
+      throw new ConflictException('User with this phone number already exists');
+    }
+
+    const hashedPassword = await argon2.hash(password, {
+      type: argon2.argon2id,
+      memoryCost: 64 * 1024,
+      timeCost: 3,
+      parallelism: 2,
+    });
+
+    const defaultRole = role || 'BORROWER';
+
+    // Ensure borrower role exists
+    let borrowerRole = await this.prisma.role.findFirst({
+      where: { name: defaultRole, isSystem: true },
+    });
+
+    if (!borrowerRole && defaultRole === 'BORROWER') {
+      borrowerRole = await this.createDefaultBorrowerRole();
+    }
+
+    if (!borrowerRole) {
+      throw new BadRequestException(`Role ${defaultRole} does not exist`);
+    }
+
+    // Create user
+    const user = await this.prisma.user.create({
+      data: {
+        fullName,
+        email,
+        phone,
+        password: hashedPassword,
+        tenantId,
+        isEmailVerified: false,
+        isActive: true,
+      },
+      include: {
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    // Assign role
+    await this.prisma.userRole.create({
+      data: {
+        userId: user.id,
+        roleId: borrowerRole.id,
+      },
+    });
+
+    // Create borrower profile if role is BORROWER
+    if (defaultRole === 'BORROWER') {
+      await this.borrowersService.ensureBorrowerExists(
+        user.id,
+        user.tenantId || '',
+        actorUserId,
+        ipAddress,
+        userAgent,
+      );
+    }
+
+    // Log activity
+    if (this.activityLogsService) {
+      await this.activityLogsService.create({
+        action: ActivityAction.CREATE,
+        entityType: ActivityEntityType.USER,
+        entityId: user.id,
+        description: 'User registered with ' + defaultRole + ' role',
+        before: null,
+        after: {
+          userId: user.id,
+          role: defaultRole,
+          email: user.email,
+        },
+        ipAddress,
+        userAgent,
+        actorUserId: actorUserId || user.id,
+        tenantId: user.tenantId || undefined,
+      });
+    }
+
+    // Return user without password
+    const { password: userPassword, ...userWithoutPassword } = user;
+    void userPassword;
+    return {
+      ...userWithoutPassword,
+      role: defaultRole,
+    };
+  }
+
+  private async createDefaultBorrowerRole() {
+    const borrowerPermissions = await this.ensureBorrowerPermissions();
+
+    const role = await this.prisma.role.create({
+      data: {
+        name: 'BORROWER',
+        description: 'Default role for borrowers',
+        isSystem: true,
+      },
+    });
+
+    for (const permission of borrowerPermissions) {
+      if (permission.id !== undefined) {
+        await this.prisma.rolePermission.create({
+          data: {
+            roleId: role.id,
+            permissionId: permission.id,
+          },
+        });
+      }
+    }
+
+    return role;
+  }
+
+  private async ensureBorrowerPermissions(): Promise<
+    Prisma.PermissionUncheckedCreateInput[]
+  > {
+    const borrowerPermissions = [
+      { name: 'VIEW_PROFILE', description: 'View own profile' },
+      { name: 'UPDATE_PROFILE', description: 'Update own profile' },
+      { name: 'UPLOAD_KYC', description: 'Upload KYC documents' },
+      { name: 'VIEW_KYC_STATUS', description: 'View KYC verification status' },
+      { name: 'REQUEST_LOAN', description: 'Request loans' },
+      { name: 'VIEW_LOAN_HISTORY', description: 'View loan history' },
+      { name: 'VIEW_REWARDS', description: 'View reward points' },
+    ];
+
+    const createdPermissions: Prisma.PermissionUncheckedCreateInput[] = [];
+
+    for (const permData of borrowerPermissions) {
+      let permission = await this.prisma.permission.findFirst({
+        where: { name: permData.name, isSystem: true },
+      });
+
+      if (!permission) {
+        permission = await this.prisma.permission.create({
+          data: {
+            name: permData.name,
+            description: permData.description,
+            isSystem: true,
+          },
+        });
+      }
+
+      createdPermissions.push(permission);
+    }
+
+    return createdPermissions;
   }
 
   async findAll(query: UsersQueryInterface, currentUser: JwtPayload) {
