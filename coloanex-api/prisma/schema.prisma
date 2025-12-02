@@ -117,6 +117,8 @@ model User {
 
   @@index([tenantId])
   @@index([tenantId, isActive])
+  @@index([email])
+  @@index([phone])
   @@map("users")
   @@schema("auth")
 }
