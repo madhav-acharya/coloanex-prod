@@ -16,6 +16,8 @@ export enum ActivityAction {
   LOGIN = 'LOGIN',
   LOGOUT = 'LOGOUT',
   PASSWORD_RESET = 'PASSWORD_RESET',
+  VISIT = 'VISIT',
+  LEAVE = 'LEAVE',
 }
 
 export class ActivityLog {
