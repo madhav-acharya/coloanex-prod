@@ -9,36 +9,23 @@ import { PrismaService } from '../prisma.service';
 import type { PermissionsQueryInterface } from './interfaces/permissions.query.interface';
 import { Prisma } from '@prisma/client';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from '../activity-logs/entities/activity-log.entity';
 
 @Injectable()
 export class PermissionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogsService: ActivityLogsService,
+  ) {}
 
   async create(createPermissionDto: CreatePermissionDto, user: JwtPayload) {
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (
-      !isSuperAdmin &&
-      createPermissionDto.tenantId &&
-      createPermissionDto.tenantId !== user.tenantId
-    ) {
-      throw new ForbiddenException(
-        'You can only create permissions for your own tenant',
-      );
-    }
-
-    const finalPermissionData = {
-      ...createPermissionDto,
-      tenantId: isSuperAdmin
-        ? (createPermissionDto.tenantId as string | null)
-        : (user.tenantId as string | null),
-      isSystem: isSuperAdmin ? Boolean(createPermissionDto.isSystem) : false,
-    };
-
     const permission = await this.prisma.permission.create({
-      data: finalPermissionData,
+      data: createPermissionDto,
       include: {
-        tenant: true,
         roles: {
           include: {
             role: true,
@@ -64,21 +51,23 @@ export class PermissionsService {
       },
     });
 
-    await this.logActivity(
+    await this.activityLogsService.logUserActivity(
       user.sub,
-      user.tenantId,
-      'PERMISSION',
+      ActivityAction.CREATE,
+      ActivityEntityType.PERMISSION,
       permission.id.toString(),
-      'CREATE',
       'Permission created',
       null,
       permission,
+      undefined,
+      undefined,
+      user.tenantId,
     );
 
     return permission;
   }
 
-  async findAll(query: PermissionsQueryInterface, user: JwtPayload) {
+  async findAll(query: PermissionsQueryInterface) {
     const {
       page = 1,
       limit = 10,
@@ -86,8 +75,6 @@ export class PermissionsService {
       order = 'desc',
       search = '',
       name,
-      isSystem,
-      tenantId,
       startDate,
       endDate,
       createdAtFrom,
@@ -104,15 +91,7 @@ export class PermissionsService {
       [sort]: order.toLowerCase() === 'asc' ? 'asc' : 'desc',
     } as Prisma.PermissionOrderByWithRelationInput;
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
     const baseWhere: Prisma.PermissionWhereInput = {};
-
-    if (!isSuperAdmin) {
-      baseWhere.tenantId = user.tenantId;
-    } else if (tenantId) {
-      baseWhere.tenantId = tenantId;
-    }
 
     const filters: Prisma.PermissionWhereInput[] = [];
 
@@ -142,10 +121,6 @@ export class PermissionsService {
           mode: Prisma.QueryMode.insensitive,
         },
       });
-    }
-
-    if (typeof isSystem === 'boolean') {
-      filters.push({ isSystem });
     }
 
     if (roleId) {
@@ -216,14 +191,12 @@ export class PermissionsService {
         take,
         orderBy,
         include: {
-          tenant: true,
           roles: {
             include: {
               role: {
                 select: {
                   id: true,
                   name: true,
-                  isSystem: true,
                 },
               },
             },
@@ -266,13 +239,10 @@ export class PermissionsService {
     };
   }
 
-  async findOne(id: bigint, user: JwtPayload) {
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
+  async findOne(id: bigint) {
     const permission = await this.prisma.permission.findUnique({
       where: { id },
       include: {
-        tenant: true,
         roles: {
           include: {
             role: true,
@@ -303,12 +273,6 @@ export class PermissionsService {
       throw new NotFoundException('Permission not found');
     }
 
-    if (!isSuperAdmin && permission.tenantId !== user.tenantId) {
-      throw new ForbiddenException(
-        'You can only access permissions from your own tenant',
-      );
-    }
-
     return permission;
   }
 
@@ -317,43 +281,14 @@ export class PermissionsService {
     updatePermissionDto: UpdatePermissionDto,
     user: JwtPayload,
   ) {
-    const existingPermission = await this.findOne(id, user);
+    const existingPermission = await this.findOne(id);
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (
-      !isSuperAdmin &&
-      updatePermissionDto.tenantId &&
-      updatePermissionDto.tenantId !== user.tenantId
-    ) {
-      throw new ForbiddenException(
-        'You can only update permissions for your own tenant',
-      );
-    }
-
-    if (!isSuperAdmin && existingPermission.isSystem) {
-      throw new ForbiddenException('You cannot modify system permissions');
-    }
-
-    const finalUpdateData = {
-      ...updatePermissionDto,
-      tenantId: isSuperAdmin
-        ? (updatePermissionDto.tenantId as string | null)
-        : (user.tenantId as string | null),
-      isSystem: isSuperAdmin
-        ? updatePermissionDto.isSystem !== undefined
-          ? Boolean(updatePermissionDto.isSystem)
-          : existingPermission.isSystem
-        : existingPermission.isSystem,
-    };
-
-    delete finalUpdateData.id;
+    delete updatePermissionDto.id;
 
     const updatedPermission = await this.prisma.permission.update({
       where: { id },
-      data: finalUpdateData,
+      data: updatePermissionDto,
       include: {
-        tenant: true,
         roles: {
           include: {
             role: true,
@@ -379,28 +314,24 @@ export class PermissionsService {
       },
     });
 
-    await this.logActivity(
+    await this.activityLogsService.logUserActivity(
       user.sub,
-      user.tenantId,
-      'PERMISSION',
+      ActivityAction.UPDATE,
+      ActivityEntityType.PERMISSION,
       id.toString(),
-      'UPDATE',
       'Permission updated',
       existingPermission,
       updatedPermission,
+      undefined,
+      undefined,
+      user.tenantId,
     );
 
     return updatedPermission;
   }
 
   async remove(id: bigint, user: JwtPayload) {
-    const existingPermission = await this.findOne(id, user);
-
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (!isSuperAdmin && existingPermission.isSystem) {
-      throw new ForbiddenException('You cannot delete system permissions');
-    }
+    const existingPermission = await this.findOne(id);
 
     const roleCount = await this.prisma.rolePermission.count({
       where: { permissionId: id },
@@ -424,20 +355,19 @@ export class PermissionsService {
 
     const deletedPermission = await this.prisma.permission.delete({
       where: { id },
-      include: {
-        tenant: true,
-      },
     });
 
-    await this.logActivity(
+    await this.activityLogsService.logUserActivity(
       user.sub,
-      user.tenantId,
-      'PERMISSION',
+      ActivityAction.DELETE,
+      ActivityEntityType.PERMISSION,
       id.toString(),
-      'DELETE',
       'Permission deleted',
       existingPermission,
       null,
+      undefined,
+      undefined,
+      user.tenantId,
     );
 
     return deletedPermission;
@@ -450,29 +380,15 @@ export class PermissionsService {
   ) {
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
-      include: { tenant: true },
     });
 
     if (!role) {
       throw new NotFoundException('Role not found');
     }
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (!isSuperAdmin && role.tenantId !== user.tenantId) {
-      throw new ForbiddenException(
-        'You can only assign permissions to roles from your own tenant',
-      );
-    }
-
-    if (!isSuperAdmin && role.isSystem) {
-      throw new ForbiddenException('You cannot modify system roles');
-    }
-
     const permissions = await this.prisma.permission.findMany({
       where: {
         id: { in: permissionIds },
-        ...(isSuperAdmin ? {} : { tenantId: user.tenantId }),
       },
       select: { id: true },
     });
@@ -494,45 +410,19 @@ export class PermissionsService {
       })),
     });
 
-    await this.logActivity(
+    await this.activityLogsService.logUserActivity(
       user.sub,
-      user.tenantId,
-      'ROLE',
+      ActivityAction.UPDATE,
+      ActivityEntityType.ROLE,
       roleId.toString(),
-      'UPDATE',
       `Permissions assigned to role: ${role.name}`,
       null,
       { roleId, permissionIds },
+      undefined,
+      undefined,
+      user.tenantId,
     );
 
     return result;
-  }
-
-  private async logActivity(
-    actorUserId: string,
-    tenantId: string | undefined,
-    entityType: 'PERMISSION' | 'ROLE',
-    entityId: string,
-    action: 'CREATE' | 'UPDATE' | 'DELETE',
-    description: string,
-    before: any,
-    after: any,
-  ) {
-    try {
-      await this.prisma.activityLog.create({
-        data: {
-          actorUserId,
-          tenantId,
-          entityType,
-          entityId,
-          action,
-          description,
-          before: before ? JSON.stringify(before) : undefined,
-          after: after ? JSON.stringify(after) : undefined,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to log activity:', error);
-    }
   }
 }

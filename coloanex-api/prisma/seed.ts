@@ -32,8 +32,6 @@ async function main() {
         update: {},
         create: {
           name: roleName,
-          isSystem: true,
-          tenantId: null,
         },
       }),
     ),
@@ -50,9 +48,7 @@ async function main() {
         update: {},
         create: {
           name: permissionName,
-          isSystem: true,
           description: `Permission to ${permissionName.toLowerCase()}`,
-          tenantId: null,
         },
       }),
     ),

@@ -81,17 +81,12 @@ export class UsersService {
       const roles = await this.prisma.role.findMany({
         where: {
           id: { in: createUserDto.roleIds },
-          ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
         },
-        select: { id: true, name: true, isSystem: true },
+        select: { id: true, name: true },
       });
 
       if (roles.length !== createUserDto.roleIds.length) {
         throw new BadRequestException('Some roles not found or not accessible');
-      }
-
-      if (!isSuperAdmin && roles.some((role) => role.isSystem)) {
-        throw new ForbiddenException('You cannot assign system roles');
       }
     }
 
@@ -99,19 +94,14 @@ export class UsersService {
       const permissions = await this.prisma.permission.findMany({
         where: {
           id: { in: createUserDto.permissionIds },
-          ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
         },
-        select: { id: true, isSystem: true },
+        select: { id: true },
       });
 
       if (permissions.length !== createUserDto.permissionIds.length) {
         throw new BadRequestException(
           'Some permissions not found or not accessible',
         );
-      }
-
-      if (!isSuperAdmin && permissions.some((perm) => perm.isSystem)) {
-        throw new ForbiddenException('You cannot assign system permissions');
       }
     }
 
@@ -219,7 +209,7 @@ export class UsersService {
 
     // Ensure borrower role exists
     let borrowerRole = await this.prisma.role.findFirst({
-      where: { name: defaultRole, isSystem: true },
+      where: { name: defaultRole },
     });
 
     if (!borrowerRole && defaultRole === 'BORROWER') {
@@ -305,7 +295,6 @@ export class UsersService {
       data: {
         name: 'BORROWER',
         description: 'Default role for borrowers',
-        isSystem: true,
       },
     });
 
@@ -340,7 +329,7 @@ export class UsersService {
 
     for (const permData of borrowerPermissions) {
       let permission = await this.prisma.permission.findFirst({
-        where: { name: permData.name, isSystem: true },
+        where: { name: permData.name },
       });
 
       if (!permission) {
@@ -348,7 +337,6 @@ export class UsersService {
           data: {
             name: permData.name,
             description: permData.description,
-            isSystem: true,
           },
         });
       }
@@ -574,7 +562,6 @@ export class UsersService {
                 select: {
                   id: true,
                   name: true,
-                  isSystem: true,
                   description: true,
                 },
               },
@@ -586,7 +573,6 @@ export class UsersService {
                 select: {
                   id: true,
                   name: true,
-                  isSystem: true,
                   description: true,
                 },
               },
@@ -650,9 +636,7 @@ export class UsersService {
               select: {
                 id: true,
                 name: true,
-                isSystem: true,
                 description: true,
-                tenantId: true,
               },
             },
           },
@@ -663,9 +647,7 @@ export class UsersService {
               select: {
                 id: true,
                 name: true,
-                isSystem: true,
                 description: true,
-                tenantId: true,
               },
             },
           },
@@ -738,17 +720,13 @@ export class UsersService {
             id: { in: updateUserDto.roleIds },
             ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
           },
-          select: { id: true, name: true, isSystem: true },
+          select: { id: true, name: true },
         });
 
         if (roles.length !== updateUserDto.roleIds.length) {
           throw new BadRequestException(
             'Some roles not found or not accessible',
           );
-        }
-
-        if (!isSuperAdmin && roles.some((role) => role.isSystem)) {
-          throw new ForbiddenException('You cannot assign system roles');
         }
       }
     }
@@ -760,17 +738,13 @@ export class UsersService {
             id: { in: updateUserDto.permissionIds },
             ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
           },
-          select: { id: true, isSystem: true },
+          select: { id: true },
         });
 
         if (permissions.length !== updateUserDto.permissionIds.length) {
           throw new BadRequestException(
             'Some permissions not found or not accessible',
           );
-        }
-
-        if (!isSuperAdmin && permissions.some((perm) => perm.isSystem)) {
-          throw new ForbiddenException('You cannot assign system permissions');
         }
       }
     }
@@ -1031,20 +1005,112 @@ export class UsersService {
     after: any,
   ) {
     try {
-      await this.prisma.activityLog.create({
-        data: {
-          actorUserId,
-          tenantId,
-          entityType,
-          entityId,
-          action,
-          description,
-          before: before ? JSON.stringify(before) : undefined,
-          after: after ? JSON.stringify(after) : undefined,
-        },
-      });
+      await this.activityLogsService.logUserActivity(
+        actorUserId,
+        action as ActivityAction,
+        entityType as ActivityEntityType,
+        entityId,
+        description,
+        before,
+        after,
+        undefined,
+        undefined,
+        tenantId,
+      );
     } catch (error) {
       console.error('Failed to log activity:', error);
     }
+  }
+
+  async markUserAsOnline(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: true,
+        lastActiveAt: new Date(),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        isActive: true,
+        lastActiveAt: true,
+        tenantId: true,
+      },
+    });
+
+    await this.activityLogsService.logUserVisit(
+      userId,
+      ipAddress,
+      userAgent,
+      user.tenantId || undefined,
+    );
+
+    return user;
+  }
+
+  async markUserAsOffline(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+        lastActiveAt: new Date(),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        isActive: true,
+        lastActiveAt: true,
+        tenantId: true,
+      },
+    });
+
+    await this.activityLogsService.logUserLeave(
+      userId,
+      ipAddress,
+      userAgent,
+      user.tenantId || undefined,
+    );
+
+    return user;
+  }
+
+  async updateUserActivity(userId: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        lastActiveAt: new Date(),
+      },
+      select: {
+        id: true,
+        lastActiveAt: true,
+      },
+    });
+  }
+
+  async getOnlineUsers(tenantId?: string) {
+    return this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        ...(tenantId && { tenantId }),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        isActive: true,
+        lastActiveAt: true,
+      },
+      orderBy: {
+        lastActiveAt: 'desc',
+      },
+    });
   }
 }

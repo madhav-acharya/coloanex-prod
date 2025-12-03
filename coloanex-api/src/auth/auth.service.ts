@@ -10,6 +10,7 @@ import { RedisSessionService } from './services/redis-session.service';
 import { LoginDto } from './dto/login.dto';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BorrowersService } from '../borrowers/borrowers.service';
+import { UsersService } from '../users/users.service';
 import {
   ActivityAction,
   ActivityEntityType,
@@ -40,6 +41,7 @@ export class AuthService {
     private readonly sessionService: RedisSessionService,
     private readonly activityLogsService: ActivityLogsService,
     private readonly borrowersService: BorrowersService,
+    private readonly usersService: UsersService,
   ) {}
 
   async validateUser(
@@ -177,6 +179,8 @@ export class AuthService {
       user.tenantId,
     );
 
+    await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
+
     if (userRoles.includes('BORROWER') && user.tenantId) {
       await this.borrowersService.ensureBorrowerExists(
         user.id,
@@ -310,6 +314,8 @@ export class AuthService {
         userAgent,
         user.tenantId || undefined,
       );
+
+      await this.usersService.markUserAsOffline(userId, ipAddress, userAgent);
     }
   }
 
@@ -337,6 +343,8 @@ export class AuthService {
         userAgent,
         user.tenantId || undefined,
       );
+
+      await this.usersService.markUserAsOffline(userId, ipAddress, userAgent);
     }
   }
 

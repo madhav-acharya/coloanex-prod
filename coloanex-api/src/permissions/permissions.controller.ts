@@ -41,20 +41,14 @@ export class PermissionsController {
 
   @Get()
   @RequirePermissions(READ_PERMISSIONS)
-  findAll(
-    @Query() query: PermissionsQueryInterface,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.permissionsService.findAll(query, user);
+  findAll(@Query() query: PermissionsQueryInterface) {
+    return this.permissionsService.findAll(query);
   }
 
   @Get(':id')
   @RequirePermissions(READ_PERMISSIONS)
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.permissionsService.findOne(BigInt(id), user);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.permissionsService.findOne(BigInt(id));
   }
 
   @Patch(':id')
