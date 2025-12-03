@@ -29,7 +29,7 @@ export class ActivityLogsService {
         tenantId: data.tenantId,
         entityType: data.entityType,
         entityId: data.entityId,
-        action: data.action,
+        action: data.action as any,
         description: data.description,
         before: data.before
           ? (data.before as Prisma.InputJsonValue)
@@ -115,5 +115,45 @@ export class ActivityLogsService {
       ipAddress,
       userAgent,
     });
+  }
+
+  async logUserVisit(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+    tenantId?: string,
+  ): Promise<ActivityLog> {
+    return this.logUserActivity(
+      userId,
+      ActivityAction.VISIT,
+      ActivityEntityType.USER,
+      userId,
+      'User visited website',
+      undefined,
+      undefined,
+      ipAddress,
+      userAgent,
+      tenantId,
+    );
+  }
+
+  async logUserLeave(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+    tenantId?: string,
+  ): Promise<ActivityLog> {
+    return this.logUserActivity(
+      userId,
+      ActivityAction.LEAVE,
+      ActivityEntityType.USER,
+      userId,
+      'User left website',
+      undefined,
+      undefined,
+      ipAddress,
+      userAgent,
+      tenantId,
+    );
   }
 }
