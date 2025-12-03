@@ -8,7 +8,9 @@ import {
   Delete,
   Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -91,5 +93,30 @@ export class UsersController {
   @RequirePermissions(UPDATE_USERS)
   deactivateUser(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
     return this.usersService.deactivateUser(id, user);
+  }
+
+  @Post(':id/mark-online')
+  markUserAsOnline(@Param('id') id: string, @Req() request: Request) {
+    const ipAddress = request.ip;
+    const userAgent = request.get('User-Agent');
+    return this.usersService.markUserAsOnline(id, ipAddress, userAgent);
+  }
+
+  @Post(':id/mark-offline')
+  markUserAsOffline(@Param('id') id: string, @Req() request: Request) {
+    const ipAddress = request.ip;
+    const userAgent = request.get('User-Agent');
+    return this.usersService.markUserAsOffline(id, ipAddress, userAgent);
+  }
+
+  @Post(':id/update-activity')
+  updateUserActivity(@Param('id') id: string) {
+    return this.usersService.updateUserActivity(id);
+  }
+
+  @Get('online/list')
+  @RequirePermissions(READ_USERS)
+  getOnlineUsers(@CurrentUser() user: JwtPayload) {
+    return this.usersService.getOnlineUsers(user.tenantId);
   }
 }
