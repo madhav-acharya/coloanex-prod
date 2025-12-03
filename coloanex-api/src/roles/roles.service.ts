@@ -9,43 +9,45 @@ import { PrismaService } from '../prisma.service';
 import type { RolesQueryInterface } from './interfaces/roles.query.interface';
 import { Prisma } from '@prisma/client';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import {
+  ActivityAction,
+  ActivityEntityType,
+} from '../activity-logs/entities/activity-log.entity';
 
 @Injectable()
 export class RolesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activityLogsService: ActivityLogsService,
+  ) {}
 
   async create(createRoleDto: CreateRoleDto, user: JwtPayload) {
     const { permissionIds, ...roleData } = createRoleDto;
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (
-      !isSuperAdmin &&
-      createRoleDto.tenantId &&
-      createRoleDto.tenantId !== user.tenantId
-    ) {
-      throw new ForbiddenException(
-        'You can only create roles for your own tenant',
-      );
-    }
-
-    const finalRoleData = {
-      ...roleData,
-      tenantId: isSuperAdmin ? createRoleDto.tenantId : user.tenantId,
-      isSystem: isSuperAdmin ? createRoleDto.isSystem || false : false,
-    };
-
     const role = await this.prisma.role.create({
-      data: finalRoleData,
+      data: roleData,
       include: {
         permissions: {
           include: {
             permission: true,
           },
         },
-        tenant: true,
       },
     });
+
+    await this.activityLogsService.logUserActivity(
+      user.sub,
+      ActivityAction.CREATE,
+      ActivityEntityType.ROLE,
+      role.id.toString(),
+      `Role created: ${role.name}`,
+      null,
+      role,
+      undefined,
+      undefined,
+      user.tenantId,
+    );
 
     if (permissionIds && permissionIds.length > 0) {
       await this.prisma.rolePermission.createMany({
@@ -63,7 +65,6 @@ export class RolesService {
               permission: true,
             },
           },
-          tenant: true,
         },
       });
     }
@@ -79,8 +80,6 @@ export class RolesService {
       order = 'desc',
       search = '',
       name,
-      isSystem,
-      tenantId,
       startDate,
       endDate,
       createdAtFrom,
@@ -95,15 +94,7 @@ export class RolesService {
       [sort]: order.toLowerCase() === 'asc' ? 'asc' : 'desc',
     } as Prisma.RoleOrderByWithRelationInput;
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
     const baseWhere: Prisma.RoleWhereInput = {};
-
-    if (!isSuperAdmin) {
-      baseWhere.tenantId = user.tenantId;
-    } else if (tenantId) {
-      baseWhere.tenantId = tenantId;
-    }
 
     const filters: Prisma.RoleWhereInput[] = [];
 
@@ -133,10 +124,6 @@ export class RolesService {
           mode: Prisma.QueryMode.insensitive,
         },
       });
-    }
-
-    if (typeof isSystem === 'boolean') {
-      filters.push({ isSystem });
     }
 
     if (startDate || endDate || createdAtFrom || createdAtTo) {
@@ -192,7 +179,6 @@ export class RolesService {
               permission: true,
             },
           },
-          tenant: true,
           _count: {
             select: {
               users: true,
@@ -230,7 +216,6 @@ export class RolesService {
             permission: true,
           },
         },
-        tenant: true,
         users: {
           include: {
             user: {
@@ -256,51 +241,19 @@ export class RolesService {
       throw new NotFoundException('Role not found');
     }
 
-    if (!isSuperAdmin && role.tenantId !== user.tenantId) {
-      throw new ForbiddenException(
-        'You can only access roles from your own tenant',
-      );
-    }
-
     return role;
   }
 
   async update(id: bigint, updateRoleDto: UpdateRoleDto, user: JwtPayload) {
     const existingRole = await this.findOne(id, user);
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (
-      !isSuperAdmin &&
-      updateRoleDto.tenantId &&
-      updateRoleDto.tenantId !== user.tenantId
-    ) {
-      throw new ForbiddenException(
-        'You can only update roles for your own tenant',
-      );
-    }
-
-    if (!isSuperAdmin && existingRole.isSystem) {
-      throw new ForbiddenException('You cannot modify system roles');
-    }
-
     const { permissionIds, ...roleData } = updateRoleDto;
 
-    const finalUpdateData = {
-      ...roleData,
-      tenantId: isSuperAdmin ? updateRoleDto.tenantId : user.tenantId,
-      isSystem: isSuperAdmin
-        ? updateRoleDto.isSystem !== undefined
-          ? updateRoleDto.isSystem
-          : existingRole.isSystem
-        : existingRole.isSystem,
-    };
-
-    delete finalUpdateData.id;
+    delete roleData.id;
 
     await this.prisma.role.update({
       where: { id },
-      data: finalUpdateData,
+      data: roleData,
     });
 
     if (permissionIds !== undefined) {
@@ -318,7 +271,7 @@ export class RolesService {
       }
     }
 
-    return this.prisma.role.findUnique({
+    const updatedRole = await this.prisma.role.findUnique({
       where: { id },
       include: {
         permissions: {
@@ -326,7 +279,6 @@ export class RolesService {
             permission: true,
           },
         },
-        tenant: true,
         _count: {
           select: {
             users: true,
@@ -335,16 +287,25 @@ export class RolesService {
         },
       },
     });
+
+    await this.activityLogsService.logUserActivity(
+      user.sub,
+      ActivityAction.UPDATE,
+      ActivityEntityType.ROLE,
+      id.toString(),
+      `Role updated: ${updatedRole?.name}`,
+      existingRole,
+      updatedRole,
+      undefined,
+      undefined,
+      user.tenantId,
+    );
+
+    return updatedRole;
   }
 
   async remove(id: bigint, user: JwtPayload) {
     const existingRole = await this.findOne(id, user);
-
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
-    if (!isSuperAdmin && existingRole.isSystem) {
-      throw new ForbiddenException('You cannot delete system roles');
-    }
 
     const userCount = await this.prisma.userRole.count({
       where: { roleId: id },
@@ -356,7 +317,7 @@ export class RolesService {
       );
     }
 
-    return this.prisma.role.delete({
+    const deletedRole = await this.prisma.role.delete({
       where: { id },
       include: {
         permissions: {
@@ -364,8 +325,22 @@ export class RolesService {
             permission: true,
           },
         },
-        tenant: true,
       },
     });
+
+    await this.activityLogsService.logUserActivity(
+      user.sub,
+      ActivityAction.DELETE,
+      ActivityEntityType.ROLE,
+      id.toString(),
+      `Role deleted: ${deletedRole.name}`,
+      existingRole,
+      null,
+      undefined,
+      undefined,
+      user.tenantId,
+    );
+
+    return deletedRole;
   }
 }
