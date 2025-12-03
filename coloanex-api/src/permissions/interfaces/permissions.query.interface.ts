@@ -5,8 +5,6 @@ export interface PermissionsQueryInterface {
   order?: 'asc' | 'desc';
   search?: string;
   name?: string;
-  isSystem?: boolean;
-  tenantId?: string;
   startDate?: string;
   endDate?: string;
   createdAtFrom?: string;
