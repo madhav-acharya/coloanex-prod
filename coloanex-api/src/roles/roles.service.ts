@@ -72,7 +72,7 @@ export class RolesService {
     return role;
   }
 
-  async findAll(query: RolesQueryInterface, user: JwtPayload) {
+  async findAll(query: RolesQueryInterface) {
     const {
       page = 1,
       limit = 10,
@@ -205,9 +205,7 @@ export class RolesService {
     };
   }
 
-  async findOne(id: bigint, user: JwtPayload) {
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-
+  async findOne(id: bigint) {
     const role = await this.prisma.role.findUnique({
       where: { id },
       include: {
@@ -245,7 +243,7 @@ export class RolesService {
   }
 
   async update(id: bigint, updateRoleDto: UpdateRoleDto, user: JwtPayload) {
-    const existingRole = await this.findOne(id, user);
+    const existingRole = await this.findOne(id);
 
     const { permissionIds, ...roleData } = updateRoleDto;
 
@@ -305,7 +303,7 @@ export class RolesService {
   }
 
   async remove(id: bigint, user: JwtPayload) {
-    const existingRole = await this.findOne(id, user);
+    const existingRole = await this.findOne(id);
 
     const userCount = await this.prisma.userRole.count({
       where: { roleId: id },

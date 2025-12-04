@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma.service';
 import type { UsersQueryInterface } from './interfaces/users.query.interface';
 import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
-import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
+import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BorrowersService } from '../borrowers/borrowers.service';
 import {
@@ -1042,12 +1042,14 @@ export class UsersService {
       },
     });
 
-    await this.activityLogsService.logUserVisit(
-      userId,
-      ipAddress,
-      userAgent,
-      user.tenantId || undefined,
-    );
+    if (this.activityLogsService) {
+      await this.activityLogsService.logUserVisit(
+        userId,
+        ipAddress,
+        userAgent,
+        user.tenantId ?? undefined,
+      );
+    }
 
     return user;
   }
@@ -1072,12 +1074,14 @@ export class UsersService {
       },
     });
 
-    await this.activityLogsService.logUserLeave(
-      userId,
-      ipAddress,
-      userAgent,
-      user.tenantId || undefined,
-    );
+    if (this.activityLogsService) {
+      await this.activityLogsService.logUserLeave(
+        userId,
+        ipAddress,
+        userAgent,
+        user.tenantId ?? undefined,
+      );
+    }
 
     return user;
   }

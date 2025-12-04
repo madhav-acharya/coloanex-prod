@@ -41,20 +41,14 @@ export class RolesController {
 
   @Get()
   @RequirePermissions(READ_ROLES)
-  findAll(
-    @Query() query: RolesQueryInterface,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.rolesService.findAll(query, user);
+  findAll(@Query() query: RolesQueryInterface) {
+    return this.rolesService.findAll(query);
   }
 
   @Get(':id')
   @RequirePermissions(READ_ROLES)
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-    @CurrentUser() user: JwtPayload,
-  ) {
-    return this.rolesService.findOne(BigInt(id), user);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.rolesService.findOne(BigInt(id));
   }
 
   @Patch(':id')
