@@ -5,7 +5,7 @@ import {
   ActivityEntityType,
   ActivityAction,
 } from './entities/activity-log.entity';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, $Enums } from '@prisma/client';
 
 @Injectable()
 export class ActivityLogsService {
@@ -29,7 +29,7 @@ export class ActivityLogsService {
         tenantId: data.tenantId,
         entityType: data.entityType,
         entityId: data.entityId,
-        action: data.action as any,
+        action: data.action as $Enums.ActivityAction,
         description: data.description,
         before: data.before
           ? (data.before as Prisma.InputJsonValue)
