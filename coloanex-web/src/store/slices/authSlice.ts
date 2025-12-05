@@ -3,7 +3,7 @@ import { authAPI, LoginRequest, RegisterRequest, User } from "../../apis/auth";
 import { toast } from "sonner";
 
 interface AuthState {
-  user: User | null;
+  user?: User | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -11,7 +11,7 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  user: JSON.parse(localStorage.getItem("user") || "null"),
+  user: localStorage.getItem("user") as unknown as User | null,
   token: localStorage.getItem("token"),
   isLoading: false,
   isAuthenticated: !!localStorage.getItem("token"),
@@ -25,10 +25,10 @@ export const loginUser = createAsyncThunk(
       const response = await authAPI.login(credentials);
       localStorage.setItem("token", response.access_token);
       localStorage.setItem("user", JSON.stringify(response.user));
-      await authAPI.markUserOnline();
+      await authAPI.markUserOnline(response.user.id);
       toast.success("Login successful!");
       return response;
-    } catch (error: any) {
+    } catch (error) {
       const message = error.response?.data?.message || "Login failed";
       toast.error(message);
       return rejectWithValue(message);
@@ -43,11 +43,11 @@ export const registerUser = createAsyncThunk(
       const response = await authAPI.register(userData);
       localStorage.setItem("token", response.access_token);
       localStorage.setItem("user", JSON.stringify(response.user));
-      await authAPI.markUserOnline();
+      await authAPI.markUserOnline(response.user.id);
       toast.success("Registration successful!");
       return response;
-    } catch (error: any) {
-      const message = error.response?.data?.message || "Registration failed";
+    } catch (error) {
+      const message = error?.response?.data?.message || "Registration failed";
       toast.error(message);
       return rejectWithValue(message);
     }
@@ -58,12 +58,15 @@ export const logoutUser = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      await authAPI.markUserOffline();
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      if (user && user.id) {
+        await authAPI.markUserOffline(user.id);
+      }
       await authAPI.logout();
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       toast.success("Logged out successfully!");
-    } catch (error: any) {
+    } catch (error) {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       const message = error.response?.data?.message || "Logout failed";
@@ -77,7 +80,7 @@ export const updateUserActivity = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       await authAPI.updateActivity();
-    } catch (error: any) {
+    } catch (error) {
       const message =
         error.response?.data?.message || "Failed to update activity";
       return rejectWithValue(message);

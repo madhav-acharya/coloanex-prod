@@ -5,6 +5,7 @@ import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import { RootState, AppDispatch } from "./store";
 import { updateUserActivity } from "./store/slices/authSlice";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
@@ -46,6 +47,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

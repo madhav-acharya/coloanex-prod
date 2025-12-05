@@ -223,6 +223,8 @@ enum ActivityAction {
   LOGIN
   LOGOUT
   PASSWORD_RESET
+  VISIT
+  LEAVE
 
   @@schema("core")
 }

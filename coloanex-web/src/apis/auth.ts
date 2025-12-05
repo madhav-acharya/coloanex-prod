@@ -63,12 +63,12 @@ export const authAPI = {
     return response.data;
   },
 
-  markUserOnline: async (): Promise<void> => {
-    await apiClient.post("/users/mark-online");
+  markUserOnline: async (id: string): Promise<void> => {
+    await apiClient.post(`/${id}/users/mark-online`);
   },
 
-  markUserOffline: async (): Promise<void> => {
-    await apiClient.post("/users/mark-offline");
+  markUserOffline: async (id: string): Promise<void> => {
+    await apiClient.post(`/${id}/users/mark-offline`);
   },
 
   updateActivity: async (): Promise<void> => {
