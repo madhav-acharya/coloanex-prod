@@ -2,36 +2,49 @@
 
 :root {
   --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
+  --foreground: 217 91% 8%;
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 217 91% 8%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 98%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
+  --popover-foreground: 217 91% 8%;
+  --primary: 142 71% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 142 76% 35%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 220 13% 95%;
+  --muted-foreground: 220 9% 46%;
+  --accent: 142 71% 45%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 142 71% 45%;
   --radius: 0.5rem;
 
+  /* Loan App Custom Colors */
+  --primary-green: 142 71% 45%; /* #16A34A */
+  --primary-dark-green: 142 76% 35%; /* #15803D */
+  --primary-light-green: 138 76% 93%; /* #DCFCE7 */
+  --success-green: 142 71% 45%; /* #16A34A */
+  --success-light-green: 138 76% 93%; /* #DCFCE7 */
+  --neutral-dark: 217 91% 8%; /* #111827 */
+  --neutral-mid: 220 9% 46%; /* #6B7280 */
+  --neutral-light: 220 13% 95%; /* #F3F4F6 */
+  --error-red: 0 72% 51%; /* #DC2626 */
+  --error-light-red: 0 86% 97%; /* #FEF2F2 */
+  --premium-gold: 38 92% 50%; /* #F59E0B */
+
   /* Custom gradients */
-  --gradient-hero: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
-  --gradient-accent: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
-  --gradient-card: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  --gradient-dark: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --gradient-hero: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  --gradient-accent: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #dcfce7 100%);
+  --gradient-dark: linear-gradient(135deg, #111827 0%, #15803d 100%);
   --gradient-brand: linear-gradient(
     135deg,
-    #6366f1 0%,
-    #a855f7 50%,
-    #ec4899 100%
+    #16a34a 0%,
+    #22c55e 50%,
+    #15803d 100%
   );
 
   /* Custom shadows */
@@ -39,10 +52,10 @@
     0 1px 2px -1px rgba(0, 0, 0, 0.1);
   --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 0 1px rgba(59, 130, 246, 0.2),
-    0 0 20px rgba(59, 130, 246, 0.3);
-  --shadow-accent: 0 0 0 1px rgba(168, 85, 247, 0.2),
-    0 0 20px rgba(168, 85, 247, 0.3);
+  --shadow-glow: 0 0 0 1px rgba(22, 163, 74, 0.2),
+    0 0 20px rgba(22, 163, 74, 0.3);
+  --shadow-accent: 0 0 0 1px rgba(22, 163, 74, 0.2),
+    0 0 20px rgba(22, 163, 74, 0.3);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1);
 }
