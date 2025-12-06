@@ -6,8 +6,9 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
+  accessToken: string;
+  refreshToken: string;
+  sessionId: string;
   user: {
     id: string;
     email: string;
@@ -45,7 +46,7 @@ export const authAPI = {
   },
 
   register: async (userData: RegisterRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post("/auth/register", userData);
+    const response = await apiClient.post("/auth/signup", userData);
     return response.data;
   },
 
@@ -64,11 +65,11 @@ export const authAPI = {
   },
 
   markUserOnline: async (id: string): Promise<void> => {
-    await apiClient.post(`/${id}/users/mark-online`);
+    await apiClient.post(`/users/${id}/mark-online`);
   },
 
   markUserOffline: async (id: string): Promise<void> => {
-    await apiClient.post(`/${id}/users/mark-offline`);
+    await apiClient.post(`/users/${id}/mark-offline`);
   },
 
   updateActivity: async (): Promise<void> => {
