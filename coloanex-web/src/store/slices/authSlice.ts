@@ -23,9 +23,10 @@ export const loginUser = createAsyncThunk(
   async (credentials: LoginRequest, { rejectWithValue }) => {
     try {
       const response = await authAPI.login(credentials);
-      localStorage.setItem("token", response.access_token);
+      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem("refreshToken", response.refreshToken);
+      localStorage.setItem("sessionId", response.sessionId);
       localStorage.setItem("user", JSON.stringify(response.user));
-      await authAPI.markUserOnline(response.user.id);
       toast.success("Login successful!");
       return response;
     } catch (error) {
@@ -41,9 +42,10 @@ export const registerUser = createAsyncThunk(
   async (userData: RegisterRequest, { rejectWithValue }) => {
     try {
       const response = await authAPI.register(userData);
-      localStorage.setItem("token", response.access_token);
+      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem("refreshToken", response.refreshToken);
+      localStorage.setItem("sessionId", response.sessionId);
       localStorage.setItem("user", JSON.stringify(response.user));
-      await authAPI.markUserOnline(response.user.id);
       toast.success("Registration successful!");
       return response;
     } catch (error) {
@@ -64,10 +66,14 @@ export const logoutUser = createAsyncThunk(
       }
       await authAPI.logout();
       localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("sessionId");
       localStorage.removeItem("user");
       toast.success("Logged out successfully!");
     } catch (error) {
       localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("sessionId");
       localStorage.removeItem("user");
       const message = error.response?.data?.message || "Logout failed";
       return rejectWithValue(message);
@@ -110,7 +116,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.access_token;
+        state.token = action.payload.accessToken;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -127,7 +133,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.access_token;
+        state.token = action.payload.accessToken;
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;

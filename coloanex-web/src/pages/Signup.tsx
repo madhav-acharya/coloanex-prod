@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/dialog";
 import { Eye, EyeOff } from "lucide-react";
 import { AppDispatch, RootState } from "@/store";
-import { loginUser } from "@/store/slices/authSlice";
+import { registerUser } from "@/store/slices/authSlice";
 import Landing from "./Landing";
 
-const Login = () => {
+const Signup = () => {
   const [formData, setFormData] = useState({
+    fullName: "",
     email: "",
+    phone: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -41,15 +43,10 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dispatch(
-        loginUser({
-          email: formData.email,
-          password: formData.password,
-        })
-      ).unwrap();
+      await dispatch(registerUser(formData)).unwrap();
       navigate("/dashboard");
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Signup error:", err);
     }
   };
 
@@ -61,10 +58,10 @@ const Login = () => {
     <>
       <Landing />
       <Dialog open={true} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl text-center">
-              Sign In to Coloanex
+              Create Your Account
             </DialogTitle>
           </DialogHeader>
 
@@ -77,6 +74,20 @@ const Login = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                name="fullName"
+                placeholder="Enter your full name"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
                 Email <span className="text-red-500">*</span>
               </label>
               <Input
@@ -86,6 +97,17 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Phone (Optional)</label>
+              <Input
+                type="tel"
+                name="phone"
+                placeholder="Enter your phone number"
+                value={formData.phone}
+                onChange={handleInputChange}
               />
             </div>
 
@@ -121,17 +143,17 @@ const Login = () => {
               className="w-full bg-green-600 hover:bg-green-700 cursor-pointer"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Creating account..." : "Create Account"}
             </Button>
 
             <p className="text-center text-sm">
-              Don't have an account?{" "}
+              Already have an account?{" "}
               <button
                 type="button"
-                onClick={() => navigate("/signup")}
+                onClick={() => navigate("/login")}
                 className="text-primary hover:underline font-medium cursor-pointer"
               >
-                Create Account
+                Log in
               </button>
             </p>
           </form>
@@ -141,4 +163,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;

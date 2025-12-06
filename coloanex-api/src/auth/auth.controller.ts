@@ -37,27 +37,38 @@ export class AuthController {
       (req.headers['x-forwarded-for'] as string);
     const userAgent = req.headers['user-agent'];
 
-    return this.usersService.createUserForSignup(
+    const result = await this.authService.signup(
       createUserDto,
       ipAddress,
       userAgent,
     );
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      sessionId: result.sessionId,
+      user: result.user,
+    };
   }
 
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() loginDto: LoginDto,
-    @Req() req: Request,
-  ): Promise<AuthTokens> {
+  async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     const ipAddress =
       req.ip ||
       req.connection?.remoteAddress ||
       (req.headers['x-forwarded-for'] as string);
     const userAgent = req.headers['user-agent'];
 
-    return this.authService.login(loginDto, ipAddress, userAgent);
+    const result = await this.authService.login(loginDto, ipAddress, userAgent);
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      sessionId: result.sessionId,
+      user: result.user,
+    };
   }
 
   @Public()

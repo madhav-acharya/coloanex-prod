@@ -10,7 +10,10 @@ import { RedisSessionService } from './services/redis-session.service';
 import { LoginDto } from './dto/login.dto';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BorrowersService } from '../borrowers/borrowers.service';
-import { UsersService } from '../users/users.service';
+import {
+  UsersService,
+  type CreateUserForSignupDto,
+} from '../users/users.service';
 import {
   ActivityAction,
   ActivityEntityType,
@@ -20,6 +23,16 @@ export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
   sessionId: string;
+  user?: {
+    id: string;
+    email: string;
+    fullName: string;
+    phone?: string;
+    isActive: boolean;
+    lastActiveAt?: Date;
+    roles: string[];
+    permissions: string[];
+  };
 }
 
 export interface JwtPayload {
@@ -110,12 +123,46 @@ export class AuthService {
     };
   }
 
-  async login(
-    loginDto: LoginDto,
+  async signup(
+    createUserDto: CreateUserForSignupDto,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokens> {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
+    // Create user via users service
+    const newUser = await this.usersService.createUserForSignup(
+      createUserDto,
+      ipAddress,
+      userAgent,
+    );
+
+    // Fetch full user with roles and permissions
+    const user = await this.prisma.user.findUnique({
+      where: { id: newUser.id },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        permissions: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User creation failed');
+    }
 
     if (!process.env.JWT_REFRESH_SECRET || !process.env.JWT_SECRET) {
       throw new Error('JWT refresh secret is not configured');
@@ -123,7 +170,7 @@ export class AuthService {
 
     const sessionId = await this.sessionService.createSession({
       userId: user.id,
-      tenantId: user.tenantId,
+      tenantId: user.tenantId || undefined,
       ipAddress,
       userAgent,
     });
@@ -148,7 +195,82 @@ export class AuthService {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
-      tenantId: user.tenantId,
+      tenantId: user.tenantId || undefined,
+      roles: userRoles,
+      permissions: userPermissions,
+      sessionId,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: 900,
+    });
+
+    const refreshToken = this.jwtService.sign(
+      { sub: user.id, sessionId },
+      {
+        expiresIn: 604800,
+        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      },
+    );
+
+    await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
+
+    return {
+      accessToken,
+      refreshToken,
+      sessionId,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: (user.phone as string | undefined) || undefined,
+        isActive: user.isActive,
+        lastActiveAt: (user.lastActiveAt as Date | undefined) || undefined,
+        roles: userRoles,
+        permissions: userPermissions,
+      },
+    };
+  }
+
+  async login(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens> {
+    const user = await this.validateUser(loginDto.email, loginDto.password);
+
+    if (!process.env.JWT_REFRESH_SECRET || !process.env.JWT_SECRET) {
+      throw new Error('JWT refresh secret is not configured');
+    }
+
+    const sessionId = await this.sessionService.createSession({
+      userId: user.id,
+      tenantId: user.tenantId || undefined,
+      ipAddress,
+      userAgent,
+    });
+
+    type Role = {
+      role: {
+        name: string;
+        permissions: { permission: { name: string } }[];
+      };
+    };
+
+    type Permission = { permission: { name: string } };
+
+    const userRoles = (user.roles as Role[]).map((ur) => ur.role.name);
+    const userPermissions = [
+      ...(user.roles as Role[]).flatMap((ur) =>
+        ur.role.permissions.map((rp) => rp.permission.name),
+      ),
+      ...(user.permissions as Permission[]).map((up) => up.permission.name),
+    ];
+
+    const payload: JwtPayload = {
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId || undefined,
       roles: userRoles,
       permissions: userPermissions,
       sessionId,
@@ -191,7 +313,21 @@ export class AuthService {
       );
     }
 
-    return { accessToken, refreshToken, sessionId };
+    return {
+      accessToken,
+      refreshToken,
+      sessionId,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName as string,
+        phone: (user.phone as string | undefined) || undefined,
+        isActive: user.isActive,
+        lastActiveAt: (user.lastActiveAt as Date | undefined) || undefined,
+        roles: userRoles,
+        permissions: userPermissions,
+      },
+    };
   }
 
   async refresh(
