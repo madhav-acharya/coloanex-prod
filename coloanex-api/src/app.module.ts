@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { BorrowersModule } from './borrowers/borrowers.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 @Module({
   imports: [
@@ -27,6 +28,10 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
     },
   ],
 })
