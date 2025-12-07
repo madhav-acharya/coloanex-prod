@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useEffect } from "react";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -7,13 +7,16 @@ import Signup from "./pages/Signup";
 import Features from "./pages/Features";
 import UseCases from "./pages/UseCases";
 import Security from "./pages/Security";
-import { RootState, AppDispatch } from "./store";
-import { updateUserActivity, logoutUser } from "./store/slices/authSlice";
+import { logout } from "./store/slices/authSlice";
+import { useLogoutMutation } from "./apis/authApi";
 import Dashboard from "./pages/Dashboard";
+import Roles from "./pages/Roles";
+import Permissions from "./pages/Permissions";
+import { useAuth } from "./hooks/useAuth";
+import Users from "./pages/Users";
 
-// Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -22,9 +25,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Public Route Component (redirects to dashboard if authenticated)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -33,54 +35,31 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Logout Component
 const Logout = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [logoutMutation] = useLogoutMutation();
 
   useEffect(() => {
-    dispatch(logoutUser());
-    navigate("/", { replace: true });
-  }, [dispatch, navigate]);
+    const handleLogout = async () => {
+      try {
+        await logoutMutation().unwrap();
+      } catch (error) {
+        console.error("Logout error:", error);
+      } finally {
+        dispatch(logout());
+        navigate("/", { replace: true });
+      }
+    };
+    handleLogout();
+  }, [dispatch, navigate, logoutMutation]);
 
   return null;
 };
 
 function App() {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const dispatch = useDispatch<AppDispatch>();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const interval = setInterval(() => {
-        dispatch(updateUserActivity());
-      }, 60000);
-
-      const handleBeforeUnload = () => {
-        if (isAuthenticated) {
-          navigator.sendBeacon("/api/users/mark-offline");
-        }
-      };
-
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === "visible" && isAuthenticated) {
-          dispatch(updateUserActivity());
-        }
-      };
-
-      window.addEventListener("beforeunload", handleBeforeUnload);
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener("beforeunload", handleBeforeUnload);
-        document.removeEventListener(
-          "visibilitychange",
-          handleVisibilityChange
-        );
-      };
-    }
-  }, [isAuthenticated, dispatch]);
+  // Initialize auth from localStorage
+  useAuth();
 
   return (
     <Routes>
@@ -119,6 +98,32 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/dashboard/roles"
+        element={
+          <ProtectedRoute>
+            <Roles />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/permissions"
+        element={
+          <ProtectedRoute>
+            <Permissions />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/users"
+        element={
+          <ProtectedRoute>
+            <Users />
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="/logout" element={<Logout />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
