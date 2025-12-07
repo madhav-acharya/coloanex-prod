@@ -1,6 +1,5 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { authAPI, LoginRequest, RegisterRequest, User } from "../../apis/auth";
-import { toast } from "sonner";
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { User } from "../../apis/authApi";
 
 interface AuthState {
   user?: User | null;
@@ -11,88 +10,12 @@ interface AuthState {
 }
 
 const initialState: AuthState = {
-  user: localStorage.getItem("user") as unknown as User | null,
-  token: localStorage.getItem("token"),
+  user: null,
+  token: null,
   isLoading: false,
-  isAuthenticated: !!localStorage.getItem("token"),
+  isAuthenticated: false,
   error: null,
 };
-
-export const loginUser = createAsyncThunk(
-  "auth/login",
-  async (credentials: LoginRequest, { rejectWithValue }) => {
-    try {
-      const response = await authAPI.login(credentials);
-      localStorage.setItem("token", response.accessToken);
-      localStorage.setItem("refreshToken", response.refreshToken);
-      localStorage.setItem("sessionId", response.sessionId);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      toast.success("Login successful!");
-      return response;
-    } catch (error) {
-      const message = error.response?.data?.message || "Login failed";
-      toast.error(message);
-      return rejectWithValue(message);
-    }
-  }
-);
-
-export const registerUser = createAsyncThunk(
-  "auth/register",
-  async (userData: RegisterRequest, { rejectWithValue }) => {
-    try {
-      const response = await authAPI.register(userData);
-      localStorage.setItem("token", response.accessToken);
-      localStorage.setItem("refreshToken", response.refreshToken);
-      localStorage.setItem("sessionId", response.sessionId);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      toast.success("Registration successful!");
-      return response;
-    } catch (error) {
-      const message = error?.response?.data?.message || "Registration failed";
-      toast.error(message);
-      return rejectWithValue(message);
-    }
-  }
-);
-
-export const logoutUser = createAsyncThunk(
-  "auth/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "null");
-      if (user && user.id) {
-        await authAPI.markUserOffline(user.id);
-      }
-      await authAPI.logout();
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("sessionId");
-      localStorage.removeItem("user");
-      toast.success("Logged out successfully!");
-    } catch (error) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("sessionId");
-      localStorage.removeItem("user");
-      const message = error.response?.data?.message || "Logout failed";
-      return rejectWithValue(message);
-    }
-  }
-);
-
-export const updateUserActivity = createAsyncThunk(
-  "auth/updateActivity",
-  async (_, { rejectWithValue }) => {
-    try {
-      await authAPI.updateActivity();
-    } catch (error) {
-      const message =
-        error.response?.data?.message || "Failed to update activity";
-      return rejectWithValue(message);
-    }
-  }
-);
 
 const authSlice = createSlice({
   name: "auth",
@@ -103,60 +26,43 @@ const authSlice = createSlice({
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
-      localStorage.setItem("user", JSON.stringify(action.payload));
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(loginUser.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.accessToken;
-      })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-        state.isAuthenticated = false;
-        state.user = null;
-        state.token = null;
-      })
-      .addCase(registerUser.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(registerUser.fulfilled, (state, action) => {
-        state.isLoading = false;
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.token = action.payload.accessToken;
-      })
-      .addCase(registerUser.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-        state.isAuthenticated = false;
-        state.user = null;
-        state.token = null;
-      })
-      .addCase(logoutUser.fulfilled, (state) => {
-        state.isLoading = false;
-        state.isAuthenticated = false;
-        state.user = null;
-        state.token = null;
-        state.error = null;
-      })
-      .addCase(updateUserActivity.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(updateUserActivity.rejected, (state, action) => {
-        state.error = action.payload as string;
-      });
+    setToken: (state, action: PayloadAction<{ token: string }>) => {
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+    },
+    setAuth: (state, action: PayloadAction<{ user: User; token: string }>) => {
+      state.user = action.payload.user;
+      state.token = action.payload.token;
+      state.isAuthenticated = true;
+      state.isLoading = false;
+      state.error = null;
+    },
+    setLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+    setError: (state, action: PayloadAction<string | null>) => {
+      state.error = action.payload;
+      state.isLoading = false;
+    },
+    logout: (state) => {
+      state.user = null;
+      state.token = null;
+      state.isAuthenticated = false;
+      state.isLoading = false;
+      state.error = null;
+      localStorage.clear();
+    },
   },
 });
 
-export const { clearError, setUser } = authSlice.actions;
+export const {
+  clearError,
+  setUser,
+  setToken,
+  setAuth,
+  setLoading,
+  setError,
+  logout,
+} = authSlice.actions;
 export default authSlice.reducer;
