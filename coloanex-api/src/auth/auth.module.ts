@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -12,9 +13,20 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: 900 },
+    JwtModule.registerAsync({
+      useFactory: () => {
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+          throw new Error('JWT_SECRET environment variable is not set');
+        }
+        return {
+          secret,
+          signOptions: {
+            expiresIn: 900,
+            algorithm: 'HS256',
+          },
+        };
+      },
     }),
     ActivityLogsModule,
     BorrowersModule,
@@ -22,6 +34,6 @@ import { UsersModule } from '../users/users.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, RedisSessionService, JwtStrategy],
-  exports: [AuthService, RedisSessionService, JwtStrategy],
+  exports: [AuthService, RedisSessionService, JwtStrategy, PassportModule],
 })
 export class AuthModule {}

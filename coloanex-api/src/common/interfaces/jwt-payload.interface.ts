@@ -1,13 +1,10 @@
 export interface JwtPayload {
   sub: string;
-  sid: string;
-  scope: string[];
-  iss: string;
-  aud: string;
-  iat: number;
-  nbf: number;
-  exp: number;
-  jti: string;
+  email: string;
   tenantId?: string;
-  roles?: string[];
+  roles: string[];
+  permissions: string[];
+  sessionId: string;
+  iat?: number;
+  exp?: number;
 }

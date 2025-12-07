@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Eye, EyeOff } from "lucide-react";
-import { AppDispatch, RootState } from "@/store";
-import { loginUser } from "@/store/slices/authSlice";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import Landing from "./Landing";
 
 const Login = () => {
@@ -21,11 +21,8 @@ const Login = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isLoading, error, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { isAuthenticated, isLoading, error, login } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -41,15 +38,15 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dispatch(
-        loginUser({
-          email: formData.email,
-          password: formData.password,
-        })
-      ).unwrap();
-      navigate("/dashboard");
+      await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      toast.success("Login successful!");
     } catch (err) {
       console.error("Login error:", err);
+      const errorMessage = (err as any)?.data?.message || "Login failed";
+      toast.error(errorMessage);
     }
   };
 
@@ -66,12 +63,15 @@ const Login = () => {
             <DialogTitle className="text-2xl text-center">
               Sign In to Coloanex
             </DialogTitle>
+            <DialogDescription className="text-center">
+              Enter your credentials to access your account
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {error}
+                {(error as any)?.data?.message || "Login failed"}
               </div>
             )}
 

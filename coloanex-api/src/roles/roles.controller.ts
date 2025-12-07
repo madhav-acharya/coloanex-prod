@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
 import { RolesService } from './roles.service';
@@ -21,11 +20,9 @@ import {
   UPDATE_ROLES,
   DELETE_ROLES,
 } from 'src/common/constants/permissions.constants';
-import { PermissionsGuard } from 'src/common/guards/permissions.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
 
-@UseGuards(PermissionsGuard)
 @Controller('roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}

@@ -98,7 +98,10 @@ export default function PublicLayout({
                       <Button variant="ghost">Login</Button>
                     </Link>
                     <Link to="/signup">
-                      <Button variant="default" className="w-full bg-green-700">
+                      <Button
+                        variant="default"
+                        className="text-white bg-green-700 hover:bg-green-800"
+                      >
                         Get Started
                       </Button>
                     </Link>

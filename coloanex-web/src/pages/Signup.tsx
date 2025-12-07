@@ -6,12 +6,15 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Eye, EyeOff } from "lucide-react";
-import { AppDispatch, RootState } from "@/store";
-import { registerUser } from "@/store/slices/authSlice";
+import { RootState } from "@/store";
+import { setAuth } from "@/store/slices/authSlice";
+import { useRegisterMutation } from "@/apis/authApi";
+import { toast } from "sonner";
 import Landing from "./Landing";
 
 const Signup = () => {
@@ -23,11 +26,11 @@ const Signup = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isLoading, error, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+
+  const [register, { isLoading, error }] = useRegisterMutation();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -43,10 +46,23 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await dispatch(registerUser(formData)).unwrap();
+      const response = await register(formData).unwrap();
+
+      // Store tokens in localStorage
+      localStorage.setItem("token", response.accessToken);
+      localStorage.setItem("refreshToken", response.refreshToken);
+      localStorage.setItem("sessionId", response.sessionId);
+      localStorage.setItem("user", JSON.stringify(response.user));
+
+      // Update Redux state
+      dispatch(setAuth({ user: response.user, token: response.accessToken }));
+
+      toast.success("Registration successful!");
       navigate("/dashboard");
     } catch (err) {
       console.error("Signup error:", err);
+      const errorMessage = (err as any)?.data?.message || "Registration failed";
+      toast.error(errorMessage);
     }
   };
 
@@ -63,12 +79,15 @@ const Signup = () => {
             <DialogTitle className="text-2xl text-center">
               Create Your Account
             </DialogTitle>
+            <DialogDescription className="text-center">
+              Join Coloanex to manage your loan operations
+            </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {error}
+                {(error as any)?.data?.message || "Registration failed"}
               </div>
             )}
 
