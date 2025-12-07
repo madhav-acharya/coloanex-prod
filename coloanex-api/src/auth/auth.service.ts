@@ -128,14 +128,12 @@ export class AuthService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokens> {
-    // Create user via users service
     const newUser = await this.usersService.createUserForSignup(
       createUserDto,
       ipAddress,
       userAgent,
     );
 
-    // Fetch full user with roles and permissions
     const user = await this.prisma.user.findUnique({
       where: { id: newUser.id },
       include: {
@@ -203,6 +201,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: 900,
+      algorithm: 'HS256',
     });
 
     const refreshToken = this.jwtService.sign(
@@ -210,6 +209,7 @@ export class AuthService {
       {
         expiresIn: 604800,
         secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        algorithm: 'HS256',
       },
     );
 
@@ -278,6 +278,7 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: 900,
+      algorithm: 'HS256',
     });
 
     const refreshToken = this.jwtService.sign(
@@ -285,6 +286,7 @@ export class AuthService {
       {
         expiresIn: 604800,
         secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+        algorithm: 'HS256',
       },
     );
 
@@ -405,13 +407,16 @@ export class AuthService {
         sessionId: decoded.sessionId,
       };
 
-      const newAccessToken = this.jwtService.sign(payload);
+      const newAccessToken = this.jwtService.sign(payload, {
+        algorithm: 'HS256',
+      });
 
       const newRefreshToken = this.jwtService.sign(
         { sub: user.id, sessionId: decoded.sessionId },
         {
           expiresIn: '7d',
           secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+          algorithm: 'HS256',
         },
       );
 
