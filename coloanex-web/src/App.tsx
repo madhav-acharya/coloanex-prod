@@ -58,7 +58,6 @@ const Logout = () => {
 };
 
 function App() {
-  // Initialize auth from localStorage
   useAuth();
 
   return (
@@ -99,7 +98,7 @@ function App() {
         }
       />
       <Route
-        path="/dashboard/roles"
+        path="/roles"
         element={
           <ProtectedRoute>
             <Roles />
@@ -107,7 +106,7 @@ function App() {
         }
       />
       <Route
-        path="/dashboard/permissions"
+        path="/permissions"
         element={
           <ProtectedRoute>
             <Permissions />
@@ -116,7 +115,7 @@ function App() {
       />
 
       <Route
-        path="/dashboard/users"
+        path="/users"
         element={
           <ProtectedRoute>
             <Users />
