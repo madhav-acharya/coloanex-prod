@@ -11,6 +11,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { BorrowersModule } from './borrowers/borrowers.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
+import { IsUniqueConstraint } from './common/validators/is-unique.validator';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard';
   providers: [
     AppService,
     PrismaService,
+    IsUniqueConstraint,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
