@@ -1,15 +1,13 @@
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { Badge } from "@/components/ui/badge";
 
 export function ProfileDropdown() {
   const { user, logout } = useAuth();
@@ -25,7 +23,7 @@ export function ProfileDropdown() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="flex items-center gap-3 w-full justify-start hover:bg-muted"
+          className="flex items-center gap-3 hover:bg-muted cursor-pointer"
         >
           <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-medium">
             {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
@@ -36,25 +34,10 @@ export function ProfileDropdown() {
               {user.email}
             </p>
           </div>
+          <ChevronDown className="w-4 h-4 text-gray-600" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{user.fullName}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-            {user.roles && user.roles.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {user.roles.map((role) => (
-                  <Badge key={role} variant="secondary" className="text-xs">
-                    {role}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent align="end" className="w-56 z-1000">
         <DropdownMenuItem className="cursor-pointer">
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
