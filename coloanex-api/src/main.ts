@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
+import { useContainer } from 'class-validator';
 
 (BigInt.prototype as unknown as { toJSON?: () => string }).toJSON = function (
   this: bigint,
@@ -10,6 +11,9 @@ import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable class-validator to use NestJS DI container
+  useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   app.setGlobalPrefix('api');
 
