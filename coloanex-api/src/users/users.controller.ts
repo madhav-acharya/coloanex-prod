@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
@@ -22,11 +21,9 @@ import {
   UPDATE_USERS,
   DELETE_USERS,
 } from 'src/common/constants/permissions.constants';
-import { PermissionsGuard } from 'src/common/guards/permissions.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
 
-@UseGuards(PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
