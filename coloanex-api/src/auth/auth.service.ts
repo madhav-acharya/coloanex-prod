@@ -103,10 +103,6 @@ export class AuthService {
       throw new ForbiddenException('Account is banned');
     }
 
-    if (!user.isActive) {
-      throw new ForbiddenException('Account is inactive');
-    }
-
     const isPasswordValid = await argon2.verify(user.password, password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
