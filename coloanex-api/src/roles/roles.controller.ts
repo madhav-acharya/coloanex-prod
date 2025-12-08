@@ -33,6 +33,12 @@ export class RolesController {
     @Body() createRoleDto: CreateRoleDto,
     @CurrentUser() user: JwtPayload,
   ) {
+    if (createRoleDto.permissionIds) {
+      createRoleDto.permissionIds = createRoleDto.permissionIds.map(
+        (id: string | bigint): bigint =>
+          typeof id === 'string' ? BigInt(id) : id,
+      );
+    }
     return this.rolesService.create(createRoleDto, user);
   }
 
@@ -55,6 +61,13 @@ export class RolesController {
     @Body() updateRoleDto: UpdateRoleDto,
     @CurrentUser() user: JwtPayload,
   ) {
+    updateRoleDto.id = BigInt(id);
+
+    if (updateRoleDto.permissionIds) {
+      updateRoleDto.permissionIds = updateRoleDto.permissionIds.map(
+        (id: string | bigint) => (typeof id === 'string' ? BigInt(id) : id),
+      );
+    }
     return this.rolesService.update(BigInt(id), updateRoleDto, user);
   }
 
