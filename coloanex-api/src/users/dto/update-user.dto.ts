@@ -1,8 +1,16 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { PartialType, OmitType } from '@nestjs/mapped-types';
 import { CreateUserDto } from './create-user.dto';
-import { IsOptional } from 'class-validator';
+import { IsOptional, IsString, MinLength, ValidateIf } from 'class-validator';
 
-export class UpdateUserDto extends PartialType(CreateUserDto) {
+export class UpdateUserDto extends PartialType(
+  OmitType(CreateUserDto, ['password'] as const),
+) {
   @IsOptional()
   id?: string;
+
+  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => o.password && o.password.trim() !== '')
+  @MinLength(8, { message: 'Password must be at least 8 characters long' })
+  password?: string;
 }
