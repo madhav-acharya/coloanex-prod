@@ -6,7 +6,7 @@ export class CreatePermissionDto {
   @IsString()
   @IsNotEmpty()
   @CapitalizeFirstLetter()
-  @IsUnique('permission', 'name')
+  @IsUnique('Permission', 'name')
   name!: string;
 
   @IsString()
