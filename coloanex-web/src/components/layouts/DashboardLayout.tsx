@@ -72,12 +72,12 @@ export default function DashboardLayout({
     {
       title: "Roles",
       icon: <Shield className="w-4 h-4" />,
-      href: "/dashboard/roles",
+      href: "/roles",
     },
     {
       title: "Permissions",
       icon: <Key className="w-4 h-4" />,
-      href: "/dashboard/permissions",
+      href: "/permissions",
     },
   ];
 
@@ -85,7 +85,7 @@ export default function DashboardLayout({
     {
       title: "Users",
       icon: <Users className="w-4 h-4" />,
-      href: "/dashboard/users",
+      href: "/users",
     },
   ];
 

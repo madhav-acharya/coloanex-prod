@@ -5,6 +5,7 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -91,7 +92,9 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(1)}
           disabled={!hasPreviousPage}
-          className="cursor-pointer"
+          className={cn(
+            hasPreviousPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+          )}
         >
           <ChevronsLeft className="h-4 w-4" />
         </Button>
@@ -100,7 +103,9 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
-          className="cursor-pointer"
+          className={cn(
+            hasPreviousPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+          )}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -115,8 +120,15 @@ export function Pagination({
                 onPageChange(page);
               }
             }}
-            disabled={page === "..."}
-            className="min-w-8 cursor-pointer"
+            disabled={page === "..." || page === currentPage}
+            className={cn(
+              "min-w-8",
+              page === currentPage
+                ? "bg-green-600 hover:bg-green-700 text-white cursor-default"
+                : page === "..."
+                ? "cursor-not-allowed"
+                : "cursor-pointer"
+            )}
           >
             {page}
           </Button>
@@ -127,7 +139,9 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
-          className="cursor-pointer"
+          className={cn(
+            hasNextPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+          )}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -136,7 +150,9 @@ export function Pagination({
           size="sm"
           onClick={() => onPageChange(totalPages)}
           disabled={!hasNextPage}
-          className="cursor-pointer"
+          className={cn(
+            hasNextPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+          )}
         >
           <ChevronsRight className="h-4 w-4" />
         </Button>
@@ -152,7 +168,7 @@ export function Pagination({
                 value={limit.toString()}
                 onValueChange={(value) => onPageSizeChange(Number(value))}
               >
-                <SelectTrigger className="w-[70px] h-9">
+                <SelectTrigger className="w-[70px] h-9 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

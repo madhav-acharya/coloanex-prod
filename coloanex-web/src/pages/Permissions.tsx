@@ -1,37 +1,36 @@
 import { useState, useEffect, useMemo } from "react";
-import { Shield } from "lucide-react";
+import { Key } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataCard, DataCardGrid } from "@/components/shared/DataCard";
 import { FormSheet } from "@/components/shared/FormSheet";
-import { MultiSelect } from "@/components/shared/MultiSelect";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import type { Message } from "@/components/shared/Messages";
 import {
-  useGetRolesQuery,
-  useCreateRoleMutation,
-  useUpdateRoleMutation,
-  useDeleteRoleMutation,
-  type Role,
-  type RolesQueryParams,
-} from "@/apis/rolesApi";
-import { useGetPermissionsQuery } from "@/apis/permissionsApi";
+  useGetPermissionsQuery,
+  useCreatePermissionMutation,
+  useUpdatePermissionMutation,
+  useDeletePermissionMutation,
+  type Permission,
+  type PermissionsQueryParams,
+} from "@/apis/permissionsApi";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function Roles() {
+export default function Permissions() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [selectedPermission, setSelectedPermission] =
+    useState<Permission | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
-  const [isDeletingRole, setIsDeletingRole] = useState(false);
+  const [permissionToDelete, setPermissionToDelete] =
+    useState<Permission | null>(null);
+  const [isDeletingPermission, setIsDeletingPermission] = useState(false);
 
-  const [filters, setFilters] = useState<RolesQueryParams>({
+  const [filters, setFilters] = useState<PermissionsQueryParams>({
     page: 1,
     limit: 12,
     search: "",
@@ -39,53 +38,46 @@ export default function Roles() {
     sortOrder: "asc",
   });
 
-  // Form fields setup
   const { fields, updateField, resetFields, setFieldValues } = useFormFields([
     {
       id: "name",
-      label: "Role Name",
+      label: "Permission Name",
       value: "",
-      placeholder: "e.g., Content Manager",
+      placeholder: "e.g., users:read",
       required: true,
     },
     {
       id: "description",
       label: "Description",
       value: "",
-      placeholder: "Brief description of this role",
+      placeholder: "Brief description of this permission",
       type: "textarea",
     },
   ]);
 
   const {
-    data: rolesData,
+    data: permissionsData,
     isLoading,
-    error: rolesError,
-  } = useGetRolesQuery(filters, { skip: !isAuthenticated });
-  const { data: permissionsData, isLoading: isLoadingPermissions } =
-    useGetPermissionsQuery(
-      { limit: 100 },
-      { skip: !sheetOpen || !isAuthenticated }
-    );
-  const [createRole, { isLoading: isCreating, error: createError }] =
-    useCreateRoleMutation();
-  const [updateRole, { isLoading: isUpdating, error: updateError }] =
-    useUpdateRoleMutation();
-  const [deleteRole] = useDeleteRoleMutation();
+    error: permissionsError,
+  } = useGetPermissionsQuery(filters, { skip: !isAuthenticated });
+  const [createPermission, { isLoading: isCreating, error: createError }] =
+    useCreatePermissionMutation();
+  const [updatePermission, { isLoading: isUpdating, error: updateError }] =
+    useUpdatePermissionMutation();
+  const [deletePermission] = useDeletePermissionMutation();
 
-  const roles = rolesData?.data || [];
   const permissions = permissionsData?.data || [];
 
   useEffect(() => {
-    if (rolesError) {
-      const error = rolesError as {
+    if (permissionsError) {
+      const error = permissionsError as {
         status?: number;
         data?: { message?: string };
       };
       const errorMessage =
         error.status === 403
-          ? "You don't have permission to view roles. Please contact your administrator."
-          : error.data?.message || "Failed to load roles";
+          ? "You don't have permission to view permissions. Please contact your administrator."
+          : error.data?.message || "Failed to load permissions";
 
       toast({
         title: "Error",
@@ -93,7 +85,7 @@ export default function Roles() {
         variant: "destructive",
       });
     }
-  }, [rolesError, toast]);
+  }, [permissionsError, toast]);
 
   const messages = useMemo<Message[]>(() => {
     if (createError || updateError) {
@@ -124,61 +116,58 @@ export default function Roles() {
   };
 
   const handleCreateClick = () => {
-    setSelectedRole(null);
+    setSelectedPermission(null);
     setIsReadOnly(false);
     resetFields();
-    setSelectedPermissions([]);
     setSheetOpen(true);
   };
 
-  const handleViewClick = (role: Role) => {
-    setSelectedRole(role);
+  const handleViewClick = (permission: Permission) => {
+    setSelectedPermission(permission);
     setIsReadOnly(true);
     setFieldValues({
-      name: role.name,
-      description: role.description || "",
+      name: permission.name,
+      description: permission.description || "",
     });
-    setSelectedPermissions(role.permissions?.map((p) => p.id) || []);
     setSheetOpen(true);
   };
 
-  const handleEditClick = (role: Role) => {
-    setSelectedRole(role);
+  const handleEditClick = (permission: Permission) => {
+    setSelectedPermission(permission);
     setIsReadOnly(false);
     setFieldValues({
-      name: role.name,
-      description: role.description || "",
+      name: permission.name,
+      description: permission.description || "",
     });
-    setSelectedPermissions(role.permissions?.map((p) => p.id) || []);
     setSheetOpen(true);
   };
 
-  const handleDeleteClick = (role: Role) => {
-    setRoleToDelete(role);
+  const handleDeleteClick = (permission: Permission) => {
+    setPermissionToDelete(permission);
     setDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
-    if (!roleToDelete) return;
+    if (!permissionToDelete) return;
 
-    setIsDeletingRole(true);
+    setIsDeletingPermission(true);
     try {
-      await deleteRole(roleToDelete.id).unwrap();
+      await deletePermission(permissionToDelete.id).unwrap();
       toast({
         title: "Success",
-        description: "Role deleted successfully",
+        description: "Permission deleted successfully",
       });
       setDeleteDialogOpen(false);
-      setRoleToDelete(null);
+      setPermissionToDelete(null);
     } catch (error) {
       console.error("Delete error:", error);
       toast({
         title: "Error",
-        description: "Failed to delete role",
+        description: "Failed to delete permission",
         variant: "destructive",
       });
     } finally {
-      setIsDeletingRole(false);
+      setIsDeletingPermission(false);
     }
   };
 
@@ -191,78 +180,77 @@ export default function Roles() {
     const formData = {
       name: fieldValues.name,
       description: fieldValues.description,
-      permissionIds: selectedPermissions,
     };
 
     try {
-      if (selectedRole) {
-        await updateRole({
-          id: selectedRole.id,
+      if (selectedPermission) {
+        await updatePermission({
+          id: selectedPermission.id,
           data: formData,
         }).unwrap();
         toast({
           title: "Success",
-          description: "Role updated successfully",
+          description: "Permission updated successfully",
         });
       } else {
-        await createRole(formData).unwrap();
+        await createPermission(formData).unwrap();
         toast({
           title: "Success",
-          description: "Role created successfully",
+          description: "Permission created successfully",
         });
       }
       setSheetOpen(false);
-      setSelectedRole(null);
+      setSelectedPermission(null);
       resetFields();
-      setSelectedPermissions([]);
     } catch (error) {
       console.error("Submit error:", error);
+      // Error will be handled by useEffect
     }
   };
 
   return (
     <DashboardLayout
-      title="Roles"
-      description="Manage roles and their permissions"
-      searchPlaceholder="Search roles..."
+      title="Permissions"
+      description="Manage system permissions"
+      searchPlaceholder="Search permissions..."
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
-      actionLabel="Add Role"
+      actionLabel="Add Permission"
       onActionClick={handleCreateClick}
     >
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading roles...</p>
+            <p className="mt-4 text-gray-600">Loading permissions...</p>
           </div>
         </div>
-      ) : roles.length === 0 ? (
+      ) : permissions.length === 0 ? (
         <div className="text-center py-12">
-          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No roles found</p>
+          <Key className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No permissions found</p>
         </div>
       ) : (
         <>
           <DataCardGrid>
-            {roles.map((role) => (
+            {permissions.map((permission) => (
               <DataCard
-                key={role.id}
-                id={role.id}
-                title={role.name}
-                subtitle={role.description}
-                icon={Shield}
+                key={permission.id}
+                id={permission.id}
+                title={permission.name}
+                subtitle={permission.description}
+                icon={Key}
                 onView={(id) => {
-                  const role = roles.find((r) => r.id === id);
-                  if (role) handleViewClick(role);
+                  const permission = permissions.find((p) => p.id === id);
+                  if (permission) handleViewClick(permission);
                 }}
                 onEdit={(id) => {
-                  const role = roles.find((r) => r.id === id);
-                  if (role) handleEditClick(role);
+                  const permission = permissions.find((p) => p.id === id);
+                  if (permission) handleEditClick(permission);
                 }}
                 onDelete={(id) => {
-                  const role = roles.find((r) => r.id === id);
-                  if (role) handleDeleteClick(role);
+                  const permission = permissions.find((p) => p.id === id);
+                  if (permission) handleDeleteClick(permission);
                 }}
               />
             ))}
@@ -270,12 +258,12 @@ export default function Roles() {
 
           <div className="mt-6">
             <Pagination
-              currentPage={rolesData?.currentPage || 1}
-              totalPages={rolesData?.totalPages || 1}
-              hasNextPage={rolesData?.hasNextPage || false}
-              hasPreviousPage={rolesData?.hasPreviousPage || false}
-              total={rolesData?.total || 0}
-              limit={rolesData?.limit || 12}
+              currentPage={permissionsData?.currentPage || 1}
+              totalPages={permissionsData?.totalPages || 1}
+              hasNextPage={permissionsData?.hasNextPage || false}
+              hasPreviousPage={permissionsData?.hasPreviousPage || false}
+              total={permissionsData?.total || 0}
+              limit={permissionsData?.limit || 12}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
@@ -288,49 +276,40 @@ export default function Roles() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         title={
-          isReadOnly ? "View Role" : selectedRole ? "Edit Role" : "Create Role"
+          isReadOnly
+            ? "View Permission"
+            : selectedPermission
+            ? "Edit Permission"
+            : "Create Permission"
         }
         description={
           isReadOnly
-            ? "View role details and permissions"
-            : selectedRole
-            ? "Update the role details and permissions"
-            : "Add a new role with specific permissions"
+            ? "View permission details"
+            : selectedPermission
+            ? "Update the permission details"
+            : "Add a new permission to the system"
         }
         fields={fields}
         onFieldChange={updateField}
         onSubmit={handleSubmit}
-        submitText={selectedRole ? "Update Role" : "Create Role"}
+        submitText={
+          selectedPermission ? "Update Permission" : "Create Permission"
+        }
         isSubmitting={isCreating || isUpdating}
         messages={messages}
         isReadOnly={isReadOnly}
-      >
-        {/* Permissions Section */}
-        <MultiSelect
-          label="Permissions"
-          placeholder="Select permissions for this role"
-          options={permissions.map((p) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description || undefined,
-          }))}
-          selectedIds={selectedPermissions}
-          onChange={setSelectedPermissions}
-          isLoading={isLoadingPermissions}
-          disabled={isReadOnly}
-        />
-      </FormSheet>
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-        title="Delete Role"
-        description="This will permanently delete this role. This action cannot be undone."
+        title="Delete Permission"
+        description="This will permanently delete this permission. This action cannot be undone."
         confirmText="Delete"
         variant="destructive"
-        isLoading={isDeletingRole}
+        isLoading={isDeletingPermission}
       />
     </DashboardLayout>
   );

@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
@@ -21,11 +20,9 @@ import {
   UPDATE_PERMISSIONS,
   DELETE_PERMISSIONS,
 } from 'src/common/constants/permissions.constants';
-import { PermissionsGuard } from 'src/common/guards/permissions.guard';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
 
-@UseGuards(PermissionsGuard)
 @Controller('permissions')
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
@@ -58,6 +55,9 @@ export class PermissionsController {
     @Body() updatePermissionDto: UpdatePermissionDto,
     @CurrentUser() user: JwtPayload,
   ) {
+    // Set the id in DTO for IsUnique validator to exclude current record
+    updatePermissionDto.id = BigInt(id);
+
     return this.permissionsService.update(
       BigInt(id),
       updatePermissionDto,

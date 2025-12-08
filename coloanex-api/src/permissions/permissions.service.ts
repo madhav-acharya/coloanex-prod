@@ -64,7 +64,7 @@ export class PermissionsService {
       user.tenantId,
     );
 
-    return permission;
+    return this.transformPermissionResponse(permission);
   }
 
   async findAll(query: PermissionsQueryInterface) {
@@ -229,7 +229,9 @@ export class PermissionsService {
     const hasPreviousPage = +page > 1;
 
     return {
-      data: permissions,
+      data: permissions.map((permission) =>
+        this.transformPermissionResponse(permission),
+      ),
       total,
       totalPages,
       hasNextPage,
@@ -273,7 +275,7 @@ export class PermissionsService {
       throw new NotFoundException('Permission not found');
     }
 
-    return permission;
+    return this.transformPermissionResponse(permission);
   }
 
   async update(
@@ -284,6 +286,20 @@ export class PermissionsService {
     const existingPermission = await this.findOne(id);
 
     delete updatePermissionDto.id;
+
+    // Check name uniqueness if name is being updated
+    if (updatePermissionDto.name) {
+      const existingWithSameName = await this.prisma.permission.findFirst({
+        where: {
+          name: updatePermissionDto.name,
+          NOT: { id },
+        },
+      });
+
+      if (existingWithSameName) {
+        throw new ForbiddenException('Permission name must be unique');
+      }
+    }
 
     const updatedPermission = await this.prisma.permission.update({
       where: { id },
@@ -327,7 +343,7 @@ export class PermissionsService {
       user.tenantId,
     );
 
-    return updatedPermission;
+    return this.transformPermissionResponse(updatedPermission);
   }
 
   async remove(id: bigint, user: JwtPayload) {
@@ -424,5 +440,14 @@ export class PermissionsService {
     );
 
     return result;
+  }
+
+  private transformPermissionResponse(permission: any) {
+    if (!permission) return permission;
+
+    return {
+      ...permission,
+      id: permission.id.toString(),
+    };
   }
 }

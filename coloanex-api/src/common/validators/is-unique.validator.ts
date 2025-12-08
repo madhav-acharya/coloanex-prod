@@ -26,25 +26,50 @@ export class IsUniqueConstraint implements ValidatorConstraintInterface {
         excludeIdValuePath?: string;
       }?,
     ];
-    const repo = this.prisma[model] as {
-      findFirst?: (args: { where: UniqueWhere }) => Promise<unknown>;
-    };
-    if (!repo || typeof repo.findFirst !== 'function') return false;
 
-    const where: UniqueWhere = { [field]: value };
-    if (options?.excludeIdField && options?.excludeIdValuePath) {
-      const obj = args.object as Record<string, unknown>;
-      const idValue =
-        options.excludeIdValuePath && obj
-          ? obj[options.excludeIdValuePath]
-          : undefined;
-      if (idValue !== undefined && idValue !== null) {
-        where.NOT = { [options.excludeIdField]: idValue };
+    const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
+
+    try {
+      type PrismaModels = {
+        [key: string]: {
+          findFirst: (args: { where: UniqueWhere }) => Promise<unknown>;
+        };
+      };
+      const prismaModels = this.prisma as unknown as PrismaModels;
+      const repo = prismaModels[modelKey];
+
+      if (!repo) {
+        console.error(
+          `Prisma model '${modelKey}' not found. Model passed: '${model}'`,
+        );
+        return false;
       }
-    }
 
-    const existing = await repo.findFirst({ where });
-    return !existing;
+      if (typeof repo.findFirst !== 'function') {
+        console.error(`findFirst method not found on model '${modelKey}'`);
+        return false;
+      }
+
+      const where: UniqueWhere = { [field]: value };
+
+      if (options?.excludeIdField && options?.excludeIdValuePath) {
+        const obj = args.object as Record<string, unknown>;
+        const idValue =
+          options.excludeIdValuePath && obj
+            ? obj[options.excludeIdValuePath]
+            : undefined;
+
+        if (idValue !== undefined && idValue !== null) {
+          where.NOT = { [options.excludeIdField]: idValue };
+        }
+      }
+
+      const existing = await repo.findFirst({ where });
+      return !existing;
+    } catch (error) {
+      console.error(`Error in IsUnique validator:`, error);
+      throw error;
+    }
   }
 
   defaultMessage(args: ValidationArguments) {
