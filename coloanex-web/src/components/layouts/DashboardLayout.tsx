@@ -13,8 +13,8 @@ import {
   Key,
   ChevronRight,
   ChevronDown,
-  Menu,
-  X,
+  PanelLeftClose,
+  PanelLeftOpen,
   Bell,
 } from "lucide-react";
 import {
@@ -64,7 +64,6 @@ export default function DashboardLayout({
   onActionClick,
 }: DashboardLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
 
@@ -160,12 +159,12 @@ export default function DashboardLayout({
           variant="ghost"
           size="icon"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="cursor-pointer hidden lg:flex"
+          className="cursor-pointer ml-auto"
         >
           {isCollapsed ? (
-            <ChevronRight className="w-4 h-4" />
+            <PanelLeftOpen className="w-4 h-4" />
           ) : (
-            <X className="w-4 h-4" />
+            <PanelLeftClose className="w-4 h-4" />
           )}
         </Button>
       </div>
@@ -205,33 +204,9 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile Toggle */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden cursor-pointer"
-      >
-        <Menu className="w-4 h-4" />
-      </Button>
-
-      {/* Mobile Sidebar */}
-      {isMobileOpen && (
-        <>
-          <div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={() => setIsMobileOpen(false)}
-          />
-          <aside className="fixed left-0 top-0 bottom-0 w-64 bg-background border-r z-50 lg:hidden">
-            {sidebarContent}
-          </aside>
-        </>
-      )}
-
-      {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden lg:flex flex-col bg-background border-r transition-all duration-300",
+          "flex flex-col bg-background border-r transition-all duration-300",
           isCollapsed ? "w-16" : "w-64"
         )}
       >
@@ -239,19 +214,18 @@ export default function DashboardLayout({
       </aside>
 
       <main className="flex-1 overflow-y-auto bg-gray-50">
-        {/* Header Section */}
         <div className="bg-white border-b sticky top-0 z-10">
-          <div className="container mx-auto px-6 py-4">
-            {/* Title, Description, Notifications, and Profile */}
-            <div className="mb-4 flex items-center justify-between">
+          <div className="px-3 sm:px-4 md:px-6 py-3 md:py-4">
+            <div className="mb-3 md:mb-4 flex items-center justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                  {title}
+                </h1>
                 {description && (
                   <p className="text-sm text-gray-500 mt-1">{description}</p>
                 )}
               </div>
-              <div className="flex items-center gap-3">
-                {/* Notification Bell */}
+              <div className="flex items-center gap-2 md:gap-3">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -260,45 +234,45 @@ export default function DashboardLayout({
                   <Bell className="w-5 h-5 text-gray-600" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </Button>
-                {/* Profile Dropdown */}
                 <ProfileDropdown />
               </div>
             </div>
 
-            {/* Search, Filters, and Action Button */}
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-              {/* Left side: Search and Filters */}
-              <div className="flex flex-1 flex-col md:flex-row gap-4 items-start md:items-center">
-                {/* Search Box */}
+            <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-start md:items-center justify-between">
+              <div className="flex flex-1 flex-col sm:flex-row gap-3 md:gap-4 items-stretch sm:items-center w-full">
                 {onSearchChange && (
-                  <div className="relative flex-1 max-w-md">
+                  <div className="relative w-full sm:flex-1 sm:max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       placeholder={searchPlaceholder}
                       value={searchValue}
                       onChange={(e) => onSearchChange(e.target.value)}
-                      className="pl-9"
+                      className="pl-9 w-full"
                     />
                   </div>
                 )}
 
-                {/* Filter Dropdowns */}
                 {filters.map((filter) => (
-                  <div key={filter.name} className="min-w-[180px]">
+                  <div
+                    key={filter.name}
+                    className="w-full sm:w-auto sm:min-w-[180px] cursor-pointer"
+                  >
                     {filter.type === "select" ? (
                       <Select
-                        value={filterValues[filter.name] || ""}
+                        value={filterValues[filter.name] || "all"}
                         onValueChange={(value) =>
                           onFilterChange?.(filter.name, value)
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="cursor-pointer">
                           <SelectValue
                             placeholder={filter.placeholder || filter.label}
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All {filter.label}</SelectItem>
+                          <SelectItem value="all">
+                            All {filter.label}
+                          </SelectItem>
                           {filter.options?.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
@@ -333,8 +307,7 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="container mx-auto p-6">{children}</div>
+        <div className="container mx-auto p-4 md:p-6">{children}</div>
       </main>
     </div>
   );
