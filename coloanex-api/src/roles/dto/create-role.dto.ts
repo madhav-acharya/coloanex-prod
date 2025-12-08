@@ -6,7 +6,7 @@ export class CreateRoleDto {
   @IsString()
   @IsNotEmpty()
   @CapitalizeFirstLetter()
-  @IsUnique('role', 'name')
+  @IsUnique('Role', 'name')
   name: string;
 
   @IsString()
