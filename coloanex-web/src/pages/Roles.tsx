@@ -76,7 +76,6 @@ export default function Roles() {
   const roles = rolesData?.data || [];
   const permissions = permissionsData?.data || [];
 
-  // Show error toast if roles fail to load
   useEffect(() => {
     if (rolesError) {
       const error = rolesError as {
@@ -96,7 +95,6 @@ export default function Roles() {
     }
   }, [rolesError, toast]);
 
-  // Derive messages from error state
   const messages = useMemo<Message[]>(() => {
     if (createError || updateError) {
       const error = (createError || updateError) as {
@@ -219,7 +217,6 @@ export default function Roles() {
       setSelectedPermissions([]);
     } catch (error) {
       console.error("Submit error:", error);
-      // Error will be handled by useEffect
     }
   };
 
