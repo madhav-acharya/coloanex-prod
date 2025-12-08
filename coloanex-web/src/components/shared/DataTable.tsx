@@ -104,15 +104,6 @@ export function DataTable<T>({
     );
   }
 
-  if (data.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8 text-center">
-        {emptyIcon && <div className="mb-4">{emptyIcon}</div>}
-        <p className="text-muted-foreground">{emptyMessage}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="border rounded-lg">
       <Table>
@@ -157,77 +148,104 @@ export function DataTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((row) => {
-            const rowId = getRowId(row);
-            return (
-              <TableRow
-                key={rowId}
-                className={onRowClick ? "cursor-pointer" : ""}
-                onClick={() => onRowClick?.(row)}
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={
+                  columns.length +
+                  (selectable ? 1 : 0) +
+                  (actions && actions.length > 0 ? 1 : 0)
+                }
+                className="h-64 text-center"
               >
-                {selectable && (
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedRows.has(rowId)}
-                      onCheckedChange={(checked) =>
-                        handleSelectRow(rowId, checked as boolean)
-                      }
-                      onClick={(e) => e.stopPropagation()}
-                      className="cursor-pointer"
-                    />
-                  </TableCell>
-                )}
-                {columns.map((column) => (
-                  <TableCell key={`${rowId}-${column.key}`}>
-                    {column.render
-                      ? column.render(
-                          (row as Record<string, unknown>)[column.key],
-                          row
-                        )
-                      : String(
-                          (row as Record<string, unknown>)[column.key] || ""
-                        )}
-                  </TableCell>
-                ))}
-                {actions && actions.length > 0 && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="cursor-pointer"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {actions.map((action, idx) => {
-                          if (action.show && !action.show(row)) return null;
-                          return (
-                            <DropdownMenuItem
-                              key={idx}
-                              onClick={() => action.onClick(row)}
-                              className={
-                                action.variant === "destructive"
-                                  ? "text-destructive cursor-pointer"
-                                  : "cursor-pointer"
-                              }
-                            >
-                              {action.icon && (
-                                <span className="mr-2">{action.icon}</span>
-                              )}
-                              {action.label}
-                            </DropdownMenuItem>
-                          );
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                )}
-              </TableRow>
-            );
-          })}
+                <div className="flex flex-col items-center justify-center">
+                  {emptyIcon && <div className="mb-4">{emptyIcon}</div>}
+                  <p className="text-muted-foreground">{emptyMessage}</p>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((row) => {
+              const rowId = getRowId(row);
+              return (
+                <TableRow
+                  key={rowId}
+                  className={onRowClick ? "cursor-pointer" : ""}
+                  onClick={() => onRowClick?.(row)}
+                >
+                  {selectable && (
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedRows.has(rowId)}
+                        onCheckedChange={(checked) =>
+                          handleSelectRow(rowId, checked as boolean)
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        className="cursor-pointer"
+                      />
+                    </TableCell>
+                  )}
+                  {columns.map((column) => (
+                    <TableCell key={`${rowId}-${column.key}`}>
+                      {column.render
+                        ? column.render(
+                            (row as Record<string, unknown>)[column.key],
+                            row
+                          )
+                        : String(
+                            (row as Record<string, unknown>)[column.key] || ""
+                          )}
+                    </TableCell>
+                  ))}
+                  {actions && actions.length > 0 && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="cursor-pointer"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {actions.map((action) => {
+                            if (action.show && !action.show(row)) return null;
+
+                            let colorClass = "cursor-pointer";
+                            if (action.variant === "destructive") {
+                              colorClass =
+                                "text-red-600 hover:text-red-700 cursor-pointer";
+                            } else if (action.label === "View") {
+                              colorClass =
+                                "text-blue-600 hover:text-blue-700 cursor-pointer";
+                            } else if (action.label === "Edit") {
+                              colorClass =
+                                "text-green-600 hover:text-green-700 cursor-pointer";
+                            }
+
+                            return (
+                              <DropdownMenuItem
+                                key={action.label}
+                                onClick={() => action.onClick(row)}
+                                className={colorClass}
+                              >
+                                {action.icon && (
+                                  <span className="mr-2">{action.icon}</span>
+                                )}
+                                {action.label}
+                              </DropdownMenuItem>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>

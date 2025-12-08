@@ -115,8 +115,8 @@ export class UsersService {
     const user = await this.prisma.user.create({
       data: {
         fullName: createUserDto.fullName,
-        email: createUserDto.email!,
-        phone: createUserDto.phone!,
+        email: createUserDto.email,
+        phone: createUserDto.phone ?? '',
         password: hashedPassword,
         tenantId: isSuperAdmin
           ? (createUserDto.tenantId as string | null)
@@ -594,7 +594,11 @@ export class UsersService {
     const hasPreviousPage = +page > 1;
 
     return {
-      data: users,
+      data: users.map((user) => ({
+        ...user,
+        roles: user.roles.map((ur) => ur.role),
+        permissions: user.permissions.map((up) => up.permission),
+      })),
       total,
       totalPages,
       hasNextPage,
@@ -671,7 +675,11 @@ export class UsersService {
       );
     }
 
-    return user;
+    return {
+      ...user,
+      roles: user.roles.map((ur) => ur.role),
+      permissions: user.permissions.map((up) => up.permission),
+    };
   }
 
   async update(
@@ -715,15 +723,22 @@ export class UsersService {
 
     if (updateUserDto.roleIds !== undefined) {
       if (updateUserDto.roleIds.length > 0) {
+        const validRoleIds = updateUserDto.roleIds
+          .filter((id) => id !== null && id !== undefined)
+          .map((id) => BigInt(id));
+
+        if (validRoleIds.length === 0) {
+          throw new BadRequestException('No valid role IDs provided');
+        }
+
         const roles = await this.prisma.role.findMany({
           where: {
-            id: { in: updateUserDto.roleIds },
-            ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
+            id: { in: validRoleIds },
           },
           select: { id: true, name: true },
         });
 
-        if (roles.length !== updateUserDto.roleIds.length) {
+        if (roles.length !== validRoleIds.length) {
           throw new BadRequestException(
             'Some roles not found or not accessible',
           );
@@ -733,15 +748,22 @@ export class UsersService {
 
     if (updateUserDto.permissionIds !== undefined) {
       if (updateUserDto.permissionIds.length > 0) {
+        const validPermissionIds = updateUserDto.permissionIds
+          .filter((id) => id !== null && id !== undefined)
+          .map((id) => BigInt(id));
+
+        if (validPermissionIds.length === 0) {
+          throw new BadRequestException('No valid permission IDs provided');
+        }
+
         const permissions = await this.prisma.permission.findMany({
           where: {
-            id: { in: updateUserDto.permissionIds },
-            ...(isSuperAdmin ? {} : { tenantId: currentUser.tenantId }),
+            id: { in: validPermissionIds },
           },
           select: { id: true },
         });
 
-        if (permissions.length !== updateUserDto.permissionIds.length) {
+        if (permissions.length !== validPermissionIds.length) {
           throw new BadRequestException(
             'Some permissions not found or not accessible',
           );
@@ -785,12 +807,18 @@ export class UsersService {
       });
 
       if (updateUserDto.roleIds.length > 0) {
-        await this.prisma.userRole.createMany({
-          data: updateUserDto.roleIds.map((roleId) => ({
-            userId: id,
-            roleId,
-          })),
-        });
+        const validRoleIds = updateUserDto.roleIds
+          .filter((id) => id !== null && id !== undefined)
+          .map((id) => BigInt(id));
+
+        if (validRoleIds.length > 0) {
+          await this.prisma.userRole.createMany({
+            data: validRoleIds.map((roleId) => ({
+              userId: id,
+              roleId,
+            })),
+          });
+        }
       }
     }
 
@@ -800,12 +828,18 @@ export class UsersService {
       });
 
       if (updateUserDto.permissionIds.length > 0) {
-        await this.prisma.userPermission.createMany({
-          data: updateUserDto.permissionIds.map((permissionId) => ({
-            userId: id,
-            permissionId,
-          })),
-        });
+        const validPermissionIds = updateUserDto.permissionIds
+          .filter((id) => id !== null && id !== undefined)
+          .map((id) => BigInt(id));
+
+        if (validPermissionIds.length > 0) {
+          await this.prisma.userPermission.createMany({
+            data: validPermissionIds.map((permissionId) => ({
+              userId: id,
+              permissionId,
+            })),
+          });
+        }
       }
     }
 

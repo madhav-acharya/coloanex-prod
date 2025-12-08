@@ -17,14 +17,18 @@ export class CreateUserDto {
   fullName!: string;
 
   @IsEmail()
-  @IsOptional()
-  @IsUnique('user', 'email')
-  email?: string;
+  @IsUnique('user', 'email', {
+    excludeIdField: 'id',
+    excludeIdValuePath: 'id',
+  })
+  email: string;
 
-  @IsString()
   @IsOptional()
   @Matches(/^\d{10}$/, { message: 'Phone must be a 10-digit number' })
-  @IsUnique('user', 'phone')
+  @IsUnique('user', 'phone', {
+    excludeIdField: 'id',
+    excludeIdValuePath: 'id',
+  })
   phone?: string;
 
   @IsString()
