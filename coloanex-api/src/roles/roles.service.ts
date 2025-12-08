@@ -57,7 +57,7 @@ export class RolesService {
         })),
       });
 
-      return this.prisma.role.findUnique({
+      const updatedRole = await this.prisma.role.findUnique({
         where: { id: role.id },
         include: {
           permissions: {
@@ -67,9 +67,11 @@ export class RolesService {
           },
         },
       });
+
+      return this.transformRoleResponse(updatedRole);
     }
 
-    return role;
+    return this.transformRoleResponse(role);
   }
 
   async findAll(query: RolesQueryInterface) {
@@ -195,7 +197,7 @@ export class RolesService {
     const hasPreviousPage = +page > 1;
 
     return {
-      data: roles,
+      data: roles.map((role) => this.transformRoleResponse(role)),
       total,
       totalPages,
       hasNextPage,
@@ -239,7 +241,7 @@ export class RolesService {
       throw new NotFoundException('Role not found');
     }
 
-    return role;
+    return this.transformRoleResponse(role);
   }
 
   async update(id: bigint, updateRoleDto: UpdateRoleDto, user: JwtPayload) {
@@ -248,6 +250,20 @@ export class RolesService {
     const { permissionIds, ...roleData } = updateRoleDto;
 
     delete roleData.id;
+
+    // Check name uniqueness if name is being updated
+    if (roleData.name) {
+      const existingWithSameName = await this.prisma.role.findFirst({
+        where: {
+          name: roleData.name,
+          NOT: { id },
+        },
+      });
+
+      if (existingWithSameName) {
+        throw new ForbiddenException('Role name must be unique');
+      }
+    }
 
     await this.prisma.role.update({
       where: { id },
@@ -299,7 +315,7 @@ export class RolesService {
       user.tenantId,
     );
 
-    return updatedRole;
+    return this.transformRoleResponse(updatedRole);
   }
 
   async remove(id: bigint, user: JwtPayload) {
@@ -340,5 +356,46 @@ export class RolesService {
     );
 
     return deletedRole;
+  }
+
+  private transformRoleResponse(
+    role: Prisma.RoleGetPayload<{
+      include: {
+        permissions: {
+          include: {
+            permission: true;
+          };
+        };
+      };
+    }> | null,
+  ): {
+    id: string;
+    name: string;
+    description?: string;
+    createdAt: Date;
+    updatedAt: Date;
+    permissions: {
+      id: string;
+      name: string;
+      description?: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }[];
+  } | null {
+    if (!role) return null;
+
+    return {
+      ...role,
+      id: role.id.toString(),
+      description: role.description ?? undefined,
+      permissions:
+        role.permissions?.map((rp) => ({
+          id: rp.permission.id.toString(),
+          name: rp.permission.name,
+          description: rp.permission.description ?? undefined,
+          createdAt: rp.permission.createdAt,
+          updatedAt: rp.permission.updatedAt,
+        })) || [],
+    };
   }
 }
