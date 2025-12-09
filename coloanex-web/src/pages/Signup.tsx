@@ -48,20 +48,22 @@ const Signup = () => {
     try {
       const response = await register(formData).unwrap();
 
-      // Store tokens in localStorage
       localStorage.setItem("token", response.accessToken);
       localStorage.setItem("refreshToken", response.refreshToken);
       localStorage.setItem("sessionId", response.sessionId);
-      localStorage.setItem("user", JSON.stringify(response.user));
 
-      // Update Redux state
-      dispatch(setAuth({ user: response.user, token: response.accessToken }));
+      dispatch(setAuth({ token: response.accessToken }));
 
       toast.success("Registration successful!");
       navigate("/dashboard");
     } catch (err) {
-      console.error("Signup error:", err);
-      const errorMessage = (err as any)?.data?.message || "Registration failed";
+      interface ApiError {
+        data?: {
+          message?: string;
+        };
+      }
+      const apiError = err as ApiError;
+      const errorMessage = apiError?.data?.message || "Registration failed";
       toast.error(errorMessage);
     }
   };
@@ -87,7 +89,12 @@ const Signup = () => {
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {(error as any)?.data?.message || "Registration failed"}
+                {"data" in error &&
+                typeof error.data === "object" &&
+                "message" in error.data
+                  ? (error.data as { message?: string }).message ||
+                    "Registration failed"
+                  : "Registration failed"}
               </div>
             )}
 
@@ -170,7 +177,7 @@ const Signup = () => {
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="text-primary hover:underline font-medium cursor-pointer"
+                className="text-green-600 font-semibold hover:underline cursor-pointer"
               >
                 Log in
               </button>
