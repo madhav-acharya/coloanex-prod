@@ -102,7 +102,7 @@ export default function Security() {
       </section>
 
       {/* Security Features */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-green-100 py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
@@ -116,7 +116,7 @@ export default function Security() {
             {securityFeatures.map((feature, index) => (
               <Card
                 key={index}
-                className="border-0 shadow-card hover:shadow-soft transition-all duration-300"
+                className="bg-gradient-dark text-white border-0 shadow-card hover:shadow-soft transition-all duration-300"
               >
                 <CardContent className="p-8">
                   <div className=" flex items-center justify-center mb-6">
@@ -146,7 +146,10 @@ export default function Security() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {complianceStandards.map((standard, index) => (
-              <Card key={index} className="border-0 shadow-card">
+              <Card
+                key={index}
+                className="bg-gradient-dark text-white border-0 shadow-card"
+              >
                 <CardContent className="p-6 text-center">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
                     <FileCheck className="w-8 h-8 text-primary" />
@@ -175,7 +178,7 @@ export default function Security() {
               Comprehensive measures to keep your data safe
             </p>
           </div>
-          <Card className="border-0 shadow-card">
+          <Card className="bg-gradient-dark text-white border-0 shadow-card">
             <CardContent className="p-8 md:p-12">
               <div className="grid md:grid-cols-2 gap-6">
                 {securityPractices.map((practice, index) => (
