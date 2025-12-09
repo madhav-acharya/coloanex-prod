@@ -44,8 +44,19 @@ const Login = () => {
       });
       toast.success("Login successful!");
     } catch (err) {
-      console.error("Login error:", err);
-      const errorMessage = (err as any)?.data?.message || "Login failed";
+      let errorMessage = "Login failed";
+      if (
+        err &&
+        typeof err === "object" &&
+        "data" in err &&
+        err.data &&
+        typeof err.data === "object" &&
+        "message" in err.data
+      ) {
+        errorMessage =
+          (err as { data: { message?: string } }).data.message ||
+          "Login failed";
+      }
       toast.error(errorMessage);
     }
   };
@@ -71,7 +82,8 @@ const Login = () => {
           <form onSubmit={handleSubmit} className="space-y-4 py-4">
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {(error as any)?.data?.message || "Login failed"}
+                {(error as { data?: { message?: string } })?.data?.message ||
+                  "Login failed"}
               </div>
             )}
 
@@ -129,7 +141,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => navigate("/signup")}
-                className="text-primary hover:underline font-medium cursor-pointer"
+                className="text-green-600 hover:underline font-semibold cursor-pointer"
               >
                 Create Account
               </button>
