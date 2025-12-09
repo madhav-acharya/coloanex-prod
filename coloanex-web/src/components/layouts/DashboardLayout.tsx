@@ -128,7 +128,7 @@ export default function DashboardLayout({
                   className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
                     isActive
-                      ? "bg-green-50 text-green-700 font-medium"
+                      ? "bg-green-100 text-green-700 font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     isCollapsed && "justify-center px-2"
                   )}
@@ -148,11 +148,11 @@ export default function DashboardLayout({
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between p-4">
         {!isCollapsed && (
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-linear-to-br from-green-600 to-green-700 flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
+          <Link to="/" className="flex items-center gap-2 cursor-pointer">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <img src="/logo.png" alt="C" className="w-full h-full" />
             </div>
-            <span className="font-bold text-lg">Coloanex</span>
+            <span className="text-xl font-bold">Coloanex</span>
           </Link>
         )}
         <Button
