@@ -67,6 +67,26 @@ export const usersApi = baseApi.injectEndpoints({
         url: "/users",
         params,
       }),
+      transformResponse: (response: UsersResponse) => {
+        return {
+          ...response,
+          data: response.data.map((user) => ({
+            ...user,
+            roles: (user.roles || [])
+              .map((r: any) =>
+                r && typeof r === "object" && "role" in r ? r.role : r
+              )
+              .filter((r: any) => r && r.id && r.name),
+            permissions: (user.permissions || [])
+              .map((p: any) =>
+                p && typeof p === "object" && "permission" in p
+                  ? p.permission
+                  : p
+              )
+              .filter((p: any) => p && p.id && p.name),
+          })),
+        };
+      },
       providesTags: (result) =>
         result
           ? [
@@ -81,6 +101,19 @@ export const usersApi = baseApi.injectEndpoints({
 
     getUser: builder.query<User, string>({
       query: (id) => `/users/${id}`,
+      transformResponse: (response: User) => ({
+        ...response,
+        roles: (response.roles || [])
+          .map((r: any) =>
+            r && typeof r === "object" && "role" in r ? r.role : r
+          )
+          .filter((r: any) => r && r.id && r.name),
+        permissions: (response.permissions || [])
+          .map((p: any) =>
+            p && typeof p === "object" && "permission" in p ? p.permission : p
+          )
+          .filter((p: any) => p && p.id && p.name),
+      }),
       providesTags: (result, error, id) => [{ type: "Users", id }],
     }),
 
