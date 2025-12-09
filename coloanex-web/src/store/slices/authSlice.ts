@@ -31,8 +31,7 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
     },
-    setAuth: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.user = action.payload.user;
+    setAuth: (state, action: PayloadAction<{ token: string }>) => {
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.isLoading = false;
@@ -51,7 +50,9 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.isLoading = false;
       state.error = null;
-      localStorage.clear();
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("sessionId");
     },
   },
 });
