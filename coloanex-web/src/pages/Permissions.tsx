@@ -159,8 +159,7 @@ export default function Permissions() {
       });
       setDeleteDialogOpen(false);
       setPermissionToDelete(null);
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete permission",
