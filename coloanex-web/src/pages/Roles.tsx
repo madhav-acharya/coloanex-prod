@@ -170,8 +170,7 @@ export default function Roles() {
       });
       setDeleteDialogOpen(false);
       setRoleToDelete(null);
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete role",
