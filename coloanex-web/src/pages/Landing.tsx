@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Shield, Database, Users, Mail, Phone } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
+import { Link } from "react-router-dom";
 
 export default function Landing() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -22,7 +23,7 @@ export default function Landing() {
   return (
     <PublicLayout showFooter={false}>
       {/* Main Content */}
-      <div className="h-[calc(100vh-3.5rem)] overflow-hidden grid md:grid-cols-2">
+      <div className="bg-green-100 h-[calc(100vh-3.5rem)] overflow-hidden grid md:grid-cols-2">
         {/* Left Side - Content */}
         <div className="flex-col hidden sm:block justify-center px-8 md:px-16 lg:px-24 py-12 bg-background">
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
@@ -205,19 +206,19 @@ export default function Landing() {
 
             <p className="text-center text-xs text-muted-foreground mt-4">
               By continuing, you agree to our{" "}
-              <a
-                href="#"
+              <Link
+                to="/"
                 className="text-primary hover:underline cursor-pointer"
               >
                 Terms of Service
-              </a>{" "}
+              </Link>
               and acknowledge that you have read our{" "}
-              <a
-                href="#"
+              <Link
+                to="#"
                 className="text-primary hover:underline cursor-pointer"
               >
                 Privacy Policy
-              </a>
+              </Link>
             </p>
 
             <p className="text-center text-sm mt-4">
@@ -227,7 +228,7 @@ export default function Landing() {
                   setAuthModalOpen(false);
                   navigate("/signup");
                 }}
-                className="text-primary hover:underline font-medium cursor-pointer"
+                className="text-green-600 hover:underline font-semibold cursor-pointer"
               >
                 Create Account
               </button>
