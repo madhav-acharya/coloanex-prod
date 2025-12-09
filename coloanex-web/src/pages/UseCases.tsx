@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import PublicLayout from "@/components/layouts/PublicLayout";
-import { Users, Building2, Lock, Check } from "lucide-react";
+import { Users, Building2, Lock, Check, Workflow } from "lucide-react";
 
 export default function UseCases() {
   const useCases = [
@@ -88,6 +88,9 @@ export default function UseCases() {
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-hero text-white">
         <div className="max-w-7xl mx-auto text-center">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-6">
+            <Workflow className="w-10 h-10" />
+          </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-6">
             Built for Your Industry
           </h1>
@@ -99,7 +102,7 @@ export default function UseCases() {
       </section>
 
       {/* Use Cases */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-green-100 py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-20">
           {useCases.map((useCase, index) => (
             <div
@@ -176,7 +179,10 @@ export default function UseCases() {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-card">
+              <Card
+                key={index}
+                className="bg-gradient-dark text-white border-0 shadow-card"
+              >
                 <CardContent className="p-8">
                   <p className="text-muted-foreground mb-6 italic">
                     "{testimonial.quote}"
