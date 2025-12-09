@@ -15,6 +15,7 @@ import {
   useLoginMutation,
   useLogoutMutation,
   useRefreshTokenMutation,
+  useGetCurrentUserQuery,
   type LoginRequest,
   type User,
 } from "@/apis/authApi";
@@ -27,35 +28,25 @@ export const useAuth = () => {
   const [loginMutation] = useLoginMutation();
   const [logoutMutation] = useLogoutMutation();
   const [refreshTokenMutation] = useRefreshTokenMutation();
+  const { data: currentUser, refetch: refetchUser } = useGetCurrentUserQuery(
+    undefined,
+    {
+      skip: !auth.isAuthenticated && !localStorage.getItem("token"),
+    }
+  );
 
-  // Load auth from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
-    const userStr = localStorage.getItem("user");
-
-    if (token && userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        dispatch(setAuth({ user, token }));
-      } catch (error) {
-        console.error("Failed to parse user from localStorage:", error);
-        localStorage.clear();
-      }
+    if (token && !auth.isAuthenticated) {
+      dispatch(setAuth({ token }));
     }
-  }, [dispatch]);
+  }, [dispatch, auth.isAuthenticated]);
 
-  // Sync auth to localStorage
   useEffect(() => {
-    if (auth.isAuthenticated && auth.token && auth.user) {
-      localStorage.setItem("token", auth.token);
-      localStorage.setItem("user", JSON.stringify(auth.user));
-    } else if (!auth.isAuthenticated) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("sessionId");
-      localStorage.removeItem("user");
+    if (currentUser && auth.isAuthenticated) {
+      dispatch(setUser(currentUser));
     }
-  }, [auth.isAuthenticated, auth.token, auth.user]);
+  }, [currentUser, dispatch, auth.isAuthenticated]);
 
   // Login function
   const login = useCallback(
@@ -66,22 +57,17 @@ export const useAuth = () => {
 
         const response = await loginMutation(credentials).unwrap();
 
-        // Store tokens
         localStorage.setItem("token", response.accessToken);
         localStorage.setItem("refreshToken", response.refreshToken);
         localStorage.setItem("sessionId", response.sessionId);
 
-        // Update state
-        dispatch(
-          setAuth({
-            user: response.user,
-            token: response.accessToken,
-          })
-        );
+        dispatch(setAuth({ token: response.accessToken }));
+
+        await refetchUser();
 
         navigate("/dashboard");
         return response;
-      } catch (error: any) {
+      } catch (error) {
         const errorMessage =
           error?.data?.message || "Login failed. Please try again.";
         dispatch(setError(errorMessage));
@@ -90,15 +76,13 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [dispatch, loginMutation, navigate]
+    [dispatch, loginMutation, navigate, refetchUser]
   );
 
   // Logout function
   const logout = useCallback(async () => {
     try {
       await logoutMutation().unwrap();
-    } catch (error) {
-      console.error("Logout API error:", error);
     } finally {
       dispatch(logoutAction());
       navigate("/login");
@@ -120,12 +104,9 @@ export const useAuth = () => {
       localStorage.setItem("token", response.accessToken);
       localStorage.setItem("refreshToken", response.refreshToken);
 
-      dispatch(
-        setAuth({
-          user: response.user,
-          token: response.accessToken,
-        })
-      );
+      dispatch(setAuth({ token: response.accessToken }));
+
+      await refetchUser();
 
       return response;
     } catch (error) {
@@ -133,7 +114,7 @@ export const useAuth = () => {
       navigate("/login");
       throw error;
     }
-  }, [dispatch, refreshTokenMutation, navigate]);
+  }, [dispatch, refreshTokenMutation, navigate, refetchUser]);
 
   // Update user
   const updateUser = useCallback(
