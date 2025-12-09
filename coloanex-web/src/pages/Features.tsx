@@ -10,6 +10,7 @@ import {
   FolderLock,
   Eye,
   Check,
+  BrainCircuit,
 } from "lucide-react";
 
 export default function Features() {
@@ -93,6 +94,9 @@ export default function Features() {
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-hero text-white">
         <div className="max-w-7xl mx-auto text-center">
+          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-6">
+            <BrainCircuit className="w-10 h-10" />
+          </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-6">
             Powerful Features for Modern Lending
           </h1>
@@ -104,13 +108,13 @@ export default function Features() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-green-100 py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="border-0 shadow-card hover:shadow-soft transition-all duration-300"
+                className="bg-gradient-dark text-white border-0 shadow-card hover:shadow-soft transition-all duration-300"
               >
                 <CardContent className="p-8">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
