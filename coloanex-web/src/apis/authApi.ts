@@ -27,7 +27,6 @@ export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   sessionId: string;
-  user: User;
 }
 
 export const authApi = baseApi.injectEndpoints({

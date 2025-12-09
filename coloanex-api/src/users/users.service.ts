@@ -593,12 +593,28 @@ export class UsersService {
     const hasNextPage = +page < totalPages;
     const hasPreviousPage = +page > 1;
 
+    const transformedUsers = users.map((user) => {
+      return {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        tenantId: user.tenantId,
+        isActive: user.isActive,
+        isBanned: user.isBanned,
+        isEmailVerified: user.isEmailVerified,
+        lastActiveAt: user.lastActiveAt,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        tenant: user.tenant,
+        roles: (user.roles || []).map((ur) => ur.role),
+        permissions: (user.permissions || []).map((up) => up.permission),
+        _count: user._count,
+      };
+    });
+
     return {
-      data: users.map((user) => ({
-        ...user,
-        roles: user.roles.map((ur) => ur.role),
-        permissions: user.permissions.map((up) => up.permission),
-      })),
+      data: transformedUsers,
       total,
       totalPages,
       hasNextPage,

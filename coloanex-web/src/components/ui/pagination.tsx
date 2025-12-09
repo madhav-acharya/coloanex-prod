@@ -124,7 +124,7 @@ export function Pagination({
             className={cn(
               "min-w-8",
               page === currentPage
-                ? "bg-green-600 hover:bg-green-700 text-white cursor-default"
+                ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                 : page === "..."
                 ? "cursor-not-allowed"
                 : "cursor-pointer"

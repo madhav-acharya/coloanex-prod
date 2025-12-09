@@ -15,12 +15,6 @@ const baseQuery = fetchBaseQuery({
 
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
-      console.log(
-        `[RTK Query] Request with token: ${token.substring(0, 30)}...`
-      );
-      console.log(`[RTK Query] SessionId: ${sessionId}`);
-    } else {
-      console.warn("[RTK Query] No token available");
     }
 
     headers.set("Content-Type", "application/json");
@@ -33,13 +27,9 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
-    console.error("[RTK Query] 401 Unauthorized:", result.error);
-
-    // Attempt to refresh token
     const refreshToken = localStorage.getItem("refreshToken");
 
     if (refreshToken) {
-      console.log("[RTK Query] Attempting token refresh...");
       const refreshResult = await baseQuery(
         {
           url: "/auth/refresh",
@@ -51,7 +41,6 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
       );
 
       if (refreshResult.data) {
-        // Store the new tokens
         const {
           accessToken,
           refreshToken: newRefreshToken,
@@ -61,20 +50,13 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
         localStorage.setItem("refreshToken", newRefreshToken);
         localStorage.setItem("sessionId", sessionId);
 
-        // Update Redux state
         api.dispatch({
           type: "auth/setToken",
           payload: { token: accessToken },
         });
 
-        console.log("[RTK Query] Token refreshed successfully");
-
-        // Retry the original request
         result = await baseQuery(args, api, extraOptions);
       } else {
-        // Refresh failed - logout user
-        console.error("[RTK Query] Token refresh failed");
-
         // Clear auth state
         api.dispatch({ type: "auth/logout" });
 
@@ -84,18 +66,13 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
         }
       }
     } else {
-      // No refresh token - logout user
-      console.error("[RTK Query] No refresh token available");
-
-      // Clear auth state
+      api.dispatch({ type: "auth/logout" });
       api.dispatch({ type: "auth/logout" });
 
       if (!window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
     }
-  } else if (result.error && result.error.status === 403) {
-    console.error("[RTK Query] 403 Forbidden:", result.error);
   }
 
   return result;

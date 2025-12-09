@@ -189,8 +189,30 @@ export default function Users() {
       phone: user.phone || "",
       password: "",
     });
-    setSelectedRoles(user.roles?.map((r) => r.id) || []);
-    setSelectedPermissions(user.permissions?.map((p) => p.id) || []);
+    setSelectedRoles(
+      user.roles
+        ?.map((r: unknown) => {
+          const item = r as Record<string, unknown>;
+          const role =
+            item && typeof item === "object" && "role" in item
+              ? item.role
+              : item;
+          return (role as { id?: string })?.id;
+        })
+        .filter((id): id is string => Boolean(id)) || []
+    );
+    setSelectedPermissions(
+      user.permissions
+        ?.map((p: unknown) => {
+          const item = p as Record<string, unknown>;
+          const perm =
+            item && typeof item === "object" && "permission" in item
+              ? item.permission
+              : item;
+          return (perm as { id?: string })?.id;
+        })
+        .filter((id): id is string => Boolean(id)) || []
+    );
     setSheetOpen(true);
   };
 
@@ -208,8 +230,30 @@ export default function Users() {
       passwordField.required = false;
       passwordField.placeholder = "Leave empty to keep unchanged";
     }
-    setSelectedRoles(user.roles?.map((r) => r.id) || []);
-    setSelectedPermissions(user.permissions?.map((p) => p.id) || []);
+    setSelectedRoles(
+      user.roles
+        ?.map((r: unknown) => {
+          const item = r as Record<string, unknown>;
+          const role =
+            item && typeof item === "object" && "role" in item
+              ? item.role
+              : item;
+          return (role as { id?: string })?.id;
+        })
+        .filter((id): id is string => Boolean(id)) || []
+    );
+    setSelectedPermissions(
+      user.permissions
+        ?.map((p: unknown) => {
+          const item = p as Record<string, unknown>;
+          const perm =
+            item && typeof item === "object" && "permission" in item
+              ? item.permission
+              : item;
+          return (perm as { id?: string })?.id;
+        })
+        .filter((id): id is string => Boolean(id)) || []
+    );
     setSheetOpen(true);
   };
 
@@ -230,8 +274,7 @@ export default function Users() {
       });
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-    } catch (error) {
-      console.error("Delete error:", error);
+    } catch {
       toast({
         title: "Error",
         description: "Failed to delete user",
@@ -295,8 +338,8 @@ export default function Users() {
       resetFields();
       setSelectedRoles([]);
       setSelectedPermissions([]);
-    } catch (error) {
-      console.error("Submit error:", error);
+    } catch {
+      return;
     }
   };
 
@@ -326,7 +369,11 @@ export default function Users() {
       width: "18%",
       render: (_, user) => {
         const maxVisible = 2;
-        const roles = user.roles || [];
+        const roles = (user.roles || [])
+          .map((r) => (typeof r === "object" && "role" in r ? r.role : r))
+          .filter(
+            (r) => r && typeof r === "object" && "id" in r && "name" in r
+          );
         const visibleRoles = roles.slice(0, maxVisible);
         const remainingCount = roles.length - maxVisible;
 
@@ -334,7 +381,7 @@ export default function Users() {
           <div className="flex flex-wrap gap-1">
             {roles.length > 0 ? (
               <>
-                {visibleRoles.map((role) => (
+                {visibleRoles.map((role: { id: string; name: string }) => (
                   <Badge key={role.id} variant="outline" className="text-xs">
                     {role.name}
                   </Badge>
@@ -358,7 +405,13 @@ export default function Users() {
       width: "18%",
       render: (_, user) => {
         const maxVisible = 2;
-        const permissions = user.permissions || [];
+        const permissions = (user.permissions || [])
+          .map((p) =>
+            typeof p === "object" && "permission" in p ? p.permission : p
+          )
+          .filter(
+            (p) => p && typeof p === "object" && "id" in p && "name" in p
+          );
         const visiblePermissions = permissions.slice(0, maxVisible);
         const remainingCount = permissions.length - maxVisible;
 
@@ -366,15 +419,17 @@ export default function Users() {
           <div className="flex flex-wrap gap-1">
             {permissions.length > 0 ? (
               <>
-                {visiblePermissions.map((permission) => (
-                  <Badge
-                    key={permission.id}
-                    variant="outline"
-                    className="text-xs"
-                  >
-                    {permission.name}
-                  </Badge>
-                ))}
+                {visiblePermissions.map(
+                  (permission: { id: string; name: string }) => (
+                    <Badge
+                      key={permission.id}
+                      variant="outline"
+                      className="text-xs"
+                    >
+                      {permission.name}
+                    </Badge>
+                  )
+                )}
                 {remainingCount > 0 && (
                   <Badge variant="outline" className="text-xs">
                     +{remainingCount} more
@@ -501,15 +556,35 @@ export default function Users() {
                 </label>
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
                   {selectedUser?.roles && selectedUser.roles.length > 0 ? (
-                    selectedUser.roles.map((role) => (
-                      <Badge
-                        key={role.id}
-                        variant="secondary"
-                        className="bg-green-100 text-green-700"
-                      >
-                        {role.name}
-                      </Badge>
-                    ))
+                    selectedUser.roles
+                      .map((role: unknown) => {
+                        const r = role as Record<string, unknown>;
+                        if (r && typeof r === "object") {
+                          if (
+                            "role" in r &&
+                            r.role &&
+                            typeof r.role === "object"
+                          ) {
+                            return r.role as { id: string; name: string };
+                          }
+                          if ("id" in r && "name" in r) {
+                            return r as { id: string; name: string };
+                          }
+                        }
+                        return null;
+                      })
+                      .filter(
+                        (r): r is { id: string; name: string } => r !== null
+                      )
+                      .map((roleData) => (
+                        <Badge
+                          key={roleData.id}
+                          variant="secondary"
+                          className="bg-green-100 text-green-700"
+                        >
+                          {roleData.name}
+                        </Badge>
+                      ))
                   ) : (
                     <span className="text-sm text-muted-foreground">
                       No roles assigned
@@ -524,15 +599,35 @@ export default function Users() {
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
                   {selectedUser?.permissions &&
                   selectedUser.permissions.length > 0 ? (
-                    selectedUser.permissions.map((permission) => (
-                      <Badge
-                        key={permission.id}
-                        variant="secondary"
-                        className="bg-blue-100 text-blue-700"
-                      >
-                        {permission.name}
-                      </Badge>
-                    ))
+                    selectedUser.permissions
+                      .map((permission: unknown) => {
+                        const p = permission as Record<string, unknown>;
+                        if (p && typeof p === "object") {
+                          if (
+                            "permission" in p &&
+                            p.permission &&
+                            typeof p.permission === "object"
+                          ) {
+                            return p.permission as { id: string; name: string };
+                          }
+                          if ("id" in p && "name" in p) {
+                            return p as { id: string; name: string };
+                          }
+                        }
+                        return null;
+                      })
+                      .filter(
+                        (p): p is { id: string; name: string } => p !== null
+                      )
+                      .map((permData) => (
+                        <Badge
+                          key={permData.id}
+                          variant="secondary"
+                          className="bg-blue-100 text-blue-700"
+                        >
+                          {permData.name}
+                        </Badge>
+                      ))
                   ) : (
                     <span className="text-sm text-muted-foreground">
                       No additional permissions
