@@ -4,6 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormLabel } from "@/components/ui/form-label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet as UISheet,
   SheetContent,
   SheetDescription,
@@ -21,6 +28,7 @@ interface Field {
   required?: boolean;
   disabled?: boolean;
   type?: string;
+  options?: { value: string; label: string }[];
 }
 
 interface FormSheetProps {
@@ -98,7 +106,28 @@ export function FormSheet({
                 >
                   {field.label}
                 </FormLabel>
-                {field.type === "textarea" ? (
+                {field.type === "select" && field.options ? (
+                  <Select
+                    value={field.value}
+                    onValueChange={(value) =>
+                      handleFieldChange(field.id, value)
+                    }
+                    disabled={field.disabled || isSubmitting || isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder={field.placeholder || "Select..."}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === "textarea" ? (
                   <Textarea
                     id={field.id}
                     value={field.value}
@@ -114,6 +143,7 @@ export function FormSheet({
                 ) : (
                   <Input
                     id={field.id}
+                    type={field.type || "text"}
                     value={field.value}
                     onChange={(e) =>
                       handleFieldChange(field.id, e.target.value)

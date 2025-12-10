@@ -38,12 +38,14 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login({
+      const res = await login({
         email: formData.email,
         password: formData.password,
       });
+      console.log("res", res);
       toast.success("Login successful!");
     } catch (err) {
+      console.log("error", err);
       let errorMessage = "Login failed";
       if (
         err &&

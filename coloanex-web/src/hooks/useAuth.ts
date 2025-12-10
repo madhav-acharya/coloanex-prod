@@ -54,17 +54,11 @@ export const useAuth = () => {
       try {
         dispatch(setLoading(true));
         dispatch(clearError());
-
         const response = await loginMutation(credentials).unwrap();
-
         localStorage.setItem("token", response.accessToken);
         localStorage.setItem("refreshToken", response.refreshToken);
         localStorage.setItem("sessionId", response.sessionId);
-
         dispatch(setAuth({ token: response.accessToken }));
-
-        await refetchUser();
-
         navigate("/dashboard");
         return response;
       } catch (error) {
@@ -76,7 +70,7 @@ export const useAuth = () => {
         dispatch(setLoading(false));
       }
     },
-    [dispatch, loginMutation, navigate, refetchUser]
+    [dispatch, loginMutation, navigate]
   );
 
   // Logout function

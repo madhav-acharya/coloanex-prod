@@ -529,7 +529,7 @@ export class AuthService {
         tenant: true,
         borrowers: {
           include: {
-            kycDocument: true,
+            kycs: true,
           },
         },
       },

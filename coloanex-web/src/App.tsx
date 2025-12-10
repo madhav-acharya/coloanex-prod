@@ -15,6 +15,7 @@ import Permissions from "./pages/Permissions";
 import { useAuth } from "./hooks/useAuth";
 import Users from "./pages/Users";
 import Tenants from "./pages/Tenants";
+import KycRequests from "./pages/KycRequests";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -129,6 +130,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Tenants />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/kyc-requests"
+        element={
+          <ProtectedRoute>
+            <KycRequests />
           </ProtectedRoute>
         }
       />
