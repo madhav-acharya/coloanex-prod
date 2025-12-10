@@ -7,6 +7,40 @@ datasource db {
   schemas  = ["auth", "borrower", "core"]
 }
 
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+
+  @@schema("borrower")
+}
+
+enum ActivityEntityType {
+  ROLE
+  PERMISSION
+  USER
+  TENANT
+  BORROWER
+  KYC_DOCUMENT
+
+  @@schema("core")
+}
+
+enum ActivityAction {
+  CREATE
+  UPDATE
+  DELETE
+  KYC_VERIFY
+  KYC_REJECT
+  LOGIN
+  LOGOUT
+  PASSWORD_RESET
+  VISIT
+  LEAVE
+
+  @@schema("core")
+}
+
 model Role {
   id          BigInt           @id @default(autoincrement())
   name        String           @unique
@@ -193,38 +227,4 @@ model KycDocument {
   @@index([nationalId, nationalIdType])
   @@map("kyc_documents")
   @@schema("borrower")
-}
-
-enum KycStatus {
-  PENDING
-  VERIFIED
-  REJECTED
-
-  @@schema("borrower")
-}
-
-enum ActivityEntityType {
-  ROLE
-  PERMISSION
-  USER
-  TENANT
-  BORROWER
-  KYC_DOCUMENT
-
-  @@schema("core")
-}
-
-enum ActivityAction {
-  CREATE
-  UPDATE
-  DELETE
-  KYC_VERIFY
-  KYC_REJECT
-  LOGIN
-  LOGOUT
-  PASSWORD_RESET
-  VISIT
-  LEAVE
-
-  @@schema("core")
 }
