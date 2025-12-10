@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { BorrowersModule } from './borrowers/borrowers.module';
 import { TenantsModule } from './tenants/tenants.module';
+import { KycModule } from './kyc/kyc.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { IsUniqueConstraint } from './common/validators/is-unique.validator';
@@ -23,6 +24,7 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     ActivityLogsModule,
     BorrowersModule,
     TenantsModule,
+    KycModule,
   ],
   controllers: [AppController],
   providers: [
