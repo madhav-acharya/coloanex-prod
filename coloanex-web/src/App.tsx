@@ -14,11 +14,13 @@ import Roles from "./pages/Roles";
 import Permissions from "./pages/Permissions";
 import { useAuth } from "./hooks/useAuth";
 import Users from "./pages/Users";
+import Tenants from "./pages/Tenants";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
+  const hasToken = localStorage.getItem("token");
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !hasToken) {
     return <Navigate to="/login" replace />;
   }
 
@@ -119,6 +121,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Users />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/tenants"
+        element={
+          <ProtectedRoute>
+            <Tenants />
           </ProtectedRoute>
         }
       />
