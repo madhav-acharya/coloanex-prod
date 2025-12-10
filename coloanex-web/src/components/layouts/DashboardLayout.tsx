@@ -18,6 +18,7 @@ import {
   Bell,
   LayoutDashboard,
   Building2,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -38,6 +39,13 @@ export interface FilterField {
   placeholder?: string;
 }
 
+interface ActionButton {
+  label: string;
+  onClick: () => void;
+  variant?: "default" | "outline" | "ghost";
+  disabled?: boolean;
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
   title: string;
@@ -50,6 +58,7 @@ interface DashboardLayoutProps {
   onFilterChange?: (name: string, value: string) => void;
   actionLabel?: string;
   onActionClick?: () => void;
+  actions?: ActionButton[];
 }
 
 export default function DashboardLayout({
@@ -64,6 +73,7 @@ export default function DashboardLayout({
   onFilterChange,
   actionLabel,
   onActionClick,
+  actions,
 }: DashboardLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(() => window.innerWidth < 768);
   const location = useLocation();
@@ -103,6 +113,11 @@ export default function DashboardLayout({
       title: "Tenants",
       icon: <Building2 className="w-4 h-4" />,
       href: "/tenants",
+    },
+    {
+      title: "KYC Requests",
+      icon: <FileText className="w-4 h-4" />,
+      href: "/kyc-requests",
     },
   ];
 
@@ -326,8 +341,27 @@ export default function DashboardLayout({
                 ))}
               </div>
 
-              {/* Right side: Action Button */}
-              {actionLabel && onActionClick && (
+              {/* Right side: Action Buttons */}
+              {actions && actions.length > 0 ? (
+                <div className="flex gap-2">
+                  {actions.map((action, index) => (
+                    <Button
+                      key={index}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                      variant={action.variant || "default"}
+                      className={
+                        action.variant === "default" || !action.variant
+                          ? "bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer"
+                          : "whitespace-nowrap cursor-pointer"
+                      }
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              ) : actionLabel && onActionClick ? (
                 <Button
                   onClick={onActionClick}
                   className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer ml-auto"
@@ -335,7 +369,7 @@ export default function DashboardLayout({
                   <Plus className="w-4 h-4 mr-2" />
                   {actionLabel}
                 </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
