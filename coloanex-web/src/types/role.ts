@@ -1,10 +1,4 @@
-export interface Permission {
-  id: string;
-  name: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { Permission } from "./permission";
 
 export interface Role {
   id: string;
@@ -17,18 +11,18 @@ export interface Role {
 
 export interface RolesResponse {
   data: Role[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  currentPage: number;
+  limit: number;
 }
 
 export interface CreateRoleDto {
   name: string;
   description?: string;
-  permissionIds?: string[];
+  permissionIds: string[];
 }
 
 export interface UpdateRoleDto {
@@ -43,4 +37,7 @@ export interface RolesQueryParams {
   search?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  name?: string;
+  dateFrom?: string;
+  dateTo?: string;
 }

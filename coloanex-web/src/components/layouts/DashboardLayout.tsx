@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -16,6 +16,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Bell,
+  LayoutDashboard,
+  Building2,
 } from "lucide-react";
 import {
   Select,
@@ -63,9 +65,20 @@ export default function DashboardLayout({
   actionLabel,
   onActionClick,
 }: DashboardLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => window.innerWidth < 768);
   const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsCollapsed(true);
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const accessControlItems = [
     {
@@ -85,6 +98,11 @@ export default function DashboardLayout({
       title: "Users",
       icon: <Users className="w-4 h-4" />,
       href: "/users",
+    },
+    {
+      title: "Tenants",
+      icon: <Building2 className="w-4 h-4" />,
+      href: "/tenants",
     },
   ];
 
@@ -173,6 +191,21 @@ export default function DashboardLayout({
 
       <ScrollArea className="flex-1 px-3 py-4">
         <div className="space-y-6">
+          <div className="space-y-1">
+            <Link
+              to="/dashboard"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                location.pathname === "/dashboard"
+                  ? "bg-green-100 text-green-700 font-medium"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                isCollapsed && "justify-center px-2"
+              )}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              {!isCollapsed && <span>Dashboard</span>}
+            </Link>
+          </div>
           <NavSection
             title="Access Control"
             items={accessControlItems}
