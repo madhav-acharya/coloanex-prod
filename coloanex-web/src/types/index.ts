@@ -3,3 +3,4 @@ export * from "./user";
 export * from "./role";
 export * from "./permission";
 export * from "./tenant";
+export * from "./kyc";
