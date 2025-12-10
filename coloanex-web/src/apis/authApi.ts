@@ -1,33 +1,17 @@
 import { baseApi } from "./baseApi";
+import type {
+  LoginRequest,
+  AuthResponse,
+  SignupRequest,
+  AuthUser,
+} from "@/types/auth";
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  fullName: string;
-  phone?: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  phone?: string;
-  isActive: boolean;
-  lastActiveAt?: string;
-  roles: string[];
-  permissions: string[];
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  refreshToken: string;
-  sessionId: string;
-}
+export type {
+  LoginRequest,
+  AuthResponse,
+  SignupRequest as RegisterRequest,
+  AuthUser as User,
+};
 
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -40,7 +24,7 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ["Auth"],
     }),
 
-    register: builder.mutation<AuthResponse, RegisterRequest>({
+    register: builder.mutation<AuthResponse, SignupRequest>({
       query: (userData) => ({
         url: "/auth/signup",
         method: "POST",
@@ -65,7 +49,7 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
 
-    getCurrentUser: builder.query<User, void>({
+    getCurrentUser: builder.query<AuthUser, void>({
       query: () => "/auth/me",
       providesTags: ["Auth"],
     }),
