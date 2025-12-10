@@ -72,7 +72,7 @@ export class BorrowersService {
             phone: true,
           },
         },
-        kycDocument: true,
+        kycs: true,
       },
     });
 
@@ -98,7 +98,7 @@ export class BorrowersService {
             phone: true,
           },
         },
-        kycDocument: true,
+        kycs: true,
       },
       orderBy: { createdAt: 'desc' },
     });
