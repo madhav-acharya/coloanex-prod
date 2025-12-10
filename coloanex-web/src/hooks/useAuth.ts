@@ -16,9 +16,8 @@ import {
   useLogoutMutation,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
-  type LoginRequest,
-  type User,
 } from "@/apis/authApi";
+import type { LoginRequest, AuthUser } from "@/types/auth";
 
 export const useAuth = () => {
   const dispatch = useDispatch();
@@ -37,6 +36,7 @@ export const useAuth = () => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (token && !auth.isAuthenticated) {
       dispatch(setAuth({ token }));
     }
@@ -116,9 +116,8 @@ export const useAuth = () => {
     }
   }, [dispatch, refreshTokenMutation, navigate, refetchUser]);
 
-  // Update user
   const updateUser = useCallback(
-    (user: User) => {
+    (user: AuthUser) => {
       dispatch(setUser(user));
     },
     [dispatch]
