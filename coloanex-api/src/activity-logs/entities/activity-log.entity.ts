@@ -4,7 +4,7 @@ export enum ActivityEntityType {
   USER = 'USER',
   TENANT = 'TENANT',
   BORROWER = 'BORROWER',
-  KYC_DOCUMENT = 'KYC_DOCUMENT',
+  KYC = 'KYC',
 }
 
 export enum ActivityAction {
