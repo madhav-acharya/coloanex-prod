@@ -8,6 +8,7 @@ interface Field {
   required?: boolean;
   disabled?: boolean;
   type?: string;
+  options?: { value: string; label: string }[];
 }
 
 export function useFormFields(initialFields: Field[]) {
