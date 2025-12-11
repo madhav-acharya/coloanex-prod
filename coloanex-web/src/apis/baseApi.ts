@@ -7,8 +7,7 @@ const API_BASE_URL =
 // Base query with authentication
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
-  prepareHeaders: (headers, { getState }) => {
-    // Get token from Redux state or localStorage
+  prepareHeaders: (headers, { getState, endpoint }) => {
     const token =
       (getState() as RootState).auth.token || localStorage.getItem("token");
     const sessionId = localStorage.getItem("sessionId");
@@ -17,7 +16,10 @@ const baseQuery = fetchBaseQuery({
       headers.set("Authorization", `Bearer ${token}`);
     }
 
-    headers.set("Content-Type", "application/json");
+    if (endpoint !== "uploadSingle" && endpoint !== "uploadMultiple") {
+      headers.set("Content-Type", "application/json");
+    }
+
     return headers;
   },
 });
