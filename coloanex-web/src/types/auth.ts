@@ -27,12 +27,21 @@ export interface AuthUser {
   phone?: string;
   fullName: string;
   isActive: boolean;
+  tenantId?: string;
   roles: Array<{
-    id: string;
-    name: string;
+    roleId: number;
+    userId: string;
+    role: {
+      id: number;
+      name: string;
+    };
   }>;
   permissions: Array<{
-    id: string;
-    name: string;
+    permissionId: number;
+    userId: string;
+    permission: {
+      id: number;
+      name: string;
+    };
   }>;
 }
