@@ -296,7 +296,12 @@ export default function Roles() {
             ? "Update the role details and permissions"
             : "Add a new role with specific permissions"
         }
-        fields={fields}
+        sections={[
+          {
+            title: "Role Information",
+            fields: fields,
+          },
+        ]}
         onFieldChange={updateField}
         onSubmit={handleSubmit}
         submitText={selectedRole ? "Update Role" : "Create Role"}
