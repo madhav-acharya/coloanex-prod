@@ -415,7 +415,12 @@ export default function Tenants() {
             ? "Update the tenant details"
             : "Add a new tenant to the system"
         }
-        fields={fields}
+        sections={[
+          {
+            title: "Tenant Information",
+            fields: fields,
+          },
+        ]}
         onFieldChange={updateField}
         onSubmit={handleSubmit}
         submitText={selectedTenant ? "Update Tenant" : "Create Tenant"}

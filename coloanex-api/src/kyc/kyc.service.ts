@@ -35,11 +35,13 @@ export class KycService {
       throw new BadRequestException('Tenant ID is required');
     }
 
+    const targetUserId = createKycDto.userId || user.sub;
+
     let borrower = await this.prisma.borrower.findUnique({
       where: {
         tenantId_userId: {
           tenantId,
-          userId: user.sub,
+          userId: targetUserId,
         },
       },
     });
@@ -48,13 +50,16 @@ export class KycService {
       borrower = await this.prisma.borrower.create({
         data: {
           tenantId,
-          userId: user.sub,
+          userId: targetUserId,
           kycStatus: KycStatus.PENDING,
         },
       });
     }
 
     const { files, ...kycData } = createKycDto;
+    delete (kycData as any).tenantId;
+    delete (kycData as any).borrowerId;
+    delete (kycData as any).userId;
 
     const kyc = await this.prisma.kyc.create({
       data: {
