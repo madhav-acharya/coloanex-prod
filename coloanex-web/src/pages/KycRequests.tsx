@@ -1,20 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
-import { Eye, FileText } from "lucide-react";
+import { Eye, FileText, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable, type Column } from "@/components/shared/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormLabel } from "@/components/ui/form-label";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import {
   useGetKycsQuery,
   useVerifyKycMutation,
   useCreateKycMutation,
+  useDeleteKycMutation,
 } from "@/apis/kycApi";
+import { useGetTenantsQuery } from "@/apis/tenantsApi";
+import { useGetUsersQuery } from "@/apis/usersApi";
 import type {
   Kyc,
   KycDocumentsQuery,
@@ -25,10 +26,7 @@ import { KycStatus, KycDocumentType, KycFileType } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
 import { FormSheet } from "@/components/shared/FormSheet";
-import {
-  FileUploader,
-  type UploadedFile,
-} from "@/components/shared/FileUploader";
+import { type UploadedFile } from "@/components/shared/FileUploader";
 
 const documentTypeOptions = [
   { value: KycDocumentType.CITIZENSHIP, label: "Citizenship" },
@@ -53,13 +51,66 @@ const maritalStatusOptions = [
 
 export default function KycRequests() {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [kycFormOpen, setKycFormOpen] = useState(false);
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Kyc | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [kycToDelete, setKycToDelete] = useState<Kyc | null>(null);
+  const [isDeletingKyc, setIsDeletingKyc] = useState(false);
+  const [editingKyc, setEditingKyc] = useState<Kyc | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
+  const [deleteKyc] = useDeleteKycMutation();
+
+  // Check if user is super admin
+  const isSuperAdmin = useMemo(
+    () => user?.roles.some((r) => r.role.name === "Super Admin") || false,
+    [user]
+  );
+
+  const isBorrower = useMemo(
+    () => user?.roles.some((r) => r.role.name === "Borrower") || false,
+    [user]
+  );
+
+  const isLender = useMemo(
+    () => user?.roles.some((r) => r.role.name === "Lender") || false,
+    [user]
+  );
+
+  // Fetch tenants for super admin
+  const { data: tenantsData } = useGetTenantsQuery(
+    { page: 1, limit: 100 },
+    { skip: !isSuperAdmin && !isLender }
+  );
+
+  const { data: usersData } = useGetUsersQuery(
+    { page: 1, limit: 1000 },
+    { skip: isBorrower }
+  );
+
+  const tenantOptions = useMemo(
+    () =>
+      tenantsData?.data.map((tenant) => ({
+        value: tenant.id,
+        label: tenant.name,
+      })) || [],
+    [tenantsData]
+  );
+
+  const userOptions = useMemo(
+    () =>
+      usersData?.data.map((u) => ({
+        value: u.id,
+        label: `${u.fullName} (${u.email || u.phone})`,
+      })) || [],
+    [usersData]
+  );
+
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
 
   // KYC Form State
   const [selectedDocTypes, setSelectedDocTypes] = useState<string[]>([]);
@@ -176,9 +227,51 @@ export default function KycRequests() {
     });
   };
 
-  const handleViewKyc = (document: Kyc) => {
+  const handleViewVerifyKyc = (document: Kyc) => {
     setSelectedDocument(document);
     setVerificationModalOpen(true);
+  };
+
+  const handleViewKyc = (document: Kyc) => {
+    setEditingKyc(document);
+    setSelectedDocument(document);
+    setIsReadOnly(true);
+    setKycFormOpen(true);
+  };
+
+  const handleEditKyc = (document: Kyc) => {
+    setEditingKyc(document);
+    setSelectedDocument(document);
+    setIsReadOnly(false);
+    setKycFormOpen(true);
+  };
+
+  const handleDeleteClick = (document: Kyc) => {
+    setKycToDelete(document);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!kycToDelete) return;
+
+    setIsDeletingKyc(true);
+    try {
+      await deleteKyc(kycToDelete.id).unwrap();
+      toast({
+        title: "Success",
+        description: "KYC document deleted successfully",
+      });
+      setDeleteDialogOpen(false);
+      setKycToDelete(null);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to delete KYC document",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingKyc(false);
+    }
   };
 
   const handleVerifySelected = () => {
@@ -209,16 +302,26 @@ export default function KycRequests() {
         description: `KYC document ${status.toLowerCase()} successfully`,
       });
 
+      const selectedArray = Array.from(selectedRows);
+      const currentIndex = selectedArray.indexOf(selectedDocument.id);
+
+      setSelectedRows((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(selectedDocument.id);
+        return newSet;
+      });
+
+      if (currentIndex < selectedArray.length - 1) {
+        const nextId = selectedArray[currentIndex + 1];
+        const nextDoc = kycDocuments.find((doc) => doc.id === nextId);
+        if (nextDoc) {
+          setSelectedDocument(nextDoc);
+          return;
+        }
+      }
+
       setVerificationModalOpen(false);
       setSelectedDocument(null);
-
-      if (selectedRows.has(selectedDocument.id)) {
-        setSelectedRows((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(selectedDocument.id);
-          return newSet;
-        });
-      }
     } catch {
       toast({
         title: "Error",
@@ -229,6 +332,156 @@ export default function KycRequests() {
   };
 
   const handleKycSubmit = async () => {
+    if (selectedDocTypes.includes(KycDocumentType.CITIZENSHIP)) {
+      if (!formData.citizenshipNumber) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Citizenship number is required when CITIZENSHIP document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.citizenshipIssueDate) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Citizenship issue date is required when CITIZENSHIP document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.citizenshipDistrict) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Citizenship district is required when CITIZENSHIP document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.citizenshipFront.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Citizenship front image is required",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.citizenshipBack.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Citizenship back image is required",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (selectedDocTypes.includes(KycDocumentType.PASSPORT)) {
+      if (!formData.passportNumber) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Passport number is required when PASSPORT document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.passportIssueDate) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Passport issue date is required when PASSPORT document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.passportExpiryDate) {
+        toast({
+          title: "Validation Error",
+          description:
+            "Passport expiry date is required when PASSPORT document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.passport.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "Passport document is required",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (selectedDocTypes.includes(KycDocumentType.PAN)) {
+      if (!formData.panNumber) {
+        toast({
+          title: "Validation Error",
+          description:
+            "PAN number is required when PAN document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.pan.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "PAN card image is required",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    if (selectedDocTypes.includes(KycDocumentType.DRIVING_LICENSE)) {
+      if (!formData.licenseNumber) {
+        toast({
+          title: "Validation Error",
+          description:
+            "License number is required when DRIVING_LICENSE document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.licenseIssueDate) {
+        toast({
+          title: "Validation Error",
+          description:
+            "License issue date is required when DRIVING_LICENSE document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!formData.licenseExpiryDate) {
+        toast({
+          title: "Validation Error",
+          description:
+            "License expiry date is required when DRIVING_LICENSE document type is selected",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.licenseFront.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "License front image is required",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (files.licenseBack.length === 0) {
+        toast({
+          title: "Validation Error",
+          description: "License back image is required",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     const allFiles: KycFile[] = [];
 
     if (selectedDocTypes.includes(KycDocumentType.CITIZENSHIP)) {
@@ -236,7 +489,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.CITIZENSHIP_FRONT,
           documentType: KycDocumentType.CITIZENSHIP,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -246,7 +499,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.CITIZENSHIP_BACK,
           documentType: KycDocumentType.CITIZENSHIP,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -259,7 +512,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.PASSPORT,
           documentType: KycDocumentType.PASSPORT,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -272,7 +525,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.PAN,
           documentType: KycDocumentType.PAN,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -285,7 +538,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.LICENSE_FRONT,
           documentType: KycDocumentType.DRIVING_LICENSE,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -295,7 +548,7 @@ export default function KycRequests() {
         allFiles.push({
           fileType: KycFileType.LICENSE_BACK,
           documentType: KycDocumentType.DRIVING_LICENSE,
-          fileUrl: f.fileUrl,
+          fileUrl: f.url,
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
@@ -306,7 +559,7 @@ export default function KycRequests() {
     files.selfie.forEach((f) =>
       allFiles.push({
         fileType: KycFileType.SELFIE,
-        fileUrl: f.fileUrl,
+        fileUrl: f.url,
         fileName: f.fileName,
         mimeType: f.mimeType,
         sizeInBytes: f.sizeInBytes,
@@ -316,7 +569,7 @@ export default function KycRequests() {
     files.collateral.forEach((f) =>
       allFiles.push({
         fileType: KycFileType.COLLATERAL_PHOTO,
-        fileUrl: f.fileUrl,
+        fileUrl: f.url,
         fileName: f.fileName,
         mimeType: f.mimeType,
         sizeInBytes: f.sizeInBytes,
@@ -326,7 +579,7 @@ export default function KycRequests() {
     files.supporting.forEach((f) =>
       allFiles.push({
         fileType: KycFileType.SUPPORTING_DOCUMENT,
-        fileUrl: f.fileUrl,
+        fileUrl: f.url,
         fileName: f.fileName,
         mimeType: f.mimeType,
         sizeInBytes: f.sizeInBytes,
@@ -348,6 +601,7 @@ export default function KycRequests() {
       });
 
       setKycFormOpen(false);
+      setEditingKyc(null);
       resetKycForm();
     } catch (error) {
       const err = error as { data?: { message?: string } };
@@ -362,6 +616,9 @@ export default function KycRequests() {
 
   const resetKycForm = () => {
     setSelectedDocTypes([]);
+    setSelectedUserId("");
+    setEditingKyc(null);
+    setIsReadOnly(false);
     setFormData({
       documentTypes: [],
       firstName: "",
@@ -392,8 +649,125 @@ export default function KycRequests() {
   };
 
   const handleFieldChange = (fieldId: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [fieldId]: value }));
+    if (fieldId === "userId") {
+      setSelectedUserId(value);
+    } else {
+      setFormData((prev) => ({ ...prev, [fieldId]: value }));
+    }
   };
+
+  useEffect(() => {
+    if (editingKyc && kycFormOpen) {
+      setFormData({
+        firstName: editingKyc.firstName || "",
+        middleName: editingKyc.middleName || "",
+        lastName: editingKyc.lastName || "",
+        dateOfBirth: editingKyc.dateOfBirth || "",
+        gender: editingKyc.gender || "",
+        maritalStatus: editingKyc.maritalStatus || "",
+        spouseName: editingKyc.spouseName || "",
+        fatherName: editingKyc.fatherName || "",
+        motherName: editingKyc.motherName || "",
+        grandfatherName: editingKyc.grandfatherName || "",
+        citizenshipNumber: editingKyc.citizenshipNumber || "",
+        citizenshipIssueDate: editingKyc.citizenshipIssueDate || "",
+        citizenshipDistrict: editingKyc.citizenshipDistrict || "",
+        passportNumber: editingKyc.passportNumber || "",
+        passportIssueDate: editingKyc.passportIssueDate || "",
+        passportExpiryDate: editingKyc.passportExpiryDate || "",
+        panNumber: editingKyc.panNumber || "",
+        licenseNumber: editingKyc.licenseNumber || "",
+        licenseIssueDate: editingKyc.licenseIssueDate || "",
+        licenseExpiryDate: editingKyc.licenseExpiryDate || "",
+        permanentProvince: editingKyc.permanentProvince || "",
+        permanentDistrict: editingKyc.permanentDistrict || "",
+        permanentMunicipality: editingKyc.permanentMunicipality || "",
+        permanentWard: editingKyc.permanentWard || "",
+        permanentTole: editingKyc.permanentTole || "",
+        temporaryProvince: editingKyc.temporaryProvince || "",
+        temporaryDistrict: editingKyc.temporaryDistrict || "",
+        temporaryMunicipality: editingKyc.temporaryMunicipality || "",
+        temporaryWard: editingKyc.temporaryWard || "",
+        temporaryTole: editingKyc.temporaryTole || "",
+        phoneNumber: editingKyc.phoneNumber || "",
+        alternatePhone: editingKyc.alternatePhone || "",
+        email: editingKyc.email || "",
+        occupation: editingKyc.occupation || "",
+        employerName: editingKyc.employerName || "",
+        monthlyIncome: editingKyc.monthlyIncome,
+        bankName: editingKyc.bankName || "",
+        bankAccountNumber: editingKyc.bankAccountNumber || "",
+        bankBranch: editingKyc.bankBranch || "",
+        loanAmount: editingKyc.loanAmount,
+        loanPurpose: editingKyc.loanPurpose || "",
+        loanDuration: editingKyc.loanDuration,
+        collateralType: editingKyc.collateralType || "",
+        collateralDescription: editingKyc.collateralDescription || "",
+        collateralValue: editingKyc.collateralValue,
+        documentTypes: editingKyc.documentTypes || [],
+        tenantId: editingKyc.borrower?.tenantId || "",
+      } as CreateKycDto);
+      setSelectedDocTypes(editingKyc.documentTypes || []);
+      if (editingKyc.borrower?.userId) {
+        setSelectedUserId(editingKyc.borrower.userId);
+      }
+
+      if (editingKyc.files && editingKyc.files.length > 0) {
+        const newFiles = {
+          citizenshipFront: [],
+          citizenshipBack: [],
+          passport: [],
+          pan: [],
+          licenseFront: [],
+          licenseBack: [],
+          selfie: [],
+          collateral: [],
+          supporting: [],
+        };
+
+        editingKyc.files.forEach((file) => {
+          const uploadedFile: UploadedFile = {
+            url: file.fileUrl,
+            fileName: file.fileName || "",
+            mimeType: file.mimeType || "",
+            sizeInBytes: file.sizeInBytes || 0,
+          };
+
+          switch (file.fileType) {
+            case "CITIZENSHIP_FRONT":
+              newFiles.citizenshipFront.push(uploadedFile);
+              break;
+            case "CITIZENSHIP_BACK":
+              newFiles.citizenshipBack.push(uploadedFile);
+              break;
+            case "PASSPORT":
+              newFiles.passport.push(uploadedFile);
+              break;
+            case "PAN":
+              newFiles.pan.push(uploadedFile);
+              break;
+            case "LICENSE_FRONT":
+              newFiles.licenseFront.push(uploadedFile);
+              break;
+            case "LICENSE_BACK":
+              newFiles.licenseBack.push(uploadedFile);
+              break;
+            case "SELFIE":
+              newFiles.selfie.push(uploadedFile);
+              break;
+            case "COLLATERAL_PHOTO":
+              newFiles.collateral.push(uploadedFile);
+              break;
+            case "SUPPORTING_DOCUMENT":
+              newFiles.supporting.push(uploadedFile);
+              break;
+          }
+        });
+
+        setFiles(newFiles);
+      }
+    }
+  }, [editingKyc, kycFormOpen]);
 
   useEffect(() => {
     if (!kycFormOpen) {
@@ -402,50 +776,563 @@ export default function KycRequests() {
     }
   }, [kycFormOpen]);
 
-  // Basic fields for FormSheet
-  const basicFields = [
-    {
-      id: "firstName",
-      label: "First Name",
-      value: formData.firstName || "",
-      required: true,
-      placeholder: "Enter first name",
-    },
-    {
-      id: "middleName",
-      label: "Middle Name",
-      value: formData.middleName || "",
-      placeholder: "Enter middle name",
-    },
-    {
-      id: "lastName",
-      label: "Last Name",
-      value: formData.lastName || "",
-      required: true,
-      placeholder: "Enter last name",
-    },
-    {
-      id: "dateOfBirth",
-      label: "Date of Birth",
-      value: formData.dateOfBirth || "",
-      type: "date",
-      required: true,
-    },
-    {
-      id: "gender",
-      label: "Gender",
-      value: formData.gender || "",
-      type: "select",
-      options: genderOptions,
-    },
-    {
-      id: "maritalStatus",
-      label: "Marital Status",
-      value: formData.maritalStatus || "",
-      type: "select",
-      options: maritalStatusOptions,
-    },
-  ];
+  const formSections = useMemo(
+    () => [
+      ...(isSuperAdmin || isLender
+        ? [
+            {
+              title: "Tenant Selection",
+              fields: [
+                {
+                  id: "tenantId",
+                  label: "Select Tenant",
+                  value: formData.tenantId || "",
+                  type: "select" as const,
+                  options: tenantOptions,
+                  required: true,
+                  placeholder: "Select a tenant",
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(!isBorrower
+        ? [
+            {
+              title: "User Selection",
+              fields: [
+                {
+                  id: "userId",
+                  label: "Select User",
+                  value: selectedUserId,
+                  type: "select" as const,
+                  options: userOptions,
+                  required: true,
+                  placeholder: "Select a user",
+                },
+              ],
+            },
+          ]
+        : []),
+      // Document Type Selection
+      {
+        title: "Document Type Selection",
+        customContent: (
+          <div className="space-y-2">
+            <FormLabel required>Document Types</FormLabel>
+            <p className="text-sm text-gray-500 mb-3">
+              Select one or more document types you want to submit
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {documentTypeOptions.map((option) => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={option.value}
+                    checked={selectedDocTypes.includes(option.value)}
+                    onCheckedChange={() => handleDocTypeToggle(option.value)}
+                    disabled={isReadOnly}
+                  />
+                  <label
+                    htmlFor={option.value}
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    {option.label}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: "Basic Information",
+        fields: [
+          {
+            id: "firstName",
+            label: "First Name",
+            value: formData.firstName || "",
+            required: true,
+            placeholder: "Enter first name",
+          },
+          {
+            id: "middleName",
+            label: "Middle Name",
+            value: formData.middleName || "",
+            placeholder: "Enter middle name",
+          },
+          {
+            id: "lastName",
+            label: "Last Name",
+            value: formData.lastName || "",
+            required: true,
+            placeholder: "Enter last name",
+          },
+          {
+            id: "dateOfBirth",
+            label: "Date of Birth",
+            value: formData.dateOfBirth || "",
+            type: "date",
+            required: true,
+          },
+          {
+            id: "gender",
+            label: "Gender",
+            value: formData.gender || "",
+            type: "select",
+            options: genderOptions,
+          },
+          {
+            id: "maritalStatus",
+            label: "Marital Status",
+            value: formData.maritalStatus || "",
+            type: "select",
+            options: maritalStatusOptions,
+          },
+        ],
+      },
+      {
+        title: "Family Information",
+        fields: [
+          {
+            id: "spouseName",
+            label: "Spouse Name",
+            value: formData.spouseName || "",
+            placeholder: "Enter spouse name",
+          },
+          {
+            id: "fatherName",
+            label: "Father's Name",
+            value: formData.fatherName || "",
+            placeholder: "Enter father's name",
+          },
+          {
+            id: "motherName",
+            label: "Mother's Name",
+            value: formData.motherName || "",
+            placeholder: "Enter mother's name",
+          },
+          {
+            id: "grandfatherName",
+            label: "Grandfather's Name",
+            value: formData.grandfatherName || "",
+            placeholder: "Enter grandfather's name",
+          },
+        ],
+      },
+      {
+        title: "Citizenship Details",
+        condition: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
+        fields: [
+          {
+            id: "citizenshipNumber",
+            label: "Citizenship Number",
+            value: formData.citizenshipNumber || "",
+            required: true,
+            placeholder: "Enter citizenship number",
+          },
+          {
+            id: "citizenshipIssueDate",
+            label: "Issue Date",
+            value: formData.citizenshipIssueDate || "",
+            type: "date",
+            required: true,
+          },
+          {
+            id: "citizenshipDistrict",
+            label: "Issue District",
+            value: formData.citizenshipDistrict || "",
+            required: true,
+            placeholder: "Enter issue district",
+            colSpan: 2,
+          },
+        ],
+        fileFields: [
+          {
+            label: "Citizenship Front",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/citizenship",
+            value: files.citizenshipFront,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, citizenshipFront: newFiles })),
+            required: true,
+          },
+          {
+            label: "Citizenship Back",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/citizenship",
+            value: files.citizenshipBack,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, citizenshipBack: newFiles })),
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Passport Details",
+        condition: selectedDocTypes.includes(KycDocumentType.PASSPORT),
+        fields: [
+          {
+            id: "passportNumber",
+            label: "Passport Number",
+            value: formData.passportNumber || "",
+            required: true,
+            placeholder: "Enter passport number",
+          },
+          {
+            id: "passportIssueDate",
+            label: "Issue Date",
+            value: formData.passportIssueDate || "",
+            type: "date",
+            required: true,
+          },
+          {
+            id: "passportExpiryDate",
+            label: "Expiry Date",
+            value: formData.passportExpiryDate || "",
+            type: "date",
+            required: true,
+          },
+        ],
+        fileFields: [
+          {
+            label: "Passport (PDF only)",
+            accept: "pdf" as const,
+            maxFiles: 1,
+            folder: "kyc/passport",
+            value: files.passport,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, passport: newFiles })),
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "PAN Details",
+        condition: selectedDocTypes.includes(KycDocumentType.PAN),
+        fields: [
+          {
+            id: "panNumber",
+            label: "PAN Number",
+            value: formData.panNumber || "",
+            required: true,
+            placeholder: "Enter PAN number",
+          },
+        ],
+        fileFields: [
+          {
+            label: "PAN Card",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/pan",
+            value: files.pan,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, pan: newFiles })),
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Driving License Details",
+        condition: selectedDocTypes.includes(KycDocumentType.DRIVING_LICENSE),
+        fields: [
+          {
+            id: "licenseNumber",
+            label: "License Number",
+            value: formData.licenseNumber || "",
+            required: true,
+            placeholder: "Enter license number",
+          },
+          {
+            id: "licenseIssueDate",
+            label: "Issue Date",
+            value: formData.licenseIssueDate || "",
+            type: "date",
+            required: true,
+          },
+          {
+            id: "licenseExpiryDate",
+            label: "Expiry Date",
+            value: formData.licenseExpiryDate || "",
+            type: "date",
+            required: true,
+          },
+        ],
+        fileFields: [
+          {
+            label: "License Front",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/license",
+            value: files.licenseFront,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, licenseFront: newFiles })),
+            required: true,
+          },
+          {
+            label: "License Back",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/license",
+            value: files.licenseBack,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, licenseBack: newFiles })),
+            required: true,
+          },
+        ],
+      },
+      {
+        title: "Permanent Address",
+        fields: [
+          {
+            id: "permanentProvince",
+            label: "Province",
+            value: formData.permanentProvince || "",
+            placeholder: "Enter province",
+          },
+          {
+            id: "permanentDistrict",
+            label: "District",
+            value: formData.permanentDistrict || "",
+            placeholder: "Enter district",
+          },
+          {
+            id: "permanentMunicipality",
+            label: "Municipality",
+            value: formData.permanentMunicipality || "",
+            placeholder: "Enter municipality",
+          },
+          {
+            id: "permanentWard",
+            label: "Ward No.",
+            value: formData.permanentWard || "",
+            placeholder: "Enter ward number",
+          },
+          {
+            id: "permanentTole",
+            label: "Tole/Street",
+            value: formData.permanentTole || "",
+            placeholder: "Enter tole/street",
+            colSpan: 2,
+          },
+        ],
+      },
+      {
+        title: "Temporary Address",
+        fields: [
+          {
+            id: "temporaryProvince",
+            label: "Province",
+            value: formData.temporaryProvince || "",
+            placeholder: "Enter province",
+          },
+          {
+            id: "temporaryDistrict",
+            label: "District",
+            value: formData.temporaryDistrict || "",
+            placeholder: "Enter district",
+          },
+          {
+            id: "temporaryMunicipality",
+            label: "Municipality",
+            value: formData.temporaryMunicipality || "",
+            placeholder: "Enter municipality",
+          },
+          {
+            id: "temporaryWard",
+            label: "Ward No.",
+            value: formData.temporaryWard || "",
+            placeholder: "Enter ward number",
+          },
+          {
+            id: "temporaryTole",
+            label: "Tole/Street",
+            value: formData.temporaryTole || "",
+            placeholder: "Enter tole/street",
+            colSpan: 2,
+          },
+        ],
+      },
+      {
+        title: "Contact Information",
+        fields: [
+          {
+            id: "phoneNumber",
+            label: "Phone Number",
+            value: formData.phoneNumber || "",
+            type: "tel",
+            placeholder: "Enter phone number",
+          },
+          {
+            id: "alternatePhone",
+            label: "Alternate Phone",
+            value: formData.alternatePhone || "",
+            type: "tel",
+            placeholder: "Enter alternate phone",
+          },
+          {
+            id: "email",
+            label: "Email",
+            value: formData.email || "",
+            type: "email",
+            placeholder: "Enter email address",
+            colSpan: 2,
+          },
+        ],
+      },
+      {
+        title: "Employment Information",
+        fields: [
+          {
+            id: "occupation",
+            label: "Occupation",
+            value: formData.occupation || "",
+            placeholder: "Enter occupation",
+          },
+          {
+            id: "employerName",
+            label: "Employer Name",
+            value: formData.employerName || "",
+            placeholder: "Enter employer name",
+          },
+          {
+            id: "monthlyIncome",
+            label: "Monthly Income",
+            value: formData.monthlyIncome?.toString() || "",
+            type: "number",
+            placeholder: "Enter monthly income",
+          },
+        ],
+      },
+      {
+        title: "Bank Information",
+        fields: [
+          {
+            id: "bankName",
+            label: "Bank Name",
+            value: formData.bankName || "",
+            placeholder: "Enter bank name",
+          },
+          {
+            id: "bankAccountNumber",
+            label: "Account Number",
+            value: formData.bankAccountNumber || "",
+            placeholder: "Enter account number",
+          },
+          {
+            id: "bankBranch",
+            label: "Branch",
+            value: formData.bankBranch || "",
+            placeholder: "Enter branch name",
+          },
+        ],
+      },
+      {
+        title: "Loan Requirements",
+        fields: [
+          {
+            id: "loanAmount",
+            label: "Loan Amount",
+            value: formData.loanAmount?.toString() || "",
+            type: "number",
+            placeholder: "Enter loan amount",
+          },
+          {
+            id: "loanDuration",
+            label: "Duration (months)",
+            value: formData.loanDuration?.toString() || "",
+            type: "number",
+            placeholder: "Enter duration",
+          },
+          {
+            id: "loanPurpose",
+            label: "Loan Purpose",
+            value: formData.loanPurpose || "",
+            type: "textarea",
+            placeholder: "Describe the purpose of loan",
+            colSpan: 2,
+          },
+        ],
+      },
+      {
+        title: "Collateral Information",
+        fields: [
+          {
+            id: "collateralType",
+            label: "Collateral Type",
+            value: formData.collateralType || "",
+            placeholder: "e.g., Property, Vehicle, Gold",
+            required: true,
+          },
+          {
+            id: "collateralValue",
+            label: "Estimated Value",
+            value: formData.collateralValue?.toString() || "",
+            type: "number",
+            placeholder: "Enter estimated value",
+            required: true,
+          },
+          {
+            id: "collateralDescription",
+            label: "Description",
+            value: formData.collateralDescription || "",
+            type: "textarea",
+            placeholder: "Describe the collateral",
+            required: true,
+          },
+        ],
+        fileFields: [
+          {
+            label: "Collateral Photos",
+            accept: "image" as const,
+            multiple: true,
+            maxFiles: 5,
+            folder: "kyc/collateral",
+            value: files.collateral,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, collateral: newFiles })),
+          },
+        ],
+      },
+      {
+        title: "Additional Documents",
+        fileFields: [
+          {
+            label: "Selfie/Photo",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/selfie",
+            value: files.selfie,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, selfie: newFiles })),
+          },
+          {
+            label: "Supporting Documents",
+            accept: "image,pdf" as const,
+            multiple: true,
+            maxFiles: 10,
+            folder: "kyc/supporting",
+            value: files.supporting,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, supporting: newFiles })),
+          },
+        ],
+      },
+    ],
+    [
+      formData,
+      selectedDocTypes,
+      files,
+      isSuperAdmin,
+      isLender,
+      isBorrower,
+      tenantOptions,
+      userOptions,
+      selectedUserId,
+      isReadOnly,
+    ]
+  );
 
   const getStatusBadge = (status: KycStatus) => {
     switch (status) {
@@ -463,7 +1350,7 @@ export default function KycRequests() {
       key: "select",
       label: "",
       sortable: false,
-      render: (doc: Kyc) => (
+      render: (_value, doc: Kyc) => (
         <Checkbox
           checked={selectedRows.has(doc.id)}
           onCheckedChange={() => handleSelectRow(doc.id)}
@@ -471,16 +1358,16 @@ export default function KycRequests() {
       ),
     },
     {
-      key: "borrower.user.fullName",
+      key: "firstName",
       label: "Borrower Name",
       sortable: true,
-      render: (doc: Kyc) => (
+      render: (_value, doc: Kyc) => (
         <div>
           <div className="font-medium">
-            {doc.borrower?.user.fullName || "N/A"}
+            {doc.borrower?.user?.fullName || `${doc.firstName} ${doc.lastName}`}
           </div>
           <div className="text-sm text-gray-500">
-            {doc.borrower?.user.email || "N/A"}
+            {doc.borrower?.user?.email || doc.email || "N/A"}
           </div>
         </div>
       ),
@@ -489,19 +1376,26 @@ export default function KycRequests() {
       key: "documentTypes",
       label: "Document Types",
       sortable: true,
-      render: (doc: Kyc) => (
-        <span>{doc.documentTypes?.join(", ") || "N/A"}</span>
+      render: (_value, doc: Kyc) => (
+        <div className="flex flex-wrap gap-1">
+          {doc.documentTypes?.map((type) => (
+            <Badge key={type} variant="outline" className="text-xs">
+              {type}
+            </Badge>
+          ))}
+        </div>
       ),
     },
     {
       key: "citizenshipNumber",
-      label: "Citizenship Number",
+      label: "Document Number",
       sortable: true,
-      render: (doc: Kyc) => (
+      render: (_value, doc: Kyc) => (
         <span>
           {doc.citizenshipNumber ||
             doc.passportNumber ||
             doc.panNumber ||
+            doc.licenseNumber ||
             "N/A"}
         </span>
       ),
@@ -510,7 +1404,13 @@ export default function KycRequests() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (doc: Kyc) => getStatusBadge(doc.status),
+      render: (_value, doc: Kyc) => getStatusBadge(doc.status),
+    },
+    {
+      key: "createdAt",
+      label: "Submitted",
+      sortable: true,
+      render: (value) => new Date(value).toLocaleDateString(),
     },
   ];
 
@@ -566,9 +1466,25 @@ export default function KycRequests() {
         sortOrder={filters.sortOrder}
         actions={[
           {
-            label: "View & Verify",
+            label: "View",
             icon: <Eye className="w-4 h-4" />,
             onClick: handleViewKyc,
+          },
+          {
+            label: "View & Verify",
+            icon: <Eye className="w-4 h-4" />,
+            onClick: handleViewVerifyKyc,
+          },
+          {
+            label: "Edit",
+            icon: <Edit className="w-4 h-4" />,
+            onClick: handleEditKyc,
+          },
+          {
+            label: "Delete",
+            icon: <Trash2 className="w-4 h-4" />,
+            variant: "destructive",
+            onClick: handleDeleteClick,
           },
         ]}
       />
@@ -594,672 +1510,45 @@ export default function KycRequests() {
       <FormSheet
         open={kycFormOpen}
         onOpenChange={setKycFormOpen}
-        title="Add KYC Request"
+        title={
+          isReadOnly
+            ? "View KYC Request"
+            : editingKyc
+            ? "Edit KYC Request"
+            : "Add KYC Request"
+        }
         description="Fill in all required information and upload necessary documents"
-        fields={basicFields}
+        sections={formSections}
         onFieldChange={handleFieldChange}
         onSubmit={handleKycSubmit}
         submitText="Submit KYC Request"
         isSubmitting={isCreating}
-      >
-        {/* Document Type Selection */}
-        <div className="space-y-2">
-          <FormLabel required>Document Types</FormLabel>
-          <p className="text-sm text-gray-500 mb-3">
-            Select one or more document types you want to submit
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {documentTypeOptions.map((option) => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <Checkbox
-                  id={option.value}
-                  checked={selectedDocTypes.includes(option.value)}
-                  onCheckedChange={() => handleDocTypeToggle(option.value)}
-                />
-                <label
-                  htmlFor={option.value}
-                  className="text-sm font-medium leading-none cursor-pointer"
-                >
-                  {option.label}
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
+        isReadOnly={isReadOnly}
+      />
 
-        <Separator />
+      <KycVerificationModal
+        open={verificationModalOpen}
+        onOpenChange={setVerificationModalOpen}
+        document={selectedDocument}
+        onSubmit={handleVerificationSubmit}
+        hasNext={
+          selectedRows.size > 1 && selectedDocument
+            ? Array.from(selectedRows).indexOf(selectedDocument.id) <
+              selectedRows.size - 1
+            : false
+        }
+      />
 
-        {/* Family Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Family Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="spouseName">Spouse Name</FormLabel>
-              <Input
-                id="spouseName"
-                value={formData.spouseName || ""}
-                onChange={(e) =>
-                  handleFieldChange("spouseName", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="fatherName">Father's Name</FormLabel>
-              <Input
-                id="fatherName"
-                value={formData.fatherName || ""}
-                onChange={(e) =>
-                  handleFieldChange("fatherName", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="motherName">Mother's Name</FormLabel>
-              <Input
-                id="motherName"
-                value={formData.motherName || ""}
-                onChange={(e) =>
-                  handleFieldChange("motherName", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="grandfatherName">
-                Grandfather's Name
-              </FormLabel>
-              <Input
-                id="grandfatherName"
-                value={formData.grandfatherName || ""}
-                onChange={(e) =>
-                  handleFieldChange("grandfatherName", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Citizenship Details - Conditional */}
-        {selectedDocTypes.includes(KycDocumentType.CITIZENSHIP) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Citizenship Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormLabel htmlFor="citizenshipNumber">
-                    Citizenship Number
-                  </FormLabel>
-                  <Input
-                    id="citizenshipNumber"
-                    value={formData.citizenshipNumber || ""}
-                    onChange={(e) =>
-                      handleFieldChange("citizenshipNumber", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="citizenshipIssueDate">
-                    Issue Date
-                  </FormLabel>
-                  <Input
-                    id="citizenshipIssueDate"
-                    type="date"
-                    value={formData.citizenshipIssueDate || ""}
-                    onChange={(e) =>
-                      handleFieldChange("citizenshipIssueDate", e.target.value)
-                    }
-                  />
-                </div>
-                <div className="col-span-2">
-                  <FormLabel htmlFor="citizenshipDistrict">
-                    Issue District
-                  </FormLabel>
-                  <Input
-                    id="citizenshipDistrict"
-                    value={formData.citizenshipDistrict || ""}
-                    onChange={(e) =>
-                      handleFieldChange("citizenshipDistrict", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <FileUploader
-                  label="Citizenship Front"
-                  accept="image/*"
-                  value={files.citizenshipFront}
-                  onChange={(newFiles) =>
-                    setFiles((prev) => ({
-                      ...prev,
-                      citizenshipFront: newFiles,
-                    }))
-                  }
-                />
-                <FileUploader
-                  label="Citizenship Back"
-                  accept="image/*"
-                  value={files.citizenshipBack}
-                  onChange={(newFiles) =>
-                    setFiles((prev) => ({ ...prev, citizenshipBack: newFiles }))
-                  }
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Passport Details - Conditional */}
-        {selectedDocTypes.includes(KycDocumentType.PASSPORT) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Passport Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormLabel htmlFor="passportNumber">
-                    Passport Number
-                  </FormLabel>
-                  <Input
-                    id="passportNumber"
-                    value={formData.passportNumber || ""}
-                    onChange={(e) =>
-                      handleFieldChange("passportNumber", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="passportIssueDate">Issue Date</FormLabel>
-                  <Input
-                    id="passportIssueDate"
-                    type="date"
-                    value={formData.passportIssueDate || ""}
-                    onChange={(e) =>
-                      handleFieldChange("passportIssueDate", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="passportExpiryDate">
-                    Expiry Date
-                  </FormLabel>
-                  <Input
-                    id="passportExpiryDate"
-                    type="date"
-                    value={formData.passportExpiryDate || ""}
-                    onChange={(e) =>
-                      handleFieldChange("passportExpiryDate", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <FileUploader
-                label="Passport (PDF only)"
-                accept="application/pdf"
-                value={files.passport}
-                onChange={(newFiles) =>
-                  setFiles((prev) => ({ ...prev, passport: newFiles }))
-                }
-              />
-            </div>
-          </>
-        )}
-
-        {/* PAN Details - Conditional */}
-        {selectedDocTypes.includes(KycDocumentType.PAN) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">PAN Details</h3>
-              <div>
-                <FormLabel htmlFor="panNumber">PAN Number</FormLabel>
-                <Input
-                  id="panNumber"
-                  value={formData.panNumber || ""}
-                  onChange={(e) =>
-                    handleFieldChange("panNumber", e.target.value)
-                  }
-                />
-              </div>
-              <FileUploader
-                label="PAN Card"
-                accept="image/*"
-                value={files.pan}
-                onChange={(newFiles) =>
-                  setFiles((prev) => ({ ...prev, pan: newFiles }))
-                }
-              />
-            </div>
-          </>
-        )}
-
-        {/* Driving License Details - Conditional */}
-        {selectedDocTypes.includes(KycDocumentType.DRIVING_LICENSE) && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Driving License Details</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FormLabel htmlFor="licenseNumber">License Number</FormLabel>
-                  <Input
-                    id="licenseNumber"
-                    value={formData.licenseNumber || ""}
-                    onChange={(e) =>
-                      handleFieldChange("licenseNumber", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="licenseIssueDate">Issue Date</FormLabel>
-                  <Input
-                    id="licenseIssueDate"
-                    type="date"
-                    value={formData.licenseIssueDate || ""}
-                    onChange={(e) =>
-                      handleFieldChange("licenseIssueDate", e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <FormLabel htmlFor="licenseExpiryDate">Expiry Date</FormLabel>
-                  <Input
-                    id="licenseExpiryDate"
-                    type="date"
-                    value={formData.licenseExpiryDate || ""}
-                    onChange={(e) =>
-                      handleFieldChange("licenseExpiryDate", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-4">
-                <FileUploader
-                  label="License Front"
-                  accept="image/*"
-                  value={files.licenseFront}
-                  onChange={(newFiles) =>
-                    setFiles((prev) => ({ ...prev, licenseFront: newFiles }))
-                  }
-                />
-                <FileUploader
-                  label="License Back"
-                  accept="image/*"
-                  value={files.licenseBack}
-                  onChange={(newFiles) =>
-                    setFiles((prev) => ({ ...prev, licenseBack: newFiles }))
-                  }
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        <Separator />
-
-        {/* Address Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Permanent Address</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="permanentProvince">Province</FormLabel>
-              <Input
-                id="permanentProvince"
-                value={formData.permanentProvince || ""}
-                onChange={(e) =>
-                  handleFieldChange("permanentProvince", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="permanentDistrict">District</FormLabel>
-              <Input
-                id="permanentDistrict"
-                value={formData.permanentDistrict || ""}
-                onChange={(e) =>
-                  handleFieldChange("permanentDistrict", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="permanentMunicipality">
-                Municipality
-              </FormLabel>
-              <Input
-                id="permanentMunicipality"
-                value={formData.permanentMunicipality || ""}
-                onChange={(e) =>
-                  handleFieldChange("permanentMunicipality", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="permanentWard">Ward No.</FormLabel>
-              <Input
-                id="permanentWard"
-                value={formData.permanentWard || ""}
-                onChange={(e) =>
-                  handleFieldChange("permanentWard", e.target.value)
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <FormLabel htmlFor="permanentTole">Tole/Street</FormLabel>
-              <Input
-                id="permanentTole"
-                value={formData.permanentTole || ""}
-                onChange={(e) =>
-                  handleFieldChange("permanentTole", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Temporary Address</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="temporaryProvince">Province</FormLabel>
-              <Input
-                id="temporaryProvince"
-                value={formData.temporaryProvince || ""}
-                onChange={(e) =>
-                  handleFieldChange("temporaryProvince", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="temporaryDistrict">District</FormLabel>
-              <Input
-                id="temporaryDistrict"
-                value={formData.temporaryDistrict || ""}
-                onChange={(e) =>
-                  handleFieldChange("temporaryDistrict", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="temporaryMunicipality">
-                Municipality
-              </FormLabel>
-              <Input
-                id="temporaryMunicipality"
-                value={formData.temporaryMunicipality || ""}
-                onChange={(e) =>
-                  handleFieldChange("temporaryMunicipality", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="temporaryWard">Ward No.</FormLabel>
-              <Input
-                id="temporaryWard"
-                value={formData.temporaryWard || ""}
-                onChange={(e) =>
-                  handleFieldChange("temporaryWard", e.target.value)
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <FormLabel htmlFor="temporaryTole">Tole/Street</FormLabel>
-              <Input
-                id="temporaryTole"
-                value={formData.temporaryTole || ""}
-                onChange={(e) =>
-                  handleFieldChange("temporaryTole", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Contact Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Contact Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="phoneNumber">Phone Number</FormLabel>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                value={formData.phoneNumber || ""}
-                onChange={(e) =>
-                  handleFieldChange("phoneNumber", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="alternatePhone">Alternate Phone</FormLabel>
-              <Input
-                id="alternatePhone"
-                type="tel"
-                value={formData.alternatePhone || ""}
-                onChange={(e) =>
-                  handleFieldChange("alternatePhone", e.target.value)
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <FormLabel htmlFor="email">Email</FormLabel>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email || ""}
-                onChange={(e) => handleFieldChange("email", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Employment Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Employment Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="occupation">Occupation</FormLabel>
-              <Input
-                id="occupation"
-                value={formData.occupation || ""}
-                onChange={(e) =>
-                  handleFieldChange("occupation", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="employerName">Employer Name</FormLabel>
-              <Input
-                id="employerName"
-                value={formData.employerName || ""}
-                onChange={(e) =>
-                  handleFieldChange("employerName", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="monthlyIncome">Monthly Income</FormLabel>
-              <Input
-                id="monthlyIncome"
-                type="number"
-                value={formData.monthlyIncome || ""}
-                onChange={(e) =>
-                  handleFieldChange("monthlyIncome", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Bank Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Bank Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="bankName">Bank Name</FormLabel>
-              <Input
-                id="bankName"
-                value={formData.bankName || ""}
-                onChange={(e) => handleFieldChange("bankName", e.target.value)}
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="bankAccountNumber">Account Number</FormLabel>
-              <Input
-                id="bankAccountNumber"
-                value={formData.bankAccountNumber || ""}
-                onChange={(e) =>
-                  handleFieldChange("bankAccountNumber", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="bankBranch">Branch</FormLabel>
-              <Input
-                id="bankBranch"
-                value={formData.bankBranch || ""}
-                onChange={(e) =>
-                  handleFieldChange("bankBranch", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Loan Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Loan Requirements</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="loanAmount">Loan Amount</FormLabel>
-              <Input
-                id="loanAmount"
-                type="number"
-                value={formData.loanAmount || ""}
-                onChange={(e) =>
-                  handleFieldChange("loanAmount", e.target.value)
-                }
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="loanDuration">Duration (months)</FormLabel>
-              <Input
-                id="loanDuration"
-                type="number"
-                value={formData.loanDuration || ""}
-                onChange={(e) =>
-                  handleFieldChange("loanDuration", e.target.value)
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <FormLabel htmlFor="loanPurpose">Loan Purpose</FormLabel>
-              <Textarea
-                id="loanPurpose"
-                value={formData.loanPurpose || ""}
-                onChange={(e) =>
-                  handleFieldChange("loanPurpose", e.target.value)
-                }
-              />
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Collateral Information */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Collateral Information</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <FormLabel htmlFor="collateralType">Collateral Type</FormLabel>
-              <Input
-                id="collateralType"
-                value={formData.collateralType || ""}
-                onChange={(e) =>
-                  handleFieldChange("collateralType", e.target.value)
-                }
-                placeholder="e.g., Property, Vehicle, Gold"
-              />
-            </div>
-            <div>
-              <FormLabel htmlFor="collateralValue">Estimated Value</FormLabel>
-              <Input
-                id="collateralValue"
-                type="number"
-                value={formData.collateralValue || ""}
-                onChange={(e) =>
-                  handleFieldChange("collateralValue", e.target.value)
-                }
-              />
-            </div>
-            <div className="col-span-2">
-              <FormLabel htmlFor="collateralDescription">Description</FormLabel>
-              <Textarea
-                id="collateralDescription"
-                value={formData.collateralDescription || ""}
-                onChange={(e) =>
-                  handleFieldChange("collateralDescription", e.target.value)
-                }
-              />
-            </div>
-          </div>
-          <FileUploader
-            label="Collateral Photos"
-            accept="image/*"
-            multiple
-            maxFiles={5}
-            value={files.collateral}
-            onChange={(newFiles) =>
-              setFiles((prev) => ({ ...prev, collateral: newFiles }))
-            }
-          />
-        </div>
-
-        <Separator />
-
-        {/* Additional Documents */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-semibold">Additional Documents</h3>
-          <FileUploader
-            label="Selfie/Photo"
-            accept="image/*"
-            value={files.selfie}
-            onChange={(newFiles) =>
-              setFiles((prev) => ({ ...prev, selfie: newFiles }))
-            }
-          />
-          <FileUploader
-            label="Supporting Documents"
-            accept="image/*,application/pdf"
-            multiple
-            maxFiles={10}
-            value={files.supporting}
-            onChange={(newFiles) =>
-              setFiles((prev) => ({ ...prev, supporting: newFiles }))
-            }
-          />
-        </div>
-      </FormSheet>
-
-      {selectedDocument && (
-        <KycVerificationModal
-          open={verificationModalOpen}
-          onOpenChange={setVerificationModalOpen}
-          document={selectedDocument}
-          onSubmit={handleVerificationSubmit}
-          onClose={() => {
-            setVerificationModalOpen(false);
-            setSelectedDocument(null);
-          }}
-        />
-      )}
+      <ConfirmationDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+        title="Delete KYC Document"
+        description="This will permanently delete this KYC document. This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+        isLoading={isDeletingKyc}
+      />
     </DashboardLayout>
   );
 }
