@@ -11,6 +11,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { BorrowersModule } from './borrowers/borrowers.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { KycModule } from './kyc/kyc.module';
+import { CloudinaryUploadsModule } from './cloudinary-uploads/cloudinary-uploads.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { IsUniqueConstraint } from './common/validators/is-unique.validator';
@@ -25,6 +26,7 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     BorrowersModule,
     TenantsModule,
     KycModule,
+    CloudinaryUploadsModule,
   ],
   controllers: [AppController],
   providers: [
