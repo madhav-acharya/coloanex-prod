@@ -539,7 +539,12 @@ export default function Users() {
             ? "Update the user details and permissions"
             : "Add a new user to the system"
         }
-        fields={fields}
+        sections={[
+          {
+            title: "User Information",
+            fields: fields,
+          },
+        ]}
         onFieldChange={updateField}
         onSubmit={handleSubmit}
         submitText={selectedUser ? "Update User" : "Create User"}
