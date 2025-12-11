@@ -288,7 +288,12 @@ export default function Permissions() {
             ? "Update the permission details"
             : "Add a new permission to the system"
         }
-        fields={fields}
+        sections={[
+          {
+            title: "Permission Information",
+            fields: fields,
+          },
+        ]}
         onFieldChange={updateField}
         onSubmit={handleSubmit}
         submitText={
