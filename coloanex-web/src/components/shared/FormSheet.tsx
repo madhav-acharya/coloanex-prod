@@ -3,13 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormLabel } from "@/components/ui/form-label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import {
   Sheet as UISheet,
   SheetContent,
@@ -19,8 +13,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Messages, type Message } from "@/components/shared/Messages";
+import {
+  FileUploader,
+  type UploadedFile,
+} from "@/components/shared/FileUploader";
 
-interface Field {
+export interface Field {
   id: string;
   label: string;
   value: string;
@@ -31,12 +29,31 @@ interface Field {
   options?: { value: string; label: string }[];
 }
 
+export interface FileField {
+  label: string;
+  accept: "image" | "pdf" | "image,pdf";
+  multiple?: boolean;
+  maxFiles?: number;
+  folder: string;
+  value: UploadedFile[];
+  onChange: (files: UploadedFile[]) => void;
+  required?: boolean;
+}
+
+export interface Section {
+  title?: string;
+  fields?: Field[];
+  fileFields?: FileField[];
+  condition?: boolean;
+  customContent?: React.ReactNode;
+}
+
 interface FormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  fields: Field[];
+  sections?: Section[];
   onFieldChange: (fieldId: string, value: string) => void;
   onSubmit: () => Promise<void>;
   submitText?: string;
@@ -52,7 +69,7 @@ export function FormSheet({
   onOpenChange,
   title,
   description,
-  fields,
+  sections = [],
   onFieldChange,
   onSubmit,
   submitText = "Save",
@@ -77,15 +94,22 @@ export function FormSheet({
     }
   };
 
-  const isFormValid = fields
+  const allFields = sections
+    .filter((section) => section.condition !== false)
+    .flatMap((section) => section.fields || []);
+
+  const isFormValid = allFields
     .filter((field) => field.required)
-    .every((field) => field.value.trim());
+    .every((field) => field.value && field.value.trim());
+
+  const visibleSections = sections.filter(
+    (section) => section.condition !== false
+  );
 
   return (
     <UISheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="flex flex-col h-full bg-white">
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          {/* Fixed Header */}
           <div className="shrink-0">
             <SheetHeader>
               <SheetTitle>{title}</SheetTitle>
@@ -95,71 +119,117 @@ export function FormSheet({
             <Messages messages={messages} className="px-6" />
           </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-            {fields.map((field) => (
-              <div key={field.id} className="grid gap-2">
-                <FormLabel
-                  htmlFor={field.id}
-                  required={field.required}
-                  optional={field.required === false}
-                >
-                  {field.label}
-                </FormLabel>
-                {field.type === "select" && field.options ? (
-                  <Select
-                    value={field.value}
-                    onValueChange={(value) =>
-                      handleFieldChange(field.id, value)
-                    }
-                    disabled={field.disabled || isSubmitting || isReadOnly}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={field.placeholder || "Select..."}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : field.type === "textarea" ? (
-                  <Textarea
-                    id={field.id}
-                    value={field.value}
-                    onChange={(e) =>
-                      handleFieldChange(field.id, e.target.value)
-                    }
-                    placeholder={field.placeholder}
-                    disabled={field.disabled || isSubmitting || isReadOnly}
-                    required={field.required}
-                    rows={3}
-                    readOnly={isReadOnly}
-                  />
+          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            {children}
+
+            {visibleSections.map((section, sectionIndex) => (
+              <div key={sectionIndex}>
+                {(sectionIndex > 0 || children) && (
+                  <Separator className="mb-6" />
+                )}
+
+                {section.customContent ? (
+                  <div>{section.customContent}</div>
                 ) : (
-                  <Input
-                    id={field.id}
-                    type={field.type || "text"}
-                    value={field.value}
-                    onChange={(e) =>
-                      handleFieldChange(field.id, e.target.value)
-                    }
-                    placeholder={field.placeholder}
-                    disabled={field.disabled || isSubmitting || isReadOnly}
-                    required={field.required}
-                    readOnly={isReadOnly}
-                  />
+                  <div className="space-y-4">
+                    {section.title && (
+                      <h3 className="text-sm font-semibold">{section.title}</h3>
+                    )}
+
+                    {section.fields && section.fields.length > 0 && (
+                      <div className="space-y-4">
+                        {section.fields.map((field) => (
+                          <div key={field.id} className="space-y-2">
+                            <FormLabel
+                              htmlFor={field.id}
+                              required={field.required}
+                            >
+                              {field.label}
+                            </FormLabel>
+                            {field.type === "select" && field.options ? (
+                              <select
+                                id={field.id}
+                                value={field.value}
+                                onChange={(e) =>
+                                  handleFieldChange(field.id, e.target.value)
+                                }
+                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                disabled={
+                                  field.disabled || isSubmitting || isReadOnly
+                                }
+                                required={field.required}
+                              >
+                                <option value="">
+                                  {field.placeholder || "Select..."}
+                                </option>
+                                {field.options.map((option) => (
+                                  <option
+                                    key={option.value}
+                                    value={option.value}
+                                  >
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : field.type === "textarea" ? (
+                              <Textarea
+                                id={field.id}
+                                value={field.value}
+                                onChange={(e) =>
+                                  handleFieldChange(field.id, e.target.value)
+                                }
+                                placeholder={field.placeholder}
+                                disabled={
+                                  field.disabled || isSubmitting || isReadOnly
+                                }
+                                required={field.required}
+                                readOnly={isReadOnly}
+                              />
+                            ) : (
+                              <Input
+                                id={field.id}
+                                type={field.type || "text"}
+                                value={field.value}
+                                onChange={(e) =>
+                                  handleFieldChange(field.id, e.target.value)
+                                }
+                                placeholder={field.placeholder}
+                                disabled={
+                                  field.disabled || isSubmitting || isReadOnly
+                                }
+                                required={field.required}
+                                readOnly={isReadOnly}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {section.fileFields && section.fileFields.length > 0 && (
+                      <div className="space-y-4">
+                        {section.fileFields.map((fileField, fIndex) => (
+                          <FileUploader
+                            key={fIndex}
+                            label={fileField.label}
+                            accept={fileField.accept}
+                            multiple={fileField.multiple}
+                            maxFiles={fileField.maxFiles}
+                            folder={fileField.folder}
+                            value={fileField.value}
+                            onChange={fileField.onChange}
+                            required={fileField.required}
+                            disabled={isReadOnly}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
-            {children}
           </div>
 
-          {/* Fixed Footer */}
           {!isReadOnly && (
             <div className="shrink-0 border-t bg-background">
               <SheetFooter className="p-6">
