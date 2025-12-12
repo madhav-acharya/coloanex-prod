@@ -66,10 +66,13 @@ export class UsersService {
       }
     }
 
-    if (createUserDto.phone) {
+    const phone = createUserDto.phone?.trim() || null;
+
+    if (phone) {
       const existingUser = await this.prisma.user.findUnique({
-        where: { phone: createUserDto.phone },
+        where: { phone },
       });
+
       if (existingUser) {
         throw new ConflictException(
           'User with this phone number already exists',
@@ -181,7 +184,7 @@ export class UsersService {
   ) {
     const { email, phone, password, fullName, tenantId, role } = createUserDto;
 
-    // Check if user already exists
+    const phoneTrimmed = phone?.trim() || null;
     const existingUserByEmail = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -190,12 +193,16 @@ export class UsersService {
       throw new ConflictException('User with this email already exists');
     }
 
-    const existingUserByPhone = await this.prisma.user.findUnique({
-      where: { phone },
-    });
+    if (phoneTrimmed) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phone: phoneTrimmed },
+      });
 
-    if (existingUserByPhone) {
-      throw new ConflictException('User with this phone number already exists');
+      if (existingUser) {
+        throw new ConflictException(
+          'User with this phone number already exists',
+        );
+      }
     }
 
     const hashedPassword = await argon2.hash(password, {
@@ -225,7 +232,7 @@ export class UsersService {
       data: {
         fullName,
         email,
-        phone,
+        phone: phoneTrimmed || null,
         password: hashedPassword,
         tenantId,
         isEmailVerified: false,
@@ -247,17 +254,6 @@ export class UsersService {
         roleId: borrowerRole.id,
       },
     });
-
-    // Create borrower profile if role is BORROWER
-    if (defaultRole === 'BORROWER') {
-      await this.borrowersService.ensureBorrowerExists(
-        user.id,
-        user.tenantId || '',
-        actorUserId,
-        ipAddress,
-        userAgent,
-      );
-    }
 
     // Log activity
     if (this.activityLogsService) {
