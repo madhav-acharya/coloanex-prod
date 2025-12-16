@@ -212,20 +212,11 @@ export class UsersService {
       parallelism: 2,
     });
 
-    const defaultRole = role || 'BORROWER';
+    const defaultRole = role || 'Borrower';
 
-    // Ensure borrower role exists
-    let borrowerRole = await this.prisma.role.findFirst({
+    const borrowerRole = await this.prisma.role.findFirst({
       where: { name: defaultRole },
     });
-
-    if (!borrowerRole && defaultRole === 'BORROWER') {
-      borrowerRole = await this.createDefaultBorrowerRole();
-    }
-
-    if (!borrowerRole) {
-      throw new BadRequestException(`Role ${defaultRole} does not exist`);
-    }
 
     // Create user
     const user = await this.prisma.user.create({
@@ -248,6 +239,9 @@ export class UsersService {
     });
 
     // Assign role
+    if (!borrowerRole) {
+      throw new BadRequestException(`Role "${defaultRole}" not found`);
+    }
     await this.prisma.userRole.create({
       data: {
         userId: user.id,
@@ -282,65 +276,6 @@ export class UsersService {
       ...userWithoutPassword,
       role: defaultRole,
     };
-  }
-
-  private async createDefaultBorrowerRole() {
-    const borrowerPermissions = await this.ensureBorrowerPermissions();
-
-    const role = await this.prisma.role.create({
-      data: {
-        name: 'BORROWER',
-        description: 'Default role for borrowers',
-      },
-    });
-
-    for (const permission of borrowerPermissions) {
-      if (permission.id !== undefined) {
-        await this.prisma.rolePermission.create({
-          data: {
-            roleId: role.id,
-            permissionId: permission.id,
-          },
-        });
-      }
-    }
-
-    return role;
-  }
-
-  private async ensureBorrowerPermissions(): Promise<
-    Prisma.PermissionUncheckedCreateInput[]
-  > {
-    const borrowerPermissions = [
-      { name: 'VIEW_PROFILE', description: 'View own profile' },
-      { name: 'UPDATE_PROFILE', description: 'Update own profile' },
-      { name: 'UPLOAD_KYC', description: 'Upload KYC documents' },
-      { name: 'VIEW_KYC_STATUS', description: 'View KYC verification status' },
-      { name: 'REQUEST_LOAN', description: 'Request loans' },
-      { name: 'VIEW_LOAN_HISTORY', description: 'View loan history' },
-      { name: 'VIEW_REWARDS', description: 'View reward points' },
-    ];
-
-    const createdPermissions: Prisma.PermissionUncheckedCreateInput[] = [];
-
-    for (const permData of borrowerPermissions) {
-      let permission = await this.prisma.permission.findFirst({
-        where: { name: permData.name },
-      });
-
-      if (!permission) {
-        permission = await this.prisma.permission.create({
-          data: {
-            name: permData.name,
-            description: permData.description,
-          },
-        });
-      }
-
-      createdPermissions.push(permission);
-    }
-
-    return createdPermissions;
   }
 
   async findAll(query: UsersQueryInterface, currentUser: JwtPayload) {
