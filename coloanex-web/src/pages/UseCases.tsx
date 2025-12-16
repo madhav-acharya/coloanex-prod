@@ -222,7 +222,7 @@ export default function UseCases() {
               </Button>
             </Link>
             <Button variant="heroOutline" size="lg">
-              Schedule Demo
+              <Link to="/signup">Schedule Demo</Link>
             </Button>
           </div>
         </div>
