@@ -6,6 +6,7 @@ import {
   ActivityEntityType,
   ActivityAction,
 } from '../activity-logs/entities/activity-log.entity';
+import type { CreateBorrowerDto } from './interfaces/create-borrower.interface';
 
 @Injectable()
 export class BorrowersService {
@@ -14,13 +15,7 @@ export class BorrowersService {
     private activityLogsService: ActivityLogsService,
   ) {}
 
-  async create(data: {
-    tenantId: string;
-    userId: string;
-    actorUserId?: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<Borrower> {
+  async create(data: CreateBorrowerDto): Promise<Borrower> {
     const borrower = await this.prisma.borrower.create({
       data: {
         tenantId: data.tenantId,
@@ -146,6 +141,21 @@ export class BorrowersService {
     );
 
     return updatedBorrower;
+  }
+
+  async createForSignup(
+    userId: string,
+    tenantId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<Borrower> {
+    return this.create({
+      tenantId,
+      userId,
+      actorUserId: userId,
+      ipAddress,
+      userAgent,
+    });
   }
 
   async ensureBorrowerExists(
