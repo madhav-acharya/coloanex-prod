@@ -10,6 +10,7 @@ import type { RolesQueryInterface } from './interfaces/roles.query.interface';
 import { Prisma } from '@prisma/client';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { PermissionAssignmentService } from '../permissions/permission-assignment.service';
 import {
   ActivityAction,
   ActivityEntityType,
@@ -20,6 +21,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly permissionAssignmentService: PermissionAssignmentService,
   ) {}
 
   async create(createRoleDto: CreateRoleDto, user: JwtPayload) {
@@ -314,6 +316,13 @@ export class RolesService {
       undefined,
       user.tenantId,
     );
+
+    if (
+      updatedRole?.name.toLowerCase().includes('lender') &&
+      permissionIds !== undefined
+    ) {
+      await this.permissionAssignmentService.syncLenderPermissions();
+    }
 
     return this.transformRoleResponse(updatedRole);
   }
