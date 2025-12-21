@@ -4,10 +4,22 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  isActive: boolean;
+  lastActiveAt?: string;
+  roles: string[];
+  permissions: string[];
+}
+
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   sessionId: string;
+  user?: AuthUser;
 }
 
 export interface SignupRequest {
@@ -15,33 +27,9 @@ export interface SignupRequest {
   phone?: string;
   password: string;
   fullName: string;
+  tenantId?: string;
 }
 
 export interface RefreshTokenRequest {
   refreshToken: string;
-}
-
-export interface AuthUser {
-  id: string;
-  email?: string;
-  phone?: string;
-  fullName: string;
-  isActive: boolean;
-  tenantId?: string;
-  roles: Array<{
-    roleId: number;
-    userId: string;
-    role: {
-      id: number;
-      name: string;
-    };
-  }>;
-  permissions: Array<{
-    permissionId: number;
-    userId: string;
-    permission: {
-      id: number;
-      name: string;
-    };
-  }>;
 }
