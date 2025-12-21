@@ -21,6 +21,14 @@ import {
 import { useGetRolesQuery } from "@/apis/rolesApi";
 import { useGetPermissionsQuery } from "@/apis/permissionsApi";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  extractUserRoleIds,
+  extractUserPermissionIds,
+  extractUserRoles,
+  extractUserPermissions,
+  extractRolePermissions,
+  getAdditionalPermissionIds,
+} from "@/lib/permissions";
 
 export default function Users() {
   const { toast } = useToast();
@@ -63,8 +71,9 @@ export default function Users() {
       id: "phone",
       label: "Phone",
       value: "",
-      placeholder: "1234567890",
+      placeholder: "+977-1234567890",
       type: "tel",
+      required: true,
     },
     {
       id: "password",
@@ -189,30 +198,8 @@ export default function Users() {
       phone: user.phone || "",
       password: "",
     });
-    setSelectedRoles(
-      user.roles
-        ?.map((r: unknown) => {
-          const item = r as Record<string, unknown>;
-          const role =
-            item && typeof item === "object" && "role" in item
-              ? item.role
-              : item;
-          return (role as { id?: string })?.id;
-        })
-        .filter((id): id is string => Boolean(id)) || []
-    );
-    setSelectedPermissions(
-      user.permissions
-        ?.map((p: unknown) => {
-          const item = p as Record<string, unknown>;
-          const perm =
-            item && typeof item === "object" && "permission" in item
-              ? item.permission
-              : item;
-          return (perm as { id?: string })?.id;
-        })
-        .filter((id): id is string => Boolean(id)) || []
-    );
+    setSelectedRoles(extractUserRoleIds(user));
+    setSelectedPermissions(extractUserPermissionIds(user));
     setSheetOpen(true);
   };
 
@@ -230,30 +217,8 @@ export default function Users() {
       passwordField.required = false;
       passwordField.placeholder = "Leave empty to keep unchanged";
     }
-    setSelectedRoles(
-      user.roles
-        ?.map((r: unknown) => {
-          const item = r as Record<string, unknown>;
-          const role =
-            item && typeof item === "object" && "role" in item
-              ? item.role
-              : item;
-          return (role as { id?: string })?.id;
-        })
-        .filter((id): id is string => Boolean(id)) || []
-    );
-    setSelectedPermissions(
-      user.permissions
-        ?.map((p: unknown) => {
-          const item = p as Record<string, unknown>;
-          const perm =
-            item && typeof item === "object" && "permission" in item
-              ? item.permission
-              : item;
-          return (perm as { id?: string })?.id;
-        })
-        .filter((id): id is string => Boolean(id)) || []
-    );
+    setSelectedRoles(extractUserRoleIds(user));
+    setSelectedPermissions(extractUserPermissionIds(user));
     setSheetOpen(true);
   };
 
@@ -557,31 +522,13 @@ export default function Users() {
             <>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Roles
+                  Assigned Roles
                 </label>
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
-                  {selectedUser?.roles && selectedUser.roles.length > 0 ? (
-                    selectedUser.roles
-                      .map((role: unknown) => {
-                        const r = role as Record<string, unknown>;
-                        if (r && typeof r === "object") {
-                          if (
-                            "role" in r &&
-                            r.role &&
-                            typeof r.role === "object"
-                          ) {
-                            return r.role as { id: string; name: string };
-                          }
-                          if ("id" in r && "name" in r) {
-                            return r as { id: string; name: string };
-                          }
-                        }
-                        return null;
-                      })
-                      .filter(
-                        (r): r is { id: string; name: string } => r !== null
-                      )
-                      .map((roleData) => (
+                  {(() => {
+                    const userRoles = extractUserRoles(selectedUser);
+                    return userRoles.length > 0 ? (
+                      userRoles.map((roleData) => (
                         <Badge
                           key={roleData.id}
                           variant="secondary"
@@ -590,41 +537,34 @@ export default function Users() {
                           {roleData.name}
                         </Badge>
                       ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      No roles assigned
-                    </span>
-                  )}
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No roles assigned
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Additional Permissions
+                  Role-Based Permissions
                 </label>
-                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
-                  {selectedUser?.permissions &&
-                  selectedUser.permissions.length > 0 ? (
-                    selectedUser.permissions
-                      .map((permission: unknown) => {
-                        const p = permission as Record<string, unknown>;
-                        if (p && typeof p === "object") {
-                          if (
-                            "permission" in p &&
-                            p.permission &&
-                            typeof p.permission === "object"
-                          ) {
-                            return p.permission as { id: string; name: string };
-                          }
-                          if ("id" in p && "name" in p) {
-                            return p as { id: string; name: string };
-                          }
-                        }
-                        return null;
-                      })
-                      .filter(
-                        (p): p is { id: string; name: string } => p !== null
-                      )
-                      .map((permData) => (
+                <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-md border border-blue-200 min-h-[60px]">
+                  {(() => {
+                    const userRoles = extractUserRoles(selectedUser);
+                    const selectedRoleObjects = roles.filter((r) =>
+                      userRoles.some((ur) => ur.id === r.id)
+                    );
+                    const rolePermissions =
+                      extractRolePermissions(selectedRoleObjects);
+                    const userPermissions =
+                      extractUserPermissions(selectedUser);
+                    const roleBasedPerms = userPermissions.filter((perm) =>
+                      rolePermissions.has(perm.id)
+                    );
+
+                    return roleBasedPerms.length > 0 ? (
+                      roleBasedPerms.map((permData) => (
                         <Badge
                           key={permData.id}
                           variant="secondary"
@@ -633,11 +573,48 @@ export default function Users() {
                           {permData.name}
                         </Badge>
                       ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      No additional permissions
-                    </span>
-                  )}
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No role-based permissions
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Additional Permissions
+                </label>
+                <div className="flex flex-wrap gap-2 p-3 bg-purple-50 rounded-md border border-purple-200 min-h-[60px]">
+                  {(() => {
+                    const userRoles = extractUserRoles(selectedUser);
+                    const selectedRoleObjects = roles.filter((r) =>
+                      userRoles.some((ur) => ur.id === r.id)
+                    );
+                    const rolePermissions =
+                      extractRolePermissions(selectedRoleObjects);
+                    const userPermissions =
+                      extractUserPermissions(selectedUser);
+                    const additionalPerms = userPermissions.filter(
+                      (perm) => !rolePermissions.has(perm.id)
+                    );
+
+                    return additionalPerms.length > 0 ? (
+                      additionalPerms.map((permData) => (
+                        <Badge
+                          key={permData.id}
+                          variant="secondary"
+                          className="bg-purple-100 text-purple-700"
+                        >
+                          {permData.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        No additional permissions
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             </>
