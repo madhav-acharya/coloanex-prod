@@ -250,6 +250,9 @@ export default function Roles() {
                 id={role.id}
                 title={role.name}
                 subtitle={role.description}
+                metadata={`${
+                  role.permissions?.length || 0
+                } permissions assigned`}
                 icon={Shield}
                 onView={(id) => {
                   const role = roles.find((r) => r.id === id);
