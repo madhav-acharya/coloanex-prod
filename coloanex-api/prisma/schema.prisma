@@ -197,16 +197,16 @@ model ActivityLog {
 }
 
 model Borrower {
-  id               String       @id @default(uuid())
+  id               String    @id @default(uuid())
   tenantId         String
-  userId           String       @map("user_id")
-  kycStatus        KycStatus    @default(PENDING)
+  userId           String    @map("user_id")
+  kycStatus        KycStatus @default(PENDING)
   rewardScore      Float?
   kycLastCheckedAt DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  tenant           Tenant       @relation(fields: [tenantId], references: [id])
-  user             User         @relation("BorrowerUser", fields: [userId], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  tenant           Tenant    @relation(fields: [tenantId], references: [id])
+  user             User      @relation("BorrowerUser", fields: [userId], references: [id])
   kycs             Kyc[]
 
   @@unique([tenantId, userId])
@@ -218,63 +218,63 @@ model Borrower {
 }
 
 model Kyc {
-  id                   String    @id @default(uuid())
-  borrowerId           String    @map("borrower_id")
-  documentTypes        String[]  @map("document_types")
-  firstName            String
-  middleName           String?   @map("middle_name")
-  lastName             String
-  dateOfBirth          DateTime  @map("date_of_birth")
-  gender               String?
-  maritalStatus        String?   @map("marital_status")
-  spouseName           String?   @map("spouse_name")
-  fatherName           String?   @map("father_name")
-  motherName           String?   @map("mother_name")
-  grandfatherName      String?   @map("grandfather_name")
-  citizenshipNumber    String?   @map("citizenship_number")
-  citizenshipIssueDate DateTime? @map("citizenship_issue_date")
-  citizenshipDistrict  String?   @map("citizenship_district")
-  passportNumber       String?   @map("passport_number")
-  passportIssueDate    DateTime? @map("passport_issue_date")
-  passportExpiryDate   DateTime? @map("passport_expiry_date")
-  panNumber            String?   @map("pan_number")
-  licenseNumber        String?   @map("license_number")
-  licenseIssueDate     DateTime? @map("license_issue_date")
-  licenseExpiryDate    DateTime? @map("license_expiry_date")
-  permanentProvince    String?   @map("permanent_province")
-  permanentDistrict    String?   @map("permanent_district")
-  permanentMunicipality String?  @map("permanent_municipality")
-  permanentWard        String?   @map("permanent_ward")
-  permanentTole        String?   @map("permanent_tole")
-  temporaryProvince    String?   @map("temporary_province")
-  temporaryDistrict    String?   @map("temporary_district")
-  temporaryMunicipality String?  @map("temporary_municipality")
-  temporaryWard        String?   @map("temporary_ward")
-  temporaryTole        String?   @map("temporary_tole")
-  phoneNumber          String?   @map("phone_number")
-  alternatePhone       String?   @map("alternate_phone")
-  email                String?
-  occupation           String?
-  employerName         String?   @map("employer_name")
-  monthlyIncome        Float?    @map("monthly_income")
-  bankName             String?   @map("bank_name")
-  bankAccountNumber    String?   @map("bank_account_number")
-  bankBranch           String?   @map("bank_branch")
-  loanAmount           Float?    @map("loan_amount")
-  loanPurpose          String?   @map("loan_purpose")
-  loanDuration         Int?      @map("loan_duration")
-  collateralType       String?   @map("collateral_type")
-  collateralDescription String?  @map("collateral_description")
-  collateralValue      Float?    @map("collateral_value")
-  status               KycStatus @default(PENDING)
-  rejectionReason      String?   @map("rejection_reason")
-  verifiedBy           String?   @map("verified_by")
-  verifiedAt           DateTime? @map("verified_at")
-  notes                String?
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-  borrower             Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
-  files                KycFile[]
+  id                    String    @id @default(uuid())
+  borrowerId            String    @map("borrower_id")
+  documentTypes         String[]  @map("document_types")
+  firstName             String
+  middleName            String?   @map("middle_name")
+  lastName              String
+  dateOfBirth           DateTime  @map("date_of_birth")
+  gender                String?
+  maritalStatus         String?   @map("marital_status")
+  spouseName            String?   @map("spouse_name")
+  fatherName            String?   @map("father_name")
+  motherName            String?   @map("mother_name")
+  grandfatherName       String?   @map("grandfather_name")
+  citizenshipNumber     String?   @map("citizenship_number")
+  citizenshipIssueDate  DateTime? @map("citizenship_issue_date")
+  citizenshipDistrict   String?   @map("citizenship_district")
+  passportNumber        String?   @map("passport_number")
+  passportIssueDate     DateTime? @map("passport_issue_date")
+  passportExpiryDate    DateTime? @map("passport_expiry_date")
+  panNumber             String?   @map("pan_number")
+  licenseNumber         String?   @map("license_number")
+  licenseIssueDate      DateTime? @map("license_issue_date")
+  licenseExpiryDate     DateTime? @map("license_expiry_date")
+  permanentProvince     String?   @map("permanent_province")
+  permanentDistrict     String?   @map("permanent_district")
+  permanentMunicipality String?   @map("permanent_municipality")
+  permanentWard         String?   @map("permanent_ward")
+  permanentTole         String?   @map("permanent_tole")
+  temporaryProvince     String?   @map("temporary_province")
+  temporaryDistrict     String?   @map("temporary_district")
+  temporaryMunicipality String?   @map("temporary_municipality")
+  temporaryWard         String?   @map("temporary_ward")
+  temporaryTole         String?   @map("temporary_tole")
+  phoneNumber           String?   @map("phone_number")
+  alternatePhone        String?   @map("alternate_phone")
+  email                 String?
+  occupation            String?
+  employerName          String?   @map("employer_name")
+  monthlyIncome         Float?    @map("monthly_income")
+  bankName              String?   @map("bank_name")
+  bankAccountNumber     String?   @map("bank_account_number")
+  bankBranch            String?   @map("bank_branch")
+  loanAmount            Float?    @map("loan_amount")
+  loanPurpose           String?   @map("loan_purpose")
+  loanDuration          Int?      @map("loan_duration")
+  collateralType        String?   @map("collateral_type")
+  collateralDescription String?   @map("collateral_description")
+  collateralValue       Float?    @map("collateral_value")
+  status                KycStatus @default(PENDING)
+  rejectionReason       String?   @map("rejection_reason")
+  verifiedBy            String?   @map("verified_by")
+  verifiedAt            DateTime? @map("verified_at")
+  notes                 String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  borrower              Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  files                 KycFile[]
 
   @@index([borrowerId])
   @@index([status])
@@ -285,16 +285,16 @@ model Kyc {
 }
 
 model KycFile {
-  id          String      @id @default(uuid())
-  kycId       String      @map("kyc_id")
-  fileType    KycFileType @map("file_type")
-  documentType String?    @map("document_type")
-  fileUrl     String      @map("file_url")
-  fileName    String?     @map("file_name")
-  mimeType    String?     @map("mime_type")
-  sizeInBytes Int?        @map("size_in_bytes")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  kyc         Kyc         @relation(fields: [kycId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid())
+  kycId        String      @map("kyc_id")
+  fileType     KycFileType @map("file_type")
+  documentType String?     @map("document_type")
+  fileUrl      String      @map("file_url")
+  fileName     String?     @map("file_name")
+  mimeType     String?     @map("mime_type")
+  sizeInBytes  Int?        @map("size_in_bytes")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  kyc          Kyc         @relation(fields: [kycId], references: [id], onDelete: Cascade)
 
   @@index([kycId])
   @@index([fileType])
