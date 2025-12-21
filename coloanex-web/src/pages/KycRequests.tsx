@@ -927,7 +927,7 @@ export default function KycRequests() {
             id: "citizenshipNumber",
             label: "Citizenship Number",
             value: formData.citizenshipNumber || "",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
             placeholder: "Enter citizenship number",
           },
           {
@@ -935,13 +935,13 @@ export default function KycRequests() {
             label: "Issue Date",
             value: formData.citizenshipIssueDate || "",
             type: "date",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
           },
           {
             id: "citizenshipDistrict",
             label: "Issue District",
             value: formData.citizenshipDistrict || "",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
             placeholder: "Enter issue district",
             colSpan: 2,
           },
@@ -955,7 +955,7 @@ export default function KycRequests() {
             value: files.citizenshipFront,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, citizenshipFront: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
           },
           {
             label: "Citizenship Back",
@@ -965,7 +965,7 @@ export default function KycRequests() {
             value: files.citizenshipBack,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, citizenshipBack: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
           },
         ],
       },
@@ -977,7 +977,7 @@ export default function KycRequests() {
             id: "passportNumber",
             label: "Passport Number",
             value: formData.passportNumber || "",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
             placeholder: "Enter passport number",
           },
           {
@@ -985,14 +985,14 @@ export default function KycRequests() {
             label: "Issue Date",
             value: formData.passportIssueDate || "",
             type: "date",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
           },
           {
             id: "passportExpiryDate",
             label: "Expiry Date",
             value: formData.passportExpiryDate || "",
             type: "date",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
           },
         ],
         fileFields: [
@@ -1004,7 +1004,7 @@ export default function KycRequests() {
             value: files.passport,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, passport: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
           },
         ],
       },
@@ -1016,7 +1016,7 @@ export default function KycRequests() {
             id: "panNumber",
             label: "PAN Number",
             value: formData.panNumber || "",
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PAN),
             placeholder: "Enter PAN number",
           },
         ],
@@ -1029,7 +1029,7 @@ export default function KycRequests() {
             value: files.pan,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, pan: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(KycDocumentType.PAN),
           },
         ],
       },
@@ -1041,7 +1041,9 @@ export default function KycRequests() {
             id: "licenseNumber",
             label: "License Number",
             value: formData.licenseNumber || "",
-            required: true,
+            required: selectedDocTypes.includes(
+              KycDocumentType.DRIVING_LICENSE
+            ),
             placeholder: "Enter license number",
           },
           {
@@ -1049,14 +1051,18 @@ export default function KycRequests() {
             label: "Issue Date",
             value: formData.licenseIssueDate || "",
             type: "date",
-            required: true,
+            required: selectedDocTypes.includes(
+              KycDocumentType.DRIVING_LICENSE
+            ),
           },
           {
             id: "licenseExpiryDate",
             label: "Expiry Date",
             value: formData.licenseExpiryDate || "",
             type: "date",
-            required: true,
+            required: selectedDocTypes.includes(
+              KycDocumentType.DRIVING_LICENSE
+            ),
           },
         ],
         fileFields: [
@@ -1068,7 +1074,9 @@ export default function KycRequests() {
             value: files.licenseFront,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, licenseFront: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(
+              KycDocumentType.DRIVING_LICENSE
+            ),
           },
           {
             label: "License Back",
@@ -1078,7 +1086,9 @@ export default function KycRequests() {
             value: files.licenseBack,
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, licenseBack: newFiles })),
-            required: true,
+            required: selectedDocTypes.includes(
+              KycDocumentType.DRIVING_LICENSE
+            ),
           },
         ],
       },
