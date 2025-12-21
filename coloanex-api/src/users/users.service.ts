@@ -12,21 +12,13 @@ import type { UsersQueryInterface } from './interfaces/users.query.interface';
 import { Prisma } from '@prisma/client';
 import * as argon2 from 'argon2';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
+import type { CreateUserForSignupDto } from '../common/interfaces/create-user-signup.interface';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
-import { BorrowersService } from '../borrowers/borrowers.service';
+import { PermissionAssignmentService } from '../permissions/permission-assignment.service';
 import {
   ActivityAction,
   ActivityEntityType,
 } from '../activity-logs/entities/activity-log.entity';
-
-interface CreateUserForSignupDto {
-  email: string;
-  phone: string;
-  password: string;
-  fullName: string;
-  tenantId?: string;
-  role?: string;
-}
 
 export type { CreateUserForSignupDto };
 
@@ -35,7 +27,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogsService: ActivityLogsService,
-    private readonly borrowersService: BorrowersService,
+    private readonly permissionAssignmentService: PermissionAssignmentService,
   ) {}
 
   async create(createUserDto: CreateUserDto, currentUser: JwtPayload) {
@@ -149,9 +141,23 @@ export class UsersService {
           roleId,
         })),
       });
-    }
 
-    if (createUserDto.permissionIds && createUserDto.permissionIds.length > 0) {
+      const roles = await this.prisma.role.findMany({
+        where: { id: { in: createUserDto.roleIds } },
+        select: { name: true },
+      });
+      const roleNames = roles.map((r) => r.name);
+
+      const additionalPermissionIds = createUserDto.permissionIds || [];
+      await this.permissionAssignmentService.assignPermissionsToUser(
+        user.id,
+        roleNames,
+        additionalPermissionIds,
+      );
+    } else if (
+      createUserDto.permissionIds &&
+      createUserDto.permissionIds.length > 0
+    ) {
       await this.prisma.userPermission.createMany({
         data: createUserDto.permissionIds
           .filter((permissionId) => permissionId !== undefined)
@@ -180,9 +186,8 @@ export class UsersService {
     createUserDto: CreateUserForSignupDto,
     ipAddress?: string,
     userAgent?: string,
-    actorUserId?: string,
   ) {
-    const { email, phone, password, fullName, tenantId, role } = createUserDto;
+    const { email, phone, password, fullName, tenantId } = createUserDto;
 
     const phoneTrimmed = phone?.trim() || null;
     const existingUserByEmail = await this.prisma.user.findUnique({
@@ -212,13 +217,14 @@ export class UsersService {
       parallelism: 2,
     });
 
-    const defaultRole = role || 'Borrower';
-
     const borrowerRole = await this.prisma.role.findFirst({
-      where: { name: defaultRole },
+      where: { name: 'Borrower' },
     });
 
-    // Create user
+    if (!borrowerRole) {
+      throw new BadRequestException('Borrower role not found');
+    }
+
     const user = await this.prisma.user.create({
       data: {
         fullName,
@@ -238,10 +244,6 @@ export class UsersService {
       },
     });
 
-    // Assign role
-    if (!borrowerRole) {
-      throw new BadRequestException(`Role "${defaultRole}" not found`);
-    }
     await this.prisma.userRole.create({
       data: {
         userId: user.id,
@@ -249,32 +251,34 @@ export class UsersService {
       },
     });
 
-    // Log activity
+    await this.permissionAssignmentService.assignPermissionsToUser(user.id, [
+      'Borrower',
+    ]);
+
     if (this.activityLogsService) {
       await this.activityLogsService.create({
         action: ActivityAction.CREATE,
         entityType: ActivityEntityType.USER,
         entityId: user.id,
-        description: 'User registered with ' + defaultRole + ' role',
+        description: 'User registered with Borrower role',
         before: null,
         after: {
           userId: user.id,
-          role: defaultRole,
+          role: 'Borrower',
           email: user.email,
         },
         ipAddress,
         userAgent,
-        actorUserId: actorUserId || user.id,
+        actorUserId: user.id,
         tenantId: user.tenantId || undefined,
       });
     }
 
-    // Return user without password
     const { password: userPassword, ...userWithoutPassword } = user;
     void userPassword;
     return {
       ...userWithoutPassword,
-      role: defaultRole,
+      role: 'Borrower',
     };
   }
 
@@ -765,29 +769,72 @@ export class UsersService {
               roleId,
             })),
           });
+
+          const roles = await this.prisma.role.findMany({
+            where: { id: { in: validRoleIds } },
+            select: { name: true },
+          });
+          const roleNames = roles.map((r) => r.name);
+
+          const additionalPermissionIds =
+            updateUserDto.permissionIds
+              ?.filter((permId) => permId !== null && permId !== undefined)
+              .map((permId) => BigInt(permId)) || [];
+
+          await this.permissionAssignmentService.assignPermissionsToUser(
+            id,
+            roleNames,
+            additionalPermissionIds,
+          );
         }
-      }
-    }
+      } else {
+        if (
+          updateUserDto.permissionIds &&
+          updateUserDto.permissionIds.length > 0
+        ) {
+          await this.prisma.userPermission.deleteMany({
+            where: { userId: id },
+          });
 
-    if (updateUserDto.permissionIds !== undefined) {
-      await this.prisma.userPermission.deleteMany({
-        where: { userId: id },
-      });
+          const validPermissionIds = updateUserDto.permissionIds
+            .filter((permId) => permId !== null && permId !== undefined)
+            .map((permId) => BigInt(permId));
 
-      if (updateUserDto.permissionIds.length > 0) {
-        const validPermissionIds = updateUserDto.permissionIds
-          .filter((id) => id !== null && id !== undefined)
-          .map((id) => BigInt(id));
-
-        if (validPermissionIds.length > 0) {
-          await this.prisma.userPermission.createMany({
-            data: validPermissionIds.map((permissionId) => ({
-              userId: id,
-              permissionId,
-            })),
+          if (validPermissionIds.length > 0) {
+            await this.prisma.userPermission.createMany({
+              data: validPermissionIds.map((permissionId) => ({
+                userId: id,
+                permissionId,
+              })),
+            });
+          }
+        } else {
+          await this.prisma.userPermission.deleteMany({
+            where: { userId: id },
           });
         }
       }
+    } else if (updateUserDto.permissionIds !== undefined) {
+      const existingRoles = await this.prisma.userRole.findMany({
+        where: { userId: id },
+        include: {
+          role: {
+            select: { name: true },
+          },
+        },
+      });
+
+      const roleNames = existingRoles.map((ur) => ur.role.name);
+
+      const additionalPermissionIds = updateUserDto.permissionIds
+        .filter((permId) => permId !== null && permId !== undefined)
+        .map((permId) => BigInt(permId));
+
+      await this.permissionAssignmentService.assignPermissionsToUser(
+        id,
+        roleNames,
+        additionalPermissionIds,
+      );
     }
 
     const updatedUser = await this.findOne(id, currentUser);
