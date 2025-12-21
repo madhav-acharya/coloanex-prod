@@ -8,12 +8,22 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   roles?: Array<{
-    id: string;
-    name: string;
+    role?: {
+      id: string;
+      name: string;
+      description?: string;
+    };
+    id?: string;
+    name?: string;
   }>;
   permissions?: Array<{
-    id: string;
-    name: string;
+    permission?: {
+      id: string;
+      name: string;
+      description?: string;
+    };
+    id?: string;
+    name?: string;
   }>;
 }
 
