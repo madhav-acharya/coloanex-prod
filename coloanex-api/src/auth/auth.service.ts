@@ -10,41 +10,24 @@ import { RedisSessionService } from './services/redis-session.service';
 import { LoginDto } from './dto/login.dto';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BorrowersService } from '../borrowers/borrowers.service';
+import { UsersService } from '../users/users.service';
+import type { CreateUserForSignupDto } from '../common/interfaces/create-user-signup.interface';
+import type {
+  AuthTokens,
+  JwtPayload,
+} from '../common/interfaces/auth-tokens.interface';
 import {
-  UsersService,
-  type CreateUserForSignupDto,
-} from '../users/users.service';
+  extractRolesAndPermissions,
+  createJwtPayload,
+  createUserResponse,
+} from '../common/helpers/auth.helper';
+import { generateTokenPair } from '../common/helpers/token.helper';
 import {
   ActivityAction,
   ActivityEntityType,
 } from '../activity-logs/entities/activity-log.entity';
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  sessionId: string;
-  user?: {
-    id: string;
-    email: string;
-    fullName: string;
-    phone?: string;
-    isActive: boolean;
-    lastActiveAt?: Date;
-    roles: string[];
-    permissions: string[];
-  };
-}
-
-export interface JwtPayload {
-  sub: string;
-  email: string;
-  tenantId?: string;
-  roles: string[];
-  permissions: string[];
-  sessionId: string;
-  iat?: number;
-  exp?: number;
-}
+export type { AuthTokens };
 
 @Injectable()
 export class AuthService {
@@ -169,62 +152,39 @@ export class AuthService {
       userAgent,
     });
 
-    type Role = {
-      role: {
-        name: string;
-        permissions: { permission: { name: string } }[];
-      };
-    };
+    const { roles: userRoles, permissions: userPermissions } =
+      extractRolesAndPermissions(user);
 
-    type Permission = { permission: { name: string } };
-
-    const userRoles = (user.roles as Role[]).map((ur) => ur.role.name);
-    const userPermissions = [
-      ...(user.roles as Role[]).flatMap((ur) =>
-        ur.role.permissions.map((rp) => rp.permission.name),
-      ),
-      ...(user.permissions as Permission[]).map((up) => up.permission.name),
-    ];
-
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      tenantId: user.tenantId || undefined,
-      roles: userRoles,
-      permissions: userPermissions,
+    const payload = createJwtPayload(
+      user.id,
+      user.email,
+      userRoles,
+      userPermissions,
       sessionId,
-    };
+      user.tenantId || undefined,
+    );
 
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: 900,
-      algorithm: 'HS256',
-    });
-
-    const refreshToken = this.jwtService.sign(
-      { sub: user.id, sessionId },
-      {
-        expiresIn: 604800,
-        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        algorithm: 'HS256',
-      },
+    const { accessToken, refreshToken } = generateTokenPair(
+      this.jwtService,
+      payload,
     );
 
     await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
+
+    if (user.tenantId) {
+      await this.borrowersService.createForSignup(
+        user.id,
+        user.tenantId,
+        ipAddress,
+        userAgent,
+      );
+    }
 
     return {
       accessToken,
       refreshToken,
       sessionId,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        phone: (user.phone as string | undefined) || undefined,
-        isActive: user.isActive,
-        lastActiveAt: (user.lastActiveAt as Date | undefined) || undefined,
-        roles: userRoles,
-        permissions: userPermissions,
-      },
+      user: createUserResponse(user, userRoles, userPermissions),
     };
   }
 
@@ -246,44 +206,21 @@ export class AuthService {
       userAgent,
     });
 
-    type Role = {
-      role: {
-        name: string;
-        permissions: { permission: { name: string } }[];
-      };
-    };
+    const { roles: userRoles, permissions: userPermissions } =
+      extractRolesAndPermissions(user);
 
-    type Permission = { permission: { name: string } };
-
-    const userRoles = (user.roles as Role[]).map((ur) => ur.role.name);
-    const userPermissions = [
-      ...(user.roles as Role[]).flatMap((ur) =>
-        ur.role.permissions.map((rp) => rp.permission.name),
-      ),
-      ...(user.permissions as Permission[]).map((up) => up.permission.name),
-    ];
-
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      tenantId: user.tenantId || undefined,
-      roles: userRoles,
-      permissions: userPermissions,
+    const payload = createJwtPayload(
+      user.id,
+      user.email,
+      userRoles,
+      userPermissions,
       sessionId,
-    };
+      user.tenantId || undefined,
+    );
 
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: 900,
-      algorithm: 'HS256',
-    });
-
-    const refreshToken = this.jwtService.sign(
-      { sub: user.id, sessionId },
-      {
-        expiresIn: 604800,
-        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-        algorithm: 'HS256',
-      },
+    const { accessToken, refreshToken } = generateTokenPair(
+      this.jwtService,
+      payload,
     );
 
     await this.activityLogsService.logUserActivity(
@@ -301,7 +238,11 @@ export class AuthService {
 
     await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
 
-    if (userRoles.includes('BORROWER') && user.tenantId) {
+    const isBorrowerRole = userRoles.some((role) =>
+      role.toLowerCase().includes('borrower'),
+    );
+
+    if (isBorrowerRole && user.tenantId) {
       await this.borrowersService.ensureBorrowerExists(
         user.id,
         user.tenantId,
@@ -315,16 +256,7 @@ export class AuthService {
       accessToken,
       refreshToken,
       sessionId,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName as string,
-        phone: (user.phone as string | undefined) || undefined,
-        isActive: user.isActive,
-        lastActiveAt: (user.lastActiveAt as Date | undefined) || undefined,
-        roles: userRoles,
-        permissions: userPermissions,
-      },
+      user: createUserResponse(user, userRoles, userPermissions),
     };
   }
 
@@ -386,35 +318,20 @@ export class AuthService {
         data: { lastActiveAt: new Date() },
       });
 
-      const userRoles = user.roles.map((ur) => ur.role.name);
-      const userPermissions = [
-        ...user.roles.flatMap((ur) =>
-          ur.role.permissions.map((rp) => rp.permission.name),
-        ),
-        ...user.permissions.map((up) => up.permission.name),
-      ];
+      const { roles: userRoles, permissions: userPermissions } =
+        extractRolesAndPermissions(user);
 
-      const payload: JwtPayload = {
-        sub: user.id,
-        email: user.email,
-        tenantId: user.tenantId || undefined,
-        roles: userRoles,
-        permissions: userPermissions,
-        sessionId: decoded.sessionId,
-      };
-
-      const newAccessToken = this.jwtService.sign(payload, {
-        algorithm: 'HS256',
-      });
-
-      const newRefreshToken = this.jwtService.sign(
-        { sub: user.id, sessionId: decoded.sessionId },
-        {
-          expiresIn: '7d',
-          secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
-          algorithm: 'HS256',
-        },
+      const payload = createJwtPayload(
+        user.id,
+        user.email,
+        userRoles,
+        userPermissions,
+        decoded.sessionId,
+        user.tenantId || undefined,
       );
+
+      const { accessToken: newAccessToken, refreshToken: newRefreshToken } =
+        generateTokenPair(this.jwtService, payload);
 
       return {
         accessToken: newAccessToken,
