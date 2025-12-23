@@ -3,12 +3,12 @@ import { cn } from "@/lib/utils";
 
 export type MessageType = "success" | "error" | "warning" | "info";
 
-export interface Message {
-  id?: string;
-  type: MessageType;
-  title?: string;
-  description: string;
-}
+// export interface Message {
+//   id?: string;
+//   type: MessageType;
+//   title?: string;
+//   description: string;
+// }
 
 interface MessagesProps {
   messages: Message[];
