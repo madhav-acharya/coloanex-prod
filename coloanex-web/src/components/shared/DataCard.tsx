@@ -1,19 +1,5 @@
 import { Edit, Trash2, Eye } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-
-interface DataCardProps {
-  id: string;
-  title: string;
-  subtitle?: string;
-  metadata?: string;
-  icon?: LucideIcon;
-  onView?: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  viewTitle?: string;
-  editTitle?: string;
-  deleteTitle?: string;
-}
+import { DataCardProps } from "@/types/common";
 
 export function DataCard({
   id,
