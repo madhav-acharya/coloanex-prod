@@ -10,18 +10,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface ConfirmationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => void | Promise<void>;
-  title?: string;
-  description?: string;
-  confirmText?: string;
-  cancelText?: string;
-  variant?: "default" | "destructive";
-  isLoading?: boolean;
-}
+import { ConfirmationDialogProps } from "@/types/common";
 
 export function ConfirmationDialog({
   open,
