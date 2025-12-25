@@ -24,18 +24,52 @@ export class KycService {
     private activityLogsService: ActivityLogsService,
   ) {}
 
+  private isSuperAdmin(user: JwtPayload): boolean {
+    return user.roles.includes('Super Admin');
+  }
+
+  private isBorrower(user: JwtPayload): boolean {
+    return user.roles.includes('Borrower');
+  }
+
+  private isLender(user: JwtPayload): boolean {
+    return user.roles.includes('Lender');
+  }
+
   async create(
     createKycDto: CreateKycDto,
     user: JwtPayload,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<Kyc> {
-    const tenantId = createKycDto.tenantId || user.tenantId;
-    if (!tenantId) {
-      throw new BadRequestException('Tenant ID is required');
-    }
+    let tenantId: string;
+    let targetUserId: string;
 
-    const targetUserId = createKycDto.userId || user.sub;
+    if (this.isSuperAdmin(user)) {
+      if (!createKycDto.tenantId) {
+        throw new BadRequestException('Tenant ID is required');
+      }
+      tenantId = createKycDto.tenantId;
+      if (!createKycDto.userId) {
+        throw new BadRequestException('User ID is required');
+      }
+      targetUserId = createKycDto.userId;
+    } else if (this.isLender(user)) {
+      if (!user.tenantId) {
+        throw new BadRequestException('Lender must have a tenant ID');
+      }
+      tenantId = user.tenantId;
+      if (!createKycDto.userId) {
+        throw new BadRequestException('User ID is required');
+      }
+      targetUserId = createKycDto.userId;
+    } else {
+      if (!user.tenantId) {
+        throw new BadRequestException('User must have a tenant ID');
+      }
+      tenantId = user.tenantId;
+      targetUserId = user.sub;
+    }
 
     let borrower = await this.prisma.borrower.findUnique({
       where: {
@@ -66,25 +100,18 @@ export class KycService {
         ...kycData,
         borrowerId: borrower.id,
         dateOfBirth: new Date(kycData.dateOfBirth),
-        citizenshipIssueDate: kycData.citizenshipIssueDate
-          ? new Date(kycData.citizenshipIssueDate)
-          : undefined,
-        passportIssueDate: kycData.passportIssueDate
-          ? new Date(kycData.passportIssueDate)
-          : undefined,
-        passportExpiryDate: kycData.passportExpiryDate
-          ? new Date(kycData.passportExpiryDate)
-          : undefined,
-        licenseIssueDate: kycData.licenseIssueDate
-          ? new Date(kycData.licenseIssueDate)
-          : undefined,
-        licenseExpiryDate: kycData.licenseExpiryDate
-          ? new Date(kycData.licenseExpiryDate)
-          : undefined,
         files: files
           ? {
               create: files.map((file) => ({
                 fileType: file.fileType,
+                documentNumber: file.documentNumber,
+                issueDate: file.issueDate
+                  ? new Date(file.issueDate)
+                  : undefined,
+                expiryDate: file.expiryDate
+                  ? new Date(file.expiryDate)
+                  : undefined,
+                issueDistrict: file.issueDistrict,
                 documentType: file.documentType,
                 fileUrl: file.fileUrl,
                 fileName: file.fileName,
@@ -138,10 +165,23 @@ export class KycService {
 
     const where: Record<string, unknown> = {};
 
-    if (query.tenantId) {
-      where.borrower = { tenantId: query.tenantId };
-    } else if (user.tenantId) {
+    if (this.isSuperAdmin(user)) {
+      if (query.tenantId) {
+        where.borrower = { tenantId: query.tenantId };
+      }
+    } else if (this.isLender(user)) {
       where.borrower = { tenantId: user.tenantId };
+    } else if (this.isBorrower(user)) {
+      where.borrower = {
+        tenantId: user.tenantId,
+        userId: user.sub,
+      };
+    } else {
+      if (query.tenantId) {
+        where.borrower = { tenantId: query.tenantId };
+      } else if (user.tenantId) {
+        where.borrower = { tenantId: user.tenantId };
+      }
     }
 
     if (query.status) {
@@ -152,9 +192,6 @@ export class KycService {
       where.OR = [
         { firstName: { contains: query.search, mode: 'insensitive' } },
         { lastName: { contains: query.search, mode: 'insensitive' } },
-        { citizenshipNumber: { contains: query.search, mode: 'insensitive' } },
-        { panNumber: { contains: query.search, mode: 'insensitive' } },
-        { passportNumber: { contains: query.search, mode: 'insensitive' } },
       ];
     }
 
@@ -200,7 +237,7 @@ export class KycService {
     };
   }
 
-  async findOne(id: string): Promise<Kyc> {
+  async findOne(id: string, user?: JwtPayload): Promise<Kyc> {
     const kyc = await this.prisma.kyc.findUnique({
       where: { id },
       include: {
@@ -223,6 +260,16 @@ export class KycService {
       throw new NotFoundException('KYC not found');
     }
 
+    if (user && this.isBorrower(user)) {
+      if (kyc.borrower.userId !== user.sub) {
+        throw new NotFoundException('KYC not found');
+      }
+    } else if (user && !this.isSuperAdmin(user)) {
+      if (kyc.borrower.tenantId !== user.tenantId) {
+        throw new NotFoundException('KYC not found');
+      }
+    }
+
     return kyc as unknown as Kyc;
   }
 
@@ -233,9 +280,20 @@ export class KycService {
     ipAddress?: string,
     userAgent?: string,
   ): Promise<Kyc> {
-    const existing = await this.findOne(id);
+    const existing = await this.findOne(id, user);
+
+    if (!this.isSuperAdmin(user) && !this.isLender(user)) {
+      if (existing.borrower && existing.borrower.userId !== user.sub) {
+        throw new BadRequestException(
+          'You can only update your own KYC documents',
+        );
+      }
+    }
 
     const { files, ...kycData } = updateKycDto;
+    delete (kycData as any).tenantId;
+    delete (kycData as any).borrowerId;
+    delete (kycData as any).userId;
 
     const updated = await this.prisma.kyc.update({
       where: { id },
@@ -243,21 +301,6 @@ export class KycService {
         ...kycData,
         dateOfBirth: kycData.dateOfBirth
           ? new Date(kycData.dateOfBirth)
-          : undefined,
-        citizenshipIssueDate: kycData.citizenshipIssueDate
-          ? new Date(kycData.citizenshipIssueDate)
-          : undefined,
-        passportIssueDate: kycData.passportIssueDate
-          ? new Date(kycData.passportIssueDate)
-          : undefined,
-        passportExpiryDate: kycData.passportExpiryDate
-          ? new Date(kycData.passportExpiryDate)
-          : undefined,
-        licenseIssueDate: kycData.licenseIssueDate
-          ? new Date(kycData.licenseIssueDate)
-          : undefined,
-        licenseExpiryDate: kycData.licenseExpiryDate
-          ? new Date(kycData.licenseExpiryDate)
           : undefined,
       },
       include: {
@@ -285,6 +328,10 @@ export class KycService {
         data: files.map((file) => ({
           kycId: id,
           fileType: file.fileType,
+          documentNumber: file.documentNumber,
+          issueDate: file.issueDate ? new Date(file.issueDate) : undefined,
+          expiryDate: file.expiryDate ? new Date(file.expiryDate) : undefined,
+          issueDistrict: file.issueDistrict,
           documentType: file.documentType,
           fileUrl: file.fileUrl,
           fileName: file.fileName,
