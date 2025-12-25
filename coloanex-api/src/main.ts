@@ -12,7 +12,9 @@ import { useContainer } from 'class-validator';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable class-validator to use NestJS DI container
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
+
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   app.setGlobalPrefix('api');
