@@ -19,6 +19,22 @@ export class CreateKycFileDto {
 
   @IsOptional()
   @IsString()
+  documentNumber?: string;
+
+  @IsOptional()
+  @IsDateString()
+  issueDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
+
+  @IsOptional()
+  @IsString()
+  issueDistrict?: string;
+
+  @IsOptional()
+  @IsString()
   documentType?: string;
 
   @IsString()
@@ -64,229 +80,74 @@ export class CreateKycDto {
   @IsString()
   lastName: string;
 
+  @IsString()
+  passportSizePhotoUrl: string;
+
   @IsDateString()
   dateOfBirth: string;
 
-  @IsOptional()
   @IsString()
-  gender?: string;
+  gender: string;
 
-  @IsOptional()
   @IsString()
-  maritalStatus?: string;
+  maritalStatus: string;
 
-  @IsOptional()
   @IsString()
-  spouseName?: string;
+  fatherName: string;
 
-  @IsOptional()
   @IsString()
-  fatherName?: string;
+  motherName: string;
 
-  @IsOptional()
   @IsString()
-  motherName?: string;
+  grandfatherName: string;
 
-  @IsOptional()
   @IsString()
-  grandfatherName?: string;
+  permanentProvince: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('CITIZENSHIP') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Citizenship number is required when CITIZENSHIP document type is selected',
-  })
   @IsString()
-  citizenshipNumber?: string;
+  permanentDistrict: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('CITIZENSHIP') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Citizenship issue date is required when CITIZENSHIP document type is selected',
-  })
-  @IsDateString()
-  citizenshipIssueDate?: string;
-
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('CITIZENSHIP') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Citizenship district is required when CITIZENSHIP document type is selected',
-  })
   @IsString()
-  citizenshipDistrict?: string;
+  permanentMunicipality: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('PASSPORT') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Passport number is required when PASSPORT document type is selected',
-  })
   @IsString()
-  passportNumber?: string;
+  permanentWard: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('PASSPORT') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Passport issue date is required when PASSPORT document type is selected',
-  })
-  @IsDateString()
-  passportIssueDate?: string;
-
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('PASSPORT') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'Passport expiry date is required when PASSPORT document type is selected',
-  })
-  @IsDateString()
-  passportExpiryDate?: string;
-
-  @ValidateIf((o: CreateKycDto) => o.documentTypes?.includes('PAN') ?? false)
-  @IsNotEmpty({
-    message: 'PAN number is required when PAN document type is selected',
-  })
   @IsString()
-  panNumber?: string;
+  permanentTole: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('DRIVING_LICENSE') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'License number is required when DRIVING_LICENSE document type is selected',
-  })
   @IsString()
-  licenseNumber?: string;
+  occupation: string;
 
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('DRIVING_LICENSE') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'License issue date is required when DRIVING_LICENSE document type is selected',
-  })
-  @IsDateString()
-  licenseIssueDate?: string;
-
-  @ValidateIf(
-    (o: CreateKycDto) => o.documentTypes?.includes('DRIVING_LICENSE') ?? false,
-  )
-  @IsNotEmpty({
-    message:
-      'License expiry date is required when DRIVING_LICENSE document type is selected',
-  })
-  @IsDateString()
-  licenseExpiryDate?: string;
-
-  @IsOptional()
-  @IsString()
-  permanentProvince?: string;
-
-  @IsOptional()
-  @IsString()
-  permanentDistrict?: string;
-
-  @IsOptional()
-  @IsString()
-  permanentMunicipality?: string;
-
-  @IsOptional()
-  @IsString()
-  permanentWard?: string;
-
-  @IsOptional()
-  @IsString()
-  permanentTole?: string;
-
-  @IsOptional()
-  @IsString()
-  temporaryProvince?: string;
-
-  @IsOptional()
-  @IsString()
-  temporaryDistrict?: string;
-
-  @IsOptional()
-  @IsString()
-  temporaryMunicipality?: string;
-
-  @IsOptional()
-  @IsString()
-  temporaryWard?: string;
-
-  @IsOptional()
-  @IsString()
-  temporaryTole?: string;
-
-  @IsOptional()
-  @IsString()
-  phoneNumber?: string;
-
-  @IsOptional()
-  @IsString()
-  alternatePhone?: string;
-
-  @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @IsOptional()
-  @IsString()
-  occupation?: string;
-
-  @IsOptional()
-  @IsString()
-  employerName?: string;
-
-  @IsOptional()
   @IsNumber()
-  monthlyIncome?: number;
+  monthlyIncome: number;
 
-  @IsOptional()
   @IsString()
-  bankName?: string;
+  bankName: string;
 
-  @IsOptional()
   @IsString()
-  bankAccountNumber?: string;
+  bankAccountNumber: string;
 
-  @IsOptional()
   @IsString()
-  bankBranch?: string;
+  bankBranch: string;
 
-  @IsOptional()
   @IsNumber()
-  loanAmount?: number;
+  loanAmount: number;
 
-  @IsOptional()
   @IsString()
-  loanPurpose?: string;
+  loanPurpose: string;
 
-  @IsOptional()
   @IsNumber()
-  loanDuration?: number;
+  loanDuration: number;
 
-  @IsOptional()
   @IsString()
-  collateralType?: string;
+  collateralType: string;
 
-  @IsOptional()
   @IsString()
-  collateralDescription?: string;
+  collateralDescription: string;
 
-  @IsOptional()
   @IsNumber()
-  collateralValue?: number;
+  collateralValue: number;
 
   @IsOptional()
   @IsString()

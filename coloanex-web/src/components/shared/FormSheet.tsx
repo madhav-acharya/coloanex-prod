@@ -153,7 +153,7 @@ export function FormSheet({
                                 onChange={(e) =>
                                   handleFieldChange(field.id, e.target.value)
                                 }
-                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                                 disabled={
                                   field.disabled || isSubmitting || isReadOnly
                                 }

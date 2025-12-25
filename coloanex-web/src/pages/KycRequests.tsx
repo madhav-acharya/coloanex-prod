@@ -12,6 +12,7 @@ import {
   useGetKycsQuery,
   useVerifyKycMutation,
   useCreateKycMutation,
+  useUpdateKycMutation,
   useDeleteKycMutation,
 } from "@/apis/kycApi";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
@@ -63,6 +64,7 @@ export default function KycRequests() {
   const [isReadOnly, setIsReadOnly] = useState(false);
 
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
+  const [updateKyc, { isLoading: isUpdating }] = useUpdateKycMutation();
   const [deleteKyc] = useDeleteKycMutation();
 
   // Check if user is super admin
@@ -112,16 +114,53 @@ export default function KycRequests() {
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
 
-  // KYC Form State
   const [selectedDocTypes, setSelectedDocTypes] = useState<string[]>([]);
+
+  const [docMetadata, setDocMetadata] = useState<{
+    citizenshipNumber?: string;
+    citizenshipIssueDate?: string;
+    citizenshipDistrict?: string;
+    passportNumber?: string;
+    passportIssueDate?: string;
+    passportExpiryDate?: string;
+    panNumber?: string;
+    licenseNumber?: string;
+    licenseIssueDate?: string;
+    licenseExpiryDate?: string;
+  }>({});
+
   const [formData, setFormData] = useState<Partial<CreateKycDto>>({
     documentTypes: [],
+    tenantId: "",
     firstName: "",
     lastName: "",
+    passportSizePhotoUrl: "",
     dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    fatherName: "",
+    motherName: "",
+    grandfatherName: "",
+    permanentProvince: "",
+    permanentDistrict: "",
+    permanentMunicipality: "",
+    permanentWard: "",
+    permanentTole: "",
+    occupation: "",
+    monthlyIncome: 0,
+    bankName: "",
+    bankAccountNumber: "",
+    bankBranch: "",
+    loanAmount: 0,
+    loanPurpose: "",
+    loanDuration: 0,
+    collateralType: "",
+    collateralDescription: "",
+    collateralValue: 0,
   });
 
   const [files, setFiles] = useState<{
+    passportSizePhoto: UploadedFile[];
     citizenshipFront: UploadedFile[];
     citizenshipBack: UploadedFile[];
     passport: UploadedFile[];
@@ -132,6 +171,7 @@ export default function KycRequests() {
     collateral: UploadedFile[];
     supporting: UploadedFile[];
   }>({
+    passportSizePhoto: [],
     citizenshipFront: [],
     citizenshipBack: [],
     passport: [],
@@ -332,34 +372,16 @@ export default function KycRequests() {
   };
 
   const handleKycSubmit = async () => {
+    if (files.passportSizePhoto.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Passport size photo is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (selectedDocTypes.includes(KycDocumentType.CITIZENSHIP)) {
-      if (!formData.citizenshipNumber) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Citizenship number is required when CITIZENSHIP document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.citizenshipIssueDate) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Citizenship issue date is required when CITIZENSHIP document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.citizenshipDistrict) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Citizenship district is required when CITIZENSHIP document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
       if (files.citizenshipFront.length === 0) {
         toast({
           title: "Validation Error",
@@ -379,33 +401,6 @@ export default function KycRequests() {
     }
 
     if (selectedDocTypes.includes(KycDocumentType.PASSPORT)) {
-      if (!formData.passportNumber) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Passport number is required when PASSPORT document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.passportIssueDate) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Passport issue date is required when PASSPORT document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.passportExpiryDate) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Passport expiry date is required when PASSPORT document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
       if (files.passport.length === 0) {
         toast({
           title: "Validation Error",
@@ -417,15 +412,6 @@ export default function KycRequests() {
     }
 
     if (selectedDocTypes.includes(KycDocumentType.PAN)) {
-      if (!formData.panNumber) {
-        toast({
-          title: "Validation Error",
-          description:
-            "PAN number is required when PAN document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
       if (files.pan.length === 0) {
         toast({
           title: "Validation Error",
@@ -437,33 +423,6 @@ export default function KycRequests() {
     }
 
     if (selectedDocTypes.includes(KycDocumentType.DRIVING_LICENSE)) {
-      if (!formData.licenseNumber) {
-        toast({
-          title: "Validation Error",
-          description:
-            "License number is required when DRIVING_LICENSE document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.licenseIssueDate) {
-        toast({
-          title: "Validation Error",
-          description:
-            "License issue date is required when DRIVING_LICENSE document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!formData.licenseExpiryDate) {
-        toast({
-          title: "Validation Error",
-          description:
-            "License expiry date is required when DRIVING_LICENSE document type is selected",
-          variant: "destructive",
-        });
-        return;
-      }
       if (files.licenseFront.length === 0) {
         toast({
           title: "Validation Error",
@@ -484,6 +443,11 @@ export default function KycRequests() {
 
     const allFiles: KycFile[] = [];
 
+    if (files.passportSizePhoto.length > 0) {
+      const photoFile = files.passportSizePhoto[0];
+      formData.passportSizePhotoUrl = photoFile.url;
+    }
+
     if (selectedDocTypes.includes(KycDocumentType.CITIZENSHIP)) {
       files.citizenshipFront.forEach((f) =>
         allFiles.push({
@@ -493,6 +457,9 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.citizenshipNumber,
+          issueDate: docMetadata.citizenshipIssueDate,
+          issueDistrict: docMetadata.citizenshipDistrict,
         })
       );
       files.citizenshipBack.forEach((f) =>
@@ -503,6 +470,9 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.citizenshipNumber,
+          issueDate: docMetadata.citizenshipIssueDate,
+          issueDistrict: docMetadata.citizenshipDistrict,
         })
       );
     }
@@ -516,6 +486,9 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.passportNumber,
+          issueDate: docMetadata.passportIssueDate,
+          expiryDate: docMetadata.passportExpiryDate,
         })
       );
     }
@@ -529,6 +502,7 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.panNumber,
         })
       );
     }
@@ -542,6 +516,9 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.licenseNumber,
+          issueDate: docMetadata.licenseIssueDate,
+          expiryDate: docMetadata.licenseExpiryDate,
         })
       );
       files.licenseBack.forEach((f) =>
@@ -552,6 +529,9 @@ export default function KycRequests() {
           fileName: f.fileName,
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
+          documentNumber: docMetadata.licenseNumber,
+          issueDate: docMetadata.licenseIssueDate,
+          expiryDate: docMetadata.licenseExpiryDate,
         })
       );
     }
@@ -590,15 +570,37 @@ export default function KycRequests() {
       ...formData,
       documentTypes: selectedDocTypes,
       files: allFiles,
+      tenantId:
+        formData.tenantId && formData.tenantId.trim() !== ""
+          ? formData.tenantId
+          : undefined,
+      userId:
+        selectedUserId && selectedUserId.trim() !== ""
+          ? selectedUserId
+          : undefined,
     } as CreateKycDto;
 
-    try {
-      await createKyc(kycData).unwrap();
+    console.log("Submitting KYC with:", {
+      tenantId: kycData.tenantId,
+      userId: kycData.userId,
+      selectedUserId,
+      formDataTenantId: formData.tenantId,
+    });
 
-      toast({
-        title: "Success",
-        description: "KYC request submitted successfully",
-      });
+    try {
+      if (editingKyc) {
+        await updateKyc({ id: editingKyc.id, data: kycData }).unwrap();
+        toast({
+          title: "Success",
+          description: "KYC request updated successfully",
+        });
+      } else {
+        await createKyc(kycData).unwrap();
+        toast({
+          title: "Success",
+          description: "KYC request submitted successfully",
+        });
+      }
 
       setKycFormOpen(false);
       setEditingKyc(null);
@@ -619,13 +621,37 @@ export default function KycRequests() {
     setSelectedUserId("");
     setEditingKyc(null);
     setIsReadOnly(false);
+    setDocMetadata({});
     setFormData({
       documentTypes: [],
       firstName: "",
       lastName: "",
+      passportSizePhotoUrl: "",
       dateOfBirth: "",
+      gender: "",
+      maritalStatus: "",
+      fatherName: "",
+      motherName: "",
+      grandfatherName: "",
+      permanentProvince: "",
+      permanentDistrict: "",
+      permanentMunicipality: "",
+      permanentWard: "",
+      permanentTole: "",
+      occupation: "",
+      monthlyIncome: 0,
+      bankName: "",
+      bankAccountNumber: "",
+      bankBranch: "",
+      loanAmount: 0,
+      loanPurpose: "",
+      loanDuration: 0,
+      collateralType: "",
+      collateralDescription: "",
+      collateralValue: 0,
     });
     setFiles({
+      passportSizePhoto: [],
       citizenshipFront: [],
       citizenshipBack: [],
       passport: [],
@@ -649,8 +675,23 @@ export default function KycRequests() {
   };
 
   const handleFieldChange = (fieldId: string, value: string) => {
+    const docMetadataFields = [
+      "citizenshipNumber",
+      "citizenshipIssueDate",
+      "citizenshipDistrict",
+      "passportNumber",
+      "passportIssueDate",
+      "passportExpiryDate",
+      "panNumber",
+      "licenseNumber",
+      "licenseIssueDate",
+      "licenseExpiryDate",
+    ];
+
     if (fieldId === "userId") {
       setSelectedUserId(value);
+    } else if (docMetadataFields.includes(fieldId)) {
+      setDocMetadata((prev) => ({ ...prev, [fieldId]: value }));
     } else {
       setFormData((prev) => ({ ...prev, [fieldId]: value }));
     }
@@ -662,38 +703,21 @@ export default function KycRequests() {
         firstName: editingKyc.firstName || "",
         middleName: editingKyc.middleName || "",
         lastName: editingKyc.lastName || "",
-        dateOfBirth: editingKyc.dateOfBirth || "",
+        passportSizePhotoUrl: editingKyc.passportSizePhotoUrl || "",
+        dateOfBirth: editingKyc.dateOfBirth
+          ? new Date(editingKyc.dateOfBirth).toISOString().split("T")[0]
+          : "",
         gender: editingKyc.gender || "",
         maritalStatus: editingKyc.maritalStatus || "",
-        spouseName: editingKyc.spouseName || "",
         fatherName: editingKyc.fatherName || "",
         motherName: editingKyc.motherName || "",
         grandfatherName: editingKyc.grandfatherName || "",
-        citizenshipNumber: editingKyc.citizenshipNumber || "",
-        citizenshipIssueDate: editingKyc.citizenshipIssueDate || "",
-        citizenshipDistrict: editingKyc.citizenshipDistrict || "",
-        passportNumber: editingKyc.passportNumber || "",
-        passportIssueDate: editingKyc.passportIssueDate || "",
-        passportExpiryDate: editingKyc.passportExpiryDate || "",
-        panNumber: editingKyc.panNumber || "",
-        licenseNumber: editingKyc.licenseNumber || "",
-        licenseIssueDate: editingKyc.licenseIssueDate || "",
-        licenseExpiryDate: editingKyc.licenseExpiryDate || "",
         permanentProvince: editingKyc.permanentProvince || "",
         permanentDistrict: editingKyc.permanentDistrict || "",
         permanentMunicipality: editingKyc.permanentMunicipality || "",
         permanentWard: editingKyc.permanentWard || "",
         permanentTole: editingKyc.permanentTole || "",
-        temporaryProvince: editingKyc.temporaryProvince || "",
-        temporaryDistrict: editingKyc.temporaryDistrict || "",
-        temporaryMunicipality: editingKyc.temporaryMunicipality || "",
-        temporaryWard: editingKyc.temporaryWard || "",
-        temporaryTole: editingKyc.temporaryTole || "",
-        phoneNumber: editingKyc.phoneNumber || "",
-        alternatePhone: editingKyc.alternatePhone || "",
-        email: editingKyc.email || "",
         occupation: editingKyc.occupation || "",
-        employerName: editingKyc.employerName || "",
         monthlyIncome: editingKyc.monthlyIncome,
         bankName: editingKyc.bankName || "",
         bankAccountNumber: editingKyc.bankAccountNumber || "",
@@ -712,8 +736,32 @@ export default function KycRequests() {
         setSelectedUserId(editingKyc.borrower.userId);
       }
 
+      if (editingKyc.passportSizePhotoUrl) {
+        setFiles((prev) => ({
+          ...prev,
+          passportSizePhoto: [
+            {
+              url: editingKyc.passportSizePhotoUrl,
+              fileName: "passport-photo",
+              mimeType: "image/jpeg",
+              sizeInBytes: 0,
+            },
+          ],
+        }));
+      }
+
       if (editingKyc.files && editingKyc.files.length > 0) {
         const newFiles = {
+          passportSizePhoto: editingKyc.passportSizePhotoUrl
+            ? [
+                {
+                  url: editingKyc.passportSizePhotoUrl,
+                  fileName: "passport-photo",
+                  mimeType: "image/jpeg",
+                  sizeInBytes: 0,
+                },
+              ]
+            : [],
           citizenshipFront: [],
           citizenshipBack: [],
           passport: [],
@@ -725,6 +773,19 @@ export default function KycRequests() {
           supporting: [],
         };
 
+        const newDocMetadata = {
+          citizenshipNumber: "",
+          citizenshipIssueDate: "",
+          citizenshipDistrict: "",
+          passportNumber: "",
+          passportIssueDate: "",
+          passportExpiryDate: "",
+          panNumber: "",
+          licenseNumber: "",
+          licenseIssueDate: "",
+          licenseExpiryDate: "",
+        };
+
         editingKyc.files.forEach((file) => {
           const uploadedFile: UploadedFile = {
             url: file.fileUrl,
@@ -732,6 +793,45 @@ export default function KycRequests() {
             mimeType: file.mimeType || "",
             sizeInBytes: file.sizeInBytes || 0,
           };
+
+          // Populate document metadata from file metadata
+          if (
+            file.documentType === KycDocumentType.CITIZENSHIP &&
+            file.documentNumber
+          ) {
+            newDocMetadata.citizenshipNumber = file.documentNumber;
+            newDocMetadata.citizenshipIssueDate = file.issueDate
+              ? new Date(file.issueDate).toISOString().split("T")[0]
+              : "";
+            newDocMetadata.citizenshipDistrict = file.issueDistrict || "";
+          } else if (
+            file.documentType === KycDocumentType.PASSPORT &&
+            file.documentNumber
+          ) {
+            newDocMetadata.passportNumber = file.documentNumber;
+            newDocMetadata.passportIssueDate = file.issueDate
+              ? new Date(file.issueDate).toISOString().split("T")[0]
+              : "";
+            newDocMetadata.passportExpiryDate = file.expiryDate
+              ? new Date(file.expiryDate).toISOString().split("T")[0]
+              : "";
+          } else if (
+            file.documentType === KycDocumentType.PAN &&
+            file.documentNumber
+          ) {
+            newDocMetadata.panNumber = file.documentNumber;
+          } else if (
+            file.documentType === KycDocumentType.DRIVING_LICENSE &&
+            file.documentNumber
+          ) {
+            newDocMetadata.licenseNumber = file.documentNumber;
+            newDocMetadata.licenseIssueDate = file.issueDate
+              ? new Date(file.issueDate).toISOString().split("T")[0]
+              : "";
+            newDocMetadata.licenseExpiryDate = file.expiryDate
+              ? new Date(file.expiryDate).toISOString().split("T")[0]
+              : "";
+          }
 
           switch (file.fileType) {
             case "CITIZENSHIP_FRONT":
@@ -765,6 +865,7 @@ export default function KycRequests() {
         });
 
         setFiles(newFiles);
+        setDocMetadata(newDocMetadata);
       }
     }
   }, [editingKyc, kycFormOpen]);
@@ -775,6 +876,23 @@ export default function KycRequests() {
       return () => clearTimeout(timer);
     }
   }, [kycFormOpen]);
+
+  useEffect(() => {
+    if (selectedUserId && !editingKyc && usersData?.data) {
+      const selectedUser = usersData.data.find((u) => u.id === selectedUserId);
+      if (selectedUser) {
+        const nameParts = selectedUser.fullName.split(" ");
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        setFormData((prev) => ({
+          ...prev,
+          firstName,
+          lastName,
+        }));
+      }
+    }
+  }, [selectedUserId, usersData, editingKyc]);
 
   const formSections = useMemo(
     () => [
@@ -880,6 +998,7 @@ export default function KycRequests() {
             value: formData.gender || "",
             type: "select",
             options: genderOptions,
+            required: true,
           },
           {
             id: "maritalStatus",
@@ -887,6 +1006,19 @@ export default function KycRequests() {
             value: formData.maritalStatus || "",
             type: "select",
             options: maritalStatusOptions,
+            required: true,
+          },
+        ],
+        fileFields: [
+          {
+            label: "Passport Size Photo",
+            accept: "image" as const,
+            maxFiles: 1,
+            folder: "kyc/photos",
+            value: files.passportSizePhoto,
+            onChange: (newFiles: UploadedFile[]) =>
+              setFiles((prev) => ({ ...prev, passportSizePhoto: newFiles })),
+            required: true,
           },
         ],
       },
@@ -894,27 +1026,24 @@ export default function KycRequests() {
         title: "Family Information",
         fields: [
           {
-            id: "spouseName",
-            label: "Spouse Name",
-            value: formData.spouseName || "",
-            placeholder: "Enter spouse name",
-          },
-          {
             id: "fatherName",
             label: "Father's Name",
             value: formData.fatherName || "",
+            required: true,
             placeholder: "Enter father's name",
           },
           {
             id: "motherName",
             label: "Mother's Name",
             value: formData.motherName || "",
+            required: true,
             placeholder: "Enter mother's name",
           },
           {
             id: "grandfatherName",
             label: "Grandfather's Name",
             value: formData.grandfatherName || "",
+            required: true,
             placeholder: "Enter grandfather's name",
           },
         ],
@@ -926,21 +1055,21 @@ export default function KycRequests() {
           {
             id: "citizenshipNumber",
             label: "Citizenship Number",
-            value: formData.citizenshipNumber || "",
+            value: docMetadata.citizenshipNumber || "",
             required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
             placeholder: "Enter citizenship number",
           },
           {
             id: "citizenshipIssueDate",
             label: "Issue Date",
-            value: formData.citizenshipIssueDate || "",
-            type: "date",
+            value: docMetadata.citizenshipIssueDate || "",
+            type: "date" as const,
             required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
           },
           {
             id: "citizenshipDistrict",
             label: "Issue District",
-            value: formData.citizenshipDistrict || "",
+            value: docMetadata.citizenshipDistrict || "",
             required: selectedDocTypes.includes(KycDocumentType.CITIZENSHIP),
             placeholder: "Enter issue district",
             colSpan: 2,
@@ -976,22 +1105,22 @@ export default function KycRequests() {
           {
             id: "passportNumber",
             label: "Passport Number",
-            value: formData.passportNumber || "",
+            value: docMetadata.passportNumber || "",
             required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
             placeholder: "Enter passport number",
           },
           {
             id: "passportIssueDate",
             label: "Issue Date",
-            value: formData.passportIssueDate || "",
-            type: "date",
+            value: docMetadata.passportIssueDate || "",
+            type: "date" as const,
             required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
           },
           {
             id: "passportExpiryDate",
             label: "Expiry Date",
-            value: formData.passportExpiryDate || "",
-            type: "date",
+            value: docMetadata.passportExpiryDate || "",
+            type: "date" as const,
             required: selectedDocTypes.includes(KycDocumentType.PASSPORT),
           },
         ],
@@ -1015,7 +1144,7 @@ export default function KycRequests() {
           {
             id: "panNumber",
             label: "PAN Number",
-            value: formData.panNumber || "",
+            value: docMetadata.panNumber || "",
             required: selectedDocTypes.includes(KycDocumentType.PAN),
             placeholder: "Enter PAN number",
           },
@@ -1040,7 +1169,7 @@ export default function KycRequests() {
           {
             id: "licenseNumber",
             label: "License Number",
-            value: formData.licenseNumber || "",
+            value: docMetadata.licenseNumber || "",
             required: selectedDocTypes.includes(
               KycDocumentType.DRIVING_LICENSE
             ),
@@ -1049,8 +1178,8 @@ export default function KycRequests() {
           {
             id: "licenseIssueDate",
             label: "Issue Date",
-            value: formData.licenseIssueDate || "",
-            type: "date",
+            value: docMetadata.licenseIssueDate || "",
+            type: "date" as const,
             required: selectedDocTypes.includes(
               KycDocumentType.DRIVING_LICENSE
             ),
@@ -1058,8 +1187,8 @@ export default function KycRequests() {
           {
             id: "licenseExpiryDate",
             label: "Expiry Date",
-            value: formData.licenseExpiryDate || "",
-            type: "date",
+            value: docMetadata.licenseExpiryDate || "",
+            type: "date" as const,
             required: selectedDocTypes.includes(
               KycDocumentType.DRIVING_LICENSE
             ),
@@ -1099,94 +1228,36 @@ export default function KycRequests() {
             id: "permanentProvince",
             label: "Province",
             value: formData.permanentProvince || "",
+            required: true,
             placeholder: "Enter province",
           },
           {
             id: "permanentDistrict",
             label: "District",
             value: formData.permanentDistrict || "",
+            required: true,
             placeholder: "Enter district",
           },
           {
             id: "permanentMunicipality",
             label: "Municipality",
             value: formData.permanentMunicipality || "",
+            required: true,
             placeholder: "Enter municipality",
           },
           {
             id: "permanentWard",
             label: "Ward No.",
             value: formData.permanentWard || "",
+            required: true,
             placeholder: "Enter ward number",
           },
           {
             id: "permanentTole",
             label: "Tole/Street",
             value: formData.permanentTole || "",
+            required: true,
             placeholder: "Enter tole/street",
-            colSpan: 2,
-          },
-        ],
-      },
-      {
-        title: "Temporary Address",
-        fields: [
-          {
-            id: "temporaryProvince",
-            label: "Province",
-            value: formData.temporaryProvince || "",
-            placeholder: "Enter province",
-          },
-          {
-            id: "temporaryDistrict",
-            label: "District",
-            value: formData.temporaryDistrict || "",
-            placeholder: "Enter district",
-          },
-          {
-            id: "temporaryMunicipality",
-            label: "Municipality",
-            value: formData.temporaryMunicipality || "",
-            placeholder: "Enter municipality",
-          },
-          {
-            id: "temporaryWard",
-            label: "Ward No.",
-            value: formData.temporaryWard || "",
-            placeholder: "Enter ward number",
-          },
-          {
-            id: "temporaryTole",
-            label: "Tole/Street",
-            value: formData.temporaryTole || "",
-            placeholder: "Enter tole/street",
-            colSpan: 2,
-          },
-        ],
-      },
-      {
-        title: "Contact Information",
-        fields: [
-          {
-            id: "phoneNumber",
-            label: "Phone Number",
-            value: formData.phoneNumber || "",
-            type: "tel",
-            placeholder: "Enter phone number",
-          },
-          {
-            id: "alternatePhone",
-            label: "Alternate Phone",
-            value: formData.alternatePhone || "",
-            type: "tel",
-            placeholder: "Enter alternate phone",
-          },
-          {
-            id: "email",
-            label: "Email",
-            value: formData.email || "",
-            type: "email",
-            placeholder: "Enter email address",
             colSpan: 2,
           },
         ],
@@ -1198,19 +1269,15 @@ export default function KycRequests() {
             id: "occupation",
             label: "Occupation",
             value: formData.occupation || "",
+            required: true,
             placeholder: "Enter occupation",
-          },
-          {
-            id: "employerName",
-            label: "Employer Name",
-            value: formData.employerName || "",
-            placeholder: "Enter employer name",
           },
           {
             id: "monthlyIncome",
             label: "Monthly Income",
             value: formData.monthlyIncome?.toString() || "",
             type: "number",
+            required: true,
             placeholder: "Enter monthly income",
           },
         ],
@@ -1222,18 +1289,21 @@ export default function KycRequests() {
             id: "bankName",
             label: "Bank Name",
             value: formData.bankName || "",
+            required: true,
             placeholder: "Enter bank name",
           },
           {
             id: "bankAccountNumber",
             label: "Account Number",
             value: formData.bankAccountNumber || "",
+            required: true,
             placeholder: "Enter account number",
           },
           {
             id: "bankBranch",
             label: "Branch",
             value: formData.bankBranch || "",
+            required: true,
             placeholder: "Enter branch name",
           },
         ],
@@ -1246,6 +1316,7 @@ export default function KycRequests() {
             label: "Loan Amount",
             value: formData.loanAmount?.toString() || "",
             type: "number",
+            required: true,
             placeholder: "Enter loan amount",
           },
           {
@@ -1253,6 +1324,7 @@ export default function KycRequests() {
             label: "Duration (months)",
             value: formData.loanDuration?.toString() || "",
             type: "number",
+            required: true,
             placeholder: "Enter duration",
           },
           {
@@ -1260,6 +1332,7 @@ export default function KycRequests() {
             label: "Loan Purpose",
             value: formData.loanPurpose || "",
             type: "textarea",
+            required: true,
             placeholder: "Describe the purpose of loan",
             colSpan: 2,
           },
@@ -1334,6 +1407,7 @@ export default function KycRequests() {
       formData,
       selectedDocTypes,
       files,
+      docMetadata,
       isSuperAdmin,
       isLender,
       isBorrower,
@@ -1400,15 +1474,12 @@ export default function KycRequests() {
       key: "citizenshipNumber",
       label: "Document Number",
       sortable: true,
-      render: (_value, doc: Kyc) => (
-        <span>
-          {doc.citizenshipNumber ||
-            doc.passportNumber ||
-            doc.panNumber ||
-            doc.licenseNumber ||
-            "N/A"}
-        </span>
-      ),
+      render: (_value, doc: Kyc) => {
+        const docNumber = doc.files?.find(
+          (f) => f.documentNumber
+        )?.documentNumber;
+        return <span>{docNumber || "N/A"}</span>;
+      },
     },
     {
       key: "status",

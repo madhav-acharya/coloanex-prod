@@ -23,6 +23,7 @@ import {
 } from 'src/common/constants/permissions.constants';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { JwtPayload } from 'src/common/interfaces/jwt-payload.interface';
+import { getClientIpAddress } from 'src/common/helpers/ip-address.helper';
 
 @Controller('users')
 export class UsersController {
@@ -94,14 +95,14 @@ export class UsersController {
 
   @Post(':id/mark-online')
   markUserAsOnline(@Param('id') id: string, @Req() request: Request) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.usersService.markUserAsOnline(id, ipAddress, userAgent);
   }
 
   @Post(':id/mark-offline')
   markUserAsOffline(@Param('id') id: string, @Req() request: Request) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.usersService.markUserAsOffline(id, ipAddress, userAgent);
   }
