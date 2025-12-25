@@ -16,6 +16,7 @@ import { LoginDto } from './dto/login.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { getClientIpAddress } from '../common/helpers/ip-address.helper';
 
 @Controller('auth')
 export class AuthController {
@@ -31,10 +32,7 @@ export class AuthController {
     @Body() createUserDto: CreateUserForSignupDto,
     @Req() req: Request,
   ) {
-    const ipAddress =
-      req.ip ||
-      req.connection?.remoteAddress ||
-      (req.headers['x-forwarded-for'] as string);
+    const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
     const result = await this.authService.signup(
@@ -54,10 +52,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
-    const ipAddress =
-      req.ip ||
-      req.connection?.remoteAddress ||
-      (req.headers['x-forwarded-for'] as string);
+    const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
     const result = await this.authService.login(loginDto, ipAddress, userAgent);
@@ -76,10 +71,7 @@ export class AuthController {
     @Body('refreshToken') refreshToken: string,
     @Req() req: Request,
   ): Promise<AuthTokens> {
-    const ipAddress =
-      req.ip ||
-      req.connection?.remoteAddress ||
-      (req.headers['x-forwarded-for'] as string);
+    const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
     return this.authService.refresh(refreshToken, ipAddress, userAgent);
@@ -92,10 +84,7 @@ export class AuthController {
     @CurrentUser() user: { sessionId: string; sub: string },
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress =
-      req.ip ||
-      req.connection?.remoteAddress ||
-      (req.headers['x-forwarded-for'] as string);
+    const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
     await this.authService.logout(
@@ -115,10 +104,7 @@ export class AuthController {
     @CurrentUser() user: { sub: string },
     @Req() req: Request,
   ): Promise<{ message: string }> {
-    const ipAddress =
-      req.ip ||
-      req.connection?.remoteAddress ||
-      (req.headers['x-forwarded-for'] as string);
+    const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
     await this.authService.logoutAll(user.sub, ipAddress, userAgent);
