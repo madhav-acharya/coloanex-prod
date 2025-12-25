@@ -28,6 +28,7 @@ import {
   DELETE_KYC_DOCUMENTS,
   APPROVE_KYC_DOCUMENTS,
 } from '../common/constants/permissions.constants';
+import { getClientIpAddress } from '../common/helpers/ip-address.helper';
 
 @Controller('kyc')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -41,7 +42,7 @@ export class KycController {
     @CurrentUser() user: JwtPayload,
     @Req() request: Request,
   ) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.kycService.create(createKycDto, user, ipAddress, userAgent);
   }
@@ -54,8 +55,8 @@ export class KycController {
 
   @Get(':id')
   @RequirePermissions(READ_KYC_DOCUMENTS)
-  findOne(@Param('id') id: string) {
-    return this.kycService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.kycService.findOne(id, user);
   }
 
   @Patch(':id')
@@ -66,7 +67,7 @@ export class KycController {
     @CurrentUser() user: JwtPayload,
     @Req() request: Request,
   ) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.kycService.update(id, updateKycDto, user, ipAddress, userAgent);
   }
@@ -79,7 +80,7 @@ export class KycController {
     @CurrentUser() user: JwtPayload,
     @Req() request: Request,
   ) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.kycService.verify(id, verifyKycDto, user, ipAddress, userAgent);
   }
@@ -91,7 +92,7 @@ export class KycController {
     @CurrentUser() user: JwtPayload,
     @Req() request: Request,
   ) {
-    const ipAddress = request.ip;
+    const ipAddress = getClientIpAddress(request);
     const userAgent = request.get('User-Agent');
     return this.kycService.remove(id, user, ipAddress, userAgent);
   }
