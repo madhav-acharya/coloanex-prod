@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Eye, FileText, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
-import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
+import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormLabel } from "@/components/ui/form-label";
@@ -27,7 +28,7 @@ import { KycStatus, KycDocumentType, KycFileType } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
 import { FormSheet } from "@/components/shared/FormSheet";
-import { type UploadedFile } from "@/components/shared/FileUploader";
+import { UploadedFile } from "@/types/upload";
 
 const documentTypeOptions = [
   { value: KycDocumentType.CITIZENSHIP, label: "Citizenship" },
@@ -69,17 +70,17 @@ export default function KycRequests() {
 
   // Check if user is super admin
   const isSuperAdmin = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Super Admin") || false,
+    () => user?.roles?.includes("Super Admin") || false,
     [user]
   );
 
   const isBorrower = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Borrower") || false,
+    () => user?.roles?.includes("Borrower") || false,
     [user]
   );
 
   const isLender = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Lender") || false,
+    () => user?.roles?.includes("Lender") || false,
     [user]
   );
 
@@ -151,12 +152,6 @@ export default function KycRequests() {
     bankName: "",
     bankAccountNumber: "",
     bankBranch: "",
-    loanAmount: 0,
-    loanPurpose: "",
-    loanDuration: 0,
-    collateralType: "",
-    collateralDescription: "",
-    collateralValue: 0,
   });
 
   const [files, setFiles] = useState<{
@@ -1333,7 +1328,7 @@ export default function KycRequests() {
             {doc.borrower?.user?.fullName || `${doc.firstName} ${doc.lastName}`}
           </div>
           <div className="text-sm text-gray-500">
-            {doc.borrower?.user?.email || doc.email || "N/A"}
+            {doc.borrower?.user?.email || "N/A"}
           </div>
         </div>
       ),
