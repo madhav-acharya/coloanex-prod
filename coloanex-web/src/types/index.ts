@@ -4,6 +4,7 @@ export * from "./role";
 export * from "./permission";
 export * from "./tenant";
 export * from "./kyc";
+export * from "./loan";
 export * from "./common";
 export * from "./upload";
 export * from "./borrower";
