@@ -105,6 +105,11 @@ export default function DashboardLayout({
       icon: <FileText className="w-4 h-4" />,
       href: "/kyc-requests",
     },
+    {
+      title: "Loan Requests",
+      icon: <FileText className="w-4 h-4" />,
+      href: "/loan-requests",
+    },
   ];
 
   const NavSection = ({
