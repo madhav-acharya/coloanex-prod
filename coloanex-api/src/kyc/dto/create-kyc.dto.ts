@@ -131,24 +131,6 @@ export class CreateKycDto {
   @IsString()
   bankBranch: string;
 
-  @IsNumber()
-  loanAmount: number;
-
-  @IsString()
-  loanPurpose: string;
-
-  @IsNumber()
-  loanDuration: number;
-
-  @IsString()
-  collateralType: string;
-
-  @IsString()
-  collateralDescription: string;
-
-  @IsNumber()
-  collateralValue: number;
-
   @IsOptional()
   @IsString()
   notes?: string;

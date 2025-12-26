@@ -15,7 +15,7 @@ enum KycStatus {
   @@schema("borrower")
 }
 
-enum KycDocumentType {P
+enum KycDocumentType {
   CITIZENSHIP
   PASSPORT
   DRIVING_LICENSE
@@ -33,7 +33,6 @@ enum KycFileType {
   LICENSE_FRONT
   LICENSE_BACK
   SELFIE
-  COLLATERAL_PHOTO
   SUPPORTING_DOCUMENT
   OTHER
 
@@ -241,12 +240,6 @@ model Kyc {
   bankName              String   @map("bank_name")
   bankAccountNumber     String   @map("bank_account_number")
   bankBranch            String   @map("bank_branch")
-  loanAmount            Float    @map("loan_amount")
-  loanPurpose           String   @map("loan_purpose")
-  loanDuration          Int      @map("loan_duration")
-  collateralType        String   @map("collateral_type")
-  collateralDescription String   @map("collateral_description")
-  collateralValue       Float    @map("collateral_value")
   status                KycStatus @default(PENDING)
   rejectionReason       String?   @map("rejection_reason")
   verifiedBy            String?   @map("verified_by")
