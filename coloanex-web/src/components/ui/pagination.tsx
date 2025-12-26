@@ -82,18 +82,24 @@ export function Pagination({
   const pageNumbers = generatePageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
-      <div className="text-sm text-muted-foreground">
-        Showing {startItem} to {endItem} of {total} results
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4 border-t bg-gradient-to-r from-neutral-light/30 to-neutral-light/50">
+      <div className="text-sm font-medium text-neutral-dark">
+        Showing{" "}
+        <span className="text-green-600 font-semibold">{startItem}</span> to{" "}
+        <span className="text-green-600 font-semibold">{endItem}</span> of{" "}
+        <span className="text-green-600 font-semibold">{total}</span> results
       </div>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(1)}
           disabled={!hasPreviousPage}
           className={cn(
-            hasPreviousPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            hasPreviousPage
+              ? "cursor-pointer text-green-700"
+              : "cursor-not-allowed opacity-40"
           )}
         >
           <ChevronsLeft className="h-4 w-4" />
@@ -104,35 +110,40 @@ export function Pagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
           className={cn(
-            hasPreviousPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            hasPreviousPage
+              ? "cursor-pointer text-green-700"
+              : "cursor-not-allowed opacity-40"
           )}
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        {pageNumbers.map((page, index) => (
-          <Button
-            key={index}
-            variant={page === currentPage ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              if (typeof page === "number") {
-                onPageChange(page);
-              }
-            }}
-            disabled={page === "..." || page === currentPage}
-            className={cn(
-              "min-w-8",
-              page === currentPage
-                ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                : page === "..."
-                ? "cursor-not-allowed"
-                : "cursor-pointer"
-            )}
-          >
-            {page}
-          </Button>
-        ))}
+        <div className="flex items-center gap-1">
+          {pageNumbers.map((page, index) => (
+            <Button
+              key={index}
+              variant={page === currentPage ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                if (typeof page === "number") {
+                  onPageChange(page);
+                }
+              }}
+              disabled={page === "..."}
+              className={cn(
+                "min-w-9 font-semibold transition-all duration-200",
+                page === currentPage
+                  ? "bg-green-600 hover:bg-green-700 text-white hover:shadow-lg scale-105 cursor-pointer border-green-600"
+                  : page === "..."
+                  ? "cursor-not-allowed border-transparent hover:border-transparent"
+                  : "cursor-pointer border-green-200 hover:bg-green-50 hover:border-green-400 hover:text-green-700 text-neutral-dark"
+              )}
+            >
+              {page}
+            </Button>
+          ))}
+        </div>
 
         <Button
           variant="outline"
@@ -140,7 +151,10 @@ export function Pagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
           className={cn(
-            hasNextPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            hasNextPage
+              ? "cursor-pointer text-green-700"
+              : "cursor-not-allowed opacity-40"
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -151,7 +165,10 @@ export function Pagination({
           onClick={() => onPageChange(totalPages)}
           disabled={!hasNextPage}
           className={cn(
-            hasNextPage ? "cursor-pointer" : "cursor-not-allowed opacity-50"
+            "border-gray-300 hover:bg-gray-100 transition-all duration-200",
+            hasNextPage
+              ? "cursor-pointer text-gray-700 hover:border-gray-400"
+              : "cursor-not-allowed opacity-40"
           )}
         >
           <ChevronsRight className="h-4 w-4" />
@@ -159,21 +176,25 @@ export function Pagination({
 
         {onPageSizeChange && (
           <>
-            <div className="h-6 w-px bg-border" />
+            <div className="h-6 w-px bg-gray-300" />
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">
+              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
                 Per page
               </span>
               <Select
                 value={limit.toString()}
                 onValueChange={(value) => onPageSizeChange(Number(value))}
               >
-                <SelectTrigger className="w-[70px] h-9 cursor-pointer">
+                <SelectTrigger className="w-[70px] h-9 cursor-pointer border-gray-300 hover:border-gray-400 focus:ring-green-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {pageSizeOptions.map((size) => (
-                    <SelectItem key={size} value={size.toString()}>
+                    <SelectItem
+                      key={size}
+                      value={size.toString()}
+                      className="hover:bg-green-50 focus:bg-green-50"
+                    >
                       {size}
                     </SelectItem>
                   ))}

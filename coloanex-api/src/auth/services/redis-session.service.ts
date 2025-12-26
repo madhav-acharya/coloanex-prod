@@ -1,15 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { createClient, RedisClientType } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-
-export interface SessionData {
-  userId: string;
-  tenantId?: string;
-  ipAddress?: string;
-  userAgent?: string;
-  loginAt: Date;
-  lastActivity: Date;
-}
+import { SessionData } from '../interfaces/session.interface';
 
 @Injectable()
 export class RedisSessionService implements OnModuleInit {

@@ -4,3 +4,8 @@ export * from "./role";
 export * from "./permission";
 export * from "./tenant";
 export * from "./kyc";
+export * from "./common";
+export * from "./upload";
+export * from "./borrower";
+export * from "./layout";
+export * from "./components";

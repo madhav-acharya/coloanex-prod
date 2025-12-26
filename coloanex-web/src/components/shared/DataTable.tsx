@@ -27,15 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MoreHorizontal, ArrowUpDown } from "lucide-react";
-
-export interface Column<T> {
-  key: string;
-  label: string;
-  sortable?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  render?: (value: any, row: T) => ReactNode;
-  width?: string;
-}
+import { Column } from "@/types/components";
 
 interface DataTableProps<T> {
   data: T[];
@@ -111,14 +103,17 @@ export function DataTable<T>({
           <TableRow>
             {selectable && (
               <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={
-                    data.length > 0 &&
-                    data.every((row) => selectedRows.has(getRowId(row)))
-                  }
-                  onCheckedChange={handleSelectAll}
-                  className="cursor-pointer"
-                />
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={
+                      data.length > 0 &&
+                      data.every((row) => selectedRows.has(getRowId(row)))
+                    }
+                    onCheckedChange={handleSelectAll}
+                    className="cursor-pointer"
+                    aria-label="Select all rows"
+                  />
+                </div>
               </TableHead>
             )}
             {columns.map((column) => (

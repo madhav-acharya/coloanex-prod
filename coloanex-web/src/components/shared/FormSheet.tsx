@@ -12,48 +12,16 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Messages, type Message } from "@/components/shared/Messages";
-import {
-  FileUploader,
-  type UploadedFile,
-} from "@/components/shared/FileUploader";
-
-export interface Field {
-  id: string;
-  label: string;
-  value: string;
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
-  type?: string;
-  options?: { value: string; label: string }[];
-}
-
-export interface FileField {
-  label: string;
-  accept: "image" | "pdf" | "image,pdf";
-  multiple?: boolean;
-  maxFiles?: number;
-  folder: string;
-  value: UploadedFile[];
-  onChange: (files: UploadedFile[]) => void;
-  required?: boolean;
-}
-
-export interface Section {
-  title?: string;
-  fields?: Field[];
-  fileFields?: FileField[];
-  condition?: boolean;
-  customContent?: React.ReactNode;
-}
+import { Messages } from "@/components/shared/Messages";
+import { FileUploader } from "@/components/shared/FileUploader";
+import { FormField, FileField, FormSection, Message } from "@/types/components";
 
 interface FormSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   description: string;
-  sections?: Section[];
+  sections?: FormSection[];
   onFieldChange: (fieldId: string, value: string) => void;
   onSubmit: () => Promise<void>;
   submitText?: string;

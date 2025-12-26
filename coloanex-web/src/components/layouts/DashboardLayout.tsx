@@ -30,21 +30,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-
-export interface FilterField {
-  name: string;
-  label: string;
-  type: "select" | "text";
-  options?: { label: string; value: string }[];
-  placeholder?: string;
-}
-
-interface ActionButton {
-  label: string;
-  onClick: () => void;
-  variant?: "default" | "outline" | "ghost";
-  disabled?: boolean;
-}
+import { FilterField, ActionButton } from "@/types/layout";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;

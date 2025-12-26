@@ -1,18 +1,5 @@
 import { baseApi } from "./baseApi";
-
-export interface CloudinaryFile {
-  url: string;
-  publicId: string;
-  format: string;
-  width?: number;
-  height?: number;
-  bytes: number;
-}
-
-export interface UploadResponse {
-  success: boolean;
-  data: CloudinaryFile | CloudinaryFile[];
-}
+import { CloudinaryFile, UploadResponse } from "@/types/upload";
 
 export const uploadApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({

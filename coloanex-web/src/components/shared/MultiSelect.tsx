@@ -5,12 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-
-export interface MultiSelectOption {
-  id: string;
-  name: string;
-  description?: string;
-}
+import { MultiSelectOption } from "@/types/components";
 
 interface MultiSelectProps {
   options: MultiSelectOption[];
