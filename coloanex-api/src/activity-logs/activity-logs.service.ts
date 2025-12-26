@@ -156,4 +156,118 @@ export class ActivityLogsService {
       tenantId,
     );
   }
+
+  async getNotifications(
+    userId: string,
+    userRoles: string[],
+    tenantId?: string,
+    limit: number = 50,
+    offset: number = 0,
+  ) {
+    const isSuperAdmin = userRoles.includes('Super Admin');
+
+    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
+      ? {}
+      : tenantId
+        ? { tenantId }
+        : { actorUserId: userId };
+
+    const notifications = await this.prisma.activityLog.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: {
+        actorUser: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+        readBy: {
+          where: { userId },
+          select: {
+            id: true,
+            readAt: true,
+          },
+        },
+      },
+    });
+
+    return notifications.map((notification) => ({
+      ...notification,
+      isRead: notification.readBy.length > 0,
+      readAt: notification.readBy[0]?.readAt,
+    }));
+  }
+
+  async getUnreadCount(
+    userId: string,
+    userRoles: string[],
+    tenantId?: string,
+  ): Promise<number> {
+    const isSuperAdmin = userRoles.includes('Super Admin');
+
+    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
+      ? {}
+      : tenantId
+        ? { tenantId }
+        : { actorUserId: userId };
+
+    return this.prisma.activityLog.count({
+      where: {
+        ...whereClause,
+        readBy: {
+          none: { userId },
+        },
+      },
+    });
+  }
+
+  async markAsRead(activityLogId: string, userId: string) {
+    return this.prisma.notificationRead.upsert({
+      where: {
+        activityLogId_userId: {
+          activityLogId,
+          userId,
+        },
+      },
+      create: {
+        activityLogId,
+        userId,
+      },
+      update: {},
+    });
+  }
+
+  async markAllAsRead(userId: string, userRoles: string[], tenantId?: string) {
+    const isSuperAdmin = userRoles.includes('Super Admin');
+
+    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
+      ? {}
+      : tenantId
+        ? { tenantId }
+        : { actorUserId: userId };
+
+    const unreadActivities = await this.prisma.activityLog.findMany({
+      where: {
+        ...whereClause,
+        readBy: {
+          none: { userId },
+        },
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.notificationRead.createMany({
+      data: unreadActivities.map((activity) => ({
+        activityLogId: activity.id,
+        userId,
+      })),
+      skipDuplicates: true,
+    });
+
+    return { count: unreadActivities.length };
+  }
 }
