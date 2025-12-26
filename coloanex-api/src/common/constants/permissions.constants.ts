@@ -28,3 +28,9 @@ export const CREATE_KYC_DOCUMENTS = 'Create KYC Documents';
 export const UPDATE_KYC_DOCUMENTS = 'Update KYC Documents';
 export const DELETE_KYC_DOCUMENTS = 'Delete KYC Documents';
 export const APPROVE_KYC_DOCUMENTS = 'Approve KYC Documents';
+
+export const READ_LOANS = 'Read Loans';
+export const CREATE_LOANS = 'Create Loans';
+export const UPDATE_LOANS = 'Update Loans';
+export const DELETE_LOANS = 'Delete Loans';
+export const APPROVE_LOANS = 'Approve Loans';
