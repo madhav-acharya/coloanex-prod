@@ -91,6 +91,7 @@ export const baseApi = createApi({
     "Users",
     "Tenants",
     "KycDocuments",
+    "Loans",
     "Borrowers",
     "Notifications",
   ],

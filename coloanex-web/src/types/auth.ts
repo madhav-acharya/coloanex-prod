@@ -11,7 +11,17 @@ export interface AuthUser {
   phone?: string;
   isActive: boolean;
   lastActiveAt?: string;
-  roles: string[];
+  roles: Array<{
+    roleId: string;
+    userId: string;
+    role: {
+      id: string;
+      name: string;
+      description?: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }>;
   permissions: string[];
   tenantId?: string;
 }

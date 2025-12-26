@@ -98,6 +98,14 @@ enum TransactionType {
   @@schema("finance")
 }
 
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+
+  @@schema("finance")
+}
 
 model Role {
   id          BigInt           @id @default(autoincrement())
@@ -201,9 +209,8 @@ model Tenant {
   users        User[]
   borrowers    Borrower[]
   activities   ActivityLog[]
-  ownerUser    User?         @relation("TenantOwner", fields: [ownerUserId], references: [id])
-  wallets      Wallet[]
   loans        Loan[]
+  ownerUser    User?         @relation("TenantOwner", fields: [ownerUserId], references: [id])
 
   @@index([isActive])
   @@index([isBanned])
@@ -236,11 +243,11 @@ model ActivityLog {
 }
 
 model NotificationRead {
-  id             String      @id @default(uuid())
-  activityLogId  String      @map("activity_log_id")
-  userId         String      @map("user_id")
-  readAt         DateTime    @default(now()) @map("read_at")
-  activityLog    ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  id            String      @id @default(uuid())
+  activityLogId String      @map("activity_log_id")
+  userId        String      @map("user_id")
+  readAt        DateTime    @default(now()) @map("read_at")
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
 
   @@unique([activityLogId, userId])
   @@index([userId])
@@ -281,20 +288,20 @@ model Kyc {
   passportSizePhotoUrl  String    @map("passport_size_photo_url")
   dateOfBirth           DateTime  @map("date_of_birth")
   gender                String
-  maritalStatus         String   @map("marital_status")
-  fatherName            String   @map("father_name")
-  motherName            String   @map("mother_name")
-  grandfatherName       String   @map("grandfather_name")
-  permanentProvince     String   @map("permanent_province")
-  permanentDistrict     String   @map("permanent_district")
-  permanentMunicipality String   @map("permanent_municipality")
-  permanentWard         String   @map("permanent_ward")
-  permanentTole         String   @map("permanent_tole")
+  maritalStatus         String    @map("marital_status")
+  fatherName            String    @map("father_name")
+  motherName            String    @map("mother_name")
+  grandfatherName       String    @map("grandfather_name")
+  permanentProvince     String    @map("permanent_province")
+  permanentDistrict     String    @map("permanent_district")
+  permanentMunicipality String    @map("permanent_municipality")
+  permanentWard         String    @map("permanent_ward")
+  permanentTole         String    @map("permanent_tole")
   occupation            String
-  monthlyIncome         Float    @map("monthly_income")
-  bankName              String   @map("bank_name")
-  bankAccountNumber     String   @map("bank_account_number")
-  bankBranch            String   @map("bank_branch")
+  monthlyIncome         Float     @map("monthly_income")
+  bankName              String    @map("bank_name")
+  bankAccountNumber     String    @map("bank_account_number")
+  bankBranch            String    @map("bank_branch")
   status                KycStatus @default(PENDING)
   rejectionReason       String?   @map("rejection_reason")
   verifiedBy            String?   @map("verified_by")
@@ -312,20 +319,20 @@ model Kyc {
 }
 
 model KycFile {
-  id           String      @id @default(uuid())
-  kycId        String      @map("kyc_id")
-  documentNumber String     @map("document_number")
-  issueDate    DateTime?   @map("issue_date")
-  expiryDate   DateTime?   @map("expiry_date")
-  issueDistrict String?     @map("issue_district")
-  fileType     KycFileType @map("file_type")
-  documentType String     @map("document_type")
-  fileUrl      String      @map("file_url")
-  fileName     String?     @map("file_name")
-  mimeType     String?     @map("mime_type")
-  sizeInBytes  Int?        @map("size_in_bytes")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  kyc          Kyc         @relation(fields: [kycId], references: [id], onDelete: Cascade)
+  id             String      @id @default(uuid())
+  kycId          String      @map("kyc_id")
+  documentNumber String      @map("document_number")
+  issueDate      DateTime?   @map("issue_date")
+  expiryDate     DateTime?   @map("expiry_date")
+  issueDistrict  String?     @map("issue_district")
+  fileType       KycFileType @map("file_type")
+  documentType   String      @map("document_type")
+  fileUrl        String      @map("file_url")
+  fileName       String?     @map("file_name")
+  mimeType       String?     @map("mime_type")
+  sizeInBytes    Int?        @map("size_in_bytes")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  kyc            Kyc         @relation(fields: [kycId], references: [id], onDelete: Cascade)
 
   @@index([kycId])
   @@index([fileType])
@@ -334,40 +341,46 @@ model KycFile {
 }
 
 model Wallet {
-  id        String   @id @default(uuid())
-  tenantId  String   @map("tenant_id")
-  userId    String   @map("user_id")
-  balance   Decimal  @default(0) @db.Decimal(20, 2)
-  address   String?  @unique
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  balance           Decimal  @default(0) @db.Decimal(20, 2)
+  bankAccountNumber String?  @unique
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  user        User        @relation("UserWallet", fields: [userId], references: [id])
+  user         User          @relation("UserWallet", fields: [userId], references: [id])
   transactions Transaction[]
 
-  @@index([tenantId])
   @@index([userId])
   @@map("wallets")
   @@schema("finance")
 }
 
 model Loan {
-  id           String      @id @default(uuid())
-  tenantId     String      @map("tenant_id")
-  borrowerId   String      @map("borrower_id")
-  amount       Decimal     @db.Decimal(20, 2)
-  interestRate Decimal     @map("interest_rate") @db.Decimal(5, 2)
-  termMonths   Int         @map("term_months")
-  status       LoanStatus  @default(DRAFT)
-  disbursedAt  DateTime?   @map("disbursed_at")
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  id                    String     @id @default(uuid())
+  borrowerId            String     @map("borrower_id")
+  tenantId              String     @map("tenant_id")
+  providedLoanAmount    Decimal    @map("provided_loan_amount") @db.Decimal(20, 2)
+  expectedLoanAmount    Decimal    @map("expected_loan_amount") @db.Decimal(20, 2)
+  loanPurpose           String     @map("loan_purpose")
+  collateralType        String     @map("collateral_type")
+  collateralDescription String     @map("collateral_description")
+  collateralValue       Decimal    @map("collateral_value") @db.Decimal(20, 2)
+  collateralImageUrl    String     @map("collateral_image_url")
+  txHash                String?    @map("tx_hash")
+  amount                Decimal    @db.Decimal(20, 2)
+  interestRate          Decimal    @map("interest_rate") @db.Decimal(5, 2)
+  termMonths            Int        @map("term_months")
+  status                LoanStatus @default(DRAFT)
+  disbursedAt           DateTime?  @map("disbursed_at")
+  dueDate               DateTime?  @map("due_date")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id])
-  borrower    Borrower    @relation("BorrowerLoans", fields: [borrowerId], references: [id])
-  investments Investment[]
-  repayments  Repayment[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+  borrower     Borrower      @relation("BorrowerLoans", fields: [borrowerId], references: [id])
+  investments  Investment[]  @relation("LoanInvestments")
+  repayments   Repayment[]
   transactions Transaction[]
 
   @@index([tenantId])
@@ -378,54 +391,54 @@ model Loan {
 }
 
 model Investment {
-  id        String   @id @default(uuid())
-  loanId    String   @map("loan_id")
-  userId    String   @map("user_id")
-  amount    Decimal  @db.Decimal(20, 2)
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(uuid())
+  loanId     String   @map("loan_id")
+  investorId String   @map("investor_id")
+  amount     Decimal  @db.Decimal(20, 2)
+  txHash     String?  @map("tx_hash")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  loan Loan @relation(fields: [loanId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  loan Loan @relation("LoanInvestments", fields: [loanId], references: [id])
+  user User @relation(fields: [investorId], references: [id])
 
   @@index([loanId])
-  @@index([userId])
+  @@index([investorId])
   @@map("investments")
   @@schema("finance")
 }
 
 model Repayment {
-  id           String           @id @default(uuid())
-  loanId       String           @map("loan_id")
-  userId       String           @map("user_id") // borrower user
-  dueDate      DateTime         @map("due_date")
-  amountDue    Decimal          @map("amount_due") @db.Decimal(20, 2)
-  amountPaid   Decimal          @map("amount_paid") @db.Decimal(20, 2) @default(0)
-  status       RepaymentStatus  @default(PENDING)
-  paidAt       DateTime?        @map("paid_at")
-  createdAt    DateTime         @default(now()) @map("created_at")
+  id         String    @id @default(uuid())
+  loanId     String    @map("loan_id")
+  userId     String    @map("user_id")
+  txHash     String?   @map("tx_hash")
+  amountPaid Decimal   @default(0) @map("amount_paid") @db.Decimal(20, 2)
+  paidAt     DateTime? @map("paid_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
-  loan        Loan        @relation(fields: [loanId], references: [id])
-  user        User        @relation("RepaymentUser", fields: [userId], references: [id])
+  loan         Loan          @relation(fields: [loanId], references: [id])
+  user         User          @relation("RepaymentUser", fields: [userId], references: [id])
   transactions Transaction[]
 
   @@index([loanId])
   @@index([userId])
-  @@index([status])
   @@map("repayments")
   @@schema("finance")
 }
 
 model Transaction {
-  id          String          @id @default(uuid())
-  walletId    String          @map("wallet_id")
-  loanId      String?         @map("loan_id")
-  repaymentId String?         @map("repayment_id")
+  id          String            @id @default(uuid())
+  walletId    String            @map("wallet_id")
+  loanId      String?           @map("loan_id")
+  repaymentId String?           @map("repayment_id")
   type        TransactionType
-  amount      Decimal         @db.Decimal(20, 2)
-  createdAt   DateTime        @default(now()) @map("created_at")
+  amount      Decimal           @db.Decimal(20, 2)
+  txHash      String?           @map("tx_hash")
+  status      TransactionStatus @default(PENDING)
+  createdAt   DateTime          @default(now()) @map("created_at")
 
-  wallet    Wallet    @relation(fields: [walletId], references: [id])
-  loan      Loan?     @relation(fields: [loanId], references: [id])
+  wallet    Wallet     @relation(fields: [walletId], references: [id])
+  loan      Loan?      @relation(fields: [loanId], references: [id])
   repayment Repayment? @relation(fields: [repaymentId], references: [id])
 
   @@index([walletId])
