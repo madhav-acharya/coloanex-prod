@@ -13,6 +13,7 @@ export interface AuthUser {
   lastActiveAt?: string;
   roles: string[];
   permissions: string[];
+  tenantId?: string;
 }
 
 export interface AuthResponse {

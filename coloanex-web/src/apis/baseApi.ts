@@ -92,6 +92,7 @@ export const baseApi = createApi({
     "Tenants",
     "KycDocuments",
     "Borrowers",
+    "Notifications",
   ],
   endpoints: () => ({}),
 });

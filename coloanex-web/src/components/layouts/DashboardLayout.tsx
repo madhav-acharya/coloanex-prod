@@ -5,6 +5,7 @@ import { RootState } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
+import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
 import {
   Search,
   Plus,
@@ -15,7 +16,6 @@ import {
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  Bell,
   LayoutDashboard,
   Building2,
   FileText,
@@ -260,14 +260,7 @@ export default function DashboardLayout({
                 )}
               </div>
               <div className="flex items-center gap-2 md:gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative cursor-pointer"
-                >
-                  <Bell className="w-5 h-5 text-gray-600" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </Button>
+                <NotificationsDropdown />
                 <ProfileDropdown />
               </div>
             </div>
