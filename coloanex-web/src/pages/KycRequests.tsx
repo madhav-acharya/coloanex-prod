@@ -68,23 +68,21 @@ export default function KycRequests() {
   const [updateKyc, { isLoading: isUpdating }] = useUpdateKycMutation();
   const [deleteKyc] = useDeleteKycMutation();
 
-  // Check if user is super admin
   const isSuperAdmin = useMemo(
-    () => user?.roles?.includes("Super Admin") || false,
+    () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
     [user]
   );
 
   const isBorrower = useMemo(
-    () => user?.roles?.includes("Borrower") || false,
+    () => user?.roles?.some((ur) => ur.role.name === "Borrower") || false,
     [user]
   );
 
   const isLender = useMemo(
-    () => user?.roles?.includes("Lender") || false,
+    () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
     [user]
   );
 
-  // Fetch tenants for super admin
   const { data: tenantsData } = useGetTenantsQuery(
     { page: 1, limit: 100 },
     { skip: !isSuperAdmin && !isLender }
