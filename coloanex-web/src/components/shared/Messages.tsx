@@ -1,14 +1,6 @@
 import { AlertCircle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type MessageType = "success" | "error" | "warning" | "info";
-
-export interface Message {
-  id?: string;
-  type: MessageType;
-  title?: string;
-  description: string;
-}
+import { Message, MessageType } from "@/types/components";
 
 interface MessagesProps {
   messages: Message[];

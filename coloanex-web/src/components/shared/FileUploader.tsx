@@ -7,14 +7,7 @@ import {
   useUploadMultipleMutation,
 } from "@/apis/uploadApi";
 import { toast } from "sonner";
-
-export interface UploadedFile {
-  url: string;
-  publicId?: string;
-  fileName: string;
-  mimeType: string;
-  sizeInBytes: number;
-}
+import { UploadedFile } from "@/types/upload";
 
 interface FileUploaderProps {
   label: string;

@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["auth", "borrower", "core"]
+  schemas  = ["auth", "borrower", "core", "finance"]
 }
 
 enum KycStatus {
@@ -15,7 +15,7 @@ enum KycStatus {
   @@schema("borrower")
 }
 
-enum KycDocumentType {P
+enum KycDocumentType {
   CITIZENSHIP
   PASSPORT
   DRIVING_LICENSE
@@ -33,7 +33,6 @@ enum KycFileType {
   LICENSE_FRONT
   LICENSE_BACK
   SELFIE
-  COLLATERAL_PHOTO
   SUPPORTING_DOCUMENT
   OTHER
 
@@ -65,6 +64,40 @@ enum ActivityAction {
 
   @@schema("core")
 }
+
+enum LoanStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  DISBURSED
+  ACTIVE
+  CLOSED
+  DEFAULTED
+
+  @@schema("finance")
+}
+
+enum RepaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+
+  @@schema("finance")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAW
+  INVESTMENT
+  DISBURSEMENT
+  REPAYMENT
+  FEE
+
+  @@schema("finance")
+}
+
 
 model Role {
   id          BigInt           @id @default(autoincrement())
@@ -122,6 +155,9 @@ model User {
   borrowers       Borrower[]       @relation("BorrowerUser")
   activities      ActivityLog[]
   ownedTenants    Tenant[]         @relation("TenantOwner")
+  repayments      Repayment[]      @relation("RepaymentUser")
+  wallets         Wallet[]         @relation("UserWallet")
+  investments     Investment[]
 
   @@index([tenantId])
   @@index([tenantId, isActive])
@@ -166,6 +202,8 @@ model Tenant {
   borrowers    Borrower[]
   activities   ActivityLog[]
   ownerUser    User?         @relation("TenantOwner", fields: [ownerUserId], references: [id])
+  wallets      Wallet[]
+  loans        Loan[]
 
   @@index([isActive])
   @@index([isBanned])
@@ -208,6 +246,7 @@ model Borrower {
   tenant           Tenant    @relation(fields: [tenantId], references: [id])
   user             User      @relation("BorrowerUser", fields: [userId], references: [id])
   kycs             Kyc[]
+  loans            Loan[]    @relation("BorrowerLoans")
 
   @@unique([tenantId, userId])
   @@index([tenantId, kycStatus])
@@ -241,12 +280,6 @@ model Kyc {
   bankName              String   @map("bank_name")
   bankAccountNumber     String   @map("bank_account_number")
   bankBranch            String   @map("bank_branch")
-  loanAmount            Float    @map("loan_amount")
-  loanPurpose           String   @map("loan_purpose")
-  loanDuration          Int      @map("loan_duration")
-  collateralType        String   @map("collateral_type")
-  collateralDescription String   @map("collateral_description")
-  collateralValue       Float    @map("collateral_value")
   status                KycStatus @default(PENDING)
   rejectionReason       String?   @map("rejection_reason")
   verifiedBy            String?   @map("verified_by")
@@ -283,4 +316,106 @@ model KycFile {
   @@index([fileType])
   @@map("kyc_files")
   @@schema("borrower")
+}
+
+model Wallet {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  userId    String   @map("user_id")
+  balance   Decimal  @default(0) @db.Decimal(20, 2)
+  address   String?  @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  user        User        @relation("UserWallet", fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([tenantId])
+  @@index([userId])
+  @@map("wallets")
+  @@schema("finance")
+}
+
+model Loan {
+  id           String      @id @default(uuid())
+  tenantId     String      @map("tenant_id")
+  borrowerId   String      @map("borrower_id")
+  amount       Decimal     @db.Decimal(20, 2)
+  interestRate Decimal     @map("interest_rate") @db.Decimal(5, 2)
+  termMonths   Int         @map("term_months")
+  status       LoanStatus  @default(DRAFT)
+  disbursedAt  DateTime?   @map("disbursed_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  borrower    Borrower    @relation("BorrowerLoans", fields: [borrowerId], references: [id])
+  investments Investment[]
+  repayments  Repayment[]
+  transactions Transaction[]
+
+  @@index([tenantId])
+  @@index([borrowerId])
+  @@index([status])
+  @@map("loans")
+  @@schema("finance")
+}
+
+model Investment {
+  id        String   @id @default(uuid())
+  loanId    String   @map("loan_id")
+  userId    String   @map("user_id")
+  amount    Decimal  @db.Decimal(20, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  loan Loan @relation(fields: [loanId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([loanId])
+  @@index([userId])
+  @@map("investments")
+  @@schema("finance")
+}
+
+model Repayment {
+  id           String           @id @default(uuid())
+  loanId       String           @map("loan_id")
+  userId       String           @map("user_id") // borrower user
+  dueDate      DateTime         @map("due_date")
+  amountDue    Decimal          @map("amount_due") @db.Decimal(20, 2)
+  amountPaid   Decimal          @map("amount_paid") @db.Decimal(20, 2) @default(0)
+  status       RepaymentStatus  @default(PENDING)
+  paidAt       DateTime?        @map("paid_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  loan        Loan        @relation(fields: [loanId], references: [id])
+  user        User        @relation("RepaymentUser", fields: [userId], references: [id])
+  transactions Transaction[]
+
+  @@index([loanId])
+  @@index([userId])
+  @@index([status])
+  @@map("repayments")
+  @@schema("finance")
+}
+
+model Transaction {
+  id          String          @id @default(uuid())
+  walletId    String          @map("wallet_id")
+  loanId      String?         @map("loan_id")
+  repaymentId String?         @map("repayment_id")
+  type        TransactionType
+  amount      Decimal         @db.Decimal(20, 2)
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  wallet    Wallet    @relation(fields: [walletId], references: [id])
+  loan      Loan?     @relation(fields: [loanId], references: [id])
+  repayment Repayment? @relation(fields: [repaymentId], references: [id])
+
+  @@index([walletId])
+  @@index([loanId])
+  @@index([repaymentId])
+  @@map("transactions")
+  @@schema("finance")
 }

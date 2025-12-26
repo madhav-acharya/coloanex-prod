@@ -126,7 +126,7 @@ export function KycVerificationModal({
                 <div>
                   <Label className="text-xs text-muted-foreground">Email</Label>
                   <p className="text-sm font-medium mt-1">
-                    {document.borrower?.user?.email || document.email || "N/A"}
+                    {document.borrower?.user?.email || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -210,8 +210,7 @@ export function KycVerificationModal({
 
             {(document.fatherName ||
               document.motherName ||
-              document.grandfatherName ||
-              document.spouseName) && (
+              document.grandfatherName) && (
               <>
                 <Separator />
                 <div>
@@ -249,170 +248,196 @@ export function KycVerificationModal({
                         </p>
                       </div>
                     )}
-                    {document.spouseName && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Spouse's Name
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.spouseName}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </>
             )}
 
-            {document.documentTypes?.includes("CITIZENSHIP") && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Citizenship Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.citizenshipNumber && (
+            {document.documentTypes?.includes("CITIZENSHIP") &&
+              (() => {
+                const citizenshipFile = document.files?.find(
+                  (f) =>
+                    f.fileType === "CITIZENSHIP_FRONT" ||
+                    f.fileType === "CITIZENSHIP_BACK"
+                );
+                return (
+                  citizenshipFile && (
+                    <>
+                      <Separator />
                       <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Citizenship Number
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.citizenshipNumber}
-                        </p>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Citizenship Information
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {citizenshipFile.documentNumber && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Citizenship Number
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {citizenshipFile.documentNumber}
+                              </p>
+                            </div>
+                          )}
+                          {citizenshipFile.issueDate && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Issue Date
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {formatDate(citizenshipFile.issueDate)}
+                              </p>
+                            </div>
+                          )}
+                          {citizenshipFile.issueDistrict && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Issue District
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {citizenshipFile.issueDistrict}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {document.citizenshipIssueDate && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Issue Date
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {formatDate(document.citizenshipIssueDate)}
-                        </p>
-                      </div>
-                    )}
-                    {document.citizenshipDistrict && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Issue District
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.citizenshipDistrict}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+                    </>
+                  )
+                );
+              })()}
 
-            {document.documentTypes?.includes("PASSPORT") && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Passport Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.passportNumber && (
+            {document.documentTypes?.includes("PASSPORT") &&
+              (() => {
+                const passportFile = document.files?.find(
+                  (f) => f.fileType === "PASSPORT"
+                );
+                return (
+                  passportFile && (
+                    <>
+                      <Separator />
                       <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Passport Number
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.passportNumber}
-                        </p>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Passport Information
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {passportFile.documentNumber && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Passport Number
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {passportFile.documentNumber}
+                              </p>
+                            </div>
+                          )}
+                          {passportFile.issueDate && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Issue Date
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {formatDate(passportFile.issueDate)}
+                              </p>
+                            </div>
+                          )}
+                          {passportFile.expiryDate && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Expiry Date
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {formatDate(passportFile.expiryDate)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {document.passportIssueDate && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Issue Date
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {formatDate(document.passportIssueDate)}
-                        </p>
-                      </div>
-                    )}
-                    {document.passportExpiryDate && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Expiry Date
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {formatDate(document.passportExpiryDate)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+                    </>
+                  )
+                );
+              })()}
 
-            {document.documentTypes?.includes("PAN") && document.panNumber && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    PAN Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">
-                        PAN Number
-                      </Label>
-                      <p className="text-sm font-medium mt-1">
-                        {document.panNumber}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+            {document.documentTypes?.includes("PAN") &&
+              (() => {
+                const panFile = document.files?.find(
+                  (f) => f.fileType === "PAN"
+                );
+                return (
+                  panFile?.documentNumber && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">
+                          PAN Information
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              PAN Number
+                            </Label>
+                            <p className="text-sm font-medium mt-1">
+                              {panFile.documentNumber}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )
+                );
+              })()}
 
-            {document.documentTypes?.includes("DRIVING_LICENSE") && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Driving License Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.licenseNumber && (
+            {document.documentTypes?.includes("DRIVING_LICENSE") &&
+              (() => {
+                const licenseFile = document.files?.find(
+                  (f) =>
+                    f.fileType === "LICENSE_FRONT" ||
+                    f.fileType === "LICENSE_BACK"
+                );
+                return (
+                  licenseFile && (
+                    <>
+                      <Separator />
                       <div>
-                        <Label className="text-xs text-muted-foreground">
-                          License Number
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.licenseNumber}
-                        </p>
+                        <h3 className="text-lg font-semibold mb-4">
+                          Driving License Information
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {licenseFile.documentNumber && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                License Number
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {licenseFile.documentNumber}
+                              </p>
+                            </div>
+                          )}
+                          {licenseFile.issueDate && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Issue Date
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {formatDate(licenseFile.issueDate)}
+                              </p>
+                            </div>
+                          )}
+                          {licenseFile.expiryDate && (
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                Expiry Date
+                              </Label>
+                              <p className="text-sm font-medium mt-1">
+                                {formatDate(licenseFile.expiryDate)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                    {document.licenseIssueDate && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Issue Date
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {formatDate(document.licenseIssueDate)}
-                        </p>
-                      </div>
-                    )}
-                    {document.licenseExpiryDate && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Expiry Date
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {formatDate(document.licenseExpiryDate)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
+                    </>
+                  )
+                );
+              })()}
 
             <Separator />
 
@@ -482,106 +507,10 @@ export function KycVerificationModal({
                     </div>
                   </div>
                 )}
-                {(document.temporaryProvince ||
-                  document.temporaryDistrict ||
-                  document.temporaryMunicipality) && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">
-                      Temporary Address
-                    </Label>
-                    <div className="grid grid-cols-3 gap-4">
-                      {document.temporaryProvince && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Province
-                          </Label>
-                          <p className="text-sm font-medium mt-1">
-                            {document.temporaryProvince}
-                          </p>
-                        </div>
-                      )}
-                      {document.temporaryDistrict && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            District
-                          </Label>
-                          <p className="text-sm font-medium mt-1">
-                            {document.temporaryDistrict}
-                          </p>
-                        </div>
-                      )}
-                      {document.temporaryMunicipality && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Municipality
-                          </Label>
-                          <p className="text-sm font-medium mt-1">
-                            {document.temporaryMunicipality}
-                          </p>
-                        </div>
-                      )}
-                      {document.temporaryWard && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Ward
-                          </Label>
-                          <p className="text-sm font-medium mt-1">
-                            {document.temporaryWard}
-                          </p>
-                        </div>
-                      )}
-                      {document.temporaryTole && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">
-                            Tole
-                          </Label>
-                          <p className="text-sm font-medium mt-1">
-                            {document.temporaryTole}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
 
-            {(document.phoneNumber || document.alternatePhone) && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Contact Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.phoneNumber && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Phone Number
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.phoneNumber}
-                        </p>
-                      </div>
-                    )}
-                    {document.alternatePhone && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Alternate Phone
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.alternatePhone}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(document.occupation ||
-              document.employerName ||
-              document.monthlyIncome) && (
+            {(document.occupation || document.monthlyIncome) && (
               <>
                 <Separator />
                 <div>
@@ -596,16 +525,6 @@ export function KycVerificationModal({
                         </Label>
                         <p className="text-sm font-medium mt-1">
                           {document.occupation}
-                        </p>
-                      </div>
-                    )}
-                    {document.employerName && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Employer Name
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.employerName}
                         </p>
                       </div>
                     )}
@@ -661,96 +580,6 @@ export function KycVerificationModal({
                         </Label>
                         <p className="text-sm font-medium mt-1">
                           {document.bankBranch}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(document.loanAmount ||
-              document.loanPurpose ||
-              document.loanDuration) && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Loan Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.loanAmount && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Loan Amount
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          NPR {document.loanAmount.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                    {document.loanPurpose && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Loan Purpose
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.loanPurpose}
-                        </p>
-                      </div>
-                    )}
-                    {document.loanDuration && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Loan Duration
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.loanDuration} months
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {(document.collateralType ||
-              document.collateralDescription ||
-              document.collateralValue) && (
-              <>
-                <Separator />
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Collateral Information
-                  </h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    {document.collateralType && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Collateral Type
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.collateralType}
-                        </p>
-                      </div>
-                    )}
-                    {document.collateralValue && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">
-                          Estimated Value
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          NPR {document.collateralValue.toLocaleString()}
-                        </p>
-                      </div>
-                    )}
-                    {document.collateralDescription && (
-                      <div className="col-span-3">
-                        <Label className="text-xs text-muted-foreground">
-                          Description
-                        </Label>
-                        <p className="text-sm font-medium mt-1">
-                          {document.collateralDescription}
                         </p>
                       </div>
                     )}

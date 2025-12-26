@@ -47,11 +47,15 @@ export class KycService {
 
     if (this.isSuperAdmin(user)) {
       if (!createKycDto.tenantId) {
-        throw new BadRequestException('Tenant ID is required');
+        throw new BadRequestException(
+          'Super Admin must provide tenant ID when creating KYC',
+        );
       }
       tenantId = createKycDto.tenantId;
       if (!createKycDto.userId) {
-        throw new BadRequestException('User ID is required');
+        throw new BadRequestException(
+          'Super Admin must provide user ID when creating KYC',
+        );
       }
       targetUserId = createKycDto.userId;
     } else if (this.isLender(user)) {
@@ -60,15 +64,28 @@ export class KycService {
       }
       tenantId = user.tenantId;
       if (!createKycDto.userId) {
-        throw new BadRequestException('User ID is required');
+        throw new BadRequestException(
+          'Lender must provide user ID when creating KYC',
+        );
       }
       targetUserId = createKycDto.userId;
-    } else {
+    } else if (this.isBorrower(user)) {
       if (!user.tenantId) {
         throw new BadRequestException('User must have a tenant ID');
       }
       tenantId = user.tenantId;
       targetUserId = user.sub;
+    } else {
+      if (!user.tenantId) {
+        throw new BadRequestException('User must have a tenant ID');
+      }
+      tenantId = user.tenantId;
+      if (!createKycDto.userId) {
+        throw new BadRequestException(
+          'Tenant user must provide user ID when creating KYC',
+        );
+      }
+      targetUserId = createKycDto.userId;
     }
 
     let borrower = await this.prisma.borrower.findUnique({
@@ -104,7 +121,7 @@ export class KycService {
           ? {
               create: files.map((file) => ({
                 fileType: file.fileType,
-                documentNumber: file.documentNumber,
+                documentNumber: file.documentNumber || '',
                 issueDate: file.issueDate
                   ? new Date(file.issueDate)
                   : undefined,
@@ -112,7 +129,7 @@ export class KycService {
                   ? new Date(file.expiryDate)
                   : undefined,
                 issueDistrict: file.issueDistrict,
-                documentType: file.documentType,
+                documentType: file.documentType || '',
                 fileUrl: file.fileUrl,
                 fileName: file.fileName,
                 mimeType: file.mimeType,
@@ -282,12 +299,80 @@ export class KycService {
   ): Promise<Kyc> {
     const existing = await this.findOne(id, user);
 
-    if (!this.isSuperAdmin(user) && !this.isLender(user)) {
-      if (existing.borrower && existing.borrower.userId !== user.sub) {
+    if (!existing.borrower) {
+      throw new NotFoundException('Borrower not found for this KYC');
+    }
+
+    let tenantId: string;
+    let targetUserId: string;
+    let shouldUpdateBorrower = false;
+
+    if (this.isSuperAdmin(user)) {
+      if (updateKycDto.tenantId && updateKycDto.userId) {
+        tenantId = updateKycDto.tenantId;
+        targetUserId = updateKycDto.userId;
+        shouldUpdateBorrower =
+          existing.borrower.tenantId !== tenantId ||
+          existing.borrower.userId !== targetUserId;
+      } else {
+        tenantId = existing.borrower.tenantId;
+        targetUserId = existing.borrower.userId;
+      }
+    } else if (this.isLender(user)) {
+      if (!user.tenantId) {
+        throw new BadRequestException('Lender must have a tenant ID');
+      }
+      tenantId = user.tenantId;
+      if (updateKycDto.userId) {
+        targetUserId = updateKycDto.userId;
+        shouldUpdateBorrower = existing.borrower.userId !== targetUserId;
+      } else {
+        targetUserId = existing.borrower.userId;
+      }
+    } else if (this.isBorrower(user)) {
+      if (existing.borrower.userId !== user.sub) {
         throw new BadRequestException(
           'You can only update your own KYC documents',
         );
       }
+      tenantId = existing.borrower.tenantId;
+      targetUserId = user.sub;
+    } else {
+      if (!user.tenantId) {
+        throw new BadRequestException('User must have a tenant ID');
+      }
+      tenantId = user.tenantId;
+      if (updateKycDto.userId) {
+        targetUserId = updateKycDto.userId;
+        shouldUpdateBorrower = existing.borrower.userId !== targetUserId;
+      } else {
+        targetUserId = existing.borrower.userId;
+      }
+    }
+
+    let borrowerId = existing.borrower.id;
+
+    if (shouldUpdateBorrower) {
+      let borrower = await this.prisma.borrower.findUnique({
+        where: {
+          tenantId_userId: {
+            tenantId,
+            userId: targetUserId,
+          },
+        },
+      });
+
+      if (!borrower) {
+        borrower = await this.prisma.borrower.create({
+          data: {
+            tenantId,
+            userId: targetUserId,
+            kycStatus: KycStatus.PENDING,
+          },
+        });
+      }
+
+      borrowerId = borrower.id;
     }
 
     const { files, ...kycData } = updateKycDto;
@@ -299,6 +384,7 @@ export class KycService {
       where: { id },
       data: {
         ...kycData,
+        borrowerId,
         dateOfBirth: kycData.dateOfBirth
           ? new Date(kycData.dateOfBirth)
           : undefined,
@@ -328,11 +414,11 @@ export class KycService {
         data: files.map((file) => ({
           kycId: id,
           fileType: file.fileType,
-          documentNumber: file.documentNumber,
+          documentNumber: file.documentNumber || '',
           issueDate: file.issueDate ? new Date(file.issueDate) : undefined,
           expiryDate: file.expiryDate ? new Date(file.expiryDate) : undefined,
           issueDistrict: file.issueDistrict,
-          documentType: file.documentType,
+          documentType: file.documentType || '',
           fileUrl: file.fileUrl,
           fileName: file.fileName,
           mimeType: file.mimeType,

@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { Eye, FileText, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
-import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
+import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormLabel } from "@/components/ui/form-label";
@@ -27,7 +28,7 @@ import { KycStatus, KycDocumentType, KycFileType } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
 import { FormSheet } from "@/components/shared/FormSheet";
-import { type UploadedFile } from "@/components/shared/FileUploader";
+import { UploadedFile } from "@/types/upload";
 
 const documentTypeOptions = [
   { value: KycDocumentType.CITIZENSHIP, label: "Citizenship" },
@@ -69,17 +70,17 @@ export default function KycRequests() {
 
   // Check if user is super admin
   const isSuperAdmin = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Super Admin") || false,
+    () => user?.roles?.includes("Super Admin") || false,
     [user]
   );
 
   const isBorrower = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Borrower") || false,
+    () => user?.roles?.includes("Borrower") || false,
     [user]
   );
 
   const isLender = useMemo(
-    () => user?.roles.some((r) => r.role.name === "Lender") || false,
+    () => user?.roles?.includes("Lender") || false,
     [user]
   );
 
@@ -151,12 +152,6 @@ export default function KycRequests() {
     bankName: "",
     bankAccountNumber: "",
     bankBranch: "",
-    loanAmount: 0,
-    loanPurpose: "",
-    loanDuration: 0,
-    collateralType: "",
-    collateralDescription: "",
-    collateralValue: 0,
   });
 
   const [files, setFiles] = useState<{
@@ -168,7 +163,6 @@ export default function KycRequests() {
     licenseFront: UploadedFile[];
     licenseBack: UploadedFile[];
     selfie: UploadedFile[];
-    collateral: UploadedFile[];
     supporting: UploadedFile[];
   }>({
     passportSizePhoto: [],
@@ -179,7 +173,6 @@ export default function KycRequests() {
     licenseFront: [],
     licenseBack: [],
     selfie: [],
-    collateral: [],
     supporting: [],
   });
 
@@ -255,16 +248,8 @@ export default function KycRequests() {
     }));
   };
 
-  const handleSelectRow = (docId: string) => {
-    setSelectedRows((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(docId)) {
-        newSet.delete(docId);
-      } else {
-        newSet.add(docId);
-      }
-      return newSet;
-    });
+  const handleSelectionChange = (selected: Set<string>) => {
+    setSelectedRows(selected);
   };
 
   const handleViewVerifyKyc = (document: Kyc) => {
@@ -546,16 +531,6 @@ export default function KycRequests() {
       })
     );
 
-    files.collateral.forEach((f) =>
-      allFiles.push({
-        fileType: KycFileType.COLLATERAL_PHOTO,
-        fileUrl: f.url,
-        fileName: f.fileName,
-        mimeType: f.mimeType,
-        sizeInBytes: f.sizeInBytes,
-      })
-    );
-
     files.supporting.forEach((f) =>
       allFiles.push({
         fileType: KycFileType.SUPPORTING_DOCUMENT,
@@ -643,12 +618,6 @@ export default function KycRequests() {
       bankName: "",
       bankAccountNumber: "",
       bankBranch: "",
-      loanAmount: 0,
-      loanPurpose: "",
-      loanDuration: 0,
-      collateralType: "",
-      collateralDescription: "",
-      collateralValue: 0,
     });
     setFiles({
       passportSizePhoto: [],
@@ -659,7 +628,6 @@ export default function KycRequests() {
       licenseFront: [],
       licenseBack: [],
       selfie: [],
-      collateral: [],
       supporting: [],
     });
   };
@@ -722,12 +690,6 @@ export default function KycRequests() {
         bankName: editingKyc.bankName || "",
         bankAccountNumber: editingKyc.bankAccountNumber || "",
         bankBranch: editingKyc.bankBranch || "",
-        loanAmount: editingKyc.loanAmount,
-        loanPurpose: editingKyc.loanPurpose || "",
-        loanDuration: editingKyc.loanDuration,
-        collateralType: editingKyc.collateralType || "",
-        collateralDescription: editingKyc.collateralDescription || "",
-        collateralValue: editingKyc.collateralValue,
         documentTypes: editingKyc.documentTypes || [],
         tenantId: editingKyc.borrower?.tenantId || "",
       } as CreateKycDto);
@@ -769,7 +731,6 @@ export default function KycRequests() {
           licenseFront: [],
           licenseBack: [],
           selfie: [],
-          collateral: [],
           supporting: [],
         };
 
@@ -854,9 +815,6 @@ export default function KycRequests() {
               break;
             case "SELFIE":
               newFiles.selfie.push(uploadedFile);
-              break;
-            case "COLLATERAL_PHOTO":
-              newFiles.collateral.push(uploadedFile);
               break;
             case "SUPPORTING_DOCUMENT":
               newFiles.supporting.push(uploadedFile);
@@ -1309,76 +1267,6 @@ export default function KycRequests() {
         ],
       },
       {
-        title: "Loan Requirements",
-        fields: [
-          {
-            id: "loanAmount",
-            label: "Loan Amount",
-            value: formData.loanAmount?.toString() || "",
-            type: "number",
-            required: true,
-            placeholder: "Enter loan amount",
-          },
-          {
-            id: "loanDuration",
-            label: "Duration (months)",
-            value: formData.loanDuration?.toString() || "",
-            type: "number",
-            required: true,
-            placeholder: "Enter duration",
-          },
-          {
-            id: "loanPurpose",
-            label: "Loan Purpose",
-            value: formData.loanPurpose || "",
-            type: "textarea",
-            required: true,
-            placeholder: "Describe the purpose of loan",
-            colSpan: 2,
-          },
-        ],
-      },
-      {
-        title: "Collateral Information",
-        fields: [
-          {
-            id: "collateralType",
-            label: "Collateral Type",
-            value: formData.collateralType || "",
-            placeholder: "e.g., Property, Vehicle, Gold",
-            required: true,
-          },
-          {
-            id: "collateralValue",
-            label: "Estimated Value",
-            value: formData.collateralValue?.toString() || "",
-            type: "number",
-            placeholder: "Enter estimated value",
-            required: true,
-          },
-          {
-            id: "collateralDescription",
-            label: "Description",
-            value: formData.collateralDescription || "",
-            type: "textarea",
-            placeholder: "Describe the collateral",
-            required: true,
-          },
-        ],
-        fileFields: [
-          {
-            label: "Collateral Photos",
-            accept: "image" as const,
-            multiple: true,
-            maxFiles: 5,
-            folder: "kyc/collateral",
-            value: files.collateral,
-            onChange: (newFiles: UploadedFile[]) =>
-              setFiles((prev) => ({ ...prev, collateral: newFiles })),
-          },
-        ],
-      },
-      {
         title: "Additional Documents",
         fileFields: [
           {
@@ -1431,17 +1319,6 @@ export default function KycRequests() {
 
   const columns: Column<Kyc>[] = [
     {
-      key: "select",
-      label: "",
-      sortable: false,
-      render: (_value, doc: Kyc) => (
-        <Checkbox
-          checked={selectedRows.has(doc.id)}
-          onCheckedChange={() => handleSelectRow(doc.id)}
-        />
-      ),
-    },
-    {
       key: "firstName",
       label: "Borrower Name",
       sortable: true,
@@ -1451,7 +1328,7 @@ export default function KycRequests() {
             {doc.borrower?.user?.fullName || `${doc.firstName} ${doc.lastName}`}
           </div>
           <div className="text-sm text-gray-500">
-            {doc.borrower?.user?.email || doc.email || "N/A"}
+            {doc.borrower?.user?.email || "N/A"}
           </div>
         </div>
       ),
@@ -1545,6 +1422,10 @@ export default function KycRequests() {
         onSort={handleSort}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
+        selectable={true}
+        selectedRows={selectedRows}
+        onSelectionChange={handleSelectionChange}
+        getRowId={(row) => row.id}
         actions={[
           {
             label: "View",

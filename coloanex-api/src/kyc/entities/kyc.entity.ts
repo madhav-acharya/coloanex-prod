@@ -20,7 +20,6 @@ export enum KycFileType {
   LICENSE_FRONT = 'LICENSE_FRONT',
   LICENSE_BACK = 'LICENSE_BACK',
   SELFIE = 'SELFIE',
-  COLLATERAL_PHOTO = 'COLLATERAL_PHOTO',
   SUPPORTING_DOCUMENT = 'SUPPORTING_DOCUMENT',
   OTHER = 'OTHER',
 }
@@ -65,12 +64,6 @@ export interface Kyc {
   bankName: string;
   bankAccountNumber: string;
   bankBranch: string;
-  loanAmount: number;
-  loanPurpose: string;
-  loanDuration: number;
-  collateralType: string;
-  collateralDescription: string;
-  collateralValue: number;
   status: KycStatus;
   rejectionReason?: string;
   verifiedBy?: string;
