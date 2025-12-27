@@ -17,6 +17,8 @@ import Users from "./pages/Users";
 import Tenants from "./pages/Tenants";
 import KycRequests from "./pages/KycRequests";
 import LoanRequests from "./pages/LoanRequests";
+import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -149,6 +151,24 @@ function App() {
         element={
           <ProtectedRoute>
             <LoanRequests />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         }
       />
