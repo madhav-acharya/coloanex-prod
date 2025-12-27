@@ -26,16 +26,16 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Post('signup')
+  @Post('signup/web')
   @HttpCode(HttpStatus.CREATED)
-  async signup(
+  async signupWeb(
     @Body() createUserDto: CreateUserForSignupDto,
     @Req() req: Request,
   ) {
     const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
-    const result = await this.authService.signup(
+    const result = await this.authService.signupWeb(
       createUserDto,
       ipAddress,
       userAgent,
@@ -49,13 +49,60 @@ export class AuthController {
   }
 
   @Public()
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  async login(@Body() loginDto: LoginDto, @Req() req: Request) {
+  @Post('signup/app')
+  @HttpCode(HttpStatus.CREATED)
+  async signupApp(
+    @Body() createUserDto: CreateUserForSignupDto,
+    @Req() req: Request,
+  ) {
     const ipAddress = getClientIpAddress(req);
     const userAgent = req.headers['user-agent'];
 
-    const result = await this.authService.login(loginDto, ipAddress, userAgent);
+    const result = await this.authService.signupApp(
+      createUserDto,
+      ipAddress,
+      userAgent,
+    );
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      sessionId: result.sessionId,
+    };
+  }
+
+  @Public()
+  @Post('login/web')
+  @HttpCode(HttpStatus.OK)
+  async loginWeb(@Body() loginDto: LoginDto, @Req() req: Request) {
+    const ipAddress = getClientIpAddress(req);
+    const userAgent = req.headers['user-agent'];
+
+    const result = await this.authService.loginWeb(
+      loginDto,
+      ipAddress,
+      userAgent,
+    );
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      sessionId: result.sessionId,
+    };
+  }
+
+  @Public()
+  @Post('login/app')
+  @HttpCode(HttpStatus.OK)
+  async loginApp(@Body() loginDto: LoginDto, @Req() req: Request) {
+    const ipAddress = getClientIpAddress(req);
+    const userAgent = req.headers['user-agent'];
+
+    const result = await this.authService.loginApp(
+      loginDto,
+      ipAddress,
+      userAgent,
+    );
 
     return {
       accessToken: result.accessToken,
