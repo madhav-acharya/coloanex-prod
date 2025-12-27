@@ -150,6 +150,7 @@ model User {
   email           String           @unique @db.VarChar(255)
   phone           String?          @unique @db.VarChar(10)
   password        String           @db.VarChar(255)
+  profileImage    String?          @map("profile_image")
   tenantId        String?          @map("tenant_id")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
