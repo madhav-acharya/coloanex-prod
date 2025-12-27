@@ -3,6 +3,7 @@ export interface User {
   email?: string;
   fullName: string;
   phone?: string;
+  profileImage?: string;
   isActive: boolean;
   lastActiveAt?: string;
   createdAt: string;
