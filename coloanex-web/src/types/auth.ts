@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   fullName: string;
   phone?: string;
+  profileImage?: string;
   isActive: boolean;
   lastActiveAt?: string;
   roles: Array<{
@@ -22,7 +23,20 @@ export interface AuthUser {
       updatedAt: string;
     };
   }>;
-  permissions: string[];
+  permissions: Array<
+    | string
+    | {
+        userId?: string;
+        permissionId?: string;
+        permission?: {
+          id: string;
+          name: string;
+          description?: string;
+        };
+        id?: string;
+        name?: string;
+      }
+  >;
   tenantId?: string;
 }
 
