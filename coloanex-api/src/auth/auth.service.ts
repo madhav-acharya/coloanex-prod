@@ -102,19 +102,84 @@ export class AuthService {
     };
   }
 
-  async signup(
+  async signupWeb(
     createUserDto: CreateUserForSignupDto,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokens> {
-    const newUser = await this.usersService.createUserForSignup(
+    const newUser = await this.usersService.createUserForWebSignup(
       createUserDto,
       ipAddress,
       userAgent,
     );
 
+    return this.generateAuthResponse(newUser.id, ipAddress, userAgent);
+  }
+
+  async signupApp(
+    createUserDto: CreateUserForSignupDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens> {
+    const newUser = await this.usersService.createUserForAppSignup(
+      createUserDto,
+      ipAddress,
+      userAgent,
+    );
+
+    return this.generateAuthResponse(newUser.id, ipAddress, userAgent);
+  }
+
+  async loginWeb(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens> {
+    const user = await this.validateUser(loginDto.email, loginDto.password);
+
+    const { roles: userRoles } = extractRolesAndPermissions(user);
+
+    const allowedRoles = ['Super Admin', 'Admin', 'Lender'];
+    const hasAllowedRole = userRoles.some((role) =>
+      allowedRoles.includes(role),
+    );
+
+    if (!hasAllowedRole) {
+      throw new ForbiddenException(
+        'Access denied. Only Lender, Admin, and Super Admin can access web platform',
+      );
+    }
+
+    return this.performLogin(user, ipAddress, userAgent);
+  }
+
+  async loginApp(
+    loginDto: LoginDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens> {
+    const user = await this.validateUser(loginDto.email, loginDto.password);
+
+    const { roles: userRoles } = extractRolesAndPermissions(user);
+
+    const isBorrower = userRoles.some((role) => role === 'Borrower');
+
+    if (!isBorrower) {
+      throw new ForbiddenException(
+        'Access denied. Only Borrowers can access mobile app',
+      );
+    }
+
+    return this.performLogin(user, ipAddress, userAgent);
+  }
+
+  private async generateAuthResponse(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens> {
     const user = await this.prisma.user.findUnique({
-      where: { id: newUser.id },
+      where: { id: userId },
       include: {
         roles: {
           include: {
@@ -171,15 +236,6 @@ export class AuthService {
 
     await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
 
-    if (user.tenantId) {
-      await this.borrowersService.createForSignup(
-        user.id,
-        user.tenantId,
-        ipAddress,
-        userAgent,
-      );
-    }
-
     return {
       accessToken,
       refreshToken,
@@ -188,13 +244,11 @@ export class AuthService {
     };
   }
 
-  async login(
-    loginDto: LoginDto,
+  private async performLogin(
+    user: any,
     ipAddress?: string,
     userAgent?: string,
   ): Promise<AuthTokens> {
-    const user = await this.validateUser(loginDto.email, loginDto.password);
-
     if (!process.env.JWT_REFRESH_SECRET || !process.env.JWT_SECRET) {
       throw new Error('JWT refresh secret is not configured');
     }
