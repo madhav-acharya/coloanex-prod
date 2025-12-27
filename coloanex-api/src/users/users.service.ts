@@ -182,7 +182,101 @@ export class UsersService {
     return this.findOne(user.id, currentUser);
   }
 
-  async createUserForSignup(
+  async createUserForWebSignup(
+    createUserDto: CreateUserForSignupDto,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const { email, phone, password, fullName, tenantId } = createUserDto;
+
+    const phoneTrimmed = phone?.trim() || null;
+    const existingUserByEmail = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUserByEmail) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    if (phoneTrimmed) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { phone: phoneTrimmed },
+      });
+
+      if (existingUser) {
+        throw new ConflictException(
+          'User with this phone number already exists',
+        );
+      }
+    }
+
+    const hashedPassword = await argon2.hash(password, {
+      type: argon2.argon2id,
+      memoryCost: 64 * 1024,
+      timeCost: 3,
+      parallelism: 2,
+    });
+
+    const lenderRole = await this.prisma.role.findFirst({
+      where: { name: 'Lender' },
+    });
+
+    if (!lenderRole) {
+      throw new BadRequestException('Lender role not found');
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        fullName,
+        email,
+        phone: phoneTrimmed || null,
+        password: hashedPassword,
+        tenantId,
+        isEmailVerified: false,
+        isActive: true,
+      },
+      include: {
+        roles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.userRole.create({
+      data: {
+        userId: user.id,
+        roleId: lenderRole.id,
+      },
+    });
+
+    await this.permissionAssignmentService.assignPermissionsToUser(user.id, [
+      'Lender',
+    ]);
+
+    if (this.activityLogsService) {
+      await this.activityLogsService.create({
+        action: ActivityAction.CREATE,
+        entityType: ActivityEntityType.USER,
+        entityId: user.id,
+        description: 'User registered with Lender role',
+        before: null,
+        after: {
+          userId: user.id,
+          role: 'Lender',
+          email: user.email,
+        },
+        ipAddress,
+        userAgent,
+        tenantId,
+      });
+    }
+
+    return user;
+  }
+
+  async createUserForAppSignup(
     createUserDto: CreateUserForSignupDto,
     ipAddress?: string,
     userAgent?: string,
@@ -255,6 +349,27 @@ export class UsersService {
       'Borrower',
     ]);
 
+    if (tenantId) {
+      const borrowersService = await import(
+        '../borrowers/borrowers.service'
+      ).then((m) => m.BorrowersService);
+      if (borrowersService) {
+        const { BorrowersService } = await import(
+          '../borrowers/borrowers.service'
+        );
+        const borrowersServiceInstance = new BorrowersService(
+          this.prisma,
+          this.activityLogsService,
+        );
+        await borrowersServiceInstance.createForSignup(
+          user.id,
+          tenantId,
+          ipAddress,
+          userAgent,
+        );
+      }
+    }
+
     if (this.activityLogsService) {
       await this.activityLogsService.create({
         action: ActivityAction.CREATE,
@@ -269,17 +384,11 @@ export class UsersService {
         },
         ipAddress,
         userAgent,
-        actorUserId: user.id,
-        tenantId: user.tenantId || undefined,
+        tenantId,
       });
     }
 
-    const { password: userPassword, ...userWithoutPassword } = user;
-    void userPassword;
-    return {
-      ...userWithoutPassword,
-      role: 'Borrower',
-    };
+    return user;
   }
 
   async findAll(query: UsersQueryInterface, currentUser: JwtPayload) {
@@ -722,21 +831,35 @@ export class UsersService {
       }
     }
 
-    const updateData: Prisma.UserUpdateInput = {
-      fullName: updateUserDto.fullName,
-      email: updateUserDto.email,
-      phone: updateUserDto.phone,
-      tenant: isSuperAdmin
-        ? updateUserDto.tenantId
-          ? { connect: { id: updateUserDto.tenantId } }
-          : undefined
-        : currentUser.tenantId
-          ? { connect: { id: currentUser.tenantId } }
-          : undefined,
-      isActive: updateUserDto.isActive,
-      isBanned: updateUserDto.isBanned,
-      isEmailVerified: updateUserDto.isEmailVerified,
-    };
+    const updateData: Prisma.UserUpdateInput = {};
+
+    if (updateUserDto.fullName !== undefined) {
+      updateData.fullName = updateUserDto.fullName;
+    }
+    if (updateUserDto.email !== undefined) {
+      updateData.email = updateUserDto.email;
+    }
+    if (updateUserDto.phone !== undefined) {
+      updateData.phone = updateUserDto.phone;
+    }
+    if (updateUserDto.profileImage !== undefined) {
+      updateData.profileImage = updateUserDto.profileImage;
+    }
+    if (updateUserDto.isActive !== undefined) {
+      updateData.isActive = updateUserDto.isActive;
+    }
+    if (updateUserDto.isBanned !== undefined) {
+      updateData.isBanned = updateUserDto.isBanned;
+    }
+    if (updateUserDto.isEmailVerified !== undefined) {
+      updateData.isEmailVerified = updateUserDto.isEmailVerified;
+    }
+
+    if (isSuperAdmin && updateUserDto.tenantId) {
+      updateData.tenant = { connect: { id: updateUserDto.tenantId } };
+    } else if (!isSuperAdmin && currentUser.tenantId) {
+      updateData.tenant = { connect: { id: currentUser.tenantId } };
+    }
 
     if (updateUserDto.password) {
       updateData.password = await argon2.hash(updateUserDto.password, {
