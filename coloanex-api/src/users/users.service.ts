@@ -19,6 +19,7 @@ import {
   ActivityAction,
   ActivityEntityType,
 } from '../activity-logs/entities/activity-log.entity';
+import { BorrowersService } from '../borrowers/borrowers.service';
 
 export type { CreateUserForSignupDto };
 
@@ -28,6 +29,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly activityLogsService: ActivityLogsService,
     private readonly permissionAssignmentService: PermissionAssignmentService,
+    private readonly borrowersService: BorrowersService,
   ) {}
 
   async create(createUserDto: CreateUserDto, currentUser: JwtPayload) {
@@ -350,24 +352,12 @@ export class UsersService {
     ]);
 
     if (tenantId) {
-      const borrowersService = await import(
-        '../borrowers/borrowers.service'
-      ).then((m) => m.BorrowersService);
-      if (borrowersService) {
-        const { BorrowersService } = await import(
-          '../borrowers/borrowers.service'
-        );
-        const borrowersServiceInstance = new BorrowersService(
-          this.prisma,
-          this.activityLogsService,
-        );
-        await borrowersServiceInstance.createForSignup(
-          user.id,
-          tenantId,
-          ipAddress,
-          userAgent,
-        );
-      }
+      await this.borrowersService.createForSignup(
+        user.id,
+        tenantId,
+        ipAddress,
+        userAgent,
+      );
     }
 
     if (this.activityLogsService) {
