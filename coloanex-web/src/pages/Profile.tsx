@@ -137,7 +137,7 @@ const Profile = () => {
       title="Profile"
       description="View and manage your profile information"
     >
-      <div className="max-w-4xl space-y-6">
+      <div className="space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
