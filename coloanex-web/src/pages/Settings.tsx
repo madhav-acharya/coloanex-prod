@@ -139,7 +139,7 @@ const Settings = () => {
       title="Settings"
       description="Manage your account settings and preferences"
     >
-      <div className="max-w-4xl">
+      <div>
         <Tabs defaultValue="account" className="space-y-6">
           <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
             <TabsTrigger
