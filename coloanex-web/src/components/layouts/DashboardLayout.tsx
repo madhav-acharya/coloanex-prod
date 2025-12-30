@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Search,
   Plus,
@@ -232,9 +233,12 @@ export default function DashboardLayout({
           <ProfileDropdown />
         ) : (
           <div className="flex justify-center">
-            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-medium">
-              {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-            </div>
+            <Avatar className="w-8 h-8">
+              <AvatarImage src={user?.profileImage} alt={user?.fullName} />
+              <AvatarFallback className="bg-green-600 text-white font-medium">
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+              </AvatarFallback>
+            </Avatar>
           </div>
         )}
       </div>
