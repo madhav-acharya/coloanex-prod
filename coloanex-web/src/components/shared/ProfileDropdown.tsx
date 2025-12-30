@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
@@ -27,9 +28,12 @@ export function ProfileDropdown() {
           variant="ghost"
           className="flex items-center gap-3 hover:bg-muted cursor-pointer"
         >
-          <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-medium">
-            {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-          </div>
+          <Avatar className="w-8 h-8">
+            <AvatarImage src={user.profileImage} alt={user.fullName} />
+            <AvatarFallback className="bg-green-600 text-white font-medium">
+              {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0 text-left">
             <p className="text-sm font-medium truncate">{user.fullName}</p>
             <p className="text-xs text-muted-foreground truncate">
