@@ -8,7 +8,11 @@ import Features from "./pages/Features";
 import UseCases from "./pages/UseCases";
 import Security from "./pages/Security";
 import { logout } from "./store/slices/authSlice";
-import { useLogoutMutation } from "./apis/authApi";
+import {
+  useLogoutMutation,
+  useLogVisitMutation,
+  useLogLeaveMutation,
+} from "./apis/authApi";
 import Dashboard from "./pages/Dashboard";
 import Roles from "./pages/Roles";
 import Permissions from "./pages/Permissions";
@@ -64,7 +68,47 @@ const Logout = () => {
 };
 
 function App() {
-  useAuth();
+  const { isAuthenticated } = useAuth();
+  const [logVisit] = useLogVisitMutation();
+  const [logLeave] = useLogLeaveMutation();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    logVisit();
+
+    let leaveTimeout: NodeJS.Timeout;
+
+    const handleBeforeUnload = () => {
+      navigator.sendBeacon("/api/auth/leave", JSON.stringify({}));
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        leaveTimeout = setTimeout(() => {
+          logLeave();
+        }, 5000);
+      } else {
+        if (leaveTimeout) {
+          clearTimeout(leaveTimeout);
+        }
+        logVisit();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (leaveTimeout) {
+        clearTimeout(leaveTimeout);
+      }
+    };
+  }, [isAuthenticated, logVisit, logLeave]);
 
   return (
     <Routes>

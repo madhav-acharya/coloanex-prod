@@ -84,9 +84,7 @@ export const NotificationsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: unreadCountData } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: 10000,
-  });
+  const { data: unreadCountData } = useGetUnreadCountQuery();
 
   const {
     data: notifications = [],
