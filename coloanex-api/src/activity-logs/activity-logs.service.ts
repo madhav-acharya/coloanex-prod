@@ -270,4 +270,16 @@ export class ActivityLogsService {
 
     return { count: unreadActivities.length };
   }
+
+  async getLastUserActivity(userId: string): Promise<ActivityLog | null> {
+    return this.prisma.activityLog.findFirst({
+      where: {
+        actorUserId: userId,
+        action: {
+          in: [ActivityAction.VISIT, ActivityAction.LEAVE],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    }) as Promise<ActivityLog | null>;
+  }
 }

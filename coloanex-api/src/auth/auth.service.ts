@@ -518,4 +518,40 @@ export class AuthService {
   async getUserActiveSessions(userId: string) {
     return this.sessionService.getUserActiveSessions(userId);
   }
+
+  async logUserVisit(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+    tenantId?: string,
+  ): Promise<void> {
+    const lastActivity =
+      await this.activityLogsService.getLastUserActivity(userId);
+    if (!lastActivity || lastActivity.action === 'LEAVE') {
+      await this.activityLogsService.logUserVisit(
+        userId,
+        ipAddress,
+        userAgent,
+        tenantId,
+      );
+    }
+  }
+
+  async logUserLeave(
+    userId: string,
+    ipAddress?: string,
+    userAgent?: string,
+    tenantId?: string,
+  ): Promise<void> {
+    const lastActivity =
+      await this.activityLogsService.getLastUserActivity(userId);
+    if (lastActivity && lastActivity.action === 'VISIT') {
+      await this.activityLogsService.logUserLeave(
+        userId,
+        ipAddress,
+        userAgent,
+        tenantId,
+      );
+    }
+  }
 }

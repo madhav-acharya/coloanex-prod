@@ -54,6 +54,20 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ["Auth"],
     }),
 
+    logVisit: builder.mutation<void, void>({
+      query: () => ({
+        url: "/auth/visit",
+        method: "POST",
+      }),
+    }),
+
+    logLeave: builder.mutation<void, void>({
+      query: () => ({
+        url: "/auth/leave",
+        method: "POST",
+      }),
+    }),
+
     updateActivity: builder.mutation<void, void>({
       query: () => ({
         url: "/auth/activity",
@@ -69,5 +83,7 @@ export const {
   useLogoutMutation,
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
+  useLogVisitMutation,
+  useLogLeaveMutation,
   useUpdateActivityMutation,
 } = authApi;

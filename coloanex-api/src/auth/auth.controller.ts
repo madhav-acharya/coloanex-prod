@@ -170,4 +170,44 @@ export class AuthController {
   async getUserSessions(@CurrentUser() user: { sub: string }) {
     return this.authService.getUserActiveSessions(user.sub);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('visit')
+  @HttpCode(HttpStatus.OK)
+  async logVisit(
+    @CurrentUser() user: { sub: string; tenantId?: string },
+    @Req() req: Request,
+  ): Promise<{ message: string }> {
+    const ipAddress = getClientIpAddress(req);
+    const userAgent = req.headers['user-agent'];
+
+    await this.authService.logUserVisit(
+      user.sub,
+      ipAddress,
+      userAgent,
+      user.tenantId,
+    );
+
+    return { message: 'Visit logged successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('leave')
+  @HttpCode(HttpStatus.OK)
+  async logLeave(
+    @CurrentUser() user: { sub: string; tenantId?: string },
+    @Req() req: Request,
+  ): Promise<{ message: string }> {
+    const ipAddress = getClientIpAddress(req);
+    const userAgent = req.headers['user-agent'];
+
+    await this.authService.logUserLeave(
+      user.sub,
+      ipAddress,
+      userAgent,
+      user.tenantId,
+    );
+
+    return { message: 'Leave logged successfully' };
+  }
 }

@@ -1183,15 +1183,6 @@ export class UsersService {
       },
     });
 
-    if (this.activityLogsService) {
-      await this.activityLogsService.logUserVisit(
-        userId,
-        ipAddress,
-        userAgent,
-        user.tenantId ?? undefined,
-      );
-    }
-
     return user;
   }
 
@@ -1214,15 +1205,6 @@ export class UsersService {
         tenantId: true,
       },
     });
-
-    if (this.activityLogsService) {
-      await this.activityLogsService.logUserLeave(
-        userId,
-        ipAddress,
-        userAgent,
-        user.tenantId ?? undefined,
-      );
-    }
 
     return user;
   }
