@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   Building2,
   FileText,
+  Landmark,
 } from "lucide-react";
 import {
   Select,
@@ -108,7 +109,7 @@ export default function DashboardLayout({
     },
     {
       title: "Loan Requests",
-      icon: <FileText className="w-4 h-4" />,
+      icon: <Landmark className="w-4 h-4" />,
       href: "/loan-requests",
     },
   ];
