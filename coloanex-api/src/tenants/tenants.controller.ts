@@ -26,11 +26,11 @@ import {
 } from 'src/common/constants/permissions.constants';
 
 @Controller('tenants')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(CREATE_TENANTS)
   create(
     @Body() createTenantDto: CreateTenantDto,
@@ -40,18 +40,21 @@ export class TenantsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(READ_TENANTS)
   findAll(@Query() query: TenantsQueryInterface) {
     return this.tenantsService.findAll(query);
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(READ_TENANTS)
   findOne(@Param('id') id: string) {
     return this.tenantsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(UPDATE_TENANTS)
   update(
     @Param('id') id: string,
@@ -62,6 +65,7 @@ export class TenantsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
   @RequirePermissions(DELETE_TENANTS)
   remove(@Param('id') id: string, @CurrentUser() currentUser: JwtPayload) {
     return this.tenantsService.remove(id, currentUser);

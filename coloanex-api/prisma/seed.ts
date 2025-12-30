@@ -174,7 +174,8 @@ async function main() {
         perm.name === 'Update KYC Documents' ||
         perm.name === 'Read Users' ||
         perm.name === 'Create Users' ||
-        perm.name === 'Update Users',
+        perm.name === 'Update Users' ||
+        perm.name === 'Read Tenants',
     );
     await Promise.all(
       borrowerPermissions.map((permission) =>
