@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,16 @@ const Profile = () => {
     email: user?.email || "",
     phone: user?.phone || "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -166,7 +176,12 @@ const Profile = () => {
                       {user.fullName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {isEditing && (
+                  {isUploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                  {isEditing && !isUploading && (
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
