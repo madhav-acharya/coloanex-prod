@@ -90,6 +90,7 @@ export const usersApi = baseApi.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: "Users", id },
         { type: "Users", id: "LIST" },
+        "Auth",
       ],
     }),
 
