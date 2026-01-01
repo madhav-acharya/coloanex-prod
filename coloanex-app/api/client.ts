@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 
@@ -57,14 +58,25 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         }
       } catch (refreshError) {
+        // Refresh failed - clear auth and redirect to login
         await AsyncStorage.multiRemove([
           "token",
           "refreshToken",
           "sessionId",
           "user",
         ]);
+        router.replace("/auth/login");
         return Promise.reject(refreshError);
       }
+
+      // No refresh token - clear auth and redirect to login
+      await AsyncStorage.multiRemove([
+        "token",
+        "refreshToken",
+        "sessionId",
+        "user",
+      ]);
+      router.replace("/auth/login");
     }
 
     return Promise.reject(error);
