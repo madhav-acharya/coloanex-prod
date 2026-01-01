@@ -2,12 +2,8 @@ import apiClient from "./client";
 import type { KycSubmission, KycStatus } from "@/types";
 
 export const kycApi = {
-  submit: async (formData: FormData): Promise<any> => {
-    const { data } = await apiClient.post("/kyc", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+  submit: async (kycData: any): Promise<any> => {
+    const { data } = await apiClient.post("/kyc", kycData);
     return data;
   },
 

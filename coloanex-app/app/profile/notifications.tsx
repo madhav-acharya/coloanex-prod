@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Switch,
   ScrollView,
-  Alert,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
@@ -13,8 +12,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usersApi } from "@/api";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/components/ui";
 
 export default function NotificationSettingsScreen() {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -26,13 +27,12 @@ export default function NotificationSettingsScreen() {
     setLoading(true);
     try {
       await usersApi.updateNotificationSettings(settings);
-      Alert.alert("Success", "Notification settings updated successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showToast("Notification settings updated successfully", "success");
+      router.back();
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to update settings"
+      showToast(
+        error.response?.data?.message || "Failed to update settings",
+        "error"
       );
     } finally {
       setLoading(false);

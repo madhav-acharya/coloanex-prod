@@ -54,7 +54,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @RequirePermissions(UPDATE_USERS)
+  @RequirePermissions(UPDATE_USERS, 'SELF_UPDATE')
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,

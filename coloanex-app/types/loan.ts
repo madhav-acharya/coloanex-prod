@@ -1,23 +1,13 @@
 export interface Lender {
   id: string;
   name: string;
-  logo?: string;
-  rating: number;
-  reviewCount: number;
-  interestRate: number;
-  minAmount: number;
-  maxAmount: number;
-  successRate: number;
-  responseTime: string;
-  loanTerms: {
-    minTerm: number;
-    maxTerm: number;
-    processingTime: string;
-    collateralRequired: boolean;
-  };
-  requirements: string[];
-  about: string;
-  verified: boolean;
+  isActive: boolean;
+  isBanned: boolean;
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Loan {
