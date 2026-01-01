@@ -1,11 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   ScrollView,
-  Alert,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
@@ -13,8 +12,10 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usersApi } from "@/api";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/components/ui";
 
 export default function ChangePasswordScreen() {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -27,23 +28,31 @@ export default function ChangePasswordScreen() {
     confirmPassword: "",
   });
 
+  const isFormValid = useMemo(() => {
+    return (
+      formData.currentPassword.length > 0 &&
+      formData.newPassword.length >= 8 &&
+      formData.newPassword === formData.confirmPassword
+    );
+  }, [formData]);
+
   const handleChangePassword = async () => {
     if (
       !formData.currentPassword ||
       !formData.newPassword ||
       !formData.confirmPassword
     ) {
-      Alert.alert("Error", "Please fill in all fields");
+      showToast("Please fill in all fields", "error");
       return;
     }
 
     if (formData.newPassword !== formData.confirmPassword) {
-      Alert.alert("Error", "New passwords do not match");
+      showToast("New passwords do not match", "error");
       return;
     }
 
     if (formData.newPassword.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters long");
+      showToast("Password must be at least 8 characters long", "error");
       return;
     }
 
@@ -53,13 +62,12 @@ export default function ChangePasswordScreen() {
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword,
       });
-      Alert.alert("Success", "Password changed successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showToast("Password changed successfully", "success");
+      router.back();
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to change password"
+      showToast(
+        error.response?.data?.message || "Failed to change password",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -181,9 +189,12 @@ export default function ChangePasswordScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            (!isFormValid || loading) && styles.buttonDisabled,
+          ]}
           onPress={handleChangePassword}
-          disabled={loading}
+          disabled={!isFormValid || loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
