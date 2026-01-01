@@ -15,10 +15,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    // @ts-ignore - boxShadow is web-only
+    boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
     elevation: 2,
   },
 });
