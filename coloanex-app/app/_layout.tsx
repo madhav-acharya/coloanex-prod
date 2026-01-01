@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAppDispatch } from "@/store/hooks";
 import { setAuth } from "@/store/slices/authSlice";
+import { ToastProvider } from "@/components/ui";
 
 function AuthLoader({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
@@ -41,22 +42,25 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <AuthLoader>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="login" />
-          <Stack.Screen name="signup" />
-          <Stack.Screen name="tabs" />
-          <Stack.Screen name="kyc" />
-          <Stack.Screen name="lender/[id]" />
-          <Stack.Screen name="loan/apply" />
-          <Stack.Screen name="loan/[id]" />
-          <Stack.Screen name="repayment/[id]" />
-          <Stack.Screen name="profile/edit-profile" />
-          <Stack.Screen name="profile/change-password" />
-          <Stack.Screen name="profile/notifications" />
-        </Stack>
-        <StatusBar style="auto" />
-      </AuthLoader>
+      <ToastProvider>
+        <AuthLoader>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/signup" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="kyc/kyc-verification" />
+            <Stack.Screen name="lenders/lender-details" />
+            <Stack.Screen name="loans/apply-loan" />
+            <Stack.Screen name="loans/loan-details" />
+            <Stack.Screen name="repayment/make-repayment" />
+            <Stack.Screen name="profile/edit-profile" />
+            <Stack.Screen name="profile/change-password" />
+            <Stack.Screen name="profile/notifications" />
+          </Stack>
+          <StatusBar style="auto" />
+        </AuthLoader>
+      </ToastProvider>
     </Provider>
   );
 }
