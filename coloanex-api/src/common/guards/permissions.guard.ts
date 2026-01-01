@@ -87,6 +87,14 @@ export class PermissionsGuard implements CanActivate {
       ...new Set([...directPermissions, ...rolePermissions]),
     ];
 
+    if (requiredPermissions.includes('SELF_UPDATE')) {
+      const httpRequest = context.switchToHttp().getRequest();
+      const paramId = httpRequest.params?.id;
+      if (paramId && paramId === user.sub) {
+        return true;
+      }
+    }
+
     const hasPermission = requiredPermissions.some((permission) =>
       allPermissions.includes(permission),
     );
