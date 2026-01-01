@@ -719,7 +719,12 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    if (!isSuperAdmin && user.tenantId !== currentUser.tenantId) {
+    const isOwnProfile = user.id === currentUser.sub;
+    if (
+      !isSuperAdmin &&
+      !isOwnProfile &&
+      user.tenantId !== currentUser.tenantId
+    ) {
       throw new ForbiddenException(
         'You can only access users from your own tenant',
       );
