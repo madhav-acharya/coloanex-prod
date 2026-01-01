@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   ScrollView,
-  Alert,
   TouchableOpacity,
   ActivityIndicator,
   Image,
@@ -17,11 +16,15 @@ import { usersApi } from "@/api";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { setUser } from "@/store/slices/authSlice";
 import { Colors } from "@/constants/theme";
+import { DatePickerInput, useToast } from "@/components/ui";
+import { uploadToCloudinary } from "@/utils/upload";
 
 export default function EditProfileScreen() {
   const user = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [originalData, setOriginalData] = useState({
     fullName: "",
     phone: "",
@@ -33,11 +36,15 @@ export default function EditProfileScreen() {
     fullName: "",
     phone: "",
     email: "",
-    dateOfBirth: "",
+    dateOfBirth: null as Date | null,
     address: "",
   });
-  const [profileImage, setProfileImage] = useState<any>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const isFormValid = useMemo(() => {
+    return formData.fullName.trim() !== "";
+  }, [formData.fullName]);
 
   useEffect(() => {
     loadUserData();
@@ -51,7 +58,9 @@ export default function EditProfileScreen() {
         fullName: userData.fullName || "",
         phone: userData.phone || "",
         email: userData.email || "",
-        dateOfBirth: userData.dateOfBirth || "",
+        dateOfBirth: userData.dateOfBirth
+          ? new Date(userData.dateOfBirth)
+          : null,
         address: userData.address || "",
       };
       setFormData(newFormData);
@@ -60,7 +69,7 @@ export default function EditProfileScreen() {
       dispatch(setUser(userData));
     } catch (error) {
       console.error("Failed to load user data:", error);
-      Alert.alert("Error", "Failed to load user data");
+      showToast("Failed to load user data", "error");
     } finally {
       setLoading(false);
     }
@@ -68,29 +77,41 @@ export default function EditProfileScreen() {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: "images" as any,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets[0]) {
-      setProfileImage(result.assets[0]);
+      setUploadingImage(true);
+      try {
+        const uploaded = await uploadToCloudinary(
+          result.assets[0].uri,
+          "profile-image.jpg"
+        );
+        setProfileImageUrl(uploaded.url);
+        showToast("Image uploaded successfully", "success");
+      } catch (error: any) {
+        showToast(error.message || "Failed to upload image", "error");
+      } finally {
+        setUploadingImage(false);
+      }
     }
   };
 
   const handleUpdate = async () => {
     if (!formData.fullName.trim()) {
-      Alert.alert("Error", "Please enter your full name");
+      showToast("Please enter your full name", "error");
       return;
     }
 
     if (!user?.id) {
-      Alert.alert("Error", "User ID not found");
+      showToast("User ID not found", "error");
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
       const updatePayload: any = {};
 
@@ -102,38 +123,33 @@ export default function EditProfileScreen() {
         updatePayload.phone = formData.phone;
       }
       if (formData.dateOfBirth !== originalData.dateOfBirth) {
-        updatePayload.dateOfBirth = formData.dateOfBirth || undefined;
+        updatePayload.dateOfBirth =
+          formData.dateOfBirth?.toISOString() || undefined;
       }
       if (formData.address !== originalData.address) {
         updatePayload.address = formData.address || undefined;
       }
 
-      // Upload image first if changed
-      if (profileImage) {
-        const uploadedImageUrl = await usersApi.uploadProfileImage(
-          profileImage
-        );
-        updatePayload.profileImage = uploadedImageUrl;
+      if (profileImageUrl && profileImageUrl !== user?.profileImage) {
+        updatePayload.profileImage = profileImageUrl;
       }
 
-      // Only update if there are changes
       if (Object.keys(updatePayload).length > 0) {
         const updatedUser = await usersApi.updateUserById(
           user.id,
           updatePayload
         );
+        dispatch(setUser(updatedUser));
       }
-      dispatch(setUser(updatedUser));
-      Alert.alert("Success", "Profile updated successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showToast("Profile updated successfully", "success");
+      router.back();
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to update profile"
+      showToast(
+        error.response?.data?.message || "Failed to update profile",
+        "error"
       );
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -160,10 +176,14 @@ export default function EditProfileScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileImageContainer}>
-          <TouchableOpacity onPress={pickImage} style={styles.imageWrapper}>
-            {profileImage || profileImageUrl ? (
+          <TouchableOpacity
+            onPress={pickImage}
+            style={styles.imageWrapper}
+            disabled={uploadingImage}
+          >
+            {profileImageUrl ? (
               <Image
-                source={{ uri: profileImage?.uri || profileImageUrl }}
+                source={{ uri: profileImageUrl }}
                 style={styles.profileImage}
               />
             ) : (
@@ -175,9 +195,16 @@ export default function EditProfileScreen() {
                 />
               </View>
             )}
-            <View style={styles.editImageBadge}>
-              <Ionicons name="camera" size={16} color="#fff" />
-            </View>
+            {uploadingImage ? (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : (
+              <View style={styles.editImageBadge}>
+                <Ionicons name="camera" size={16} color="#fff" />
+              </View>
+            )}
           </TouchableOpacity>
           <Text style={styles.imageHint}>Tap to change profile picture</Text>
         </View>
@@ -219,18 +246,13 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Date of Birth</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.dateOfBirth}
-              onChangeText={(text) =>
-                setFormData({ ...formData, dateOfBirth: text })
-              }
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={Colors.textSecondary}
-            />
-          </View>
+          <DatePickerInput
+            label="Date of Birth"
+            value={formData.dateOfBirth}
+            onChange={(date) => setFormData({ ...formData, dateOfBirth: date })}
+            maximumDate={new Date()}
+            placeholder="Select your date of birth"
+          />
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Address</Text>
@@ -251,11 +273,14 @@ export default function EditProfileScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            (!isFormValid || saving) && styles.buttonDisabled,
+          ]}
           onPress={handleUpdate}
-          disabled={loading}
+          disabled={!isFormValid || saving}
         >
-          {loading ? (
+          {saving ? (
             <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.buttonText}>Save Changes</Text>
@@ -336,6 +361,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 3,
     borderColor: "#fff",
+  },
+  uploadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    borderRadius: 60,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  uploadingText: {
+    color: "#fff",
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: "600",
   },
   imageHint: {
     fontSize: 12,
