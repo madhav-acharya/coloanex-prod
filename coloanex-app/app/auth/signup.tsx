@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { Link, router } from "expo-router";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, useToast } from "@/components/ui";
 import { colors, spacing, typography } from "@/constants/theme";
 import { authApi } from "@/api";
 import { useAppDispatch } from "@/store/hooks";
@@ -18,6 +17,7 @@ import { setAuth } from "@/store/slices/authSlice";
 
 export default function SignupScreen() {
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -31,6 +31,16 @@ export default function SignupScreen() {
     password?: string;
     confirmPassword?: string;
   }>({});
+
+  const isFormValid = useMemo(() => {
+    return (
+      fullName.trim() !== "" &&
+      email.trim() !== "" &&
+      /\S+@\S+\.\S+/.test(email) &&
+      password.length >= 6 &&
+      password === confirmPassword
+    );
+  }, [fullName, email, password, confirmPassword]);
 
   const validateForm = () => {
     const newErrors: any = {};
@@ -71,11 +81,12 @@ export default function SignupScreen() {
         password,
       });
       dispatch(setAuth({ token: response.accessToken, user: response.user }));
-      router.replace("/tabs");
+      showToast("Account created successfully!", "success");
+      router.replace("/");
     } catch (error: any) {
-      Alert.alert(
-        "Signup Failed",
-        error.response?.data?.message || "An error occurred. Please try again."
+      showToast(
+        error.response?.data?.message || "Signup failed. Please try again.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -160,6 +171,7 @@ export default function SignupScreen() {
             title="Sign Up"
             onPress={handleSignup}
             loading={loading}
+            disabled={!isFormValid}
             style={styles.button}
           />
 

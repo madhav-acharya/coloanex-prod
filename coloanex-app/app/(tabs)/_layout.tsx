@@ -1,16 +1,8 @@
-import { Tabs, Redirect } from "expo-router";
-import React from "react";
+import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/constants/theme";
-import { useAppSelector } from "@/store/hooks";
 
-export default function TabLayout() {
-  const { isAuthenticated } = useAppSelector((state) => state.auth);
-
-  if (!isAuthenticated) {
-    return <Redirect href="/login" />;
-  }
-
+export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -31,7 +23,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           title: "Home",
           tabBarIcon: ({ color, size }) => (
@@ -40,7 +32,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="browse"
+        name="browse-lenders"
         options={{
           title: "Browse",
           tabBarIcon: ({ color, size }) => (
@@ -49,16 +41,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="calculate"
-        options={{
-          title: "Calculate",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calculator" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="loans"
+        name="my-loans"
         options={{
           title: "My Loans",
           tabBarIcon: ({ color, size }) => (

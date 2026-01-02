@@ -237,7 +237,12 @@ export default function LoanDetailsScreen() {
           />
           <Button
             title="Make Payment"
-            onPress={() => router.push(`/repayment/${loan.id}`)}
+            onPress={() =>
+              router.push({
+                pathname: "/repayment/make-repayment",
+                params: { id: loan.id },
+              })
+            }
             style={styles.payButton}
           />
         </View>

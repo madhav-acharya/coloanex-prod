@@ -1,16 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import Slider from "@react-native-community/slider";
-import { Card, LenderLogo, Button } from "@/components/ui";
+import { Card, LenderLogo, Button, useToast } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { loansApi } from "@/api";
 import type { Loan } from "@/types";
@@ -18,9 +17,12 @@ import { formatCurrency } from "@/utils/currency";
 
 export default function RepaymentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { showToast } = useToast();
   const [loan, setLoan] = useState<Loan | null>(null);
   const [amount, setAmount] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  const isFormValid = useMemo(() => amount >= 100, [amount]);
 
   useEffect(() => {
     if (id) {
@@ -58,20 +60,19 @@ export default function RepaymentScreen() {
 
   const handlePayment = async () => {
     if (amount < 100) {
-      Alert.alert("Error", "Minimum payment amount is Rs 100");
+      showToast("Minimum payment amount is Rs 100", "error");
       return;
     }
 
     setLoading(true);
     try {
       await loansApi.makePayment(id!, amount);
-      Alert.alert("Success", "Payment processed successfully!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      showToast("Payment processed successfully!", "success");
+      router.back();
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message || "Failed to process payment"
+      showToast(
+        error.response?.data?.message || "Failed to process payment",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -212,6 +213,7 @@ export default function RepaymentScreen() {
             title="Pay Now"
             onPress={handlePayment}
             loading={loading}
+            disabled={!isFormValid || loading}
             style={styles.payButton}
           />
         </View>

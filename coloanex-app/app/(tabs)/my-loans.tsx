@@ -99,7 +99,12 @@ export default function LoansScreen() {
             return (
               <TouchableOpacity
                 key={loan.id}
-                onPress={() => router.push(`/loan/${loan.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/loans/loan-details",
+                    params: { id: loan.id },
+                  })
+                }
               >
                 <Card style={styles.loanCard}>
                   <View style={styles.loanHeader}>
@@ -176,7 +181,12 @@ export default function LoansScreen() {
                     </Text>
                     <TouchableOpacity
                       style={styles.payButton}
-                      onPress={() => router.push(`/repayment/${loan.id}`)}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/repayment/make-repayment",
+                          params: { id: loan.id },
+                        })
+                      }
                     >
                       <Text style={styles.payButtonText}>Make Payment</Text>
                     </TouchableOpacity>
@@ -189,7 +199,7 @@ export default function LoansScreen() {
 
         <Button
           title="Apply for New Loan"
-          onPress={() => router.push("/tabs/browse")}
+          onPress={() => router.push("/home/browse-lenders")}
           variant="outline"
           style={styles.applyButton}
         />

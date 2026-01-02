@@ -9,13 +9,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, LenderLogo } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { lendersApi } from "@/api";
 import type { Lender } from "@/types";
-import { formatCurrencyShort } from "@/utils/currency";
 
-const FILTERS = ["All", "Low Interest", "Fast Approval", "High Amount"];
+const FILTERS = ["All", "Active", "Inactive"];
 
 export default function BrowseScreen() {
   const [lenders, setLenders] = useState<Lender[]>([]);
@@ -35,9 +34,12 @@ export default function BrowseScreen() {
     loadLenders();
   }, []);
 
-  const formatAmount = (min: number, max: number) => {
-    return `${formatCurrencyShort(min)}-${formatCurrencyShort(max)}`;
-  };
+  const filteredLenders = lenders.filter((lender) => {
+    if (selectedFilter === "All") return true;
+    if (selectedFilter === "Active") return lender.isActive;
+    if (selectedFilter === "Inactive") return !lender.isActive;
+    return true;
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,67 +77,99 @@ export default function BrowseScreen() {
       </ScrollView>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {lenders.map((lender) => (
+        {filteredLenders.map((lender) => (
           <TouchableOpacity
             key={lender.id}
-            onPress={() => router.push(`/lender/${lender.id}`)}
+            onPress={() =>
+              router.push({
+                pathname: "/lenders/lender-details",
+                params: { id: lender.id },
+              })
+            }
           >
             <Card style={styles.lenderCard}>
               <View style={styles.lenderHeader}>
-                <LenderLogo
-                  logo={lender.logo}
-                  name={lender.name}
-                  size={48}
-                  verified={lender.verified}
-                />
+                <View style={styles.lenderIcon}>
+                  <Ionicons name="business" size={32} color={colors.primary} />
+                </View>
                 <View style={styles.lenderInfo}>
                   <Text style={styles.lenderName}>{lender.name}</Text>
-                  <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color={colors.warning} />
-                    <Text style={styles.rating}>
-                      {(lender.rating || 0).toFixed(1)}
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      lender.isActive && styles.statusBadgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        lender.isActive && styles.statusTextActive,
+                      ]}
+                    >
+                      {lender.isActive ? "Active" : "Inactive"}
                     </Text>
                   </View>
                 </View>
               </View>
 
-              <View style={styles.lenderStats}>
-                <View style={styles.stat}>
-                  <Text style={styles.statValue}>
-                    {lender.interestRate || 0}%
-                  </Text>
-                  <Text style={styles.statLabel}>Interest Rate</Text>
+              {(lender.contactEmail ||
+                lender.contactPhone ||
+                lender.address) && (
+                <View style={styles.contactInfo}>
+                  {lender.contactEmail && (
+                    <View style={styles.contactRow}>
+                      <Ionicons
+                        name="mail-outline"
+                        size={14}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.contactText}>
+                        {lender.contactEmail}
+                      </Text>
+                    </View>
+                  )}
+                  {lender.contactPhone && (
+                    <View style={styles.contactRow}>
+                      <Ionicons
+                        name="call-outline"
+                        size={14}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.contactText}>
+                        {lender.contactPhone}
+                      </Text>
+                    </View>
+                  )}
+                  {lender.address && (
+                    <View style={styles.contactRow}>
+                      <Ionicons
+                        name="location-outline"
+                        size={14}
+                        color={colors.textSecondary}
+                      />
+                      <Text style={styles.contactText} numberOfLines={1}>
+                        {lender.address}
+                      </Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.stat}>
-                  <Text style={styles.statValue}>
-                    {formatAmount(lender.minAmount || 0, lender.maxAmount || 0)}
-                  </Text>
-                  <Text style={styles.statLabel}>Amount</Text>
-                </View>
-                <View style={styles.stat}>
-                  <Text style={styles.statValue}>
-                    {lender.successRate || 0}%
-                  </Text>
-                  <Text style={styles.statLabel}>Success Rate</Text>
-                </View>
-              </View>
-
-              <View style={styles.responseTime}>
-                <Ionicons
-                  name="time-outline"
-                  size={16}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.responseTimeText}>
-                  {lender.responseTime}
-                </Text>
-              </View>
+              )}
 
               <TouchableOpacity
                 style={styles.viewButton}
-                onPress={() => router.push(`/lender/${lender.id}`)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/lenders/lender-details",
+                    params: { id: lender.id },
+                  })
+                }
               >
                 <Text style={styles.viewButtonText}>View Details</Text>
+                <Ionicons
+                  name="arrow-forward"
+                  size={16}
+                  color={colors.background}
+                />
               </TouchableOpacity>
             </Card>
           </TouchableOpacity>
@@ -198,6 +232,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginBottom: spacing.md,
   },
+  lenderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   lenderInfo: {
     flex: 1,
     marginLeft: spacing.md,
@@ -209,58 +251,53 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 4,
   },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  statusBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    alignSelf: "flex-start",
   },
-  rating: {
-    ...typography.bodySmall,
-    fontWeight: "600",
-    color: colors.text,
-    marginLeft: 4,
+  statusBadgeActive: {
+    backgroundColor: colors.primaryLight,
   },
-  lenderStats: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  stat: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    ...typography.body,
-    fontWeight: "700",
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  statLabel: {
+  statusText: {
     ...typography.caption,
     color: colors.textSecondary,
+    fontWeight: "600",
   },
-  responseTime: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  responseTimeText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
+  statusTextActive: {
+    color: colors.primary,
   },
   viewButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "center",
   },
   viewButtonText: {
     ...typography.bodySmall,
     color: colors.background,
     fontWeight: "600",
+    marginRight: spacing.xs,
+  },
+  contactInfo: {
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  contactText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginLeft: spacing.xs,
+    flex: 1,
   },
 });

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, useToast } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
@@ -19,25 +18,24 @@ import { authApi } from "@/api";
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const { showToast } = useToast();
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await authApi.logout();
-          } catch (error) {
-            console.error("Logout error:", error);
-          } finally {
-            dispatch(logout());
-            router.replace("/login");
-          }
-        },
-      },
-    ]);
+    setLoggingOut(true);
+    try {
+      await authApi.logout();
+      showToast("Logged out successfully", "success");
+      dispatch(logout());
+      router.replace("/auth/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      showToast("Logout failed, clearing session", "warning");
+      dispatch(logout());
+      router.replace("/auth/login");
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const menuItems = [
@@ -119,10 +117,11 @@ export default function ProfileScreen() {
         </View>
 
         <Button
-          title="Logout"
+          title={loggingOut ? "Logging out..." : "Logout"}
           onPress={handleLogout}
           variant="outline"
           style={styles.logoutButton}
+          loading={loggingOut}
         />
 
         <Text style={styles.version}>Version 1.0.0</Text>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { Link, router } from "expo-router";
-import { Button, Input } from "@/components/ui";
+import { Button, Input, useToast } from "@/components/ui";
 import { colors, spacing, typography } from "@/constants/theme";
 import { authApi } from "@/api";
 import { useAppDispatch } from "@/store/hooks";
@@ -18,12 +17,19 @@ import { setAuth } from "@/store/slices/authSlice";
 
 export default function LoginScreen() {
   const dispatch = useAppDispatch();
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
+
+  const isFormValid = useMemo(() => {
+    return (
+      email.trim() !== "" && /\S+@\S+\.\S+/.test(email) && password.length >= 6
+    );
+  }, [email, password]);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -51,11 +57,12 @@ export default function LoginScreen() {
     try {
       const response = await authApi.login({ email, password });
       dispatch(setAuth({ token: response.accessToken, user: response.user }));
-      router.replace("/tabs");
+      showToast("Login successful!", "success");
+      router.replace("/");
     } catch (error: any) {
-      Alert.alert(
-        "Login Failed",
-        error.response?.data?.message || "An error occurred. Please try again."
+      showToast(
+        error.response?.data?.message || "Login failed. Please try again.",
+        "error"
       );
     } finally {
       setLoading(false);
@@ -111,6 +118,7 @@ export default function LoginScreen() {
             title="Sign In"
             onPress={handleLogin}
             loading={loading}
+            disabled={!isFormValid}
             style={styles.button}
           />
 
