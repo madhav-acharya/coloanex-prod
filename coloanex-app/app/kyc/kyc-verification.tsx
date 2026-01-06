@@ -96,7 +96,6 @@ export default function KYCVerificationScreen() {
   );
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Per-document-type information
   type DocumentInfo = {
     documentNumber: string;
     issueDate: Date | null;
@@ -113,7 +112,6 @@ export default function KYCVerificationScreen() {
     selfie: "",
   });
 
-  // Helper to get/set document details for a specific type
   const getDocumentDetail = (docType: string): DocumentInfo => {
     return (
       documentDetails[docType] || {
@@ -139,7 +137,6 @@ export default function KYCVerificationScreen() {
     }));
   };
 
-  // Form validation for each step
   const isStepValid = useMemo(() => {
     switch (currentStep) {
       case 1:
