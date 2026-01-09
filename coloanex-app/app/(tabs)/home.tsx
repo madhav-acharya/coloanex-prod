@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  LinearGradient,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -44,7 +45,19 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Welcome to CoLoanex</Text>
+        <View style={styles.headerContent}>
+          <View>
+            <Text style={styles.welcomeText}>Welcome to</Text>
+            <Text style={styles.title}>CoLoanex</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+            <Ionicons
+              name="notifications-outline"
+              size={24}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+        </View>
         <Text style={styles.subtitle}>Find the best loan options for you</Text>
       </View>
 
@@ -173,17 +186,45 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  headerContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  welcomeText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: "500",
   },
   title: {
-    ...typography.h2,
-    color: colors.text,
-    marginBottom: spacing.xs,
+    ...typography.h1,
+    color: colors.primary,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  notificationButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
   subtitle: {
     ...typography.body,
     color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
   content: {
     flex: 1,
@@ -205,12 +246,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   lenderIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     backgroundColor: colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   lenderInfo: {
     flex: 1,

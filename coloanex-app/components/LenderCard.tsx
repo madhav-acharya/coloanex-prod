@@ -77,18 +77,23 @@ export default function LenderCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 16,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   lenderInfo: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 14,
     flex: 1,
   },
   nameContainer: {
@@ -97,16 +102,17 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   name: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 19,
+    fontWeight: "700",
     color: "#111827",
   },
   verified: {
-    fontSize: 16,
-    color: "#10B981",
+    fontSize: 18,
+    color: "#16A34A",
+    fontWeight: "700",
   },
   stats: {
     flexDirection: "row",
@@ -114,21 +120,27 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
     marginBottom: 16,
+    backgroundColor: "#F9FAFB",
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   stat: {
     alignItems: "center",
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#10B981",
-    marginBottom: 4,
+    color: "#16A34A",
+    marginBottom: 6,
   },
   statLabel: {
     fontSize: 12,
     color: "#6B7280",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   footer: {
     flexDirection: "row",
@@ -138,13 +150,14 @@ const styles = StyleSheet.create({
   responseTime: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   clockIcon: {
-    fontSize: 14,
+    fontSize: 16,
   },
   responseText: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#6B7280",
+    fontWeight: "500",
   },
 });
