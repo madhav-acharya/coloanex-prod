@@ -142,12 +142,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
+    paddingTop: spacing.xxl * 1.5,
     paddingBottom: spacing.lg,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xl * 1.5,
   },
   logo: {
     width: 120,
@@ -155,21 +155,26 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: spacing.xl,
+    alignItems: "center",
   },
   title: {
     ...typography.h1,
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
+    fontWeight: "800",
+    textAlign: "center",
   },
   subtitle: {
     ...typography.body,
     color: colors.textSecondary,
+    textAlign: "center",
   },
   form: {
     flex: 1,
   },
   button: {
     marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   footer: {
     flexDirection: "row",
@@ -183,6 +188,6 @@ const styles = StyleSheet.create({
   link: {
     ...typography.body,
     color: colors.primary,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

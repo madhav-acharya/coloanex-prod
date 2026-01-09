@@ -65,31 +65,40 @@ const styles = StyleSheet.create({
   button: {
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 14,
     flexDirection: "row",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   primary: {
-    backgroundColor: "#10B981",
+    backgroundColor: "#16A34A",
   },
   outline: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: "#10B981",
+    borderColor: "#16A34A",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   text: {
     backgroundColor: "transparent",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   smallButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   mediumButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
   },
   largeButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingVertical: 18,
+    paddingHorizontal: 36,
   },
   disabled: {
     opacity: 0.5,
@@ -97,7 +106,7 @@ const styles = StyleSheet.create({
   primaryText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   outlineText: {
     color: "#10B981",

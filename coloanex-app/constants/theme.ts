@@ -5,8 +5,13 @@ export const Colors = {
     primary: "#16A34A",
     primaryDark: "#15803D",
     primaryLight: "#DCFCE7",
+    primaryGradientStart: "#22C55E",
+    primaryGradientEnd: "#16A34A",
     secondary: "#6366F1",
-    background: "#FFFFFF",
+    secondaryLight: "#EEF2FF",
+    background: "#F9FAFB",
+    backgroundGradientStart: "#FFFFFF",
+    backgroundGradientEnd: "#F3F4F6",
     surface: "#F3F4F6",
     card: "#FFFFFF",
     text: "#111827",
@@ -16,7 +21,9 @@ export const Colors = {
     error: "#DC2626",
     errorLight: "#FEF2F2",
     success: "#16A34A",
+    successLight: "#D1FAE5",
     warning: "#F59E0B",
+    warningLight: "#FEF3C7",
     icon: "#111827",
     tabIconDefault: "#9CA3AF",
     tabIconSelected: "#16A34A",
@@ -73,13 +80,13 @@ export const spacing = {
 export const typography = {
   h1: {
     fontSize: 32,
-    fontWeight: "700" as const,
+    fontWeight: "800" as const,
     lineHeight: 40,
   },
   h2: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700" as const,
-    lineHeight: 32,
+    lineHeight: 34,
   },
   h3: {
     fontSize: 20,
@@ -98,6 +105,10 @@ export const typography = {
   },
   caption: {
     fontSize: 12,
+    fontWeight: "400" as const,
+    lineHeight: 16,
+  },
+};
     fontWeight: "400" as const,
     lineHeight: 16,
   },
