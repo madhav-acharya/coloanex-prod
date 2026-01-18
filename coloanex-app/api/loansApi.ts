@@ -7,6 +7,13 @@ export const loansApi = {
     return data;
   },
 
+  checkExisting: async (
+    tenantId: string,
+  ): Promise<{ hasLoan: boolean; loanId?: string; status?: string }> => {
+    const { data } = await apiClient.get(`/loans/check-existing/${tenantId}`);
+    return data;
+  },
+
   getById: async (id: string): Promise<Loan> => {
     const { data } = await apiClient.get(`/loans/${id}`);
     return data;
@@ -17,12 +24,8 @@ export const loansApi = {
     return data;
   },
 
-  applyForLoan: async (formData: FormData): Promise<any> => {
-    const { data } = await apiClient.post("/loans", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+  applyForLoan: async (loanData: any): Promise<any> => {
+    const { data } = await apiClient.post("/loans", loanData);
     return data;
   },
 
@@ -34,7 +37,7 @@ export const loansApi = {
   makePayment: async (
     loanId: string,
     amount: number,
-    paymentMethodId?: string
+    paymentMethodId?: string,
   ): Promise<any> => {
     const { data } = await apiClient.post(`/loans/${loanId}/payment`, {
       amount,
@@ -46,7 +49,7 @@ export const loansApi = {
   calculatePayment: async (
     amount: number,
     interestRate: number,
-    term: number
+    term: number,
   ): Promise<number> => {
     const monthlyRate = interestRate / 100 / 12;
     const payment =
