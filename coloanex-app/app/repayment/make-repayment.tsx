@@ -32,7 +32,8 @@ export default function RepaymentScreen() {
 
   useEffect(() => {
     if (loan) {
-      setAmount(loan.monthlyPayment);
+      const monthlyPayment = loan.monthlyPayment || 0;
+      setAmount(monthlyPayment > 0 ? monthlyPayment : 1000);
     }
   }, [loan]);
 
@@ -42,14 +43,18 @@ export default function RepaymentScreen() {
       setLoan(data);
     } catch (error) {
       console.error("Failed to load loan:", error);
+      showToast("Failed to load loan details", "error");
+      router.back();
     }
   };
 
   const calculateBreakdown = () => {
     if (!loan) return { principal: 0, interest: 0 };
 
-    const monthlyRate = loan.interestRate / 100 / 12;
-    const interest = loan.remainingBalance * monthlyRate;
+    const interestRate = Number(loan.interestRate) || 0;
+    const remainingBalance = loan.remainingBalance || loan.amount || 0;
+    const monthlyRate = interestRate / 100 / 12;
+    const interest = remainingBalance * monthlyRate;
     const principal = amount - interest;
 
     return {
@@ -72,7 +77,7 @@ export default function RepaymentScreen() {
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Failed to process payment",
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -82,10 +87,14 @@ export default function RepaymentScreen() {
   if (!loan) return null;
 
   const breakdown = calculateBreakdown();
-  const daysRemaining = Math.ceil(
-    (new Date(loan.nextPaymentDate).getTime() - Date.now()) /
-      (1000 * 60 * 60 * 24)
-  );
+  const remainingBalance = loan.remainingBalance || loan.amount || 0;
+  const nextPaymentDate = loan.nextPaymentDate || loan.dueDate;
+  const daysRemaining = nextPaymentDate
+    ? Math.ceil(
+        (new Date(nextPaymentDate).getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24),
+      )
+    : 30;
 
   return (
     <View style={styles.container}>
@@ -93,19 +102,22 @@ export default function RepaymentScreen() {
         <Card style={styles.headerCard}>
           <View style={styles.lenderHeader}>
             <LenderLogo
-              logo={loan.lenderLogo}
-              name={loan.lenderName}
+              name={loan.borrower?.tenant?.name || "Lender"}
               size={48}
               verified
             />
             <View style={styles.lenderInfo}>
-              <Text style={styles.lenderName}>{loan.lenderName}</Text>
-              <Text style={styles.loanType}>{loan.loanType}</Text>
+              <Text style={styles.lenderName}>
+                {loan.borrower?.tenant?.name || "Lender"}
+              </Text>
+              <Text style={styles.loanType}>Personal Loan</Text>
             </View>
           </View>
           <View style={styles.dueBox}>
             <Text style={styles.dueText}>
-              Next payment due in {daysRemaining} days
+              {nextPaymentDate
+                ? `Next payment due in ${daysRemaining} days`
+                : "Payment schedule pending"}
             </Text>
           </View>
         </Card>
@@ -116,9 +128,9 @@ export default function RepaymentScreen() {
           <Slider
             style={styles.slider}
             minimumValue={100}
-            maximumValue={loan.remainingBalance}
+            maximumValue={Math.max(remainingBalance, 1000)}
             step={50}
-            value={amount}
+            value={Math.max(amount, 100)}
             onValueChange={setAmount}
             minimumTrackTintColor={colors.primary}
             maximumTrackTintColor={colors.border}
@@ -127,7 +139,7 @@ export default function RepaymentScreen() {
           <View style={styles.range}>
             <Text style={styles.rangeText}>Rs 100</Text>
             <Text style={styles.rangeText}>
-              Full Balance: {formatCurrency(loan.remainingBalance)}
+              Full Balance: {formatCurrency(remainingBalance)}
             </Text>
           </View>
         </Card>
@@ -138,9 +150,7 @@ export default function RepaymentScreen() {
             <View style={styles.paymentMethodLeft}>
               <Ionicons name="card-outline" size={24} color={colors.text} />
               <View style={styles.paymentMethodInfo}>
-                <Text style={styles.paymentMethodText}>
-                  {loan.paymentMethod || "Visa •••• 4532"}
-                </Text>
+                <Text style={styles.paymentMethodText}>Visa •••• 4532</Text>
                 <Text style={styles.paymentMethodSubtext}>
                   Default payment method
                 </Text>
@@ -186,7 +196,7 @@ export default function RepaymentScreen() {
             </View>
             <View style={styles.upcomingRight}>
               <Text style={styles.upcomingAmount}>
-                {formatCurrency(loan.monthlyPayment)}
+                {formatCurrency(loan.monthlyPayment || amount)}
               </Text>
               <View style={styles.dueBadge}>
                 <Text style={styles.dueText}>Due Soon</Text>
