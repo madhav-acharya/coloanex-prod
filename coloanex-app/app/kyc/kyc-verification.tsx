@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import {
   Input,
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui";
 import { Colors } from "@/constants/theme";
 import { kycApi } from "@/api";
-import { uploadToCloudinary, uploadMultipleToCloudinary } from "@/utils/upload";
+import { uploadToCloudinary } from "@/utils/upload";
 
 const GENDER_OPTIONS = [
   { label: "Male", value: "Male" },
@@ -50,19 +50,25 @@ const DOCUMENT_TYPE_OPTIONS = [
   { label: "PAN", value: "PAN", numberLabel: "PAN Number" },
 ];
 
-const getDocumentNumberLabel = (docTypes: string[]): string => {
-  if (docTypes.length === 0) return "Document Number";
-  if (docTypes.length === 1) {
-    const doc = DOCUMENT_TYPE_OPTIONS.find((o) => o.value === docTypes[0]);
-    return doc?.numberLabel || "Document Number";
-  }
-  return "Document Number";
+type DocumentInfo = {
+  documentNumber: string;
+  issueDate: Date | null;
+  expiryDate: Date | null;
+  issueDistrict: string;
+  frontImage: string;
+  backImage: string;
 };
 
 export default function KYCVerificationScreen() {
+  const params = useLocalSearchParams<{ tenantId: string }>();
+  const tenantId = Array.isArray(params.tenantId)
+    ? params.tenantId[0]
+    : params.tenantId;
   const { showToast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
     middleName: "",
@@ -92,25 +98,22 @@ export default function KYCVerificationScreen() {
   });
 
   const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<string[]>(
-    []
+    [],
   );
-  const [uploadingImage, setUploadingImage] = useState(false);
 
-  type DocumentInfo = {
-    documentNumber: string;
-    issueDate: Date | null;
-    expiryDate: Date | null;
-    issueDistrict: string;
-  };
   const [documentDetails, setDocumentDetails] = useState<
     Record<string, DocumentInfo>
   >({});
 
-  const [documents, setDocuments] = useState({
-    passportPhoto: "",
-    documentImages: [] as string[],
-    selfie: "",
-  });
+  const [passportPhoto, setPassportPhoto] = useState("");
+  const [selfie, setSelfie] = useState("");
+
+  useEffect(() => {
+    if (!tenantId) {
+      showToast("Invalid request. Please select a lender first.", "error");
+      router.back();
+    }
+  }, [tenantId]);
 
   const getDocumentDetail = (docType: string): DocumentInfo => {
     return (
@@ -119,6 +122,8 @@ export default function KYCVerificationScreen() {
         issueDate: null,
         expiryDate: null,
         issueDistrict: "",
+        frontImage: "",
+        backImage: "",
       }
     );
   };
@@ -126,7 +131,7 @@ export default function KYCVerificationScreen() {
   const updateDocumentDetail = (
     docType: string,
     field: keyof DocumentInfo,
-    value: any
+    value: any,
   ) => {
     setDocumentDetails((prev) => ({
       ...prev,
@@ -137,82 +142,32 @@ export default function KYCVerificationScreen() {
     }));
   };
 
-  const isStepValid = useMemo(() => {
-    switch (currentStep) {
-      case 1:
-        return (
-          personalInfo.firstName.trim() !== "" &&
-          personalInfo.lastName.trim() !== "" &&
-          personalInfo.dateOfBirth !== null
-        );
-      case 2:
-        return (
-          address.province.trim() !== "" &&
-          address.district.trim() !== "" &&
-          address.municipality.trim() !== "" &&
-          address.ward.trim() !== ""
-        );
-      case 3:
-        return (
-          financialInfo.occupation.trim() !== "" &&
-          financialInfo.monthlyIncome.trim() !== ""
-        );
-      case 4:
-        return (
-          selectedDocumentTypes.length > 0 &&
-          selectedDocumentTypes.every(
-            (docType) => getDocumentDetail(docType).documentNumber.trim() !== ""
-          )
-        );
-      case 5:
-        return (
-          documents.passportPhoto !== "" &&
-          documents.documentImages.length > 0 &&
-          documents.selfie !== ""
-        );
-      default:
-        return false;
-    }
-  }, [
-    currentStep,
-    personalInfo,
-    address,
-    financialInfo,
-    selectedDocumentTypes,
-    documents,
-    documentDetails,
-  ]);
-
-  const pickDocument = async (isMultiple: boolean = false) => {
+  const pickImage = async (
+    docType: string,
+    side: "front" | "back" | "passport" | "selfie",
+  ) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images" as any,
-      allowsEditing: !isMultiple,
-      allowsMultipleSelection: isMultiple,
+      allowsEditing: true,
       quality: 0.8,
     });
 
-    if (!result.canceled && result.assets.length > 0) {
+    if (!result.canceled && result.assets[0]) {
       setUploadingImage(true);
       try {
-        if (isMultiple) {
-          const uploadPromises = result.assets.map((asset) =>
-            uploadToCloudinary(asset.uri, `document-${Date.now()}.jpg`)
-          );
-          const uploadedUrls = await Promise.all(uploadPromises);
-          setDocuments((prev) => ({
-            ...prev,
-            documentImages: [
-              ...prev.documentImages,
-              ...uploadedUrls.map((u) => u.url),
-            ],
-          }));
+        const uploaded = await uploadToCloudinary(
+          result.assets[0].uri,
+          `${side}-${Date.now()}.jpg`,
+        );
+
+        if (side === "passport") {
+          setPassportPhoto(uploaded.url);
+        } else if (side === "selfie") {
+          setSelfie(uploaded.url);
         } else {
-          const uploaded = await uploadToCloudinary(
-            result.assets[0].uri,
-            "passport-photo.jpg"
-          );
-          setDocuments((prev) => ({ ...prev, passportPhoto: uploaded.url }));
+          updateDocumentDetail(docType, `${side}Image`, uploaded.url);
         }
+        showToast("Image uploaded successfully", "success");
       } catch (error: any) {
         showToast(error.message || "Failed to upload image", "error");
       } finally {
@@ -232,9 +187,10 @@ export default function KYCVerificationScreen() {
       try {
         const uploaded = await uploadToCloudinary(
           result.assets[0].uri,
-          "selfie.jpg"
+          "selfie.jpg",
         );
-        setDocuments((prev) => ({ ...prev, selfie: uploaded.url }));
+        setSelfie(uploaded.url);
+        showToast("Selfie uploaded successfully", "success");
       } catch (error: any) {
         showToast(error.message || "Failed to upload selfie", "error");
       } finally {
@@ -243,39 +199,63 @@ export default function KYCVerificationScreen() {
     }
   };
 
-  const removeDocumentImage = (index: number) => {
-    setDocuments((prev) => ({
-      ...prev,
-      documentImages: prev.documentImages.filter((_, i) => i !== index),
-    }));
-  };
-
-  const pickSelfieFromGallery = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images" as any,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setUploadingImage(true);
-      try {
-        const uploaded = await uploadToCloudinary(
-          result.assets[0].uri,
-          "selfie.jpg"
+  const isStepValid = useMemo(() => {
+    switch (currentStep) {
+      case 1:
+        return (
+          tenantId !== undefined &&
+          personalInfo.firstName.trim() !== "" &&
+          personalInfo.lastName.trim() !== "" &&
+          personalInfo.dateOfBirth !== null
         );
-        setDocuments((prev) => ({ ...prev, selfie: uploaded.url }));
-      } catch (error: any) {
-        showToast(error.message || "Failed to upload selfie", "error");
-      } finally {
-        setUploadingImage(false);
-      }
+      case 2:
+        return (
+          address.province.trim() !== "" &&
+          address.district.trim() !== "" &&
+          address.municipality.trim() !== "" &&
+          address.ward.trim() !== ""
+        );
+      case 3:
+        return (
+          financialInfo.occupation.trim() !== "" &&
+          financialInfo.monthlyIncome.trim() !== ""
+        );
+      case 4:
+        return (
+          selectedDocumentTypes.length > 0 &&
+          selectedDocumentTypes.every((docType) => {
+            const detail = getDocumentDetail(docType);
+            return (
+              detail.documentNumber.trim() !== "" &&
+              detail.frontImage !== "" &&
+              (docType === "PAN" || detail.backImage !== "")
+            );
+          }) &&
+          passportPhoto !== "" &&
+          selfie !== ""
+        );
+      default:
+        return false;
     }
-  };
+  }, [
+    currentStep,
+    tenantId,
+    personalInfo,
+    address,
+    financialInfo,
+    selectedDocumentTypes,
+    documentDetails,
+    passportPhoto,
+    selfie,
+  ]);
 
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 1:
+        if (!tenantId) {
+          showToast("Invalid request. Tenant information missing.", "error");
+          return false;
+        }
         if (
           !personalInfo.firstName ||
           !personalInfo.lastName ||
@@ -283,7 +263,7 @@ export default function KYCVerificationScreen() {
         ) {
           showToast(
             "Please fill all required personal information fields",
-            "error"
+            "error",
           );
           return false;
         }
@@ -305,7 +285,7 @@ export default function KYCVerificationScreen() {
         if (!financialInfo.occupation || !financialInfo.monthlyIncome) {
           showToast(
             "Please fill all required financial information fields",
-            "error"
+            "error",
           );
           return false;
         }
@@ -316,16 +296,36 @@ export default function KYCVerificationScreen() {
           showToast("Please select at least one document type", "error");
           return false;
         }
-        const missingDocNumber = selectedDocumentTypes.find(
-          (docType) => !getDocumentDetail(docType).documentNumber.trim()
-        );
-        if (missingDocNumber) {
+
+        const invalidDoc = selectedDocumentTypes.find((docType) => {
+          const detail = getDocumentDetail(docType);
+          if (!detail.documentNumber.trim()) return true;
+          if (!detail.frontImage) return true;
+          if (docType !== "PAN" && !detail.backImage) return true;
+          return false;
+        });
+
+        if (invalidDoc) {
           const docLabel = DOCUMENT_TYPE_OPTIONS.find(
-            (o) => o.value === missingDocNumber
+            (o) => o.value === invalidDoc,
           )?.label;
-          showToast(`Please enter document number for ${docLabel}`, "error");
+          showToast(
+            `Please complete all required fields and upload images for ${docLabel}`,
+            "error",
+          );
           return false;
         }
+
+        if (!passportPhoto) {
+          showToast("Please upload your passport size photo", "error");
+          return false;
+        }
+
+        if (!selfie) {
+          showToast("Please upload a selfie with your document", "error");
+          return false;
+        }
+
         return true;
 
       default:
@@ -348,61 +348,75 @@ export default function KYCVerificationScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!documents.passportPhoto) {
-      showToast("Please upload your passport size photo", "error");
+    if (!validateStep(4)) {
       return;
     }
 
-    if (documents.documentImages.length === 0) {
-      showToast("Please upload at least one document image", "error");
-      return;
-    }
-
-    if (!documents.selfie) {
-      showToast("Please upload a selfie with your document", "error");
+    if (!tenantId) {
+      showToast("Tenant ID is missing. Please try again.", "error");
       return;
     }
 
     setLoading(true);
     try {
-      // Build files array with each document type's information
       const files: any[] = [];
 
-      // For each selected document type, add the document images with that type's details
-      selectedDocumentTypes.forEach((docType, typeIndex) => {
+      files.push({
+        fileType: "OTHER",
+        documentType: "OTHER",
+        fileUrl: passportPhoto,
+      });
+
+      selectedDocumentTypes.forEach((docType) => {
         const detail = getDocumentDetail(docType);
-        // Add document images (front/back) - distribute images across document types
-        // For simplicity, we'll associate all images with the primary document type
-        if (typeIndex === 0) {
-          documents.documentImages.forEach((url, imgIndex) => {
-            files.push({
-              fileType: imgIndex === 0 ? `${docType}_FRONT` : `${docType}_BACK`,
-              documentType: docType,
-              fileUrl: url,
-              documentNumber: detail.documentNumber,
-              issueDate: detail.issueDate?.toISOString(),
-              expiryDate: detail.expiryDate?.toISOString(),
-              issueDistrict: detail.issueDistrict || undefined,
-            });
+
+        let frontFileType = "OTHER";
+        let backFileType = "OTHER";
+
+        if (docType === "CITIZENSHIP") {
+          frontFileType = "CITIZENSHIP_FRONT";
+          backFileType = "CITIZENSHIP_BACK";
+        } else if (docType === "PASSPORT") {
+          frontFileType = "PASSPORT";
+        } else if (docType === "DRIVING_LICENSE") {
+          frontFileType = "LICENSE_FRONT";
+          backFileType = "LICENSE_BACK";
+        } else if (docType === "PAN") {
+          frontFileType = "PAN";
+        }
+
+        files.push({
+          fileType: frontFileType,
+          documentType: docType,
+          fileUrl: detail.frontImage,
+          documentNumber: detail.documentNumber,
+          issueDate: detail.issueDate?.toISOString(),
+          expiryDate: detail.expiryDate?.toISOString(),
+          issueDistrict: detail.issueDistrict || undefined,
+        });
+
+        if (detail.backImage) {
+          files.push({
+            fileType: backFileType,
+            documentType: docType,
+            fileUrl: detail.backImage,
+            documentNumber: detail.documentNumber,
+            issueDate: detail.issueDate?.toISOString(),
+            expiryDate: detail.expiryDate?.toISOString(),
+            issueDistrict: detail.issueDistrict || undefined,
           });
         }
       });
 
-      // Add selfie with primary document type
-      const primaryDocType = selectedDocumentTypes[0];
-      const primaryDetail = getDocumentDetail(primaryDocType);
       files.push({
         fileType: "SELFIE",
-        documentType: primaryDocType,
-        fileUrl: documents.selfie,
-        documentNumber: primaryDetail.documentNumber,
-        issueDate: primaryDetail.issueDate?.toISOString(),
-        expiryDate: primaryDetail.expiryDate?.toISOString(),
-        issueDistrict: primaryDetail.issueDistrict || undefined,
+        documentType: selectedDocumentTypes[0],
+        fileUrl: selfie,
+        documentNumber: getDocumentDetail(selectedDocumentTypes[0])
+          .documentNumber,
       });
 
-      // Build document details array for all selected types
-      const allDocumentDetails = selectedDocumentTypes.map((docType) => {
+      const documentDetailsArray = selectedDocumentTypes.map((docType) => {
         const detail = getDocumentDetail(docType);
         return {
           documentType: docType,
@@ -414,6 +428,7 @@ export default function KYCVerificationScreen() {
       });
 
       const kycData = {
+        tenantId: tenantId || "",
         firstName: personalInfo.firstName,
         middleName: personalInfo.middleName || undefined,
         lastName: personalInfo.lastName,
@@ -434,19 +449,24 @@ export default function KYCVerificationScreen() {
         bankAccountNumber: financialInfo.bankAccountNumber,
         bankBranch: financialInfo.bankBranch,
         documentTypes: selectedDocumentTypes,
-        documentDetails: allDocumentDetails,
-        passportSizePhotoUrl: documents.passportPhoto,
+        documentDetails: documentDetailsArray,
+        passportSizePhotoUrl: passportPhoto,
         files,
       };
 
       await kycApi.submit(kycData);
       showToast(
         "KYC verification submitted successfully. We will review your information and notify you soon.",
-        "success"
+        "success",
       );
       router.back();
     } catch (error: any) {
-      showToast(error.message || "Failed to submit KYC verification", "error");
+      showToast(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to submit KYC verification",
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -462,9 +482,8 @@ export default function KYCVerificationScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Progress Indicator */}
       <View style={styles.progressContainer}>
-        {[1, 2, 3, 4, 5].map((step) => (
+        {[1, 2, 3, 4].map((step) => (
           <View key={step} style={styles.progressStepContainer}>
             <View
               style={[
@@ -485,7 +504,7 @@ export default function KYCVerificationScreen() {
                 </Text>
               )}
             </View>
-            {step < 5 && (
+            {step < 4 && (
               <View
                 style={[
                   styles.progressLine,
@@ -499,11 +518,10 @@ export default function KYCVerificationScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.description}>
-          Step {currentStep} of 5 - Please provide accurate information.{" "}
+          Step {currentStep} of 4 - Please provide accurate information.{" "}
           <Text style={styles.required}>*</Text> = required
         </Text>
 
-        {/* Step 1: Personal Information */}
         {currentStep === 1 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -599,7 +617,6 @@ export default function KYCVerificationScreen() {
           </View>
         )}
 
-        {/* Step 2: Address */}
         {currentStep === 2 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Permanent Address</Text>
@@ -656,7 +673,6 @@ export default function KYCVerificationScreen() {
           </View>
         )}
 
-        {/* Step 3: Financial Information */}
         {currentStep === 3 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Financial Information</Text>
@@ -713,16 +729,39 @@ export default function KYCVerificationScreen() {
           </View>
         )}
 
-        {/* Step 4: Document Selection & Details */}
         {currentStep === 4 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Document Information</Text>
+            <Text style={styles.sectionTitle}>Document Upload</Text>
+
+            <Text style={styles.label}>
+              Passport Size Photo <Text style={styles.required}>*</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={() => pickImage("", "passport")}
+              disabled={uploadingImage}
+            >
+              {passportPhoto ? (
+                <Image
+                  source={{ uri: passportPhoto }}
+                  style={styles.uploadedImage}
+                />
+              ) : uploadingImage ? (
+                <ActivityIndicator size="large" color={Colors.primary} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="cloud-upload-outline"
+                    size={32}
+                    color={Colors.primary}
+                  />
+                  <Text style={styles.uploadText}>Upload Passport Photo</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
             <Text style={styles.label}>
               Select Document Type(s) <Text style={styles.required}>*</Text>
-            </Text>
-            <Text style={styles.helperText}>
-              You can select multiple document types
             </Text>
             <View style={styles.documentTypesContainer}>
               {DOCUMENT_TYPE_OPTIONS.map((option) => {
@@ -737,7 +776,7 @@ export default function KYCVerificationScreen() {
                     onPress={() => {
                       if (isSelected) {
                         setSelectedDocumentTypes((prev) =>
-                          prev.filter((v) => v !== option.value)
+                          prev.filter((v) => v !== option.value),
                         );
                       } else {
                         setSelectedDocumentTypes((prev) => [
@@ -768,275 +807,172 @@ export default function KYCVerificationScreen() {
               })}
             </View>
 
-            {selectedDocumentTypes.length > 0 && (
-              <>
-                {selectedDocumentTypes.map((docType) => {
-                  const option = DOCUMENT_TYPE_OPTIONS.find(
-                    (o) => o.value === docType
-                  );
-                  const detail = getDocumentDetail(docType);
-                  return (
-                    <View key={docType} style={styles.documentDetailSection}>
-                      <Text style={styles.documentDetailTitle}>
-                        {option?.label} Details
-                      </Text>
+            {selectedDocumentTypes.map((docType) => {
+              const option = DOCUMENT_TYPE_OPTIONS.find(
+                (o) => o.value === docType,
+              );
+              const detail = getDocumentDetail(docType);
 
-                      <Text style={styles.label}>
-                        {option?.numberLabel || "Document Number"}{" "}
-                        <Text style={styles.required}>*</Text>
-                      </Text>
-                      <Input
-                        value={detail.documentNumber}
-                        onChangeText={(text) =>
-                          updateDocumentDetail(docType, "documentNumber", text)
-                        }
-                        placeholder={`Enter ${option?.label?.toLowerCase()} number`}
-                      />
-
-                      <DatePickerInput
-                        label="Issue Date"
-                        value={detail.issueDate}
-                        onChange={(date) =>
-                          updateDocumentDetail(docType, "issueDate", date)
-                        }
-                        maximumDate={new Date()}
-                        placeholder="Select issue date"
-                      />
-
-                      <DatePickerInput
-                        label="Expiry Date"
-                        value={detail.expiryDate}
-                        onChange={(date) =>
-                          updateDocumentDetail(docType, "expiryDate", date)
-                        }
-                        minimumDate={new Date()}
-                        placeholder="Select expiry date"
-                      />
-
-                      <Text style={styles.label}>Issue District</Text>
-                      <Input
-                        value={detail.issueDistrict}
-                        onChangeText={(text) =>
-                          updateDocumentDetail(docType, "issueDistrict", text)
-                        }
-                        placeholder="Enter issue district"
-                      />
-                    </View>
-                  );
-                })}
-              </>
-            )}
-          </View>
-        )}
-
-        {/* Step 5: Document Uploads */}
-        {currentStep === 5 && (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Upload Documents</Text>
-
-              {selectedDocumentTypes.length > 0 && (
-                <View style={styles.selectedDocsInfo}>
-                  <Text style={styles.selectedDocsTitle}>
-                    Selected Documents:
+              return (
+                <View key={docType} style={styles.documentDetailSection}>
+                  <Text style={styles.documentDetailTitle}>
+                    {option?.label} Details
                   </Text>
-                  {selectedDocumentTypes.map((docType) => {
-                    const option = DOCUMENT_TYPE_OPTIONS.find(
-                      (o) => o.value === docType
-                    );
-                    const detail = getDocumentDetail(docType);
-                    return (
-                      <View key={docType} style={styles.selectedDocItem}>
-                        <Text style={styles.selectedDocLabel}>
-                          {option?.label}
-                        </Text>
-                        <Text style={styles.selectedDocValue}>
-                          {option?.numberLabel}: {detail.documentNumber}
-                        </Text>
-                        {detail.issueDate && (
-                          <Text style={styles.selectedDocValue}>
-                            Issue Date: {detail.issueDate.toLocaleDateString()}
-                          </Text>
-                        )}
-                        {detail.expiryDate && (
-                          <Text style={styles.selectedDocValue}>
-                            Expiry Date:{" "}
-                            {detail.expiryDate.toLocaleDateString()}
-                          </Text>
-                        )}
-                        {detail.issueDistrict && (
-                          <Text style={styles.selectedDocValue}>
-                            Issue District: {detail.issueDistrict}
-                          </Text>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
 
-              <Text style={styles.label}>
-                Passport Size Photo <Text style={styles.required}>*</Text>
-              </Text>
-              <TouchableOpacity
-                style={styles.uploadButton}
-                onPress={() => pickDocument(false)}
-                disabled={uploadingImage}
-              >
-                {documents.passportPhoto ? (
-                  <Image
-                    source={{ uri: documents.passportPhoto }}
-                    style={styles.uploadedImage}
-                  />
-                ) : uploadingImage ? (
-                  <>
-                    <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={styles.uploadText}>Uploading...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Ionicons
-                      name="cloud-upload-outline"
-                      size={32}
-                      color={Colors.primary}
-                    />
-                    <Text style={styles.uploadText}>Upload Passport Photo</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              {selectedDocumentTypes.length > 0 && (
-                <>
                   <Text style={styles.label}>
-                    {selectedDocumentTypes
-                      .map(
-                        (dt) =>
-                          DOCUMENT_TYPE_OPTIONS.find((o) => o.value === dt)
-                            ?.label
-                      )
-                      .join(" / ")}{" "}
-                    Images <Text style={styles.required}>*</Text>
+                    {option?.numberLabel} <Text style={styles.required}>*</Text>
                   </Text>
-                  <Text style={styles.helperText}>
-                    Upload front and back images (if applicable)
-                  </Text>
+                  <Input
+                    value={detail.documentNumber}
+                    onChangeText={(text) =>
+                      updateDocumentDetail(docType, "documentNumber", text)
+                    }
+                    placeholder={`Enter ${option?.label?.toLowerCase()} number`}
+                  />
 
+                  <DatePickerInput
+                    label="Issue Date"
+                    value={detail.issueDate}
+                    onChange={(date) =>
+                      updateDocumentDetail(docType, "issueDate", date)
+                    }
+                    maximumDate={new Date()}
+                    placeholder="Select issue date"
+                  />
+
+                  <DatePickerInput
+                    label="Expiry Date"
+                    value={detail.expiryDate}
+                    onChange={(date) =>
+                      updateDocumentDetail(docType, "expiryDate", date)
+                    }
+                    minimumDate={new Date()}
+                    placeholder="Select expiry date"
+                  />
+
+                  <Text style={styles.label}>Issue District</Text>
+                  <Input
+                    value={detail.issueDistrict}
+                    onChangeText={(text) =>
+                      updateDocumentDetail(docType, "issueDistrict", text)
+                    }
+                    placeholder="Enter issue district"
+                  />
+
+                  <Text style={styles.label}>
+                    Front Image <Text style={styles.required}>*</Text>
+                  </Text>
                   <TouchableOpacity
                     style={styles.uploadButton}
-                    onPress={() => pickDocument(true)}
+                    onPress={() => pickImage(docType, "front")}
                     disabled={uploadingImage}
                   >
-                    {uploadingImage ? (
-                      <>
-                        <ActivityIndicator
-                          size="large"
-                          color={Colors.primary}
-                        />
-                        <Text style={styles.uploadText}>Uploading...</Text>
-                      </>
+                    {detail.frontImage ? (
+                      <Image
+                        source={{ uri: detail.frontImage }}
+                        style={styles.uploadedSmallImage}
+                      />
                     ) : (
                       <>
                         <Ionicons
                           name="cloud-upload-outline"
-                          size={32}
+                          size={24}
                           color={Colors.primary}
                         />
                         <Text style={styles.uploadText}>
-                          Upload Document Images
+                          Upload Front Image
                         </Text>
                       </>
                     )}
                   </TouchableOpacity>
 
-                  {documents.documentImages.length > 0 && (
-                    <View style={styles.imageGrid}>
-                      {documents.documentImages.map((url, index) => (
-                        <View key={index} style={styles.imageContainer}>
+                  {docType !== "PAN" && (
+                    <>
+                      <Text style={styles.label}>
+                        Back Image <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.uploadButton}
+                        onPress={() => pickImage(docType, "back")}
+                        disabled={uploadingImage}
+                      >
+                        {detail.backImage ? (
                           <Image
-                            source={{ uri: url }}
-                            style={styles.gridImage}
+                            source={{ uri: detail.backImage }}
+                            style={styles.uploadedSmallImage}
                           />
-                          <TouchableOpacity
-                            style={styles.removeButton}
-                            onPress={() => removeDocumentImage(index)}
-                          >
+                        ) : (
+                          <>
                             <Ionicons
-                              name="close-circle"
+                              name="cloud-upload-outline"
                               size={24}
-                              color={Colors.error}
+                              color={Colors.primary}
                             />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
+                            <Text style={styles.uploadText}>
+                              Upload Back Image
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </>
                   )}
-                </>
-              )}
+                </View>
+              );
+            })}
 
-              <Text style={styles.label}>
-                Selfie with Document <Text style={styles.required}>*</Text>
-              </Text>
-              <View style={styles.selfieButtons}>
-                <TouchableOpacity
-                  style={[styles.uploadButton, styles.halfButton]}
-                  onPress={takeSelfie}
-                  disabled={uploadingImage}
-                >
-                  <Ionicons
-                    name="camera-outline"
-                    size={24}
-                    color={Colors.primary}
+            {selectedDocumentTypes.length > 0 && (
+              <>
+                <Text style={styles.label}>
+                  Selfie with Document <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.selfieButtons}>
+                  <TouchableOpacity
+                    style={[styles.uploadButton, styles.halfButton]}
+                    onPress={takeSelfie}
+                    disabled={uploadingImage}
+                  >
+                    <Ionicons
+                      name="camera-outline"
+                      size={24}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.uploadText}>Take Selfie</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.uploadButton, styles.halfButton]}
+                    onPress={() => pickImage("", "selfie")}
+                    disabled={uploadingImage}
+                  >
+                    <Ionicons
+                      name="images-outline"
+                      size={24}
+                      color={Colors.primary}
+                    />
+                    <Text style={styles.uploadText}>From Gallery</Text>
+                  </TouchableOpacity>
+                </View>
+                {selfie && (
+                  <Image
+                    source={{ uri: selfie }}
+                    style={styles.uploadedImage}
                   />
-                  <Text style={styles.uploadText}>Take Selfie</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.uploadButton, styles.halfButton]}
-                  onPress={pickSelfieFromGallery}
-                  disabled={uploadingImage}
-                >
-                  <Ionicons
-                    name="images-outline"
-                    size={24}
-                    color={Colors.primary}
-                  />
-                  <Text style={styles.uploadText}>From Gallery</Text>
-                </TouchableOpacity>
-              </View>
-              {uploadingImage && !documents.selfie && (
-                <ActivityIndicator
-                  size="small"
-                  color={Colors.primary}
-                  style={{ marginTop: 10 }}
-                />
-              )}
-              {documents.selfie && (
-                <Image
-                  source={{ uri: documents.selfie }}
-                  style={styles.uploadedImage}
-                />
-              )}
-            </View>
-          </>
+                )}
+              </>
+            )}
+          </View>
         )}
 
         <View style={{ height: 20 }} />
       </ScrollView>
 
       <View style={styles.footer}>
-        {currentStep < 5 ? (
+        {currentStep < 4 ? (
           <Button title="Next" onPress={handleNext} disabled={!isStepValid} />
         ) : (
           <Button
             title={loading ? "Submitting..." : "Submit for Verification"}
             onPress={handleSubmit}
             disabled={loading || !isStepValid}
-          />
-        )}
-        {loading && (
-          <ActivityIndicator
-            size="small"
-            color={Colors.primary}
-            style={{ marginTop: 10 }}
           />
         )}
       </View>
@@ -1143,11 +1079,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: 12,
   },
-  helperText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-  },
   documentTypesContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1192,7 +1123,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     borderStyle: "dashed",
     borderRadius: 12,
-    padding: 32,
+    padding: 24,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
@@ -1203,32 +1134,15 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 8,
   },
-  uploadText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 8,
-  },
-  imageGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 12,
-  },
-  imageContainer: {
-    width: "48%",
-    position: "relative",
-  },
-  gridImage: {
+  uploadedSmallImage: {
     width: "100%",
     height: 150,
     borderRadius: 8,
   },
-  removeButton: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  uploadText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginTop: 8,
   },
   selfieButtons: {
     flexDirection: "row",
@@ -1237,37 +1151,6 @@ const styles = StyleSheet.create({
   halfButton: {
     flex: 1,
     padding: 16,
-  },
-  selectedDocsInfo: {
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  selectedDocsTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  selectedDocItem: {
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  selectedDocLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.primary,
-    marginBottom: 4,
-  },
-  selectedDocValue: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
   },
   footer: {
     padding: 20,
