@@ -95,7 +95,7 @@ export default function LoanCard({
         <Text style={styles.dueDate}>Due Date: {formatDate(dueDate)}</Text>
         <Button
           title="Make Payment"
-          onPress={() => router.push(`/repayment/${id}`)}
+          onPress={() => router.push(`/repayment/make-repayment?id=${id}`)}
           size="small"
         />
       </View>
