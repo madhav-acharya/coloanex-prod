@@ -67,7 +67,7 @@ export default function LenderCard({
         </View>
         <Button
           title="View Details"
-          onPress={() => router.push(`/lender/${id}`)}
+          onPress={() => router.push(`/lenders/lender-details?id=${id}`)}
           size="small"
         />
       </View>
