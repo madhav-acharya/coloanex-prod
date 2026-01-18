@@ -12,25 +12,37 @@ export interface Lender {
 
 export interface Loan {
   id: string;
-  loanNumber: string;
-  lenderId: string;
-  lenderName: string;
-  lenderLogo?: string;
-  loanType: string;
-  principalAmount: number;
+  amount: number;
   interestRate: number;
-  totalAmount: number;
-  remainingBalance: number;
-  monthlyPayment: number;
-  loanTerm: number;
+  termMonths: number;
   status: string;
-  disbursementDate: string;
-  maturityDate: string;
-  nextPaymentDate: string;
-  paymentsMade: number;
-  totalPayments: number;
-  autoDebit: boolean;
-  paymentMethod?: string;
+  loanPurpose: string;
+  collateralType: string;
+  collateralDescription: string;
+  collateralValue: number;
+  collateralImageUrl: string;
+  providedLoanAmount: number;
+  expectedLoanAmount: number;
+  disbursedAt?: string;
+  dueDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  borrower?: {
+    tenant?: {
+      id: string;
+      name: string;
+    };
+    user?: {
+      id: string;
+      fullName: string;
+      email: string;
+    };
+  };
+  monthlyPayment?: number;
+  remainingBalance?: number;
+  nextPaymentDate?: string;
+  paymentsMade?: number;
+  totalPayments?: number;
 }
 
 export interface LoanApplication {
@@ -43,10 +55,11 @@ export interface LoanApplication {
 }
 
 export interface PaymentSchedule {
-  date: string;
+  installmentNumber: number;
+  dueDate: string;
   amount: number;
-  principal: number;
-  interest: number;
+  principalAmount: number;
+  interestAmount: number;
   status: string;
 }
 
