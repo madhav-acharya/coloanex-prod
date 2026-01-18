@@ -327,7 +327,7 @@ export class UsersService {
         email,
         phone: phoneTrimmed || null,
         password: hashedPassword,
-        tenantId,
+        tenantId: tenantId || null,
         isEmailVerified: false,
         isActive: true,
       },
@@ -350,15 +350,6 @@ export class UsersService {
     await this.permissionAssignmentService.assignPermissionsToUser(user.id, [
       'Borrower',
     ]);
-
-    if (tenantId) {
-      await this.borrowersService.createForSignup(
-        user.id,
-        tenantId,
-        ipAddress,
-        userAgent,
-      );
-    }
 
     if (this.activityLogsService) {
       await this.activityLogsService.create({

@@ -10,7 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { Card, Button, useToast } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
-import { lendersApi, kycApi } from "@/api";
+import { lendersApi, kycApi, loansApi } from "@/api";
 import type { Lender } from "@/types";
 
 export default function LenderDetailsScreen() {
@@ -18,11 +18,14 @@ export default function LenderDetailsScreen() {
   const { showToast } = useToast();
   const [lender, setLender] = useState<Lender | null>(null);
   const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [hasExistingLoan, setHasExistingLoan] = useState(false);
+  const [existingLoanId, setExistingLoanId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       loadLender();
       checkKycStatus();
+      checkExistingLoan();
     }
   }, [id]);
 
@@ -41,6 +44,16 @@ export default function LenderDetailsScreen() {
       setKycStatus(data.status);
     } catch (error) {
       setKycStatus(null);
+    }
+  };
+
+  const checkExistingLoan = async () => {
+    try {
+      const data = await loansApi.checkExisting(id!);
+      setHasExistingLoan(data.hasLoan);
+      setExistingLoanId(data.loanId || null);
+    } catch (error) {
+      setHasExistingLoan(false);
     }
   };
 
@@ -128,37 +141,28 @@ export default function LenderDetailsScreen() {
           </Card>
         )}
 
-        {kycStatus === "VERIFIED" ? (
-          <Button
-            title="Apply for Loan"
-            onPress={() =>
+        <Button
+          title={hasExistingLoan ? "View Loan Application" : "Apply for Loan"}
+          onPress={() => {
+            if (hasExistingLoan && existingLoanId) {
+              router.push(`/loans/loan-details?id=${existingLoanId}`);
+            } else if (kycStatus === "VERIFIED") {
               router.push({
                 pathname: "/loans/apply-loan",
                 params: { lenderId: id },
-              })
+              });
+            } else if (kycStatus === "PENDING") {
+              showToast(
+                "Your KYC verification is currently being reviewed. You'll be notified once it's approved.",
+                "info",
+              );
+            } else {
+              router.push(`/kyc/kyc-verification?tenantId=${lender.id}`);
             }
-            style={styles.applyButton}
-          />
-        ) : (
-          <Button
-            title={
-              kycStatus === "PENDING"
-                ? "KYC Verification Pending"
-                : "Verify KYC to Apply"
-            }
-            onPress={() => {
-              if (kycStatus === "PENDING") {
-                showToast(
-                  "Your KYC verification is currently being reviewed. You'll be notified once it's approved.",
-                  "info"
-                );
-              } else {
-                router.push("/kyc/kyc-verification");
-              }
-            }}
-            style={styles.applyButton}
-          />
-        )}
+          }}
+          disabled={!hasExistingLoan && kycStatus !== "VERIFIED"}
+          style={styles.applyButton}
+        />
       </ScrollView>
     </View>
   );

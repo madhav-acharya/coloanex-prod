@@ -51,7 +51,7 @@ export default function LoansScreen() {
             new Date(loan.nextPaymentDate) < new Date(earliest)
               ? loan.nextPaymentDate
               : earliest,
-          loans[0].nextPaymentDate
+          loans[0].nextPaymentDate,
         )
       : null;
 
@@ -176,7 +176,7 @@ export default function LoansScreen() {
                       Due Date:{" "}
                       {new Date(loan.nextPaymentDate).toLocaleDateString(
                         "en-US",
-                        { month: "short", day: "numeric", year: "numeric" }
+                        { month: "short", day: "numeric", year: "numeric" },
                       )}
                     </Text>
                     <TouchableOpacity
@@ -199,7 +199,7 @@ export default function LoansScreen() {
 
         <Button
           title="Apply for New Loan"
-          onPress={() => router.push("/home/browse-lenders")}
+          onPress={() => router.push("/browse-lenders")}
           variant="outline"
           style={styles.applyButton}
         />

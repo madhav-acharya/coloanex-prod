@@ -1,0 +1,161 @@
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { Card } from "@/components/ui";
+import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+
+export default function SupportScreen() {
+  const supportOptions = [
+    {
+      icon: "mail-outline",
+      title: "Email Support",
+      subtitle: "support@coloanex.com",
+      action: () => Linking.openURL("mailto:support@coloanex.com"),
+    },
+    {
+      icon: "call-outline",
+      title: "Phone Support",
+      subtitle: "+977 1234567890",
+      action: () => Linking.openURL("tel:+9771234567890"),
+    },
+    {
+      icon: "chatbubble-outline",
+      title: "Live Chat",
+      subtitle: "Chat with our support team",
+      action: () => {},
+    },
+    {
+      icon: "document-text-outline",
+      title: "FAQs",
+      subtitle: "Find answers to common questions",
+      action: () => {},
+    },
+  ];
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Help & Support</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <Card style={styles.infoCard}>
+          <Text style={styles.infoTitle}>How can we help you?</Text>
+          <Text style={styles.infoText}>
+            Our support team is available 24/7 to assist you with any questions
+            or concerns.
+          </Text>
+        </Card>
+
+        {supportOptions.map((option, index) => (
+          <TouchableOpacity
+            key={index}
+            onPress={option.action}
+            style={styles.optionCard}
+          >
+            <View style={styles.optionIcon}>
+              <Ionicons
+                name={option.icon as any}
+                size={24}
+                color={colors.primary}
+              />
+            </View>
+            <View style={styles.optionContent}>
+              <Text style={styles.optionTitle}>{option.title}</Text>
+              <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.text,
+  },
+  content: {
+    flex: 1,
+    padding: spacing.md,
+  },
+  infoCard: {
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  infoTitle: {
+    ...typography.h3,
+    marginBottom: spacing.sm,
+  },
+  infoText: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+  optionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.background,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.md,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionTitle: {
+    ...typography.bodyLarge,
+    fontWeight: "600",
+    marginBottom: spacing.xs / 2,
+  },
+  optionSubtitle: {
+    ...typography.body,
+    color: colors.textSecondary,
+  },
+});

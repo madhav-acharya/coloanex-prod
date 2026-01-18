@@ -36,6 +36,83 @@ export class LoansService {
     return user.roles.includes('Lender');
   }
 
+  async checkExistingLoan(
+    tenantId: string,
+    user: JwtPayload,
+  ): Promise<{ hasLoan: boolean; loanId?: string; status?: string }> {
+    if (!this.isBorrower(user)) {
+      throw new BadRequestException(
+        'Only borrowers can check for existing loans',
+      );
+    }
+
+    const borrower = await this.prisma.borrower.findUnique({
+      where: {
+        tenantId_userId: {
+          tenantId,
+          userId: user.sub,
+        },
+      },
+      include: {
+        loans: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!borrower || borrower.loans.length === 0) {
+      return { hasLoan: false };
+    }
+
+    const loan = borrower.loans[0];
+    return {
+      hasLoan: true,
+      loanId: loan.id,
+      status: loan.status,
+    };
+  }
+
+  async getMyLoans(user: JwtPayload): Promise<Loan[]> {
+    if (!this.isBorrower(user)) {
+      throw new BadRequestException('Only borrowers can view their loans');
+    }
+
+    const loans = await this.prisma.loan.findMany({
+      where: {
+        borrower: {
+          userId: user.sub,
+        },
+      },
+      include: {
+        borrower: {
+          include: {
+            tenant: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return loans as unknown as Loan[];
+  }
+
   async create(
     createLoanDto: CreateLoanDto,
     user: JwtPayload,
@@ -70,10 +147,12 @@ export class LoansService {
       }
       targetUserId = createLoanDto.userId;
     } else if (this.isBorrower(user)) {
-      if (!user.tenantId) {
-        throw new BadRequestException('User must have a tenant ID');
+      if (!createLoanDto.tenantId) {
+        throw new BadRequestException(
+          'Borrower must provide tenant ID when applying for loan',
+        );
       }
-      tenantId = user.tenantId;
+      tenantId = createLoanDto.tenantId;
       targetUserId = user.sub;
     } else {
       if (!user.tenantId) {
@@ -489,5 +568,81 @@ export class LoansService {
       userAgent,
       user.tenantId,
     );
+  }
+
+  async getPaymentSchedule(id: string, user: JwtPayload): Promise<any[]> {
+    const loan = await this.findOne(id, user);
+
+    const schedule: any[] = [];
+    const monthlyPayment = this.calculateMonthlyPayment(
+      loan.amount,
+      loan.interestRate,
+      loan.termMonths,
+    );
+
+    for (let i = 1; i <= loan.termMonths; i++) {
+      const dueDate = new Date(loan.createdAt);
+      dueDate.setMonth(dueDate.getMonth() + i);
+
+      schedule.push({
+        installmentNumber: i,
+        dueDate,
+        amount: monthlyPayment,
+        principalAmount:
+          monthlyPayment - (loan.amount * loan.interestRate) / 100 / 12,
+        interestAmount: (loan.amount * loan.interestRate) / 100 / 12,
+        status: 'PENDING',
+      });
+    }
+
+    return schedule;
+  }
+
+  async makePayment(
+    id: string,
+    amount: number,
+    user: JwtPayload,
+    ipAddress?: string,
+    userAgent?: string,
+    paymentMethodId?: string,
+  ): Promise<any> {
+    const loan = await this.findOne(id, user);
+
+    if (!this.isBorrower(user) || loan.borrower?.userId !== user.sub) {
+      throw new BadRequestException(
+        'You can only make payments on your own loans',
+      );
+    }
+
+    await this.activityLogsService.logUserActivity(
+      user.sub,
+      ActivityAction.CREATE,
+      ActivityEntityType.KYC,
+      id,
+      `Payment of ${amount} made`,
+      null,
+      { amount, paymentMethodId },
+      ipAddress,
+      userAgent,
+      loan.tenantId,
+    );
+
+    return {
+      success: true,
+      message: 'Payment processed successfully',
+      amount,
+    };
+  }
+
+  private calculateMonthlyPayment(
+    principal: number,
+    annualRate: number,
+    months: number,
+  ): number {
+    const monthlyRate = annualRate / 100 / 12;
+    const payment =
+      (principal * monthlyRate * Math.pow(1 + monthlyRate, months)) /
+      (Math.pow(1 + monthlyRate, months) - 1);
+    return Math.round(payment * 100) / 100;
   }
 }

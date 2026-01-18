@@ -175,7 +175,9 @@ async function main() {
         perm.name === 'Read Users' ||
         perm.name === 'Create Users' ||
         perm.name === 'Update Users' ||
-        perm.name === 'Read Tenants',
+        perm.name === 'Read Tenants' ||
+        perm.name === 'Read Loans' ||
+        perm.name === 'Create Loans',
     );
     await Promise.all(
       borrowerPermissions.map((permission) =>

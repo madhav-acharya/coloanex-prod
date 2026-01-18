@@ -70,10 +70,12 @@ export class KycService {
       }
       targetUserId = createKycDto.userId;
     } else if (this.isBorrower(user)) {
-      if (!user.tenantId) {
-        throw new BadRequestException('User must have a tenant ID');
+      if (!createKycDto.tenantId) {
+        throw new BadRequestException(
+          'Borrower must provide tenant ID when applying for KYC',
+        );
       }
-      tenantId = user.tenantId;
+      tenantId = createKycDto.tenantId;
       targetUserId = user.sub;
     } else {
       if (!user.tenantId) {
@@ -246,11 +248,35 @@ export class KycService {
     return {
       data: kycs,
       total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      hasNextPage: page < Math.ceil(total / limit),
-      hasPreviousPage: page > 1,
+    };
+  }
+
+  async getStatus(user: JwtPayload) {
+    const borrower = await this.prisma.borrower.findFirst({
+      where: {
+        userId: user.sub,
+      },
+      include: {
+        kycs: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!borrower || borrower.kycs.length === 0) {
+      return {
+        status: null,
+        hasKyc: false,
+      };
+    }
+
+    return {
+      status: borrower.kycs[0].status,
+      hasKyc: true,
+      kycId: borrower.kycs[0].id,
     };
   }
 

@@ -47,6 +47,21 @@ export class LoansController {
     return this.loansService.create(createLoanDto, user, ipAddress, userAgent);
   }
 
+  @Get('my-loans')
+  @RequirePermissions(READ_LOANS)
+  getMyLoans(@CurrentUser() user: JwtPayload) {
+    return this.loansService.getMyLoans(user);
+  }
+
+  @Get('check-existing/:tenantId')
+  @RequirePermissions(READ_LOANS)
+  checkExisting(
+    @Param('tenantId') tenantId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.loansService.checkExistingLoan(tenantId, user);
+  }
+
   @Get()
   @RequirePermissions(READ_LOANS)
   findAll(@Query() query: LoanQueryInterface, @CurrentUser() user: JwtPayload) {
@@ -75,6 +90,32 @@ export class LoansController {
       user,
       ipAddress,
       userAgent,
+    );
+  }
+
+  @Get(':id/payment-schedule')
+  @RequirePermissions(READ_LOANS)
+  getPaymentSchedule(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.loansService.getPaymentSchedule(id, user);
+  }
+
+  @Post(':id/payment')
+  @RequirePermissions(CREATE_LOANS)
+  makePayment(
+    @Param('id') id: string,
+    @Body() paymentDto: { amount: number; paymentMethodId?: string },
+    @CurrentUser() user: JwtPayload,
+    @Req() request: Request,
+  ) {
+    const ipAddress = getClientIpAddress(request);
+    const userAgent = request.get('User-Agent');
+    return this.loansService.makePayment(
+      id,
+      paymentDto.amount,
+      user,
+      ipAddress,
+      userAgent,
+      paymentDto.paymentMethodId,
     );
   }
 
