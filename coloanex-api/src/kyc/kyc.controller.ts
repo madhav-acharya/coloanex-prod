@@ -53,6 +53,12 @@ export class KycController {
     return this.kycService.findAll(query, user);
   }
 
+  @Get('status')
+  @RequirePermissions(READ_KYC_DOCUMENTS)
+  getStatus(@CurrentUser() user: JwtPayload) {
+    return this.kycService.getStatus(user);
+  }
+
   @Get(':id')
   @RequirePermissions(READ_KYC_DOCUMENTS)
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
