@@ -46,8 +46,12 @@ export default function LoanDetailsScreen() {
 
   if (!loan) return null;
 
-  const paidAmount = loan.principalAmount - loan.remainingBalance;
-  const progressPercent = (paidAmount / loan.principalAmount) * 100;
+  const principalAmount = loan.amount || 0;
+  const monthlyPayment = loan.monthlyPayment || 0;
+  const remainingBalance = loan.remainingBalance || loan.amount || 0;
+  const paidAmount = principalAmount - remainingBalance;
+  const progressPercent =
+    principalAmount > 0 ? (paidAmount / principalAmount) * 100 : 0;
 
   return (
     <View style={styles.container}>
@@ -55,26 +59,23 @@ export default function LoanDetailsScreen() {
         <Card style={styles.headerCard}>
           <View style={styles.lenderHeader}>
             <LenderLogo
-              logo={loan.lenderLogo}
-              name={loan.lenderName}
+              name={loan.borrower?.tenant?.name || "Lender"}
               size={56}
               verified
             />
             <View style={styles.lenderInfo}>
-              <Text style={styles.lenderName}>{loan.lenderName}</Text>
-              <Text style={styles.loanType}>
-                {loan.loanType} • {loan.status}
+              <Text style={styles.lenderName}>
+                {loan.borrower?.tenant?.name || "Lender"}
               </Text>
+              <Text style={styles.loanType}>Personal Loan • {loan.status}</Text>
             </View>
           </View>
-          <Text style={styles.loanNumber}>{loan.loanNumber}</Text>
+          <Text style={styles.loanNumber}>Loan #{loan.id.slice(0, 8)}</Text>
         </Card>
 
         <Card style={styles.overviewCard}>
           <Text style={styles.sectionTitle}>Loan Overview</Text>
-          <Text style={styles.amount}>
-            {formatCurrency(loan.principalAmount)}
-          </Text>
+          <Text style={styles.amount}>{formatCurrency(principalAmount)}</Text>
 
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
@@ -83,7 +84,7 @@ export default function LoanDetailsScreen() {
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Loan Term</Text>
-              <Text style={styles.statValue}>{loan.loanTerm} months</Text>
+              <Text style={styles.statValue}>{loan.termMonths} months</Text>
             </View>
           </View>
 
@@ -91,13 +92,13 @@ export default function LoanDetailsScreen() {
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Monthly Payment</Text>
               <Text style={styles.statValue}>
-                {formatCurrency(loan.monthlyPayment)}
+                {formatCurrency(monthlyPayment)}
               </Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>Remaining Balance</Text>
               <Text style={styles.statValue}>
-                {formatCurrency(loan.remainingBalance)}
+                {formatCurrency(remainingBalance)}
               </Text>
             </View>
           </View>
@@ -115,31 +116,34 @@ export default function LoanDetailsScreen() {
               Paid {formatCurrency(paidAmount)}
             </Text>
             <Text style={styles.progressText}>
-              Remaining {formatCurrency(loan.remainingBalance)}
+              Remaining {formatCurrency(remainingBalance)}
             </Text>
           </View>
           <Text style={styles.paymentsCompleted}>
-            {loan.paymentsMade} of {loan.totalPayments} payments completed
+            {loan.paymentsMade || 0} of{" "}
+            {loan.totalPayments || loan.termMonths || 0} payments completed
           </Text>
         </Card>
 
-        <Card style={styles.nextPaymentCard}>
-          <Text style={styles.nextPaymentLabel}>Next Payment Due</Text>
-          <Text style={styles.nextPaymentDate}>
-            {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </Text>
-          <Text style={styles.daysRemaining}>
-            {Math.ceil(
-              (new Date(loan.nextPaymentDate).getTime() - Date.now()) /
-                (1000 * 60 * 60 * 24)
-            )}{" "}
-            days remaining
-          </Text>
-        </Card>
+        {loan.nextPaymentDate && (
+          <Card style={styles.nextPaymentCard}>
+            <Text style={styles.nextPaymentLabel}>Next Payment Due</Text>
+            <Text style={styles.nextPaymentDate}>
+              {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Text>
+            <Text style={styles.daysRemaining}>
+              {Math.ceil(
+                (new Date(loan.nextPaymentDate).getTime() - Date.now()) /
+                  (1000 * 60 * 60 * 24),
+              )}{" "}
+              days remaining
+            </Text>
+          </Card>
+        )}
 
         <View style={styles.scheduleHeader}>
           <Text style={styles.scheduleTitle}>Payment Schedule</Text>
@@ -150,7 +154,7 @@ export default function LoanDetailsScreen() {
             <View style={styles.scheduleRow}>
               <View>
                 <Text style={styles.scheduleDate}>
-                  {new Date(payment.date).toLocaleDateString("en-US", {
+                  {new Date(payment.dueDate).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
@@ -165,7 +169,7 @@ export default function LoanDetailsScreen() {
                 <View
                   style={[
                     styles.statusBadge,
-                    payment.status === "paid"
+                    payment.status === "PAID"
                       ? styles.statusBadgePaid
                       : styles.statusBadgeScheduled,
                   ]}
@@ -173,14 +177,14 @@ export default function LoanDetailsScreen() {
                   <Text
                     style={[
                       styles.statusText,
-                      payment.status === "paid" && styles.statusTextPaid,
+                      payment.status === "PAID" && styles.statusTextPaid,
                     ]}
                   >
-                    {payment.status === "paid"
+                    {payment.status === "PAID"
                       ? "Paid"
-                      : payment.status === "due"
-                      ? "Due Soon"
-                      : "Scheduled"}
+                      : payment.status === "OVERDUE"
+                        ? "Overdue"
+                        : "Scheduled"}
                   </Text>
                 </View>
               </View>
