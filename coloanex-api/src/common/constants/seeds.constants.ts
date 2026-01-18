@@ -30,6 +30,25 @@ export const PERMISSIONS = [
   'Create KYC Documents',
   'Update KYC Documents',
   'Delete KYC Documents',
+  'Approve KYC Documents',
+
+  'Read Loans',
+  'Create Loans',
+  'Update Loans',
+  'Delete Loans',
+
+  'Read Lenders',
+  'Create Lenders',
+  'Update Lenders',
+  'Delete Lenders',
+
+  'Read Payments',
+  'Create Payments',
+  'Update Payments',
+  'Delete Payments',
+
+  'Read Reports',
+  'Generate Reports',
 ] as const;
 
 export type Role = (typeof ROLES)[number];
