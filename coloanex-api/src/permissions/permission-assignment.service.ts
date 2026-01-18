@@ -26,6 +26,8 @@ import {
   UPDATE_KYC_DOCUMENTS,
   DELETE_KYC_DOCUMENTS,
   APPROVE_KYC_DOCUMENTS,
+  READ_LOANS,
+  CREATE_LOANS,
 } from '../common/constants/permissions.constants';
 
 @Injectable()
@@ -110,6 +112,8 @@ export class PermissionAssignmentService {
       READ_USERS,
       CREATE_USERS,
       UPDATE_USERS,
+      READ_LOANS,
+      CREATE_LOANS,
     ];
   }
 
