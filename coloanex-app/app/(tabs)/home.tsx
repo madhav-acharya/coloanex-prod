@@ -13,13 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card } from "@/components/ui";
 import { colors, spacing, typography } from "@/constants/theme";
-import { lendersApi } from "@/api";
+import { lendersApi, notificationsApi } from "@/api";
 import type { Lender } from "@/types";
 
 export default function HomeScreen() {
   const [lenders, setLenders] = useState<Lender[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const loadLenders = async () => {
     try {
@@ -33,13 +34,24 @@ export default function HomeScreen() {
     }
   };
 
+  const loadUnreadCount = async () => {
+    try {
+      const data = await notificationsApi.getUnreadCount();
+      setUnreadCount(data.count);
+    } catch (error) {
+      console.error("Failed to load unread count:", error);
+    }
+  };
+
   useEffect(() => {
     loadLenders();
+    loadUnreadCount();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadLenders();
+    loadUnreadCount();
   };
 
   return (
@@ -50,12 +62,22 @@ export default function HomeScreen() {
             <Text style={styles.welcomeText}>Welcome to</Text>
             <Text style={styles.title}>CoLoanex</Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push("/activity-logs")}
+          >
             <Ionicons
               name="notifications-outline"
               size={24}
               color={colors.text}
             />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>Find the best loan options for you</Text>
@@ -220,6 +242,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
   subtitle: {
     ...typography.body,
