@@ -127,6 +127,14 @@ export default function ActivityLogsScreen() {
       ]);
       setNotifications(notificationsData);
       setUnreadCount(unreadData.count);
+
+      // Auto-mark unread notifications as read after a short delay
+      const unreadNotifications = notificationsData.filter((n) => !n.isRead);
+      if (unreadNotifications.length > 0) {
+        setTimeout(() => {
+          markUnreadAsRead(unreadNotifications);
+        }, 1000); // 1 second delay to ensure user sees them
+      }
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Failed to load notifications",
@@ -156,6 +164,29 @@ export default function ActivityLogsScreen() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Failed to mark as read:", error);
+    }
+  };
+
+  const markUnreadAsRead = async (unreadNotifications: NotificationItem[]) => {
+    try {
+      // Mark all as read in parallel
+      await Promise.all(
+        unreadNotifications.map((notification) =>
+          notificationsApi.markAsRead(notification.id),
+        ),
+      );
+
+      // Update local state
+      setNotifications((prev) =>
+        prev.map((n) =>
+          unreadNotifications.find((un) => un.id === n.id)
+            ? { ...n, isRead: true }
+            : n,
+        ),
+      );
+      setUnreadCount((prev) => Math.max(0, prev - unreadNotifications.length));
+    } catch (error) {
+      console.error("Failed to mark notifications as read:", error);
     }
   };
 
