@@ -427,6 +427,7 @@ model Repayment {
   @@schema("finance")
 }
 
+// transaction model
 model Transaction {
   id          String            @id @default(uuid())
   walletId    String            @map("wallet_id")
