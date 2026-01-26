@@ -391,6 +391,7 @@ model Loan {
   @@schema("finance")
 }
 
+// investment model
 model Investment {
   id         String   @id @default(uuid())
   loanId     String   @map("loan_id")
@@ -408,6 +409,7 @@ model Investment {
   @@schema("finance")
 }
 
+// repayment model
 model Repayment {
   id         String    @id @default(uuid())
   loanId     String    @map("loan_id")
