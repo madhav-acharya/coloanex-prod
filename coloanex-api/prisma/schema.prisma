@@ -341,6 +341,7 @@ model KycFile {
   @@schema("borrower")
 }
 
+// wallet model
 model Wallet {
   id                String   @id @default(uuid())
   userId            String   @map("user_id")
@@ -357,6 +358,7 @@ model Wallet {
   @@schema("finance")
 }
 
+// loan model
 model Loan {
   id                    String     @id @default(uuid())
   borrowerId            String     @map("borrower_id")
