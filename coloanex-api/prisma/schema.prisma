@@ -453,3 +453,15 @@ model Transaction {
   @@map("transactions")
   @@schema("finance")
 }
+
+model Contract {
+  id          String            @id @default(uuid())
+  @@map("contracts")
+  @@schema("finance")
+}
+
+model Rule {
+  id          String            @id @default(uuid())
+  @@map("rules")
+  @@schema("finance")
+}
