@@ -12,6 +12,11 @@ import { BorrowersModule } from './borrowers/borrowers.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { KycModule } from './kyc/kyc.module';
 import { LoansModule } from './loans/loans.module';
+import { RulesModule } from './rules/rules.module';
+import { ContractsModule } from './contracts/contracts.module';
+import { PaymentSchedulesModule } from './payment-schedules/payment-schedules.module';
+import { TransactionsModule } from './transactions/transactions.module';
+import { WalletsModule } from './wallets/wallets.module';
 import { CloudinaryUploadsModule } from './cloudinary-uploads/cloudinary-uploads.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -28,6 +33,11 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     TenantsModule,
     KycModule,
     LoansModule,
+    RulesModule,
+    ContractsModule,
+    PaymentSchedulesModule,
+    TransactionsModule,
+    WalletsModule,
     CloudinaryUploadsModule,
   ],
   controllers: [AppController],
