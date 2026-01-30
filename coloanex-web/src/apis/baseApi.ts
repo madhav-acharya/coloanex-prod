@@ -39,7 +39,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
           body: { refreshToken },
         },
         api,
-        extraOptions
+        extraOptions,
       );
 
       if (refreshResult.data) {
@@ -94,6 +94,11 @@ export const baseApi = createApi({
     "Loans",
     "Borrowers",
     "Notifications",
+    "Rules",
+    "Contracts",
+    "PaymentSchedules",
+    "Transactions",
+    "Wallets",
   ],
   endpoints: () => ({}),
 });
