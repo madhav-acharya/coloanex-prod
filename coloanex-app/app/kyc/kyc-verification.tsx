@@ -361,17 +361,17 @@ export default function KYCVerificationScreen() {
     try {
       const files: any[] = [];
 
+      // Passport photo as SELFIE
       files.push({
-        fileType: "OTHER",
-        documentType: "OTHER",
-        fileUrl: passportPhoto,
+        fileType: "SELFIE",
+        fileUrl: selfie,
       });
 
       selectedDocumentTypes.forEach((docType) => {
         const detail = getDocumentDetail(docType);
 
-        let frontFileType = "OTHER";
-        let backFileType = "OTHER";
+        let frontFileType = "SUPPORTING_DOCUMENT";
+        let backFileType = "SUPPORTING_DOCUMENT";
 
         if (docType === "CITIZENSHIP") {
           frontFileType = "CITIZENSHIP_FRONT";
@@ -387,70 +387,69 @@ export default function KYCVerificationScreen() {
 
         files.push({
           fileType: frontFileType,
-          documentType: docType,
           fileUrl: detail.frontImage,
-          documentNumber: detail.documentNumber,
-          issueDate: detail.issueDate?.toISOString(),
-          expiryDate: detail.expiryDate?.toISOString(),
-          issueDistrict: detail.issueDistrict || undefined,
+          documentMetadata: {
+            documentType: docType,
+            documentNumber: detail.documentNumber,
+            issueDate: detail.issueDate?.toISOString(),
+            expiryDate: detail.expiryDate?.toISOString(),
+            issueDistrict: detail.issueDistrict || undefined,
+          },
         });
 
         if (detail.backImage) {
           files.push({
             fileType: backFileType,
-            documentType: docType,
             fileUrl: detail.backImage,
-            documentNumber: detail.documentNumber,
-            issueDate: detail.issueDate?.toISOString(),
-            expiryDate: detail.expiryDate?.toISOString(),
-            issueDistrict: detail.issueDistrict || undefined,
+            documentMetadata: {
+              documentType: docType,
+              documentNumber: detail.documentNumber,
+              issueDate: detail.issueDate?.toISOString(),
+              expiryDate: detail.expiryDate?.toISOString(),
+              issueDistrict: detail.issueDistrict || undefined,
+            },
           });
         }
       });
 
-      files.push({
-        fileType: "SELFIE",
-        documentType: selectedDocumentTypes[0],
-        fileUrl: selfie,
-        documentNumber: getDocumentDetail(selectedDocumentTypes[0])
-          .documentNumber,
-      });
-
-      const documentDetailsArray = selectedDocumentTypes.map((docType) => {
-        const detail = getDocumentDetail(docType);
-        return {
-          documentType: docType,
-          documentNumber: detail.documentNumber,
-          issueDate: detail.issueDate?.toISOString(),
-          expiryDate: detail.expiryDate?.toISOString(),
-          issueDistrict: detail.issueDistrict || undefined,
-        };
-      });
+      // Build fullName from firstName, middleName, lastName
+      const fullName = [
+        personalInfo.firstName,
+        personalInfo.middleName,
+        personalInfo.lastName,
+      ]
+        .filter(Boolean)
+        .join(" ");
 
       const kycData = {
         tenantId: tenantId || "",
-        firstName: personalInfo.firstName,
-        middleName: personalInfo.middleName || undefined,
-        lastName: personalInfo.lastName,
-        dateOfBirth: personalInfo.dateOfBirth?.toISOString(),
-        gender: personalInfo.gender,
-        maritalStatus: personalInfo.maritalStatus,
-        fatherName: personalInfo.fatherName,
-        motherName: personalInfo.motherName,
-        grandfatherName: personalInfo.grandfatherName,
-        permanentProvince: address.province,
-        permanentDistrict: address.district,
-        permanentMunicipality: address.municipality,
-        permanentWard: address.ward,
-        permanentTole: address.tole,
-        occupation: financialInfo.occupation,
-        monthlyIncome: parseFloat(financialInfo.monthlyIncome),
-        bankName: financialInfo.bankName,
-        bankAccountNumber: financialInfo.bankAccountNumber,
-        bankBranch: financialInfo.bankBranch,
-        documentTypes: selectedDocumentTypes,
-        documentDetails: documentDetailsArray,
-        passportSizePhotoUrl: passportPhoto,
+        fullName: fullName,
+        dateOfBirth: personalInfo.dateOfBirth?.toISOString() || "",
+        photoUrl: passportPhoto,
+        personalDetails: {
+          firstName: personalInfo.firstName || "",
+          middleName: personalInfo.middleName || "",
+          lastName: personalInfo.lastName || "",
+          gender: personalInfo.gender || "",
+          maritalStatus: personalInfo.maritalStatus || "",
+          fatherName: personalInfo.fatherName || "",
+          motherName: personalInfo.motherName || "",
+          grandfatherName: personalInfo.grandfatherName || "",
+        },
+        permanentAddress: {
+          province: address.province || "",
+          district: address.district || "",
+          municipality: address.municipality || "",
+          ward: address.ward || "",
+          tole: address.tole || "",
+        },
+        occupation: financialInfo.occupation || "",
+        monthlyIncome: parseFloat(financialInfo.monthlyIncome) || 0,
+        bankDetails: {
+          bankName: financialInfo.bankName || "",
+          bankAccountNumber: financialInfo.bankAccountNumber || "",
+          bankBranch: financialInfo.bankBranch || "",
+        },
         files,
       };
 

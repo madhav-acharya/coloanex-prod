@@ -1,32 +1,32 @@
 export enum LoanStatus {
   DRAFT = 'DRAFT',
-  PENDING_REVIEW = 'PENDING_REVIEW',
+  SUBMITTED = 'SUBMITTED',
+  UNDER_REVIEW = 'UNDER_REVIEW',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
-  DISBURSED = 'DISBURSED',
-  ACTIVE = 'ACTIVE',
-  CLOSED = 'CLOSED',
-  DEFAULTED = 'DEFAULTED',
+  CONTRACT_GENERATED = 'CONTRACT_GENERATED',
+  CONTRACT_SIGNED = 'CONTRACT_SIGNED',
+}
+
+export interface CollateralDetails {
+  type: string;
+  description: string;
+  value: number;
+  imageUrl?: string;
+  [key: string]: unknown;
 }
 
 export interface Loan {
   id: string;
   borrowerId: string;
   tenantId: string;
-  providedLoanAmount: number;
-  expectedLoanAmount: number;
-  loanPurpose: string;
-  collateralType: string;
-  collateralDescription: string;
-  collateralValue: number;
-  collateralImageUrl: string;
-  txHash?: string;
-  amount: number;
-  interestRate: number;
-  termMonths: number;
+  requestedAmount: number;
+  approvedAmount?: number;
+  purpose: string;
+  collateralDetails: CollateralDetails;
+  requestedTermMonths: number;
   status: LoanStatus;
-  disbursedAt?: Date;
-  dueDate?: Date;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
   borrower?: {
@@ -38,5 +38,10 @@ export interface Loan {
       fullName: string;
       email: string;
     };
+  };
+  tenant?: {
+    id: string;
+    name: string;
+    logo?: string;
   };
 }

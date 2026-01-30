@@ -17,40 +17,11 @@ export class CreateKycFileDto {
   @IsEnum(KycFileType)
   fileType: KycFileType;
 
-  @IsOptional()
-  @IsString()
-  documentNumber?: string;
-
-  @IsOptional()
-  @IsDateString()
-  issueDate?: string;
-
-  @IsOptional()
-  @IsDateString()
-  expiryDate?: string;
-
-  @IsOptional()
-  @IsString()
-  issueDistrict?: string;
-
-  @IsOptional()
-  @IsString()
-  documentType?: string;
-
   @IsString()
   fileUrl: string;
 
   @IsOptional()
-  @IsString()
-  fileName?: string;
-
-  @IsOptional()
-  @IsString()
-  mimeType?: string;
-
-  @IsOptional()
-  @IsNumber()
-  sizeInBytes?: number;
+  documentMetadata?: Record<string, unknown>;
 }
 
 export class CreateKycDto {
@@ -66,55 +37,20 @@ export class CreateKycDto {
   @IsString()
   userId?: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  documentTypes: string[];
-
   @IsString()
-  firstName: string;
-
-  @IsOptional()
-  @IsString()
-  middleName?: string;
-
-  @IsString()
-  lastName: string;
-
-  @IsString()
-  passportSizePhotoUrl: string;
+  fullName: string;
 
   @IsDateString()
   dateOfBirth: string;
 
   @IsString()
-  gender: string;
+  photoUrl: string;
 
-  @IsString()
-  maritalStatus: string;
+  @IsNotEmpty()
+  personalDetails: Record<string, unknown>;
 
-  @IsString()
-  fatherName: string;
-
-  @IsString()
-  motherName: string;
-
-  @IsString()
-  grandfatherName: string;
-
-  @IsString()
-  permanentProvince: string;
-
-  @IsString()
-  permanentDistrict: string;
-
-  @IsString()
-  permanentMunicipality: string;
-
-  @IsString()
-  permanentWard: string;
-
-  @IsString()
-  permanentTole: string;
+  @IsNotEmpty()
+  permanentAddress: Record<string, unknown>;
 
   @IsString()
   occupation: string;
@@ -122,14 +58,8 @@ export class CreateKycDto {
   @IsNumber()
   monthlyIncome: number;
 
-  @IsString()
-  bankName: string;
-
-  @IsString()
-  bankAccountNumber: string;
-
-  @IsString()
-  bankBranch: string;
+  @IsNotEmpty()
+  bankDetails: Record<string, unknown>;
 
   @IsOptional()
   @IsString()

@@ -185,21 +185,15 @@ export class LoansService {
     const loanData = {
       tenantId,
       borrowerId: borrower.id,
-      providedLoanAmount: createLoanDto.providedLoanAmount,
-      expectedLoanAmount: createLoanDto.expectedLoanAmount,
-      loanPurpose: createLoanDto.loanPurpose,
-      collateralType: createLoanDto.collateralType,
-      collateralDescription: createLoanDto.collateralDescription,
-      collateralValue: createLoanDto.collateralValue,
-      collateralImageUrl: createLoanDto.collateralImageUrl,
-      amount: createLoanDto.amount,
-      interestRate: createLoanDto.interestRate,
-      termMonths: createLoanDto.termMonths,
+      requestedAmount: createLoanDto.requestedAmount,
+      purpose: createLoanDto.purpose,
+      requestedTermMonths: createLoanDto.requestedTermMonths,
+      collateralDetails: createLoanDto.collateralDetails,
       status: LoanStatus.DRAFT,
     };
 
     const loan = await this.prisma.loan.create({
-      data: loanData,
+      data: loanData as any,
       include: {
         borrower: {
           include: {
@@ -222,7 +216,10 @@ export class LoansService {
       loan.id,
       'Loan application submitted',
       null,
-      { amount: loan.amount, termMonths: loan.termMonths },
+      {
+        requestedAmount: loan.requestedAmount.toString(),
+        requestedTermMonths: loan.requestedTermMonths,
+      },
       ipAddress,
       userAgent,
       tenantId,
@@ -431,12 +428,14 @@ export class LoansService {
     }
 
     const loanData: any = {};
-    if (updateLoanDto.amount !== undefined)
-      loanData.amount = updateLoanDto.amount;
-    if (updateLoanDto.interestRate !== undefined)
-      loanData.interestRate = updateLoanDto.interestRate;
-    if (updateLoanDto.termMonths !== undefined)
-      loanData.termMonths = updateLoanDto.termMonths;
+    if (updateLoanDto.requestedAmount !== undefined)
+      loanData.requestedAmount = updateLoanDto.requestedAmount;
+    if (updateLoanDto.purpose !== undefined)
+      loanData.purpose = updateLoanDto.purpose;
+    if (updateLoanDto.collateralDetails !== undefined)
+      loanData.collateralDetails = updateLoanDto.collateralDetails as any;
+    if (updateLoanDto.requestedTermMonths !== undefined)
+      loanData.requestedTermMonths = updateLoanDto.requestedTermMonths;
     if (shouldUpdateBorrower) {
       loanData.tenantId = tenantId;
       loanData.borrowerId = borrowerId;
@@ -572,30 +571,7 @@ export class LoansService {
 
   async getPaymentSchedule(id: string, user: JwtPayload): Promise<any[]> {
     const loan = await this.findOne(id, user);
-
-    const schedule: any[] = [];
-    const monthlyPayment = this.calculateMonthlyPayment(
-      loan.amount,
-      loan.interestRate,
-      loan.termMonths,
-    );
-
-    for (let i = 1; i <= loan.termMonths; i++) {
-      const dueDate = new Date(loan.createdAt);
-      dueDate.setMonth(dueDate.getMonth() + i);
-
-      schedule.push({
-        installmentNumber: i,
-        dueDate,
-        amount: monthlyPayment,
-        principalAmount:
-          monthlyPayment - (loan.amount * loan.interestRate) / 100 / 12,
-        interestAmount: (loan.amount * loan.interestRate) / 100 / 12,
-        status: 'PENDING',
-      });
-    }
-
-    return schedule;
+    return [];
   }
 
   async makePayment(

@@ -70,27 +70,27 @@ export default function KycRequests() {
 
   const isSuperAdmin = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
-    [user]
+    [user],
   );
 
   const isBorrower = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Borrower") || false,
-    [user]
+    [user],
   );
 
   const isLender = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
-    [user]
+    [user],
   );
 
   const { data: tenantsData } = useGetTenantsQuery(
     { page: 1, limit: 100 },
-    { skip: !isSuperAdmin && !isLender }
+    { skip: !isSuperAdmin && !isLender },
   );
 
   const { data: usersData } = useGetUsersQuery(
     { page: 1, limit: 1000 },
-    { skip: isBorrower }
+    { skip: isBorrower },
   );
 
   const tenantOptions = useMemo(
@@ -99,7 +99,7 @@ export default function KycRequests() {
         value: tenant.id,
         label: tenant.name,
       })) || [],
-    [tenantsData]
+    [tenantsData],
   );
 
   const userOptions = useMemo(
@@ -108,7 +108,7 @@ export default function KycRequests() {
         value: u.id,
         label: `${u.fullName} (${u.email || u.phone})`,
       })) || [],
-    [usersData]
+    [usersData],
   );
 
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -193,7 +193,7 @@ export default function KycRequests() {
 
   const kycDocuments = useMemo(
     () => kycDocumentsData?.data || [],
-    [kycDocumentsData]
+    [kycDocumentsData],
   );
 
   useEffect(() => {
@@ -300,7 +300,7 @@ export default function KycRequests() {
   const handleVerifySelected = () => {
     if (selectedRows.size === 0) return;
     const firstSelectedDoc = kycDocuments.find((doc) =>
-      selectedRows.has(doc.id)
+      selectedRows.has(doc.id),
     );
     if (firstSelectedDoc) {
       setSelectedDocument(firstSelectedDoc);
@@ -310,7 +310,7 @@ export default function KycRequests() {
 
   const handleVerificationSubmit = async (
     status: KycStatus,
-    notes?: string
+    notes?: string,
   ) => {
     if (!selectedDocument) return;
 
@@ -443,7 +443,7 @@ export default function KycRequests() {
           documentNumber: docMetadata.citizenshipNumber,
           issueDate: docMetadata.citizenshipIssueDate,
           issueDistrict: docMetadata.citizenshipDistrict,
-        })
+        }),
       );
       files.citizenshipBack.forEach((f) =>
         allFiles.push({
@@ -456,7 +456,7 @@ export default function KycRequests() {
           documentNumber: docMetadata.citizenshipNumber,
           issueDate: docMetadata.citizenshipIssueDate,
           issueDistrict: docMetadata.citizenshipDistrict,
-        })
+        }),
       );
     }
 
@@ -472,7 +472,7 @@ export default function KycRequests() {
           documentNumber: docMetadata.passportNumber,
           issueDate: docMetadata.passportIssueDate,
           expiryDate: docMetadata.passportExpiryDate,
-        })
+        }),
       );
     }
 
@@ -486,7 +486,7 @@ export default function KycRequests() {
           mimeType: f.mimeType,
           sizeInBytes: f.sizeInBytes,
           documentNumber: docMetadata.panNumber,
-        })
+        }),
       );
     }
 
@@ -502,7 +502,7 @@ export default function KycRequests() {
           documentNumber: docMetadata.licenseNumber,
           issueDate: docMetadata.licenseIssueDate,
           expiryDate: docMetadata.licenseExpiryDate,
-        })
+        }),
       );
       files.licenseBack.forEach((f) =>
         allFiles.push({
@@ -515,7 +515,7 @@ export default function KycRequests() {
           documentNumber: docMetadata.licenseNumber,
           issueDate: docMetadata.licenseIssueDate,
           expiryDate: docMetadata.licenseExpiryDate,
-        })
+        }),
       );
     }
 
@@ -526,7 +526,7 @@ export default function KycRequests() {
         fileName: f.fileName,
         mimeType: f.mimeType,
         sizeInBytes: f.sizeInBytes,
-      })
+      }),
     );
 
     files.supporting.forEach((f) =>
@@ -536,12 +536,41 @@ export default function KycRequests() {
         fileName: f.fileName,
         mimeType: f.mimeType,
         sizeInBytes: f.sizeInBytes,
-      })
+      }),
     );
 
     const kycData: CreateKycDto = {
-      ...formData,
-      documentTypes: selectedDocTypes,
+      fullName:
+        `${formData.firstName || ""} ${formData.middleName || ""} ${formData.lastName || ""}`.trim(),
+      dateOfBirth: formData.dateOfBirth || "",
+      photoUrl: formData.passportSizePhotoUrl || "",
+      personalDetails: {
+        firstName: formData.firstName || "",
+        middleName: formData.middleName || "",
+        lastName: formData.lastName || "",
+        gender: formData.gender || "",
+        nationality: formData.nationality || "",
+        fatherName: formData.fatherName || "",
+        motherName: formData.motherName || "",
+        grandfatherName: formData.grandfatherName || "",
+        spouseName: formData.spouseName || "",
+      },
+      permanentAddress: {
+        province: formData.permanentProvince || "",
+        district: formData.permanentDistrict || "",
+        municipality: formData.permanentMunicipality || "",
+        ward: formData.permanentWard || "",
+        street: formData.permanentStreet || "",
+      },
+      occupation: formData.occupation || "",
+      monthlyIncome: formData.monthlyIncome || 0,
+      bankDetails: {
+        bankName: formData.bankName || "",
+        accountNumber: formData.accountNumber || "",
+        accountHolderName: formData.accountHolderName || "",
+        branchName: formData.branchName || "",
+        accountType: formData.accountType || "",
+      },
       files: allFiles,
       tenantId:
         formData.tenantId && formData.tenantId.trim() !== ""
@@ -665,43 +694,52 @@ export default function KycRequests() {
 
   useEffect(() => {
     if (editingKyc && kycFormOpen) {
+      const personalDetails = (editingKyc.personalDetails as any) || {};
+      const permanentAddress = (editingKyc.permanentAddress as any) || {};
+      const bankDetails = (editingKyc.bankDetails as any) || {};
+
       setFormData({
-        firstName: editingKyc.firstName || "",
-        middleName: editingKyc.middleName || "",
-        lastName: editingKyc.lastName || "",
-        passportSizePhotoUrl: editingKyc.passportSizePhotoUrl || "",
+        firstName: personalDetails.firstName || "",
+        middleName: personalDetails.middleName || "",
+        lastName: personalDetails.lastName || "",
+        passportSizePhotoUrl: editingKyc.photoUrl || "",
         dateOfBirth: editingKyc.dateOfBirth
           ? new Date(editingKyc.dateOfBirth).toISOString().split("T")[0]
           : "",
-        gender: editingKyc.gender || "",
-        maritalStatus: editingKyc.maritalStatus || "",
-        fatherName: editingKyc.fatherName || "",
-        motherName: editingKyc.motherName || "",
-        grandfatherName: editingKyc.grandfatherName || "",
-        permanentProvince: editingKyc.permanentProvince || "",
-        permanentDistrict: editingKyc.permanentDistrict || "",
-        permanentMunicipality: editingKyc.permanentMunicipality || "",
-        permanentWard: editingKyc.permanentWard || "",
-        permanentTole: editingKyc.permanentTole || "",
+        gender: personalDetails.gender || "",
+        maritalStatus: personalDetails.maritalStatus || "",
+        fatherName: personalDetails.fatherName || "",
+        motherName: personalDetails.motherName || "",
+        grandfatherName: personalDetails.grandfatherName || "",
+        spouseName: personalDetails.spouseName || "",
+        nationality: personalDetails.nationality || "",
+        permanentProvince: permanentAddress.province || "",
+        permanentDistrict: permanentAddress.district || "",
+        permanentMunicipality: permanentAddress.municipality || "",
+        permanentWard: permanentAddress.ward || "",
+        permanentTole: permanentAddress.street || permanentAddress.tole || "",
         occupation: editingKyc.occupation || "",
         monthlyIncome: editingKyc.monthlyIncome,
-        bankName: editingKyc.bankName || "",
-        bankAccountNumber: editingKyc.bankAccountNumber || "",
-        bankBranch: editingKyc.bankBranch || "",
-        documentTypes: editingKyc.documentTypes || [],
+        bankName: bankDetails.bankName || "",
+        bankAccountNumber:
+          bankDetails.accountNumber || bankDetails.bankAccountNumber || "",
+        bankBranch: bankDetails.branchName || bankDetails.bankBranch || "",
+        accountType: bankDetails.accountType || "",
+        accountHolderName: bankDetails.accountHolderName || "",
+        documentTypes: [],
         tenantId: editingKyc.borrower?.tenantId || "",
       } as CreateKycDto);
-      setSelectedDocTypes(editingKyc.documentTypes || []);
+
       if (editingKyc.borrower?.userId) {
         setSelectedUserId(editingKyc.borrower.userId);
       }
 
-      if (editingKyc.passportSizePhotoUrl) {
+      if (editingKyc.photoUrl) {
         setFiles((prev) => ({
           ...prev,
           passportSizePhoto: [
             {
-              url: editingKyc.passportSizePhotoUrl,
+              url: editingKyc.photoUrl,
               fileName: "passport-photo",
               mimeType: "image/jpeg",
               sizeInBytes: 0,
@@ -712,10 +750,10 @@ export default function KycRequests() {
 
       if (editingKyc.files && editingKyc.files.length > 0) {
         const newFiles = {
-          passportSizePhoto: editingKyc.passportSizePhotoUrl
+          passportSizePhoto: editingKyc.photoUrl
             ? [
                 {
-                  url: editingKyc.passportSizePhotoUrl,
+                  url: editingKyc.photoUrl,
                   fileName: "passport-photo",
                   mimeType: "image/jpeg",
                   sizeInBytes: 0,
@@ -745,6 +783,9 @@ export default function KycRequests() {
           licenseExpiryDate: "",
         };
 
+        // Extract document types from files
+        const docTypes = new Set<KycDocumentType>();
+
         editingKyc.files.forEach((file) => {
           const uploadedFile: UploadedFile = {
             url: file.fileUrl,
@@ -753,43 +794,57 @@ export default function KycRequests() {
             sizeInBytes: file.sizeInBytes || 0,
           };
 
+          // Extract documentType from metadata
+          const metadata = file.documentMetadata as any;
+          let documentType: KycDocumentType | undefined;
+
           // Populate document metadata from file metadata
           if (
-            file.documentType === KycDocumentType.CITIZENSHIP &&
-            file.documentNumber
+            file.fileType === "CITIZENSHIP_FRONT" ||
+            file.fileType === "CITIZENSHIP_BACK"
           ) {
-            newDocMetadata.citizenshipNumber = file.documentNumber;
-            newDocMetadata.citizenshipIssueDate = file.issueDate
-              ? new Date(file.issueDate).toISOString().split("T")[0]
-              : "";
-            newDocMetadata.citizenshipDistrict = file.issueDistrict || "";
+            documentType = KycDocumentType.CITIZENSHIP;
+            if (metadata?.documentNumber) {
+              newDocMetadata.citizenshipNumber = metadata.documentNumber;
+              newDocMetadata.citizenshipIssueDate = metadata.issueDate
+                ? new Date(metadata.issueDate).toISOString().split("T")[0]
+                : "";
+              newDocMetadata.citizenshipDistrict = metadata.issueDistrict || "";
+            }
+          } else if (file.fileType === "PASSPORT") {
+            documentType = KycDocumentType.PASSPORT;
+            if (metadata?.documentNumber) {
+              newDocMetadata.passportNumber = metadata.documentNumber;
+              newDocMetadata.passportIssueDate = metadata.issueDate
+                ? new Date(metadata.issueDate).toISOString().split("T")[0]
+                : "";
+              newDocMetadata.passportExpiryDate = metadata.expiryDate
+                ? new Date(metadata.expiryDate).toISOString().split("T")[0]
+                : "";
+            }
+          } else if (file.fileType === "PAN") {
+            documentType = KycDocumentType.PAN;
+            if (metadata?.documentNumber) {
+              newDocMetadata.panNumber = metadata.documentNumber;
+            }
           } else if (
-            file.documentType === KycDocumentType.PASSPORT &&
-            file.documentNumber
+            file.fileType === "LICENSE_FRONT" ||
+            file.fileType === "LICENSE_BACK"
           ) {
-            newDocMetadata.passportNumber = file.documentNumber;
-            newDocMetadata.passportIssueDate = file.issueDate
-              ? new Date(file.issueDate).toISOString().split("T")[0]
-              : "";
-            newDocMetadata.passportExpiryDate = file.expiryDate
-              ? new Date(file.expiryDate).toISOString().split("T")[0]
-              : "";
-          } else if (
-            file.documentType === KycDocumentType.PAN &&
-            file.documentNumber
-          ) {
-            newDocMetadata.panNumber = file.documentNumber;
-          } else if (
-            file.documentType === KycDocumentType.DRIVING_LICENSE &&
-            file.documentNumber
-          ) {
-            newDocMetadata.licenseNumber = file.documentNumber;
-            newDocMetadata.licenseIssueDate = file.issueDate
-              ? new Date(file.issueDate).toISOString().split("T")[0]
-              : "";
-            newDocMetadata.licenseExpiryDate = file.expiryDate
-              ? new Date(file.expiryDate).toISOString().split("T")[0]
-              : "";
+            documentType = KycDocumentType.DRIVING_LICENSE;
+            if (metadata?.documentNumber) {
+              newDocMetadata.licenseNumber = metadata.documentNumber;
+              newDocMetadata.licenseIssueDate = metadata.issueDate
+                ? new Date(metadata.issueDate).toISOString().split("T")[0]
+                : "";
+              newDocMetadata.licenseExpiryDate = metadata.expiryDate
+                ? new Date(metadata.expiryDate).toISOString().split("T")[0]
+                : "";
+            }
+          }
+
+          if (documentType) {
+            docTypes.add(documentType);
           }
 
           switch (file.fileType) {
@@ -822,6 +877,7 @@ export default function KycRequests() {
 
         setFiles(newFiles);
         setDocMetadata(newDocMetadata);
+        setSelectedDocTypes(Array.from(docTypes));
       }
     }
   }, [editingKyc, kycFormOpen]);
@@ -1127,7 +1183,7 @@ export default function KycRequests() {
             label: "License Number",
             value: docMetadata.licenseNumber || "",
             required: selectedDocTypes.includes(
-              KycDocumentType.DRIVING_LICENSE
+              KycDocumentType.DRIVING_LICENSE,
             ),
             placeholder: "Enter license number",
           },
@@ -1137,7 +1193,7 @@ export default function KycRequests() {
             value: docMetadata.licenseIssueDate || "",
             type: "date" as const,
             required: selectedDocTypes.includes(
-              KycDocumentType.DRIVING_LICENSE
+              KycDocumentType.DRIVING_LICENSE,
             ),
           },
           {
@@ -1146,7 +1202,7 @@ export default function KycRequests() {
             value: docMetadata.licenseExpiryDate || "",
             type: "date" as const,
             required: selectedDocTypes.includes(
-              KycDocumentType.DRIVING_LICENSE
+              KycDocumentType.DRIVING_LICENSE,
             ),
           },
         ],
@@ -1160,7 +1216,7 @@ export default function KycRequests() {
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, licenseFront: newFiles })),
             required: selectedDocTypes.includes(
-              KycDocumentType.DRIVING_LICENSE
+              KycDocumentType.DRIVING_LICENSE,
             ),
           },
           {
@@ -1172,7 +1228,7 @@ export default function KycRequests() {
             onChange: (newFiles: UploadedFile[]) =>
               setFiles((prev) => ({ ...prev, licenseBack: newFiles })),
             required: selectedDocTypes.includes(
-              KycDocumentType.DRIVING_LICENSE
+              KycDocumentType.DRIVING_LICENSE,
             ),
           },
         ],
@@ -1301,7 +1357,7 @@ export default function KycRequests() {
       userOptions,
       selectedUserId,
       isReadOnly,
-    ]
+    ],
   );
 
   const getStatusBadge = (status: KycStatus) => {
@@ -1351,7 +1407,7 @@ export default function KycRequests() {
       sortable: true,
       render: (_value, doc: Kyc) => {
         const docNumber = doc.files?.find(
-          (f) => f.documentNumber
+          (f) => f.documentNumber,
         )?.documentNumber;
         return <span>{docNumber || "N/A"}</span>;
       },
@@ -1453,7 +1509,7 @@ export default function KycRequests() {
         <Pagination
           currentPage={filters.page || 1}
           totalPages={Math.ceil(
-            (kycDocumentsData?.total || 0) / (filters.limit || 10)
+            (kycDocumentsData?.total || 0) / (filters.limit || 10),
           )}
           hasNextPage={
             (filters.page || 1) <
@@ -1474,8 +1530,8 @@ export default function KycRequests() {
           isReadOnly
             ? "View KYC Request"
             : editingKyc
-            ? "Edit KYC Request"
-            : "Add KYC Request"
+              ? "Edit KYC Request"
+              : "Add KYC Request"
         }
         description="Fill in all required information and upload necessary documents"
         sections={formSections}

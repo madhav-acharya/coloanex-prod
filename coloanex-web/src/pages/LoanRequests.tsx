@@ -53,27 +53,27 @@ export default function LoanRequests() {
 
   const isSuperAdmin = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
-    [user]
+    [user],
   );
 
   const isBorrower = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Borrower") || false,
-    [user]
+    [user],
   );
 
   const isLender = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
-    [user]
+    [user],
   );
 
   const { data: tenantsData } = useGetTenantsQuery(
     { page: 1, limit: 100 },
-    { skip: !isSuperAdmin && !isLender }
+    { skip: !isSuperAdmin && !isLender },
   );
 
   const { data: usersData } = useGetUsersQuery(
     { page: 1, limit: 1000 },
-    { skip: isBorrower }
+    { skip: isBorrower },
   );
 
   const tenantOptions = useMemo(
@@ -82,7 +82,7 @@ export default function LoanRequests() {
         value: tenant.id,
         label: tenant.name,
       })) || [],
-    [tenantsData]
+    [tenantsData],
   );
 
   const userOptions = useMemo(
@@ -91,20 +91,17 @@ export default function LoanRequests() {
         value: u.id,
         label: `${u.fullName} (${u.email || u.phone})`,
       })) || [],
-    [usersData]
+    [usersData],
   );
 
   const [formData, setFormData] = useState<Partial<CreateLoanDto>>({
-    providedLoanAmount: 0,
-    expectedLoanAmount: 0,
-    loanPurpose: "",
+    requestedAmount: 0,
+    purpose: "",
     collateralType: "",
     collateralDescription: "",
     collateralValue: 0,
     collateralImageUrl: "",
-    amount: 0,
-    interestRate: 0,
-    termMonths: 0,
+    requestedTermMonths: 0,
     tenantId: "",
     userId: "",
   });
@@ -128,7 +125,7 @@ export default function LoanRequests() {
 
   const loans = useMemo(
     () => (loansData?.data || []).filter((loan) => loan != null),
-    [loansData]
+    [loansData],
   );
 
   useEffect(() => {
@@ -188,25 +185,24 @@ export default function LoanRequests() {
   const handleViewLoan = (loan: Loan) => {
     setEditingLoan(loan);
     setIsReadOnly(true);
+    const collateral = (loan.collateralDetails as any) || {};
     setFormData({
-      providedLoanAmount: loan.providedLoanAmount,
-      expectedLoanAmount: loan.expectedLoanAmount,
-      loanPurpose: loan.loanPurpose,
-      collateralType: loan.collateralType,
-      collateralDescription: loan.collateralDescription,
-      collateralValue: loan.collateralValue,
-      collateralImageUrl: loan.collateralImageUrl,
-      amount: loan.amount,
-      interestRate: loan.interestRate,
-      termMonths: loan.termMonths,
+      requestedAmount: loan.requestedAmount,
+      purpose: loan.purpose,
+      collateralType: collateral.type || "",
+      collateralDescription: collateral.description || "",
+      collateralValue: collateral.value || 0,
+      collateralImageUrl: collateral.imageUrl || "",
+      requestedTermMonths: loan.requestedTermMonths,
       tenantId: loan.tenantId,
       userId: loan.borrower?.userId,
     });
     // Set collateral images from existing loan
-    if (loan.collateralImageUrl) {
+    const collateralImageUrl = collateral.imageUrl || loan.collateralImageUrl;
+    if (collateralImageUrl) {
       setCollateralImages([
         {
-          url: loan.collateralImageUrl,
+          url: collateralImageUrl,
           publicId: "",
           fileName: "Collateral Image",
           mimeType: "image/jpeg",
@@ -222,25 +218,24 @@ export default function LoanRequests() {
   const handleEditLoan = (loan: Loan) => {
     setEditingLoan(loan);
     setIsReadOnly(false);
+    const collateral = (loan.collateralDetails as any) || {};
     setFormData({
-      providedLoanAmount: loan.providedLoanAmount,
-      expectedLoanAmount: loan.expectedLoanAmount,
-      loanPurpose: loan.loanPurpose,
-      collateralType: loan.collateralType,
-      collateralDescription: loan.collateralDescription,
-      collateralValue: loan.collateralValue,
-      collateralImageUrl: loan.collateralImageUrl,
-      amount: loan.amount,
-      interestRate: loan.interestRate,
-      termMonths: loan.termMonths,
+      requestedAmount: loan.requestedAmount,
+      purpose: loan.purpose,
+      collateralType: collateral.type || "",
+      collateralDescription: collateral.description || "",
+      collateralValue: collateral.value || 0,
+      collateralImageUrl: collateral.imageUrl || "",
+      requestedTermMonths: loan.requestedTermMonths,
       tenantId: loan.tenantId,
       userId: loan.borrower?.userId,
     });
     // Set collateral images from existing loan
-    if (loan.collateralImageUrl) {
+    const collateralImageUrl = collateral.imageUrl || loan.collateralImageUrl;
+    if (collateralImageUrl) {
       setCollateralImages([
         {
-          url: loan.collateralImageUrl,
+          url: collateralImageUrl,
           publicId: "",
           fileName: "Collateral Image",
           mimeType: "image/jpeg",
@@ -297,7 +292,7 @@ export default function LoanRequests() {
 
   const handleReviewSubmit = async (
     status: LoanStatus,
-    rejectionReason?: string
+    rejectionReason?: string,
   ) => {
     if (!selectedLoan) return;
 
@@ -415,25 +410,16 @@ export default function LoanRequests() {
       return;
     }
 
-    if (!formData.amount || formData.amount <= 0) {
+    if (!formData.requestedAmount || formData.requestedAmount <= 0) {
       toast({
         title: "Validation Error",
-        description: "Final loan amount must be greater than 0",
+        description: "Loan amount must be greater than 0",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.interestRate || formData.interestRate < 0) {
-      toast({
-        title: "Validation Error",
-        description: "Interest rate must be 0 or greater",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.termMonths || formData.termMonths <= 0) {
+    if (!formData.requestedTermMonths || formData.requestedTermMonths <= 0) {
       toast({
         title: "Validation Error",
         description: "Term months must be greater than 0",
@@ -443,16 +429,15 @@ export default function LoanRequests() {
     }
 
     const loanData: CreateLoanDto = {
-      providedLoanAmount: formData.providedLoanAmount,
-      expectedLoanAmount: formData.expectedLoanAmount,
-      loanPurpose: formData.loanPurpose,
-      collateralType: formData.collateralType,
-      collateralDescription: formData.collateralDescription,
-      collateralValue: formData.collateralValue,
-      collateralImageUrl: formData.collateralImageUrl,
-      amount: formData.amount,
-      interestRate: formData.interestRate,
-      termMonths: formData.termMonths,
+      requestedAmount: formData.requestedAmount || 0,
+      purpose: formData.purpose || "",
+      collateralDetails: {
+        type: formData.collateralType || "",
+        description: formData.collateralDescription || "",
+        value: formData.collateralValue || 0,
+        imageUrl: formData.collateralImageUrl || "",
+      },
+      requestedTermMonths: formData.requestedTermMonths || 0,
       tenantId:
         formData.tenantId && formData.tenantId.trim() !== ""
           ? formData.tenantId
@@ -493,16 +478,13 @@ export default function LoanRequests() {
 
   const resetLoanForm = () => {
     setFormData({
-      providedLoanAmount: 0,
-      expectedLoanAmount: 0,
-      loanPurpose: "",
+      requestedAmount: 0,
+      purpose: "",
       collateralType: "",
       collateralDescription: "",
       collateralValue: 0,
       collateralImageUrl: "",
-      amount: 0,
-      interestRate: 0,
-      termMonths: 0,
+      requestedTermMonths: 0,
       tenantId: "",
       userId: "",
     });
@@ -513,11 +495,8 @@ export default function LoanRequests() {
 
   const handleFieldChange = (fieldId: string, value: string) => {
     if (
-      fieldId === "providedLoanAmount" ||
-      fieldId === "expectedLoanAmount" ||
-      fieldId === "amount" ||
-      fieldId === "interestRate" ||
-      fieldId === "termMonths" ||
+      fieldId === "requestedAmount" ||
+      fieldId === "requestedTermMonths" ||
       fieldId === "collateralValue"
     ) {
       setFormData((prev) => ({ ...prev, [fieldId]: Number(value) }));
@@ -528,25 +507,24 @@ export default function LoanRequests() {
 
   useEffect(() => {
     if (editingLoan && loanFormOpen) {
+      const collateral = (editingLoan.collateralDetails as any) || {};
       setFormData({
-        providedLoanAmount: editingLoan.providedLoanAmount,
-        expectedLoanAmount: editingLoan.expectedLoanAmount,
-        loanPurpose: editingLoan.loanPurpose,
-        collateralType: editingLoan.collateralType,
-        collateralDescription: editingLoan.collateralDescription,
-        collateralValue: editingLoan.collateralValue,
-        collateralImageUrl: editingLoan.collateralImageUrl,
-        amount: editingLoan.amount,
-        interestRate: editingLoan.interestRate,
-        termMonths: editingLoan.termMonths,
+        requestedAmount: editingLoan.requestedAmount,
+        purpose: editingLoan.purpose,
+        collateralType: collateral.type || "",
+        collateralDescription: collateral.description || "",
+        collateralValue: collateral.value || 0,
+        collateralImageUrl: collateral.imageUrl || "",
+        requestedTermMonths: editingLoan.requestedTermMonths,
         tenantId: editingLoan.tenantId || "",
         userId: editingLoan.borrower?.userId || "",
       });
       // Set collateral images from existing loan
-      if (editingLoan.collateralImageUrl) {
+      const collateralImageUrl = collateral.imageUrl;
+      if (collateralImageUrl) {
         setCollateralImages([
           {
-            url: editingLoan.collateralImageUrl,
+            url: collateralImageUrl,
             publicId: "",
             fileName: "Collateral Image",
             mimeType: "image/jpeg",
@@ -568,16 +546,24 @@ export default function LoanRequests() {
       }
     > = {
       [LoanStatus.DRAFT]: { variant: "outline", label: "Draft" },
-      [LoanStatus.PENDING_REVIEW]: {
+      [LoanStatus.SUBMITTED]: {
         variant: "secondary",
-        label: "Pending Review",
+        label: "Submitted",
+      },
+      [LoanStatus.UNDER_REVIEW]: {
+        variant: "secondary",
+        label: "Under Review",
       },
       [LoanStatus.APPROVED]: { variant: "default", label: "Approved" },
       [LoanStatus.REJECTED]: { variant: "destructive", label: "Rejected" },
-      [LoanStatus.DISBURSED]: { variant: "default", label: "Disbursed" },
-      [LoanStatus.ACTIVE]: { variant: "default", label: "Active" },
-      [LoanStatus.CLOSED]: { variant: "outline", label: "Closed" },
-      [LoanStatus.DEFAULTED]: { variant: "destructive", label: "Defaulted" },
+      [LoanStatus.CONTRACT_GENERATED]: {
+        variant: "default",
+        label: "Contract Generated",
+      },
+      [LoanStatus.CONTRACT_SIGNED]: {
+        variant: "default",
+        label: "Contract Signed",
+      },
     };
 
     const config = statusConfig[status];
@@ -592,50 +578,56 @@ export default function LoanRequests() {
       render: (_value, loan) => loan?.borrower?.user?.fullName || "N/A",
     },
     {
-      key: "loanPurpose",
+      key: "purpose",
       label: "Purpose",
       sortable: false,
       render: (_value, loan) =>
-        loan?.loanPurpose
-          ? loan.loanPurpose.substring(0, 30) +
-            (loan.loanPurpose.length > 30 ? "..." : "")
+        loan?.purpose
+          ? loan.purpose.substring(0, 30) +
+            (loan.purpose.length > 30 ? "..." : "")
           : "N/A",
     },
     {
-      key: "providedLoanAmount",
-      label: "Provided Amount",
+      key: "requestedAmount",
+      label: "Requested Amount",
       sortable: true,
       render: (_value, loan) =>
-        loan?.providedLoanAmount
-          ? `NPR ${loan.providedLoanAmount.toLocaleString()}`
+        loan?.requestedAmount
+          ? `NPR ${loan.requestedAmount.toLocaleString()}`
           : "N/A",
     },
     {
-      key: "amount",
-      label: "Final Amount",
+      key: "approvedAmount",
+      label: "Approved Amount",
       sortable: true,
       render: (_value, loan) =>
-        loan?.amount ? `NPR ${loan.amount.toLocaleString()}` : "N/A",
+        loan?.approvedAmount
+          ? `NPR ${loan.approvedAmount.toLocaleString()}`
+          : "Pending",
     },
     {
-      key: "collateralType",
-      label: "Collateral",
+      key: "collateralDetails.type",
+      label: "Collateral Type",
       sortable: false,
-      render: (_value, loan) => loan?.collateralType || "N/A",
+      render: (_value, loan) => (loan?.collateralDetails as any)?.type || "N/A",
     },
     {
-      key: "interestRate",
-      label: "Interest Rate",
-      sortable: true,
-      render: (_value, loan) =>
-        loan?.interestRate !== undefined ? `${loan.interestRate}%` : "N/A",
+      key: "collateralDetails.value",
+      label: "Collateral Value",
+      sortable: false,
+      render: (_value, loan) => {
+        const value = (loan?.collateralDetails as any)?.value;
+        return value ? `NPR ${Number(value).toLocaleString()}` : "N/A";
+      },
     },
     {
-      key: "termMonths",
+      key: "requestedTermMonths",
       label: "Term",
       sortable: true,
       render: (_value, loan) =>
-        loan?.termMonths ? `${loan.termMonths} months` : "N/A",
+        loan?.requestedTermMonths
+          ? `${loan.requestedTermMonths} months`
+          : "N/A",
     },
     {
       key: "status",
@@ -779,41 +771,36 @@ export default function LoanRequests() {
         title: "Loan Amount Details",
         fields: [
           {
-            id: "providedLoanAmount",
-            label: "Provided Loan Amount (NPR)",
-            value: String(formData.providedLoanAmount || ""),
+            id: "requestedAmount",
+            label: "Requested Loan Amount (NPR)",
+            value: String(formData.requestedAmount || ""),
             type: "number" as const,
             required: true,
-            placeholder: "Enter provided loan amount",
+            placeholder: "Enter requested loan amount",
             min: 1,
           },
-          {
-            id: "expectedLoanAmount",
-            label: "Expected Loan Amount (NPR)",
-            value: String(formData.expectedLoanAmount || ""),
-            type: "number" as const,
-            required: true,
-            placeholder: "Enter expected loan amount",
-            min: 1,
-          },
-          {
-            id: "amount",
-            label: "Final Loan Amount (NPR)",
-            value: String(formData.amount || ""),
-            type: "number" as const,
-            required: true,
-            placeholder: "Enter final loan amount",
-            min: 1,
-          },
+          ...(isReadOnly && editingLoan?.approvedAmount
+            ? [
+                {
+                  id: "approvedAmount",
+                  label: "Approved Loan Amount (NPR)",
+                  value: String(editingLoan.approvedAmount || ""),
+                  type: "number" as const,
+                  required: false,
+                  placeholder: "Approved amount",
+                  min: 0,
+                },
+              ]
+            : []),
         ],
       },
       {
         title: "Loan Purpose",
         fields: [
           {
-            id: "loanPurpose",
+            id: "purpose",
             label: "Purpose of Loan",
-            value: formData.loanPurpose || "",
+            value: formData.purpose || "",
             type: "textarea" as const,
             required: true,
             placeholder: "Describe the purpose of this loan",
@@ -866,20 +853,9 @@ export default function LoanRequests() {
         title: "Loan Terms",
         fields: [
           {
-            id: "interestRate",
-            label: "Interest Rate (%)",
-            value: String(formData.interestRate || ""),
-            type: "number" as const,
-            required: true,
-            placeholder: "Enter interest rate",
-            min: 0,
-            max: 100,
-            step: 0.01,
-          },
-          {
-            id: "termMonths",
+            id: "requestedTermMonths",
             label: "Term (Months)",
-            value: String(formData.termMonths || ""),
+            value: String(formData.requestedTermMonths || ""),
             type: "number" as const,
             required: true,
             placeholder: "Enter term in months",
@@ -887,6 +863,62 @@ export default function LoanRequests() {
           },
         ],
       },
+      ...(isReadOnly &&
+      editingLoan?.status === LoanStatus.REJECTED &&
+      editingLoan?.rejectionReason
+        ? [
+            {
+              title: "Rejection Information",
+              fields: [
+                {
+                  id: "rejectionReason",
+                  label: "Rejection Reason",
+                  value: editingLoan.rejectionReason || "",
+                  type: "textarea" as const,
+                  required: false,
+                  placeholder: "Reason for rejection",
+                },
+              ],
+            },
+          ]
+        : []),
+      ...(isReadOnly && editingLoan
+        ? [
+            {
+              title: "Loan Information",
+              fields: [
+                {
+                  id: "loanId",
+                  label: "Loan ID",
+                  value: editingLoan.id || "",
+                  type: "text" as const,
+                  required: false,
+                  placeholder: "",
+                },
+                {
+                  id: "createdAt",
+                  label: "Created At",
+                  value: editingLoan.createdAt
+                    ? new Date(editingLoan.createdAt).toLocaleString()
+                    : "",
+                  type: "text" as const,
+                  required: false,
+                  placeholder: "",
+                },
+                {
+                  id: "updatedAt",
+                  label: "Last Updated",
+                  value: editingLoan.updatedAt
+                    ? new Date(editingLoan.updatedAt).toLocaleString()
+                    : "",
+                  type: "text" as const,
+                  required: false,
+                  placeholder: "",
+                },
+              ],
+            },
+          ]
+        : []),
     ],
     [
       formData,
@@ -896,7 +928,9 @@ export default function LoanRequests() {
       tenantOptions,
       userOptions,
       collateralImages,
-    ]
+      isReadOnly,
+      editingLoan,
+    ],
   );
 
   const handleCreateLoan = () => {
@@ -1005,7 +1039,7 @@ export default function LoanRequests() {
             <Pagination
               currentPage={filters.page || 1}
               totalPages={Math.ceil(
-                (loansData.total || 0) / (filters.limit || 10)
+                (loansData.total || 0) / (filters.limit || 10),
               )}
               hasNextPage={
                 (filters.page || 1) <
@@ -1028,8 +1062,8 @@ export default function LoanRequests() {
           isReadOnly
             ? "View Loan Request"
             : editingLoan
-            ? "Edit Loan Request"
-            : "Create Loan Request"
+              ? "Edit Loan Request"
+              : "Create Loan Request"
         }
         description="Fill in all required information to submit a loan application"
         sections={formSections}

@@ -21,49 +21,28 @@ export enum KycFileType {
   LICENSE_BACK = "LICENSE_BACK",
   SELFIE = "SELFIE",
   SUPPORTING_DOCUMENT = "SUPPORTING_DOCUMENT",
-  OTHER = "OTHER",
 }
 
 export interface KycFile {
   id?: string;
   kycId?: string;
-  documentNumber?: string;
-  issueDate?: string;
-  expiryDate?: string;
-  issueDistrict?: string;
   fileType: KycFileType;
-  documentType?: string;
   fileUrl: string;
-  fileName?: string;
-  mimeType?: string;
-  sizeInBytes?: number;
+  documentMetadata?: Record<string, unknown>;
   createdAt?: string;
 }
 
 export interface Kyc {
   id: string;
   borrowerId: string;
-  documentTypes: string[];
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  passportSizePhotoUrl: string;
+  fullName: string;
   dateOfBirth: string;
-  gender: string;
-  maritalStatus: string;
-  fatherName: string;
-  motherName: string;
-  grandfatherName: string;
-  permanentProvince: string;
-  permanentDistrict: string;
-  permanentMunicipality: string;
-  permanentWard: string;
-  permanentTole: string;
+  photoUrl: string;
+  personalDetails: Record<string, unknown>;
+  permanentAddress: Record<string, unknown>;
   occupation: string;
   monthlyIncome: number;
-  bankName: string;
-  bankAccountNumber: string;
-  bankBranch: string;
+  bankDetails: Record<string, unknown>;
   status: KycStatus;
   rejectionReason?: string;
   verifiedBy?: string;
@@ -99,27 +78,14 @@ export interface KycDocumentsQuery {
 export interface CreateKycDto {
   tenantId?: string;
   userId?: string;
-  documentTypes: string[];
-  firstName: string;
-  middleName?: string;
-  lastName: string;
-  passportSizePhotoUrl: string;
+  fullName: string;
   dateOfBirth: string;
-  gender: string;
-  maritalStatus: string;
-  fatherName: string;
-  motherName: string;
-  grandfatherName: string;
-  permanentProvince: string;
-  permanentDistrict: string;
-  permanentMunicipality: string;
-  permanentWard: string;
-  permanentTole: string;
+  photoUrl: string;
+  personalDetails: Record<string, unknown>;
+  permanentAddress: Record<string, unknown>;
   occupation: string;
   monthlyIncome: number;
-  bankName: string;
-  bankAccountNumber: string;
-  bankBranch: string;
+  bankDetails: Record<string, unknown>;
   files?: KycFile[];
 }
 
