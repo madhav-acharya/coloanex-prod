@@ -86,7 +86,7 @@ export default function SignupScreen() {
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Signup failed. Please try again.",
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -177,7 +177,7 @@ export default function SignupScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
-            <Link href="/login" asChild>
+            <Link href="/auth/login" asChild>
               <Text style={styles.link}>Sign In</Text>
             </Link>
           </View>
