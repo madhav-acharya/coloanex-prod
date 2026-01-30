@@ -109,7 +109,7 @@ export default function LoanApplicationScreen() {
       try {
         const uploaded = await uploadToCloudinary(
           result.assets[0].uri,
-          "collateral.jpg"
+          "collateral.jpg",
         );
         setCollateralImage(uploaded.url);
         showToast("Image uploaded successfully", "success");
@@ -165,16 +165,15 @@ export default function LoanApplicationScreen() {
     try {
       const loanData = {
         tenantId: lenderId as string,
-        expectedLoanAmount: loanAmount,
-        providedLoanAmount: loanAmount,
-        amount: loanAmount,
-        loanPurpose,
-        collateralType,
-        collateralDescription,
-        collateralValue: parseFloat(collateralValue),
-        collateralImageUrl: collateralImage,
-        termMonths,
-        interestRate: lender?.interestRate || 12,
+        requestedAmount: parseFloat(loanAmount.toString()) || 0,
+        purpose: loanPurpose || "",
+        collateralDetails: {
+          type: collateralType || "",
+          description: collateralDescription || "",
+          value: parseFloat(collateralValue) || 0,
+          imageUrl: collateralImage || "",
+        },
+        requestedTermMonths: parseInt(termMonths.toString()) || 1,
       };
 
       await loansApi.applyForLoan(loanData);
