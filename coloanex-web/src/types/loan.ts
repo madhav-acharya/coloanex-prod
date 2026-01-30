@@ -1,33 +1,24 @@
 export enum LoanStatus {
   DRAFT = "DRAFT",
-  PENDING_REVIEW = "PENDING_REVIEW",
+  SUBMITTED = "SUBMITTED",
+  UNDER_REVIEW = "UNDER_REVIEW",
   APPROVED = "APPROVED",
   REJECTED = "REJECTED",
-  DISBURSED = "DISBURSED",
-  ACTIVE = "ACTIVE",
-  CLOSED = "CLOSED",
-  DEFAULTED = "DEFAULTED",
+  CONTRACT_GENERATED = "CONTRACT_GENERATED",
+  CONTRACT_SIGNED = "CONTRACT_SIGNED",
 }
 
 export interface Loan {
   id: string;
   borrowerId: string;
   tenantId: string;
-  providedLoanAmount: number;
-  expectedLoanAmount: number;
-  loanPurpose: string;
-  collateralType: string;
-  collateralDescription: string;
-  collateralValue: number;
-  collateralImageUrl: string;
-  txHash?: string;
-  amount: number;
-  interestRate: number;
-  termMonths: number;
+  requestedAmount: number;
+  approvedAmount?: number;
+  purpose: string;
+  collateralDetails: Record<string, unknown>;
+  requestedTermMonths: number;
   status: LoanStatus;
   rejectionReason?: string;
-  disbursedAt?: string;
-  dueDate?: string;
   createdAt: string;
   updatedAt: string;
   borrower?: {
@@ -46,29 +37,17 @@ export interface CreateLoanDto {
   borrowerId?: string;
   tenantId?: string;
   userId?: string;
-  providedLoanAmount: number;
-  expectedLoanAmount: number;
-  loanPurpose: string;
-  collateralType: string;
-  collateralDescription: string;
-  collateralValue: number;
-  collateralImageUrl: string;
-  amount: number;
-  interestRate: number;
-  termMonths: number;
+  requestedAmount: number;
+  purpose: string;
+  collateralDetails: Record<string, unknown>;
+  requestedTermMonths: number;
 }
 
 export interface UpdateLoanDto {
-  providedLoanAmount?: number;
-  expectedLoanAmount?: number;
-  loanPurpose?: string;
-  collateralType?: string;
-  collateralDescription?: string;
-  collateralValue?: number;
-  collateralImageUrl?: string;
-  amount?: number;
-  interestRate?: number;
-  termMonths?: number;
+  requestedAmount?: number;
+  purpose?: string;
+  collateralDetails?: Record<string, unknown>;
+  requestedTermMonths?: number;
 }
 
 export interface ReviewLoanDto {
