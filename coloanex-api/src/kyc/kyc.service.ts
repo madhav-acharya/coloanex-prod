@@ -116,26 +116,22 @@ export class KycService {
 
     const kyc = await this.prisma.kyc.create({
       data: {
-        ...kycData,
         borrowerId: borrower.id,
+        fullName: kycData.fullName,
         dateOfBirth: new Date(kycData.dateOfBirth),
+        photoUrl: kycData.photoUrl,
+        personalDetails: kycData.personalDetails as any,
+        permanentAddress: kycData.permanentAddress as any,
+        occupation: kycData.occupation,
+        monthlyIncome: kycData.monthlyIncome,
+        bankDetails: kycData.bankDetails as any,
+        notes: kycData.notes,
         files: files
           ? {
               create: files.map((file) => ({
                 fileType: file.fileType,
-                documentNumber: file.documentNumber || '',
-                issueDate: file.issueDate
-                  ? new Date(file.issueDate)
-                  : undefined,
-                expiryDate: file.expiryDate
-                  ? new Date(file.expiryDate)
-                  : undefined,
-                issueDistrict: file.issueDistrict,
-                documentType: file.documentType || '',
                 fileUrl: file.fileUrl,
-                fileName: file.fileName,
-                mimeType: file.mimeType,
-                sizeInBytes: file.sizeInBytes,
+                documentMetadata: (file.documentMetadata || {}) as any,
               })),
             }
           : undefined,
@@ -168,7 +164,7 @@ export class KycService {
       kyc.id,
       'KYC application submitted',
       null,
-      { firstName: kyc.firstName, lastName: kyc.lastName },
+      { fullName: kyc.fullName },
       ipAddress,
       userAgent,
       tenantId,
@@ -409,11 +405,18 @@ export class KycService {
     const updated = await this.prisma.kyc.update({
       where: { id },
       data: {
-        ...kycData,
         borrowerId,
         dateOfBirth: kycData.dateOfBirth
           ? new Date(kycData.dateOfBirth)
           : undefined,
+        fullName: kycData.fullName,
+        photoUrl: kycData.photoUrl,
+        personalDetails: kycData.personalDetails as any,
+        permanentAddress: kycData.permanentAddress as any,
+        occupation: kycData.occupation,
+        monthlyIncome: kycData.monthlyIncome,
+        bankDetails: kycData.bankDetails as any,
+        notes: kycData.notes,
       },
       include: {
         files: true,
@@ -440,15 +443,8 @@ export class KycService {
         data: files.map((file) => ({
           kycId: id,
           fileType: file.fileType,
-          documentNumber: file.documentNumber || '',
-          issueDate: file.issueDate ? new Date(file.issueDate) : undefined,
-          expiryDate: file.expiryDate ? new Date(file.expiryDate) : undefined,
-          issueDistrict: file.issueDistrict,
-          documentType: file.documentType || '',
           fileUrl: file.fileUrl,
-          fileName: file.fileName,
-          mimeType: file.mimeType,
-          sizeInBytes: file.sizeInBytes,
+          documentMetadata: (file.documentMetadata || {}) as any,
         })),
       });
     }
