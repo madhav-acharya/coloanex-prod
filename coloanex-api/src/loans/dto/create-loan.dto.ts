@@ -6,6 +6,7 @@ import {
   IsInt,
   Min,
   Max,
+  IsNotEmpty,
 } from 'class-validator';
 
 export class CreateLoanDto {
@@ -23,40 +24,16 @@ export class CreateLoanDto {
 
   @IsNumber()
   @IsPositive()
-  providedLoanAmount: number;
-
-  @IsNumber()
-  @IsPositive()
-  expectedLoanAmount: number;
+  requestedAmount: number;
 
   @IsString()
-  loanPurpose: string;
+  purpose: string;
 
-  @IsString()
-  collateralType: string;
-
-  @IsString()
-  collateralDescription: string;
-
-  @IsNumber()
-  @IsPositive()
-  collateralValue: number;
-
-  @IsString()
-  collateralImageUrl: string;
-
-  @IsNumber()
-  @IsPositive()
-  amount: number;
-
-  @IsNumber()
-  @IsPositive()
-  @Min(0)
-  @Max(100)
-  interestRate: number;
+  @IsNotEmpty()
+  collateralDetails: Record<string, unknown>;
 
   @IsInt()
   @IsPositive()
   @Min(1)
-  termMonths: number;
+  requestedTermMonths: number;
 }
