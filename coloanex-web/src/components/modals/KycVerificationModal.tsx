@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { KycStatus, type Kyc } from "@/types/kyc";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -48,6 +49,12 @@ export function KycVerificationModal({
   const [status, setStatus] = useState<KycStatus>(KycStatus.PENDING);
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string>("");
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  const imageFiles =
+    document?.files?.filter((f) => f.mimeType?.startsWith("image/")) || [];
 
   useEffect(() => {
     if (document) {
@@ -64,6 +71,32 @@ export function KycVerificationModal({
       setStatus(KycStatus.PENDING);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openLightbox = (imageUrl: string, index: number) => {
+    setLightboxImage(imageUrl);
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxOpen(false);
+  };
+
+  const nextImage = () => {
+    if (lightboxIndex < imageFiles.length - 1) {
+      const newIndex = lightboxIndex + 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(imageFiles[newIndex].fileUrl);
+    }
+  };
+
+  const prevImage = () => {
+    if (lightboxIndex > 0) {
+      const newIndex = lightboxIndex - 1;
+      setLightboxIndex(newIndex);
+      setLightboxImage(imageFiles[newIndex].fileUrl);
     }
   };
 
@@ -258,7 +291,7 @@ export function KycVerificationModal({
                 const citizenshipFile = document.files?.find(
                   (f) =>
                     f.fileType === "CITIZENSHIP_FRONT" ||
-                    f.fileType === "CITIZENSHIP_BACK"
+                    f.fileType === "CITIZENSHIP_BACK",
                 );
                 return (
                   citizenshipFile && (
@@ -309,7 +342,7 @@ export function KycVerificationModal({
             {document.documentTypes?.includes("PASSPORT") &&
               (() => {
                 const passportFile = document.files?.find(
-                  (f) => f.fileType === "PASSPORT"
+                  (f) => f.fileType === "PASSPORT",
                 );
                 return (
                   passportFile && (
@@ -360,7 +393,7 @@ export function KycVerificationModal({
             {document.documentTypes?.includes("PAN") &&
               (() => {
                 const panFile = document.files?.find(
-                  (f) => f.fileType === "PAN"
+                  (f) => f.fileType === "PAN",
                 );
                 return (
                   panFile?.documentNumber && (
@@ -391,7 +424,7 @@ export function KycVerificationModal({
                 const licenseFile = document.files?.find(
                   (f) =>
                     f.fileType === "LICENSE_FRONT" ||
-                    f.fileType === "LICENSE_BACK"
+                    f.fileType === "LICENSE_BACK",
                 );
                 return (
                   licenseFile && (
@@ -596,46 +629,70 @@ export function KycVerificationModal({
                     Uploaded Documents & Images
                   </h3>
                   <div className="grid grid-cols-4 gap-4">
-                    {document.files.map((file, index) => (
-                      <div
-                        key={file.id || index}
-                        className="border rounded-lg p-3 space-y-2"
-                      >
-                        <div className="aspect-video bg-gray-100 rounded overflow-hidden">
-                          {file.mimeType?.startsWith("image/") ? (
-                            <img
-                              src={file.fileUrl}
-                              alt={file.fileType}
-                              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                              onClick={() =>
-                                window.open(file.fileUrl, "_blank")
-                              }
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <a
-                                href={file.fileUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm text-center px-2"
-                              >
-                                View Document
-                              </a>
-                            </div>
-                          )}
+                    {document.files.map((file, index) => {
+                      // Check if it's an image by mimeType or file extension
+                      const isImage =
+                        file.mimeType?.startsWith("image/") ||
+                        file.fileUrl?.match(
+                          /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i,
+                        ) ||
+                        file.fileType?.includes("CITIZENSHIP") ||
+                        file.fileType?.includes("PASSPORT") ||
+                        file.fileType?.includes("LICENSE") ||
+                        file.fileType?.includes("SELFIE") ||
+                        file.fileType?.includes("PAN");
+
+                      const imageIndex = isImage
+                        ? imageFiles.findIndex(
+                            (f) => f.fileUrl === file.fileUrl,
+                          )
+                        : -1;
+
+                      return (
+                        <div
+                          key={file.id || index}
+                          className="border rounded-lg p-3 space-y-2"
+                        >
+                          <div className="aspect-video bg-gray-100 rounded overflow-hidden">
+                            {isImage ? (
+                              <img
+                                src={file.fileUrl}
+                                alt={file.fileType}
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity hover:scale-105"
+                                onClick={() =>
+                                  openLightbox(
+                                    file.fileUrl,
+                                    imageIndex >= 0 ? imageIndex : index,
+                                  )
+                                }
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <a
+                                  href={file.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline text-sm text-center px-2"
+                                >
+                                  View Document
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <Badge variant="outline" className="text-xs">
+                              {file.fileType}
+                            </Badge>
+                            {file.fileName && (
+                              <p className="text-xs text-muted-foreground mt-1 truncate">
+                                {file.fileName}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <Badge variant="outline" className="text-xs">
-                            {file.fileType}
-                          </Badge>
-                          {file.fileName && (
-                            <p className="text-xs text-muted-foreground mt-1 truncate">
-                              {file.fileName}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </>
@@ -685,12 +742,63 @@ export function KycVerificationModal({
               {isSubmitting
                 ? "Saving..."
                 : hasNext
-                ? "Save & Next"
-                : "Save & Finish"}
+                  ? "Save & Next"
+                  : "Save & Finish"}
             </Button>
           </div>
         </SheetFooter>
       </SheetContent>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+          onClick={closeLightbox}
+        >
+          <button
+            onClick={closeLightbox}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10"
+          >
+            <X size={32} />
+          </button>
+
+          {lightboxIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                prevImage();
+              }}
+              className="absolute left-4 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <ChevronLeft size={48} />
+            </button>
+          )}
+
+          {lightboxIndex < imageFiles.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                nextImage();
+              }}
+              className="absolute right-4 text-white hover:text-gray-300 transition-colors z-10"
+            >
+              <ChevronRight size={48} />
+            </button>
+          )}
+
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
+            <img
+              src={lightboxImage}
+              alt="Full size preview"
+              className="max-w-full max-h-[90vh] object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm">
+              {lightboxIndex + 1} / {imageFiles.length}
+            </div>
+          </div>
+        </div>
+      )}
     </Sheet>
   );
 }
