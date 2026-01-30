@@ -21,6 +21,9 @@ import {
   Building2,
   FileText,
   Landmark,
+  ScrollText,
+  FileSignature,
+  Wallet,
 } from "lucide-react";
 import {
   Select,
@@ -114,6 +117,24 @@ export default function DashboardLayout({
     },
   ];
 
+  const loanManagementItems = [
+    {
+      title: "Loan Rules",
+      icon: <ScrollText className="w-4 h-4" />,
+      href: "/rules",
+    },
+    {
+      title: "Contracts",
+      icon: <FileSignature className="w-4 h-4" />,
+      href: "/contracts",
+    },
+    {
+      title: "Wallets",
+      icon: <Wallet className="w-4 h-4" />,
+      href: "/wallets",
+    },
+  ];
+
   const NavSection = ({
     title,
     items,
@@ -131,7 +152,7 @@ export default function DashboardLayout({
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
             "flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer",
-            isCollapsed && "justify-center"
+            isCollapsed && "justify-center",
           )}
         >
           {!isCollapsed && <span>{title}</span>}
@@ -156,7 +177,7 @@ export default function DashboardLayout({
                     isActive
                       ? "bg-green-100 text-green-700 font-medium"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    isCollapsed && "justify-center px-2"
+                    isCollapsed && "justify-center px-2",
                   )}
                 >
                   {item.icon}
@@ -207,7 +228,7 @@ export default function DashboardLayout({
                 location.pathname === "/dashboard"
                   ? "bg-green-100 text-green-700 font-medium"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                isCollapsed && "justify-center px-2"
+                isCollapsed && "justify-center px-2",
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
@@ -222,6 +243,11 @@ export default function DashboardLayout({
           <NavSection
             title="Management"
             items={managementItems}
+            isOpen={true}
+          />
+          <NavSection
+            title="Loan Management"
+            items={loanManagementItems}
             isOpen={true}
           />
         </div>
@@ -251,7 +277,7 @@ export default function DashboardLayout({
       <aside
         className={cn(
           "flex flex-col bg-background border-r transition-all duration-300",
-          isCollapsed ? "w-16" : "w-64"
+          isCollapsed ? "w-16" : "w-64",
         )}
       >
         {sidebarContent}
