@@ -1,3 +1,13 @@
+export enum LoanStatus {
+  DRAFT = "DRAFT",
+  SUBMITTED = "SUBMITTED",
+  UNDER_REVIEW = "UNDER_REVIEW",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  CONTRACT_GENERATED = "CONTRACT_GENERATED",
+  CONTRACT_SIGNED = "CONTRACT_SIGNED",
+}
+
 export interface Lender {
   id: string;
   name: string;
@@ -12,19 +22,15 @@ export interface Lender {
 
 export interface Loan {
   id: string;
-  amount: number;
-  interestRate: number;
-  termMonths: number;
-  status: string;
-  loanPurpose: string;
-  collateralType: string;
-  collateralDescription: string;
-  collateralValue: number;
-  collateralImageUrl: string;
-  providedLoanAmount: number;
-  expectedLoanAmount: number;
-  disbursedAt?: string;
-  dueDate?: string;
+  borrowerId: string;
+  tenantId: string;
+  requestedAmount: number;
+  approvedAmount?: number;
+  purpose: string;
+  collateralDetails: Record<string, unknown>;
+  requestedTermMonths: number;
+  status: LoanStatus | string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
   borrower?: {
@@ -43,6 +49,16 @@ export interface Loan {
   nextPaymentDate?: string;
   paymentsMade?: number;
   totalPayments?: number;
+}
+
+export interface CreateLoanDto {
+  borrowerId?: string;
+  tenantId?: string;
+  userId?: string;
+  requestedAmount: number;
+  purpose: string;
+  collateralDetails: Record<string, unknown>;
+  requestedTermMonths: number;
 }
 
 export interface LoanApplication {
