@@ -22,7 +22,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
+    {},
   );
 
   const isFormValid = useMemo(() => {
@@ -62,7 +62,7 @@ export default function LoginScreen() {
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Login failed. Please try again.",
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -124,7 +124,7 @@ export default function LoginScreen() {
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don't have an account? </Text>
-            <Link href="/signup" asChild>
+            <Link href="/auth/signup" asChild>
               <Text style={styles.link}>Sign Up</Text>
             </Link>
           </View>
