@@ -12,12 +12,13 @@ import { Card, Button, useToast } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi } from "@/api";
 import type { Lender } from "@/types";
+import { KycStatus } from "@/types";
 
 export default function LenderDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { showToast } = useToast();
   const [lender, setLender] = useState<Lender | null>(null);
-  const [kycStatus, setKycStatus] = useState<string | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
   const [hasExistingLoan, setHasExistingLoan] = useState(false);
   const [existingLoanId, setExistingLoanId] = useState<string | null>(null);
 
@@ -41,7 +42,7 @@ export default function LenderDetailsScreen() {
   const checkKycStatus = async () => {
     try {
       const data = await kycApi.getStatus();
-      setKycStatus(data.status);
+      setKycStatus(data.status as KycStatus);
     } catch (error) {
       setKycStatus(null);
     }
@@ -141,31 +142,89 @@ export default function LenderDetailsScreen() {
           </Card>
         )}
 
-        <Button
-          title={hasExistingLoan ? "View Loan Application" : "Apply for Loan"}
-          onPress={() => {
-            if (hasExistingLoan && existingLoanId) {
-              router.push(`/loans/loan-details?id=${existingLoanId}`);
-            } else if (kycStatus === "VERIFIED") {
-              router.push({
-                pathname: "/loans/apply-loan",
-                params: { lenderId: id },
-              });
-            } else if (kycStatus === "PENDING") {
-              showToast(
-                "Your KYC verification is currently being reviewed. You'll be notified once it's approved.",
-                "info",
-              );
-            } else {
-              router.push(`/kyc/kyc-verification?tenantId=${lender.id}`);
-            }
-          }}
-          disabled={!hasExistingLoan && kycStatus !== "VERIFIED"}
-          style={styles.applyButton}
-        />
+        {renderActionButton()}
       </ScrollView>
     </View>
   );
+
+  function getButtonConfig() {
+    if (hasExistingLoan) {
+      return {
+        title: "View Loan Application",
+        disabled: false,
+        variant: "primary" as const,
+      };
+    }
+
+    switch (kycStatus) {
+      case KycStatus.VERIFIED:
+        return {
+          title: "Apply for Loan",
+          disabled: false,
+          variant: "primary" as const,
+        };
+      case KycStatus.PENDING:
+        return {
+          title: "Request Pending",
+          disabled: true,
+          variant: "outline" as const,
+        };
+      case KycStatus.REJECTED:
+        return {
+          title: "KYC Rejected - Resubmit",
+          disabled: false,
+          variant: "outline" as const,
+        };
+      default:
+        return {
+          title: "Verify KYC",
+          disabled: false,
+          variant: "primary" as const,
+        };
+    }
+  }
+
+  function handleButtonPress() {
+    if (hasExistingLoan && existingLoanId) {
+      router.push(`/loans/loan-details?id=${existingLoanId}` as any);
+      return;
+    }
+
+    switch (kycStatus) {
+      case KycStatus.VERIFIED:
+        router.push({
+          pathname: "/loans/apply-loan" as any,
+          params: { lenderId: id },
+        });
+        break;
+      case KycStatus.PENDING:
+        showToast(
+          "Your KYC verification is currently being reviewed. You'll be notified once it's approved.",
+          "info",
+        );
+        break;
+      case KycStatus.REJECTED:
+        router.push(`/kyc/kyc-verification?tenantId=${lender?.id}` as any);
+        break;
+      default:
+        router.push(`/kyc/kyc-verification?tenantId=${lender?.id}` as any);
+        break;
+    }
+  }
+
+  function renderActionButton() {
+    const buttonConfig = getButtonConfig();
+
+    return (
+      <Button
+        title={buttonConfig.title}
+        onPress={handleButtonPress}
+        disabled={buttonConfig.disabled}
+        variant={buttonConfig.variant}
+        style={styles.applyButton}
+      />
+    );
+  }
 }
 
 const styles = StyleSheet.create({
