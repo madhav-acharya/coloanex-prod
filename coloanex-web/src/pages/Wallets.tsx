@@ -119,7 +119,7 @@ export default function Wallets() {
         <Badge
           variant={transaction.type === "DEPOSIT" ? "default" : "secondary"}
         >
-          {transaction.type.replace(/_/g, " ")}
+          {transaction?.type?.replace(/_/g, " ")}
         </Badge>
       ),
     },
@@ -134,7 +134,7 @@ export default function Wallets() {
           }
         >
           {transaction.type === "DEPOSIT" ? "+" : "-"}NPR{" "}
-          {transaction.amount.toLocaleString()}
+          {transaction?.amount?.toLocaleString()}
         </span>
       ),
     },
@@ -159,7 +159,7 @@ export default function Wallets() {
     {
       key: "description",
       label: "Description",
-      render: (transaction) => transaction.description || "-",
+      render: (transaction) => transaction?.description || "-",
     },
     {
       key: "createdAt",
