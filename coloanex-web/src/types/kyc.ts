@@ -4,13 +4,7 @@ export enum KycStatus {
   REJECTED = "REJECTED",
 }
 
-export enum KycDocumentType {
-  CITIZENSHIP = "CITIZENSHIP",
-  PASSPORT = "PASSPORT",
-  DRIVING_LICENSE = "DRIVING_LICENSE",
-  PAN = "PAN",
-  OTHER = "OTHER",
-}
+// Removed KycDocumentType enum - not in schema
 
 export enum KycFileType {
   CITIZENSHIP_FRONT = "CITIZENSHIP_FRONT",
@@ -28,7 +22,7 @@ export interface KycFile {
   kycId?: string;
   fileType: KycFileType;
   fileUrl: string;
-  documentMetadata?: Record<string, unknown>;
+  documentMetadata: Record<string, unknown>;
   createdAt?: string;
 }
 

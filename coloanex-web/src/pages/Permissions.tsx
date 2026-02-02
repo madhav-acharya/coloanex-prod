@@ -7,7 +7,7 @@ import { FormSheet } from "@/components/shared/FormSheet";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import type { Message } from "@/components/shared/Messages";
+import type { Message } from "@/types/components";
 import {
   useGetPermissionsQuery,
   useCreatePermissionMutation,
@@ -171,10 +171,13 @@ export default function Permissions() {
   };
 
   const handleSubmit = async () => {
-    const fieldValues = fields.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const fieldValues = fields.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     const formData = {
       name: fieldValues.name,
@@ -278,15 +281,15 @@ export default function Permissions() {
           isReadOnly
             ? "View Permission"
             : selectedPermission
-            ? "Edit Permission"
-            : "Create Permission"
+              ? "Edit Permission"
+              : "Create Permission"
         }
         description={
           isReadOnly
             ? "View permission details"
             : selectedPermission
-            ? "Update the permission details"
-            : "Add a new permission to the system"
+              ? "Update the permission details"
+              : "Add a new permission to the system"
         }
         sections={[
           {

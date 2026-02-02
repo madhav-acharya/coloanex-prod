@@ -10,11 +10,6 @@ export interface Field {
   type?: string;
 }
 
-export interface Message {
-  type: "error" | "warning" | "success" | "info";
-  description: string;
-}
-
 export interface PaginationProps {
   currentPage: number;
   totalPages: number;

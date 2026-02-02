@@ -2,14 +2,15 @@ import { useState, useEffect, useMemo } from "react";
 import { Users as UsersIcon, Eye, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
-import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
+import type { Column } from "@/types/components";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { MultiSelect } from "@/components/shared/MultiSelect";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import type { Message } from "@/components/shared/Messages";
+import type { Message } from "@/types/components";
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -92,12 +93,12 @@ export default function Users() {
   } = useGetUsersQuery(filters, { skip: !isAuthenticated });
   const { data: rolesData, isLoading: isLoadingRoles } = useGetRolesQuery(
     { limit: 100 },
-    { skip: !sheetOpen || !isAuthenticated }
+    { skip: !sheetOpen || !isAuthenticated },
   );
   const { data: permissionsData, isLoading: isLoadingPermissions } =
     useGetPermissionsQuery(
       { limit: 100 },
-      { skip: !sheetOpen || !isAuthenticated }
+      { skip: !sheetOpen || !isAuthenticated },
     );
   const [createUser, { isLoading: isCreating, error: createError }] =
     useCreateUserMutation();
@@ -251,10 +252,13 @@ export default function Users() {
   };
 
   const handleSubmit = async () => {
-    const fieldValues = fields.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const fieldValues = fields.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     try {
       if (selectedUser) {
@@ -264,7 +268,7 @@ export default function Users() {
           phone: fieldValues.phone || undefined,
           roleIds: selectedRoles.filter((id) => id && id.trim() !== ""),
           permissionIds: selectedPermissions.filter(
-            (id) => id && id.trim() !== ""
+            (id) => id && id.trim() !== "",
           ),
           id: selectedUser.id,
         };
@@ -289,7 +293,7 @@ export default function Users() {
           password: fieldValues.password,
           roleIds: selectedRoles.filter((id) => id && id.trim() !== ""),
           permissionIds: selectedPermissions.filter(
-            (id) => id && id.trim() !== ""
+            (id) => id && id.trim() !== "",
           ),
         };
         await createUser(createData).unwrap();
@@ -337,7 +341,7 @@ export default function Users() {
         const roles = (user.roles || [])
           .map((r) => (typeof r === "object" && "role" in r ? r.role : r))
           .filter(
-            (r) => r && typeof r === "object" && "id" in r && "name" in r
+            (r) => r && typeof r === "object" && "id" in r && "name" in r,
           );
         const visibleRoles = roles.slice(0, maxVisible);
         const remainingCount = roles.length - maxVisible;
@@ -372,10 +376,10 @@ export default function Users() {
         const maxVisible = 2;
         const permissions = (user.permissions || [])
           .map((p) =>
-            typeof p === "object" && "permission" in p ? p.permission : p
+            typeof p === "object" && "permission" in p ? p.permission : p,
           )
           .filter(
-            (p) => p && typeof p === "object" && "id" in p && "name" in p
+            (p) => p && typeof p === "object" && "id" in p && "name" in p,
           );
         const visiblePermissions = permissions.slice(0, maxVisible);
         const remainingCount = permissions.length - maxVisible;
@@ -393,7 +397,7 @@ export default function Users() {
                     >
                       {permission.name}
                     </Badge>
-                  )
+                  ),
                 )}
                 {remainingCount > 0 && (
                   <Badge variant="outline" className="text-xs">
@@ -501,8 +505,8 @@ export default function Users() {
           isReadOnly
             ? "View user details, roles, and permissions"
             : selectedUser
-            ? "Update the user details and permissions"
-            : "Add a new user to the system"
+              ? "Update the user details and permissions"
+              : "Add a new user to the system"
         }
         sections={[
           {
@@ -553,14 +557,14 @@ export default function Users() {
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
                     const selectedRoleObjects = roles.filter((r) =>
-                      userRoles.some((ur) => ur.id === r.id)
+                      userRoles.some((ur) => ur.id === r.id),
                     );
                     const rolePermissions =
                       extractRolePermissions(selectedRoleObjects);
                     const userPermissions =
                       extractUserPermissions(selectedUser);
                     const roleBasedPerms = userPermissions.filter((perm) =>
-                      rolePermissions.has(perm.id)
+                      rolePermissions.has(perm.id),
                     );
 
                     return roleBasedPerms.length > 0 ? (
@@ -589,14 +593,14 @@ export default function Users() {
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
                     const selectedRoleObjects = roles.filter((r) =>
-                      userRoles.some((ur) => ur.id === r.id)
+                      userRoles.some((ur) => ur.id === r.id),
                     );
                     const rolePermissions =
                       extractRolePermissions(selectedRoleObjects);
                     const userPermissions =
                       extractUserPermissions(selectedUser);
                     const additionalPerms = userPermissions.filter(
-                      (perm) => !rolePermissions.has(perm.id)
+                      (perm) => !rolePermissions.has(perm.id),
                     );
 
                     return additionalPerms.length > 0 ? (

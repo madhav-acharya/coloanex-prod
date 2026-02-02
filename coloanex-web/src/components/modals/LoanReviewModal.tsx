@@ -50,7 +50,7 @@ export function LoanReviewModal({
   onSubmit,
   hasNext,
 }: LoanReviewModalProps) {
-  const [status, setStatus] = useState<LoanStatus>(LoanStatus.PENDING_REVIEW);
+  const [status, setStatus] = useState<LoanStatus>(LoanStatus.UNDER_REVIEW);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -66,7 +66,7 @@ export function LoanReviewModal({
     try {
       await onSubmit(status, rejectionReason);
       setRejectionReason("");
-      setStatus(LoanStatus.PENDING_REVIEW);
+      setStatus(LoanStatus.UNDER_REVIEW);
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +78,7 @@ export function LoanReviewModal({
         return "bg-green-100 text-green-800";
       case LoanStatus.REJECTED:
         return "bg-red-100 text-red-800";
-      case LoanStatus.DISBURSED:
+      case LoanStatus.CONTRACT_SIGNED:
         return "bg-blue-100 text-blue-800";
       case LoanStatus.DRAFT:
         return "bg-gray-100 text-gray-800";
@@ -116,8 +116,8 @@ export function LoanReviewModal({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={LoanStatus.PENDING_REVIEW}>
-                      Pending Review
+                    <SelectItem value={LoanStatus.UNDER_REVIEW}>
+                      Under Review
                     </SelectItem>
                     <SelectItem value={LoanStatus.APPROVED}>
                       Approved
@@ -177,26 +177,18 @@ export function LoanReviewModal({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">
-                    Provided Loan Amount
+                    Requested Amount
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {formatCurrency(loan.providedLoanAmount)}
+                    {formatCurrency(loan.requestedAmount)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">
-                    Expected Loan Amount
+                    Approved Amount
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {formatCurrency(loan.expectedLoanAmount)}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    Final Amount
-                  </Label>
-                  <p className="text-sm font-medium mt-1">
-                    {formatCurrency(loan.amount)}
+                    {formatCurrency(loan.approvedAmount)}
                   </p>
                 </div>
               </div>
@@ -210,7 +202,7 @@ export function LoanReviewModal({
               <div>
                 <Label className="text-xs text-muted-foreground">Purpose</Label>
                 <p className="text-sm font-medium mt-1">
-                  {loan.loanPurpose || "N/A"}
+                  {loan.purpose || "N/A"}
                 </p>
               </div>
             </div>
@@ -228,7 +220,7 @@ export function LoanReviewModal({
                     Collateral Type
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {loan.collateralType || "N/A"}
+                    {(loan.collateralDetails as any)?.type || "N/A"}
                   </p>
                 </div>
                 <div>
@@ -236,16 +228,16 @@ export function LoanReviewModal({
                     Collateral Value
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {formatCurrency(loan.collateralValue)}
+                    {formatCurrency((loan.collateralDetails as any)?.value)}
                   </p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">
                     Collateral Image
                   </Label>
-                  {loan.collateralImageUrl ? (
+                  {(loan.collateralDetails as any)?.imageUrl ? (
                     <a
-                      href={loan.collateralImageUrl}
+                      href={(loan.collateralDetails as any)?.imageUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-blue-600 hover:underline mt-1 block"
@@ -257,13 +249,13 @@ export function LoanReviewModal({
                   )}
                 </div>
               </div>
-              {loan.collateralDescription && (
+              {(loan.collateralDetails as any)?.description && (
                 <div className="mt-4">
                   <Label className="text-xs text-muted-foreground">
                     Description
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {loan.collateralDescription}
+                    {(loan.collateralDetails as any)?.description}
                   </p>
                 </div>
               )}
@@ -277,54 +269,16 @@ export function LoanReviewModal({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">
-                    Interest Rate
+                    Requested Term (Months)
                   </Label>
                   <p className="text-sm font-medium mt-1">
-                    {loan.interestRate}%
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    Term (Months)
-                  </Label>
-                  <p className="text-sm font-medium mt-1">
-                    {loan.termMonths} months
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">
-                    Due Date
-                  </Label>
-                  <p className="text-sm font-medium mt-1">
-                    {formatDate(loan.dueDate)}
+                    {loan.requestedTermMonths} months
                   </p>
                 </div>
               </div>
             </div>
 
             <Separator />
-
-            {/* Transaction Hash */}
-            {loan.txHash && (
-              <>
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">
-                    Transaction Details
-                  </h3>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Transaction Hash
-                    </Label>
-                    <p className="text-sm font-medium mt-1 break-all">
-                      {loan.txHash}
-                    </p>
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
-
-            {/* Dates */}
             <div>
               <h3 className="text-lg font-semibold mb-4">Important Dates</h3>
               <div className="grid grid-cols-3 gap-4">
@@ -344,16 +298,6 @@ export function LoanReviewModal({
                     {formatDate(loan.updatedAt)}
                   </p>
                 </div>
-                {loan.disbursedAt && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">
-                      Disbursed At
-                    </Label>
-                    <p className="text-sm font-medium mt-1">
-                      {formatDate(loan.disbursedAt)}
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -405,8 +349,8 @@ export function LoanReviewModal({
                 {isSubmitting
                   ? "Submitting..."
                   : hasNext
-                  ? "Submit & Next"
-                  : "Submit Review"}
+                    ? "Submit & Next"
+                    : "Submit Review"}
               </Button>
             </div>
           </div>

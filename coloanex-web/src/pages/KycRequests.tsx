@@ -24,11 +24,20 @@ import type {
   CreateKycDto,
   KycFile,
 } from "@/types/kyc";
-import { KycStatus, KycDocumentType, KycFileType } from "@/types/kyc";
+import { KycStatus, KycFileType } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { UploadedFile } from "@/types/upload";
+
+// Local enum for UI document type selection (not in schema)
+enum KycDocumentType {
+  CITIZENSHIP = "CITIZENSHIP",
+  PASSPORT = "PASSPORT",
+  DRIVING_LICENSE = "DRIVING_LICENSE",
+  PAN = "PAN",
+  OTHER = "OTHER",
+}
 
 const documentTypeOptions = [
   { value: KycDocumentType.CITIZENSHIP, label: "Citizenship" },
@@ -128,26 +137,34 @@ export default function KycRequests() {
     licenseExpiryDate?: string;
   }>({});
 
-  const [formData, setFormData] = useState<Partial<CreateKycDto>>({
-    documentTypes: [],
+  // Form state - different from the actual DTO structure
+  const [formData, setFormData] = useState<any>({
     tenantId: "",
     firstName: "",
+    middleName: "",
     lastName: "",
     passportSizePhotoUrl: "",
     dateOfBirth: "",
     gender: "",
     maritalStatus: "",
+    nationality: "",
     fatherName: "",
     motherName: "",
     grandfatherName: "",
+    spouseName: "",
     permanentProvince: "",
     permanentDistrict: "",
     permanentMunicipality: "",
     permanentWard: "",
+    permanentStreet: "",
     permanentTole: "",
     occupation: "",
     monthlyIncome: 0,
     bankName: "",
+    accountNumber: "",
+    accountHolderName: "",
+    branchName: "",
+    accountType: "",
     bankAccountNumber: "",
     bankBranch: "",
   });
@@ -428,34 +445,30 @@ export default function KycRequests() {
 
     if (files.passportSizePhoto.length > 0) {
       const photoFile = files.passportSizePhoto[0];
-      formData.passportSizePhotoUrl = photoFile.url;
+      formData.photoUrl = photoFile.url;
     }
 
     if (selectedDocTypes.includes(KycDocumentType.CITIZENSHIP)) {
       files.citizenshipFront.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.CITIZENSHIP_FRONT,
-          documentType: KycDocumentType.CITIZENSHIP,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.citizenshipNumber,
-          issueDate: docMetadata.citizenshipIssueDate,
-          issueDistrict: docMetadata.citizenshipDistrict,
+          documentMetadata: {
+            documentNumber: docMetadata.citizenshipNumber,
+            issueDate: docMetadata.citizenshipIssueDate,
+            issueDistrict: docMetadata.citizenshipDistrict,
+          },
         }),
       );
       files.citizenshipBack.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.CITIZENSHIP_BACK,
-          documentType: KycDocumentType.CITIZENSHIP,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.citizenshipNumber,
-          issueDate: docMetadata.citizenshipIssueDate,
-          issueDistrict: docMetadata.citizenshipDistrict,
+          documentMetadata: {
+            documentNumber: docMetadata.citizenshipNumber,
+            issueDate: docMetadata.citizenshipIssueDate,
+            issueDistrict: docMetadata.citizenshipDistrict,
+          },
         }),
       );
     }
@@ -464,14 +477,12 @@ export default function KycRequests() {
       files.passport.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.PASSPORT,
-          documentType: KycDocumentType.PASSPORT,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.passportNumber,
-          issueDate: docMetadata.passportIssueDate,
-          expiryDate: docMetadata.passportExpiryDate,
+          documentMetadata: {
+            documentNumber: docMetadata.passportNumber,
+            issueDate: docMetadata.passportIssueDate,
+            expiryDate: docMetadata.passportExpiryDate,
+          },
         }),
       );
     }
@@ -480,12 +491,10 @@ export default function KycRequests() {
       files.pan.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.PAN,
-          documentType: KycDocumentType.PAN,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.panNumber,
+          documentMetadata: {
+            documentNumber: docMetadata.panNumber,
+          },
         }),
       );
     }
@@ -494,27 +503,23 @@ export default function KycRequests() {
       files.licenseFront.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.LICENSE_FRONT,
-          documentType: KycDocumentType.DRIVING_LICENSE,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.licenseNumber,
-          issueDate: docMetadata.licenseIssueDate,
-          expiryDate: docMetadata.licenseExpiryDate,
+          documentMetadata: {
+            documentNumber: docMetadata.licenseNumber,
+            issueDate: docMetadata.licenseIssueDate,
+            expiryDate: docMetadata.licenseExpiryDate,
+          },
         }),
       );
       files.licenseBack.forEach((f) =>
         allFiles.push({
           fileType: KycFileType.LICENSE_BACK,
-          documentType: KycDocumentType.DRIVING_LICENSE,
           fileUrl: f.url,
-          fileName: f.fileName,
-          mimeType: f.mimeType,
-          sizeInBytes: f.sizeInBytes,
-          documentNumber: docMetadata.licenseNumber,
-          issueDate: docMetadata.licenseIssueDate,
-          expiryDate: docMetadata.licenseExpiryDate,
+          documentMetadata: {
+            documentNumber: docMetadata.licenseNumber,
+            issueDate: docMetadata.licenseIssueDate,
+            expiryDate: docMetadata.licenseExpiryDate,
+          },
         }),
       );
     }
@@ -523,9 +528,7 @@ export default function KycRequests() {
       allFiles.push({
         fileType: KycFileType.SELFIE,
         fileUrl: f.url,
-        fileName: f.fileName,
-        mimeType: f.mimeType,
-        sizeInBytes: f.sizeInBytes,
+        documentMetadata: {},
       }),
     );
 
@@ -533,9 +536,7 @@ export default function KycRequests() {
       allFiles.push({
         fileType: KycFileType.SUPPORTING_DOCUMENT,
         fileUrl: f.url,
-        fileName: f.fileName,
-        mimeType: f.mimeType,
-        sizeInBytes: f.sizeInBytes,
+        documentMetadata: {},
       }),
     );
 
@@ -625,24 +626,32 @@ export default function KycRequests() {
     setIsReadOnly(false);
     setDocMetadata({});
     setFormData({
-      documentTypes: [],
+      tenantId: "",
       firstName: "",
+      middleName: "",
       lastName: "",
       passportSizePhotoUrl: "",
       dateOfBirth: "",
       gender: "",
       maritalStatus: "",
+      nationality: "",
       fatherName: "",
       motherName: "",
       grandfatherName: "",
+      spouseName: "",
       permanentProvince: "",
       permanentDistrict: "",
       permanentMunicipality: "",
       permanentWard: "",
+      permanentStreet: "",
       permanentTole: "",
       occupation: "",
       monthlyIncome: 0,
       bankName: "",
+      accountNumber: "",
+      accountHolderName: "",
+      branchName: "",
+      accountType: "",
       bankAccountNumber: "",
       bankBranch: "",
     });
@@ -726,9 +735,8 @@ export default function KycRequests() {
         bankBranch: bankDetails.branchName || bankDetails.bankBranch || "",
         accountType: bankDetails.accountType || "",
         accountHolderName: bankDetails.accountHolderName || "",
-        documentTypes: [],
         tenantId: editingKyc.borrower?.tenantId || "",
-      } as CreateKycDto);
+      });
 
       if (editingKyc.borrower?.userId) {
         setSelectedUserId(editingKyc.borrower.userId);
@@ -789,9 +797,9 @@ export default function KycRequests() {
         editingKyc.files.forEach((file) => {
           const uploadedFile: UploadedFile = {
             url: file.fileUrl,
-            fileName: file.fileName || "",
-            mimeType: file.mimeType || "",
-            sizeInBytes: file.sizeInBytes || 0,
+            fileName: "", // Not available in schema
+            mimeType: "", // Not available in schema
+            sizeInBytes: 0, // Not available in schema
           };
 
           // Extract documentType from metadata
@@ -1373,13 +1381,13 @@ export default function KycRequests() {
 
   const columns: Column<Kyc>[] = [
     {
-      key: "firstName",
+      key: "fullName",
       label: "Borrower Name",
       sortable: true,
       render: (_value, doc: Kyc) => (
         <div>
           <div className="font-medium">
-            {doc.borrower?.user?.fullName || `${doc.firstName} ${doc.lastName}`}
+            {doc.borrower?.user?.fullName || doc.fullName}
           </div>
           <div className="text-sm text-gray-500">
             {doc.borrower?.user?.email || "N/A"}
@@ -1388,28 +1396,34 @@ export default function KycRequests() {
       ),
     },
     {
-      key: "documentTypes",
+      key: "files",
       label: "Document Types",
-      sortable: true,
+      sortable: false,
       render: (_value, doc: Kyc) => (
         <div className="flex flex-wrap gap-1">
-          {doc.documentTypes?.map((type) => (
-            <Badge key={type} variant="outline" className="text-xs">
-              {type}
-            </Badge>
-          ))}
+          {Array.from(new Set(doc.files?.map((f) => f.fileType))).map(
+            (type) => (
+              <Badge key={type} variant="outline" className="text-xs">
+                {type}
+              </Badge>
+            ),
+          )}
         </div>
       ),
     },
     {
-      key: "citizenshipNumber",
+      key: "documentNumber",
       label: "Document Number",
-      sortable: true,
+      sortable: false,
       render: (_value, doc: Kyc) => {
         const docNumber = doc.files?.find(
-          (f) => f.documentNumber,
-        )?.documentNumber;
-        return <span>{docNumber || "N/A"}</span>;
+          (f) => (f.documentMetadata as any)?.documentNumber,
+        );
+        return (
+          <span>
+            {(docNumber?.documentMetadata as any)?.documentNumber || "N/A"}
+          </span>
+        );
       },
     },
     {
