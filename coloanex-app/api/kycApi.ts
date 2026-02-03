@@ -7,8 +7,9 @@ export const kycApi = {
     return data;
   },
 
-  getStatus: async (): Promise<any> => {
-    const { data } = await apiClient.get("/kyc/status");
+  getStatus: async (tenantId?: string): Promise<any> => {
+    const params = tenantId ? { tenantId } : {};
+    const { data } = await apiClient.get("/kyc/status", { params });
     return data;
   },
 
