@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, LenderLogo, Button } from "@/components/ui";
+import { Card, Button } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { loansApi } from "@/api";
 import type { Loan } from "@/types";
@@ -42,16 +42,20 @@ export default function LoansScreen() {
     loadLoans();
   };
 
-  const totalDebt = loans.reduce((sum, loan) => sum + loan.remainingBalance, 0);
+  const totalDebt = loans.reduce(
+    (sum, loan) => sum + (loan.remainingBalance ?? 0),
+    0,
+  );
   const activeLoans = loans.filter((loan) => loan.status === "active").length;
   const nextPaymentDate =
     loans.length > 0
       ? loans.reduce(
           (earliest, loan) =>
-            new Date(loan.nextPaymentDate) < new Date(earliest)
+            loan.nextPaymentDate &&
+            (!earliest || new Date(loan.nextPaymentDate) < new Date(earliest))
               ? loan.nextPaymentDate
               : earliest,
-          loans[0].nextPaymentDate,
+          loans[0]?.nextPaymentDate,
         )
       : null;
 
@@ -93,9 +97,13 @@ export default function LoansScreen() {
 
         <View style={styles.loansSection}>
           {loans.map((loan) => {
+            const loanAmount = loan.approvedAmount ?? loan.requestedAmount;
+            const totalPayments = loan.totalPayments ?? 1;
+            const paymentsMade = loan.paymentsMade ?? 0;
             const percentPaid =
-              ((loan.totalPayments - loan.paymentsMade) / loan.totalPayments) *
-              100;
+              ((totalPayments - paymentsMade) / totalPayments) * 100;
+            const lenderName = loan.borrower?.tenant?.name ?? "Unknown Lender";
+
             return (
               <TouchableOpacity
                 key={loan.id}
@@ -108,15 +116,9 @@ export default function LoansScreen() {
               >
                 <Card style={styles.loanCard}>
                   <View style={styles.loanHeader}>
-                    <LenderLogo
-                      logo={loan.lenderLogo}
-                      name={loan.lenderName}
-                      size={48}
-                      verified
-                    />
                     <View style={styles.loanInfo}>
-                      <Text style={styles.lenderName}>{loan.lenderName}</Text>
-                      <Text style={styles.loanType}>{loan.loanType}</Text>
+                      <Text style={styles.lenderName}>{lenderName}</Text>
+                      <Text style={styles.loanType}>{loan.purpose}</Text>
                     </View>
                   </View>
 
@@ -124,13 +126,13 @@ export default function LoansScreen() {
                     <View style={styles.loanDetail}>
                       <Text style={styles.loanDetailLabel}>Loan Amount</Text>
                       <Text style={styles.loanDetailValue}>
-                        {formatCurrency(loan.principalAmount)}
+                        {formatCurrency(loanAmount)}
                       </Text>
                     </View>
                     <View style={styles.loanDetail}>
-                      <Text style={styles.loanDetailLabel}>Interest Rate</Text>
+                      <Text style={styles.loanDetailLabel}>Term</Text>
                       <Text style={styles.loanDetailValue}>
-                        {loan.interestRate}%
+                        {loan.requestedTermMonths} months
                       </Text>
                     </View>
                   </View>
@@ -143,7 +145,7 @@ export default function LoansScreen() {
                       <Text
                         style={[styles.loanDetailValue, styles.balanceValue]}
                       >
-                        {formatCurrency(loan.remainingBalance)}
+                        {formatCurrency(loan.remainingBalance ?? loanAmount)}
                       </Text>
                     </View>
                     <View style={styles.loanDetail}>
@@ -151,34 +153,38 @@ export default function LoansScreen() {
                         Monthly Payment
                       </Text>
                       <Text style={styles.loanDetailValue}>
-                        ${loan.monthlyPayment}
+                        {formatCurrency(loan.monthlyPayment ?? 0)}
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: `${percentPaid}%` },
-                        ]}
-                      />
+                  {loan.totalPayments && loan.paymentsMade !== undefined && (
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: `${percentPaid}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.progressText}>
+                        {paymentsMade} of {totalPayments} payments completed (
+                        {percentPaid.toFixed(0)}% paid)
+                      </Text>
                     </View>
-                    <Text style={styles.progressText}>
-                      {loan.paymentsMade} of {loan.totalPayments} payments
-                      completed ({percentPaid.toFixed(0)}% paid)
-                    </Text>
-                  </View>
+                  )}
 
                   <View style={styles.loanFooter}>
-                    <Text style={styles.dueDate}>
-                      Due Date:{" "}
-                      {new Date(loan.nextPaymentDate).toLocaleDateString(
-                        "en-US",
-                        { month: "short", day: "numeric", year: "numeric" },
-                      )}
-                    </Text>
+                    {loan.nextPaymentDate && (
+                      <Text style={styles.dueDate}>
+                        Due Date:{" "}
+                        {new Date(loan.nextPaymentDate).toLocaleDateString(
+                          "en-US",
+                          { month: "short", day: "numeric", year: "numeric" },
+                        )}
+                      </Text>
+                    )}
                     <TouchableOpacity
                       style={styles.payButton}
                       onPress={() =>
