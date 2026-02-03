@@ -53,6 +53,7 @@ export interface UpdateLoanDto {
 export interface ReviewLoanDto {
   status: LoanStatus;
   rejectionReason?: string;
+  approvedAmount?: number;
 }
 
 export interface LoanQuery {
