@@ -61,6 +61,11 @@ export default function LoanRequests() {
     [user],
   );
 
+  const isAdmin = useMemo(
+    () => user?.roles?.some((ur) => ur.role.name === "Admin") || false,
+    [user],
+  );
+
   const isLender = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
     [user],
@@ -109,6 +114,11 @@ export default function LoanRequests() {
 
   const [collateralImages, setCollateralImages] = useState<UploadedFile[]>([]);
 
+  // Determine if user should be filtered by tenant
+  const shouldFilterByTenant = useMemo(() => {
+    return isLender || user?.roles?.some((ur) => ur.role.name === "Admin");
+  }, [isLender, user]);
+
   const [filters, setFilters] = useState<LoanQuery>({
     page: 1,
     limit: 10,
@@ -116,7 +126,19 @@ export default function LoanRequests() {
     status: undefined,
     sortBy: "createdAt",
     sortOrder: "desc",
+    tenantId:
+      shouldFilterByTenant && user?.tenantId ? user.tenantId : undefined,
   });
+
+  // Update filters when user changes
+  useEffect(() => {
+    if (shouldFilterByTenant && user?.tenantId) {
+      setFilters((prev) => ({
+        ...prev,
+        tenantId: user.tenantId,
+      }));
+    }
+  }, [shouldFilterByTenant, user?.tenantId]);
 
   const {
     data: loansData,
@@ -294,6 +316,7 @@ export default function LoanRequests() {
   const handleReviewSubmit = async (
     status: LoanStatus,
     rejectionReason?: string,
+    approvedAmount?: number,
   ) => {
     if (!selectedLoan) return;
 
@@ -302,6 +325,7 @@ export default function LoanRequests() {
       data: {
         status,
         rejectionReason: rejectionReason?.trim() || undefined,
+        approvedAmount: approvedAmount || undefined,
       },
     }).unwrap();
 
@@ -478,6 +502,9 @@ export default function LoanRequests() {
   };
 
   const resetLoanForm = () => {
+    // Auto-assign tenant for Admin/Lender users
+    const shouldAutoSetTenant = (isAdmin || isLender) && user?.tenantId;
+
     setFormData({
       requestedAmount: 0,
       purpose: "",
@@ -486,7 +513,7 @@ export default function LoanRequests() {
       collateralValue: 0,
       collateralImageUrl: "",
       requestedTermMonths: 0,
-      tenantId: "",
+      tenantId: shouldAutoSetTenant ? user.tenantId : "",
       userId: "",
     });
     setCollateralImages([]);
@@ -731,7 +758,7 @@ export default function LoanRequests() {
 
   const formSections = useMemo(
     () => [
-      ...(isSuperAdmin || isLender
+      ...(isSuperAdmin
         ? [
             {
               title: "Tenant Selection",
