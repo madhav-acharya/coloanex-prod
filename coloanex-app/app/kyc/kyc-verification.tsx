@@ -458,7 +458,7 @@ export default function KYCVerificationScreen() {
         "KYC verification submitted successfully. We will review your information and notify you soon.",
         "success",
       );
-      router.back();
+      router.replace(`/lenders/lender-details?id=${tenantId}` as any);
     } catch (error: any) {
       showToast(
         error.response?.data?.message ||
