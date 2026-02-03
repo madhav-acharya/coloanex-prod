@@ -24,6 +24,7 @@ import {
   ScrollText,
   FileSignature,
   Wallet,
+  Lock,
 } from "lucide-react";
 import {
   Select,
@@ -36,6 +37,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { FilterField, ActionButton } from "@/types/layout";
+import { hasPermission } from "@/lib/permissions";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -81,16 +83,26 @@ export default function DashboardLayout({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const isSuperAdmin = user?.roles?.some(
+    (ur) => ur.role?.name === "Super Admin",
+  );
+  const isAdminOrLender = user?.roles?.some(
+    (ur) => ur.role?.name === "Admin" || ur.role?.name === "Lender",
+  );
+  const needsTenantId = !isSuperAdmin && isAdminOrLender && !user?.tenantId;
+
   const accessControlItems = [
     {
       title: "Roles",
       icon: <Shield className="w-4 h-4" />,
       href: "/roles",
+      permission: "Read Roles",
     },
     {
       title: "Permissions",
       icon: <Key className="w-4 h-4" />,
       href: "/permissions",
+      permission: "Read Permissions",
     },
   ];
 
@@ -99,21 +111,25 @@ export default function DashboardLayout({
       title: "Users",
       icon: <Users className="w-4 h-4" />,
       href: "/users",
+      permission: "Read Users",
     },
     {
       title: "Tenants",
       icon: <Building2 className="w-4 h-4" />,
       href: "/tenants",
+      permission: "Read Tenants",
     },
     {
       title: "KYC Requests",
       icon: <FileText className="w-4 h-4" />,
       href: "/kyc-requests",
+      permission: "Read KYC Documents",
     },
     {
       title: "Loan Requests",
       icon: <Landmark className="w-4 h-4" />,
       href: "/loan-requests",
+      permission: "Read Loans",
     },
   ];
 
@@ -122,16 +138,19 @@ export default function DashboardLayout({
       title: "Loan Rules",
       icon: <ScrollText className="w-4 h-4" />,
       href: "/rules",
+      permission: "Read Loans",
     },
     {
       title: "Contracts",
-      icon: <FileSignature className="w-4 h-4" />,
+      icon: <FileText className="w-4 h-4" />,
       href: "/contracts",
+      permission: "Read Loans",
     },
     {
       title: "Wallets",
       icon: <Wallet className="w-4 h-4" />,
       href: "/wallets",
+      permission: "Read Payments",
     },
   ];
 
@@ -141,7 +160,12 @@ export default function DashboardLayout({
     isOpen: initialOpen,
   }: {
     title: string;
-    items: { title: string; icon: React.ReactNode; href: string }[];
+    items: {
+      title: string;
+      icon: React.ReactNode;
+      href: string;
+      permission?: string;
+    }[];
     isOpen: boolean;
   }) => {
     const [isOpen, setIsOpen] = useState(initialOpen);
@@ -168,6 +192,38 @@ export default function DashboardLayout({
           <div className="space-y-1">
             {items.map((item) => {
               const isActive = location.pathname === item.href;
+              const hasAccess =
+                !item.permission || hasPermission(user, item.permission);
+              const isLocked = !hasAccess || needsTenantId;
+
+              if (isLocked) {
+                return (
+                  <div
+                    key={item.title}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-not-allowed opacity-60",
+                      isActive
+                        ? "bg-green-100 text-green-700 font-medium"
+                        : "text-muted-foreground",
+                      isCollapsed && "justify-center px-2",
+                    )}
+                    title={
+                      needsTenantId
+                        ? "Tenant assignment required"
+                        : "No permission"
+                    }
+                  >
+                    {item.icon}
+                    {!isCollapsed && (
+                      <>
+                        <span className="flex-1">{item.title}</span>
+                        <Lock className="w-3 h-3 text-muted-foreground" />
+                      </>
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.title}
@@ -181,7 +237,7 @@ export default function DashboardLayout({
                   )}
                 >
                   {item.icon}
-                  {!isCollapsed && <span>{item.title}</span>}
+                  {!isCollapsed && <span className="flex-1">{item.title}</span>}
                 </Link>
               );
             })}
@@ -221,19 +277,40 @@ export default function DashboardLayout({
       <ScrollArea className="flex-1 px-3 py-4">
         <div className="space-y-6">
           <div className="space-y-1">
-            <Link
-              to="/dashboard"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
-                location.pathname === "/dashboard"
-                  ? "bg-green-100 text-green-700 font-medium"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                isCollapsed && "justify-center px-2",
-              )}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              {!isCollapsed && <span>Dashboard</span>}
-            </Link>
+            {needsTenantId ? (
+              <div
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-not-allowed opacity-60",
+                  location.pathname === "/dashboard"
+                    ? "bg-green-100 text-green-700 font-medium"
+                    : "text-muted-foreground",
+                  isCollapsed && "justify-center px-2",
+                )}
+                title="Tenant assignment required"
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                {!isCollapsed && (
+                  <>
+                    <span className="flex-1">Dashboard</span>
+                    <Lock className="w-3 h-3 text-muted-foreground" />
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/dashboard"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                  location.pathname === "/dashboard"
+                    ? "bg-green-100 text-green-700 font-medium"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  isCollapsed && "justify-center px-2",
+                )}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                {!isCollapsed && <span>Dashboard</span>}
+              </Link>
+            )}
           </div>
           <NavSection
             title="Access Control"
@@ -356,7 +433,6 @@ export default function DashboardLayout({
                 ))}
               </div>
 
-              {/* Right side: Action Buttons */}
               {actions && actions.length > 0 ? (
                 <div className="flex gap-2">
                   {actions.map((action, index) => (
