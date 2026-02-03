@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    ...typography.bodyLarge,
+    ...typography.body,
     fontWeight: "600",
     marginBottom: spacing.xs / 2,
   },
