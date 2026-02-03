@@ -10,6 +10,7 @@ export interface Wallet {
   id: string;
   userId: string;
   balance: number;
+  pendingBalance: number;
   paymentGatewayLinks?: PaymentGatewayLinks;
   createdAt: string;
   updatedAt: string;
@@ -34,15 +35,19 @@ export const walletsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["Wallets"],
     }),
     getMyWallet: builder.query<Wallet, void>({
       query: () => "/wallets/my-wallet",
+      providesTags: ["Wallets"],
     }),
     getWalletByUser: builder.query<Wallet, string>({
       query: (userId) => `/wallets/user/${userId}`,
+      providesTags: ["Wallets"],
     }),
     getWallet: builder.query<Wallet, string>({
       query: (id) => `/wallets/${id}`,
+      providesTags: ["Wallets"],
     }),
     updateWalletBalance: builder.mutation<
       Wallet,
@@ -53,6 +58,7 @@ export const walletsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { amount },
       }),
+      invalidatesTags: ["Wallets"],
     }),
   }),
 });

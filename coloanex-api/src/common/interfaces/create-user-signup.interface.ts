@@ -5,4 +5,8 @@ export interface CreateUserForSignupDto {
   fullName: string;
   tenantId?: string;
   role?: string;
+  tenantName?: string;
+  tenantContactEmail?: string;
+  tenantContactPhone?: string;
+  tenantAddress?: string;
 }

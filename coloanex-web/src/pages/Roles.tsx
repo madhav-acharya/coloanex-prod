@@ -8,7 +8,7 @@ import { MultiSelect } from "@/components/shared/MultiSelect";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import type { Message } from "@/components/shared/Messages";
+import type { Message } from "@/types/components";
 import {
   useGetRolesQuery,
   useCreateRoleMutation,
@@ -65,7 +65,7 @@ export default function Roles() {
   const { data: permissionsData, isLoading: isLoadingPermissions } =
     useGetPermissionsQuery(
       { limit: 100 },
-      { skip: !sheetOpen || !isAuthenticated }
+      { skip: !sheetOpen || !isAuthenticated },
     );
   const [createRole, { isLoading: isCreating, error: createError }] =
     useCreateRoleMutation();
@@ -182,10 +182,13 @@ export default function Roles() {
   };
 
   const handleSubmit = async () => {
-    const fieldValues = fields.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const fieldValues = fields.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     const formData = {
       name: fieldValues.name,
@@ -296,8 +299,8 @@ export default function Roles() {
           isReadOnly
             ? "View role details and permissions"
             : selectedRole
-            ? "Update the role details and permissions"
-            : "Add a new role with specific permissions"
+              ? "Update the role details and permissions"
+              : "Add a new role with specific permissions"
         }
         sections={[
           {

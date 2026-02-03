@@ -208,6 +208,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     fontWeight: "600",
   },
+  viewButton: {
     fontSize: 13,
     fontWeight: "500",
     color: "#111827",

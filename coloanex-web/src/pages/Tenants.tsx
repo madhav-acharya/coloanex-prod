@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { Building2, Eye, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
-import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
+import type { Column } from "@/types/components";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import type { Message } from "@/components/shared/Messages";
+import type { Message } from "@/types/components";
 import {
   useGetTenantsQuery,
   useCreateTenantMutation,
@@ -88,7 +89,7 @@ export default function Tenants() {
   } = useGetTenantsQuery(filters, { skip: !isAuthenticated });
   const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery(
     { limit: 1000 },
-    { skip: !sheetOpen || !isAuthenticated }
+    { skip: !sheetOpen || !isAuthenticated },
   );
   const [createTenant, { isLoading: isCreating, error: createError }] =
     useCreateTenantMutation();
@@ -228,10 +229,13 @@ export default function Tenants() {
   };
 
   const handleSubmit = async () => {
-    const fieldValues = fields.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const fieldValues = fields.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     try {
       if (selectedTenant) {
@@ -405,15 +409,15 @@ export default function Tenants() {
           isReadOnly
             ? "View Tenant"
             : selectedTenant
-            ? "Edit Tenant"
-            : "Create Tenant"
+              ? "Edit Tenant"
+              : "Create Tenant"
         }
         description={
           isReadOnly
             ? "View tenant details and owner information"
             : selectedTenant
-            ? "Update the tenant details"
-            : "Add a new tenant to the system"
+              ? "Update the tenant details"
+              : "Add a new tenant to the system"
         }
         sections={[
           {

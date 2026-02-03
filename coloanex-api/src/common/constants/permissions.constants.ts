@@ -34,3 +34,48 @@ export const CREATE_LOANS = 'Create Loans';
 export const UPDATE_LOANS = 'Update Loans';
 export const DELETE_LOANS = 'Delete Loans';
 export const APPROVE_LOANS = 'Approve Loans';
+
+export const READ_RULES = 'Read Rules';
+export const CREATE_RULES = 'Create Rules';
+export const UPDATE_RULES = 'Update Rules';
+export const DELETE_RULES = 'Delete Rules';
+
+export const READ_WALLETS = 'Read Wallets';
+export const CREATE_WALLETS = 'Create Wallets';
+export const UPDATE_WALLETS = 'Update Wallets';
+export const DELETE_WALLETS = 'Delete Wallets';
+
+export const READ_TRANSACTIONS = 'Read Transactions';
+export const CREATE_TRANSACTIONS = 'Create Transactions';
+export const UPDATE_TRANSACTIONS = 'Update Transactions';
+export const DELETE_TRANSACTIONS = 'Delete Transactions';
+
+export const READ_CONTRACTS = 'Read Contracts';
+export const CREATE_CONTRACTS = 'Create Contracts';
+export const UPDATE_CONTRACTS = 'Update Contracts';
+export const DELETE_CONTRACTS = 'Delete Contracts';
+
+export const READ_NOTIFICATIONS = 'Read Notifications';
+export const CREATE_NOTIFICATIONS = 'Create Notifications';
+export const UPDATE_NOTIFICATIONS = 'Update Notifications';
+export const DELETE_NOTIFICATIONS = 'Delete Notifications';
+
+export const READ_LENDERS = 'Read Lenders';
+export const CREATE_LENDERS = 'Create Lenders';
+export const UPDATE_LENDERS = 'Update Lenders';
+export const DELETE_LENDERS = 'Delete Lenders';
+
+export const READ_PAYMENTS = 'Read Payments';
+export const CREATE_PAYMENTS = 'Create Payments';
+export const UPDATE_PAYMENTS = 'Update Payments';
+export const DELETE_PAYMENTS = 'Delete Payments';
+
+export const READ_REPORTS = 'Read Reports';
+export const GENERATE_REPORTS = 'Generate Reports';
+
+export const READ_PAYMENT_SCHEDULES = 'Read Payment Schedules';
+export const CREATE_PAYMENT_SCHEDULES = 'Create Payment Schedules';
+export const UPDATE_PAYMENT_SCHEDULES = 'Update Payment Schedules';
+export const DELETE_PAYMENT_SCHEDULES = 'Delete Payment Schedules';
+
+export const READ_ACTIVITY_LOGS = 'Read Activity Logs';

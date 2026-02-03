@@ -63,15 +63,19 @@ export const transactionsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: ["Transactions", "Wallets"],
     }),
     getTransactionsByContract: builder.query<Transaction[], string>({
       query: (contractId) => `/transactions/contract/${contractId}`,
+      providesTags: ["Transactions"],
     }),
     getTransactionsByWallet: builder.query<Transaction[], string>({
       query: (walletId) => `/transactions/wallet/${walletId}`,
+      providesTags: ["Transactions"],
     }),
     getTransaction: builder.query<Transaction, string>({
       query: (id) => `/transactions/${id}`,
+      providesTags: ["Transactions"],
     }),
     updateTransactionStatus: builder.mutation<
       Transaction,
@@ -82,6 +86,7 @@ export const transactionsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: { status },
       }),
+      invalidatesTags: ["Transactions"],
     }),
   }),
 });

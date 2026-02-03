@@ -2,14 +2,23 @@ import { useState, useEffect, useMemo } from "react";
 import { Users as UsersIcon, Eye, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
-import { DataTable, type Column } from "@/components/shared/DataTable";
+import { DataTable } from "@/components/shared/DataTable";
+import type { Column } from "@/types/components";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { MultiSelect } from "@/components/shared/MultiSelect";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import type { Message } from "@/components/shared/Messages";
+import type { Message } from "@/types/components";
 import {
   useGetUsersQuery,
   useCreateUserMutation,
@@ -18,8 +27,7 @@ import {
   type User,
   type UsersQueryParams,
 } from "@/apis/usersApi";
-import { useGetRolesQuery } from "@/apis/rolesApi";
-import { useGetPermissionsQuery } from "@/apis/permissionsApi";
+import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useAuth } from "@/hooks/useAuth";
 import {
   extractUserRoleIds,
@@ -32,12 +40,20 @@ import {
 
 export default function Users() {
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user: currentUser } = useAuth();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
+  const [showTenantFields, setShowTenantFields] = useState(false);
+  const [tenantFormData, setTenantFormData] = useState({
+    tenantName: "",
+    tenantContactEmail: "",
+    tenantContactPhone: "",
+    tenantAddress: "",
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
@@ -90,15 +106,10 @@ export default function Users() {
     isLoading,
     error: usersError,
   } = useGetUsersQuery(filters, { skip: !isAuthenticated });
-  const { data: rolesData, isLoading: isLoadingRoles } = useGetRolesQuery(
+  const { data: tenantsData, isLoading: isLoadingTenants } = useGetTenantsQuery(
     { limit: 100 },
-    { skip: !sheetOpen || !isAuthenticated }
+    { skip: !sheetOpen || !isAuthenticated },
   );
-  const { data: permissionsData, isLoading: isLoadingPermissions } =
-    useGetPermissionsQuery(
-      { limit: 100 },
-      { skip: !sheetOpen || !isAuthenticated }
-    );
   const [createUser, { isLoading: isCreating, error: createError }] =
     useCreateUserMutation();
   const [updateUser, { isLoading: isUpdating, error: updateError }] =
@@ -106,8 +117,94 @@ export default function Users() {
   const [deleteUser] = useDeleteUserMutation();
 
   const users = usersData?.data || [];
-  const roles = rolesData?.data || [];
-  const permissions = permissionsData?.data || [];
+  const tenants = tenantsData?.data || [];
+
+  const KNOWN_ROLES = [
+    {
+      id: "super-admin",
+      name: "Super Admin",
+      description: "Full system access",
+    },
+    { id: "admin", name: "Admin", description: "Tenant administration" },
+    { id: "lender", name: "Lender", description: "Lending operations" },
+    { id: "borrower", name: "Borrower", description: "Borrowing services" },
+  ];
+
+  const extractedRolesMap = useMemo(() => {
+    const rolesMap = new Map<
+      string,
+      { id: string; name: string; description?: string }
+    >();
+
+    KNOWN_ROLES.forEach((role) => {
+      rolesMap.set(role.name, role);
+    });
+
+    if (currentUser) {
+      extractUserRoles(currentUser as any).forEach((role) => {
+        rolesMap.set(role.name, role);
+      });
+    }
+
+    users.forEach((user) => {
+      extractUserRoles(user).forEach((role) => {
+        rolesMap.set(role.name, role);
+      });
+    });
+
+    return rolesMap;
+  }, [users, currentUser]);
+
+  const extractedPermissionsMap = useMemo(() => {
+    const permsMap = new Map<
+      string,
+      { id: string; name: string; description?: string }
+    >();
+
+    if (currentUser) {
+      extractUserPermissions(currentUser as any).forEach((perm) => {
+        permsMap.set(perm.id, perm);
+      });
+    }
+
+    return permsMap;
+  }, [currentUser]);
+
+  const allRoles = useMemo(
+    () => Array.from(extractedRolesMap.values()),
+    [extractedRolesMap],
+  );
+  const allPermissions = useMemo(
+    () => Array.from(extractedPermissionsMap.values()),
+    [extractedPermissionsMap],
+  );
+
+  const currentUserRoles = extractUserRoles(currentUser as any);
+  const isSuperAdmin = currentUserRoles.some((r) => r.name === "Super Admin");
+  const isAdmin = currentUserRoles.some((r) => r.name === "Admin");
+  const isLender = currentUserRoles.some((r) => r.name === "Lender");
+
+  const roles = allRoles.filter((role) => {
+    if (isSuperAdmin) {
+      return role.name !== "Super Admin";
+    } else if (isAdmin) {
+      return role.name !== "Super Admin" && role.name !== "Admin";
+    } else if (isLender) {
+      return (
+        role.name !== "Super Admin" &&
+        role.name !== "Admin" &&
+        role.name !== "Lender"
+      );
+    }
+    return false;
+  });
+
+  const currentUserPermissions = extractUserPermissions(currentUser as any);
+  const permissions = isSuperAdmin
+    ? allPermissions
+    : allPermissions.filter((perm) =>
+        currentUserPermissions.some((userPerm) => userPerm.id === perm.id),
+      );
 
   useEffect(() => {
     if (usersError) {
@@ -181,6 +278,15 @@ export default function Users() {
     resetFields();
     setSelectedRoles([]);
     setSelectedPermissions([]);
+    const shouldAutoSetTenant = (isAdmin || isLender) && currentUser?.tenantId;
+    setSelectedTenant(shouldAutoSetTenant ? currentUser.tenantId : "");
+    setShowTenantFields(false);
+    setTenantFormData({
+      tenantName: "",
+      tenantContactEmail: "",
+      tenantContactPhone: "",
+      tenantAddress: "",
+    });
     const passwordField = fields.find((f) => f.id === "password");
     if (passwordField) {
       passwordField.required = true;
@@ -219,6 +325,7 @@ export default function Users() {
     }
     setSelectedRoles(extractUserRoleIds(user));
     setSelectedPermissions(extractUserPermissionIds(user));
+    setSelectedTenant(user.tenantId || "");
     setSheetOpen(true);
   };
 
@@ -251,10 +358,13 @@ export default function Users() {
   };
 
   const handleSubmit = async () => {
-    const fieldValues = fields.reduce((acc, field) => {
-      acc[field.id] = field.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const fieldValues = fields.reduce(
+      (acc, field) => {
+        acc[field.id] = field.value;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
 
     try {
       if (selectedUser) {
@@ -264,8 +374,9 @@ export default function Users() {
           phone: fieldValues.phone || undefined,
           roleIds: selectedRoles.filter((id) => id && id.trim() !== ""),
           permissionIds: selectedPermissions.filter(
-            (id) => id && id.trim() !== ""
+            (id) => id && id.trim() !== "",
           ),
+          tenantId: selectedTenant || undefined,
           id: selectedUser.id,
         };
 
@@ -289,8 +400,15 @@ export default function Users() {
           password: fieldValues.password,
           roleIds: selectedRoles.filter((id) => id && id.trim() !== ""),
           permissionIds: selectedPermissions.filter(
-            (id) => id && id.trim() !== ""
+            (id) => id && id.trim() !== "",
           ),
+          tenantId: selectedTenant || undefined,
+          ...(showTenantFields && {
+            tenantName: tenantFormData.tenantName,
+            tenantContactEmail: tenantFormData.tenantContactEmail,
+            tenantContactPhone: tenantFormData.tenantContactPhone,
+            tenantAddress: tenantFormData.tenantAddress,
+          }),
         };
         await createUser(createData).unwrap();
         toast({
@@ -303,6 +421,7 @@ export default function Users() {
       resetFields();
       setSelectedRoles([]);
       setSelectedPermissions([]);
+      setSelectedTenant("");
     } catch {
       return;
     }
@@ -337,7 +456,7 @@ export default function Users() {
         const roles = (user.roles || [])
           .map((r) => (typeof r === "object" && "role" in r ? r.role : r))
           .filter(
-            (r) => r && typeof r === "object" && "id" in r && "name" in r
+            (r) => r && typeof r === "object" && "id" in r && "name" in r,
           );
         const visibleRoles = roles.slice(0, maxVisible);
         const remainingCount = roles.length - maxVisible;
@@ -372,10 +491,10 @@ export default function Users() {
         const maxVisible = 2;
         const permissions = (user.permissions || [])
           .map((p) =>
-            typeof p === "object" && "permission" in p ? p.permission : p
+            typeof p === "object" && "permission" in p ? p.permission : p,
           )
           .filter(
-            (p) => p && typeof p === "object" && "id" in p && "name" in p
+            (p) => p && typeof p === "object" && "id" in p && "name" in p,
           );
         const visiblePermissions = permissions.slice(0, maxVisible);
         const remainingCount = permissions.length - maxVisible;
@@ -393,7 +512,7 @@ export default function Users() {
                     >
                       {permission.name}
                     </Badge>
-                  )
+                  ),
                 )}
                 {remainingCount > 0 && (
                   <Badge variant="outline" className="text-xs">
@@ -501,8 +620,8 @@ export default function Users() {
           isReadOnly
             ? "View user details, roles, and permissions"
             : selectedUser
-            ? "Update the user details and permissions"
-            : "Add a new user to the system"
+              ? "Update the user details and permissions"
+              : "Add a new user to the system"
         }
         sections={[
           {
@@ -518,6 +637,219 @@ export default function Users() {
         isReadOnly={isReadOnly}
       >
         <div className="space-y-4">
+          {!isReadOnly && isSuperAdmin && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Tenant
+                {selectedRoles.some((roleId) => {
+                  const role = allRoles.find((r) => r.id === roleId);
+                  return (
+                    role?.name?.toLowerCase() === "admin" ||
+                    role?.name?.toLowerCase() === "lender"
+                  );
+                }) && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              {selectedRoles.some((roleId) => {
+                const role = allRoles.find((r) => r.id === roleId);
+                return role?.name?.toLowerCase() === "admin";
+              }) ? (
+                <>
+                  <Select
+                    value={selectedTenant}
+                    onValueChange={setSelectedTenant}
+                    disabled={isLoadingTenants || isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select existing tenant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tenants.map((tenant) => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          {tenant.name || tenant.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Admin must select an existing tenant
+                  </p>
+                </>
+              ) : selectedRoles.some((roleId) => {
+                  const role = allRoles.find((r) => r.id === roleId);
+                  return role?.name?.toLowerCase() === "lender";
+                }) ? (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="radio"
+                      id="existing-tenant"
+                      name="tenant-option"
+                      checked={!showTenantFields}
+                      onChange={() => {
+                        setShowTenantFields(false);
+                        setTenantFormData({
+                          tenantName: "",
+                          tenantContactEmail: "",
+                          tenantContactPhone: "",
+                          tenantAddress: "",
+                        });
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <label
+                      htmlFor="existing-tenant"
+                      className="text-sm cursor-pointer"
+                    >
+                      Select existing tenant
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="radio"
+                      id="new-tenant"
+                      name="tenant-option"
+                      checked={showTenantFields}
+                      onChange={() => {
+                        setShowTenantFields(true);
+                        setSelectedTenant("");
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <label
+                      htmlFor="new-tenant"
+                      className="text-sm cursor-pointer"
+                    >
+                      Create new lender organization
+                    </label>
+                  </div>
+                  {!showTenantFields ? (
+                    <Select
+                      value={selectedTenant}
+                      onValueChange={setSelectedTenant}
+                      disabled={isLoadingTenants || isReadOnly}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tenant" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tenants.map((tenant) => (
+                          <SelectItem key={tenant.id} value={tenant.id}>
+                            {tenant.name || tenant.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-3 p-4 border rounded-md bg-gray-50">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">
+                          Organization Name{" "}
+                          <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          value={tenantFormData.tenantName}
+                          onChange={(e) =>
+                            setTenantFormData({
+                              ...tenantFormData,
+                              tenantName: e.target.value,
+                            })
+                          }
+                          placeholder="Enter organization name"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">
+                          Contact Email <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="email"
+                          value={tenantFormData.tenantContactEmail}
+                          onChange={(e) =>
+                            setTenantFormData({
+                              ...tenantFormData,
+                              tenantContactEmail: e.target.value,
+                            })
+                          }
+                          placeholder="organization@example.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">
+                          Contact Phone
+                        </label>
+                        <Input
+                          type="tel"
+                          value={tenantFormData.tenantContactPhone}
+                          onChange={(e) =>
+                            setTenantFormData({
+                              ...tenantFormData,
+                              tenantContactPhone: e.target.value,
+                            })
+                          }
+                          placeholder="Organization phone"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">
+                          Address
+                        </label>
+                        <Input
+                          value={tenantFormData.tenantAddress}
+                          onChange={(e) =>
+                            setTenantFormData({
+                              ...tenantFormData,
+                              tenantAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Organization address"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Lender can create new organization or select existing tenant
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Select
+                    value={selectedTenant}
+                    onValueChange={setSelectedTenant}
+                    disabled={isLoadingTenants || isReadOnly}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select tenant" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tenants.map((tenant) => (
+                        <SelectItem key={tenant.id} value={tenant.id}>
+                          {tenant.name || tenant.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Tenant assignment is required for Admin and Lender users
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          {!isReadOnly && (isAdmin || isLender) && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Tenant
+              </label>
+              <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+                <p className="text-sm text-gray-700">
+                  {currentUser?.tenant?.name || "No tenant assigned"}
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Users will be assigned to your tenant automatically
+              </p>
+            </div>
+          )}
           {isReadOnly ? (
             <>
               <div className="space-y-2">
@@ -552,15 +884,15 @@ export default function Users() {
                 <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-md border border-blue-200 min-h-[60px]">
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
-                    const selectedRoleObjects = roles.filter((r) =>
-                      userRoles.some((ur) => ur.id === r.id)
+                    const selectedRoleObjects = allRoles.filter((r) =>
+                      userRoles.some((ur) => ur.id === r.id),
                     );
                     const rolePermissions =
                       extractRolePermissions(selectedRoleObjects);
                     const userPermissions =
                       extractUserPermissions(selectedUser);
                     const roleBasedPerms = userPermissions.filter((perm) =>
-                      rolePermissions.has(perm.id)
+                      rolePermissions.has(perm.id),
                     );
 
                     return roleBasedPerms.length > 0 ? (
@@ -588,15 +920,15 @@ export default function Users() {
                 <div className="flex flex-wrap gap-2 p-3 bg-purple-50 rounded-md border border-purple-200 min-h-[60px]">
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
-                    const selectedRoleObjects = roles.filter((r) =>
-                      userRoles.some((ur) => ur.id === r.id)
+                    const selectedRoleObjects = allRoles.filter((r) =>
+                      userRoles.some((ur) => ur.id === r.id),
                     );
                     const rolePermissions =
                       extractRolePermissions(selectedRoleObjects);
                     const userPermissions =
                       extractUserPermissions(selectedUser);
                     const additionalPerms = userPermissions.filter(
-                      (perm) => !rolePermissions.has(perm.id)
+                      (perm) => !rolePermissions.has(perm.id),
                     );
 
                     return additionalPerms.length > 0 ? (
@@ -630,7 +962,6 @@ export default function Users() {
                 }))}
                 selectedIds={selectedRoles}
                 onChange={setSelectedRoles}
-                isLoading={isLoadingRoles}
                 disabled={isReadOnly}
               />
               <MultiSelect
@@ -643,7 +974,6 @@ export default function Users() {
                 }))}
                 selectedIds={selectedPermissions}
                 onChange={setSelectedPermissions}
-                isLoading={isLoadingPermissions}
                 disabled={isReadOnly}
               />
             </>

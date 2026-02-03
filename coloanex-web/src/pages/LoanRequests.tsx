@@ -61,6 +61,11 @@ export default function LoanRequests() {
     [user],
   );
 
+  const isAdmin = useMemo(
+    () => user?.roles?.some((ur) => ur.role.name === "Admin") || false,
+    [user],
+  );
+
   const isLender = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
     [user],
@@ -94,7 +99,8 @@ export default function LoanRequests() {
     [usersData],
   );
 
-  const [formData, setFormData] = useState<Partial<CreateLoanDto>>({
+  // Form state - different from the actual DTO structure
+  const [formData, setFormData] = useState<any>({
     requestedAmount: 0,
     purpose: "",
     collateralType: "",
@@ -108,6 +114,11 @@ export default function LoanRequests() {
 
   const [collateralImages, setCollateralImages] = useState<UploadedFile[]>([]);
 
+  // Determine if user should be filtered by tenant
+  const shouldFilterByTenant = useMemo(() => {
+    return isLender || user?.roles?.some((ur) => ur.role.name === "Admin");
+  }, [isLender, user]);
+
   const [filters, setFilters] = useState<LoanQuery>({
     page: 1,
     limit: 10,
@@ -115,7 +126,19 @@ export default function LoanRequests() {
     status: undefined,
     sortBy: "createdAt",
     sortOrder: "desc",
+    tenantId:
+      shouldFilterByTenant && user?.tenantId ? user.tenantId : undefined,
   });
+
+  // Update filters when user changes
+  useEffect(() => {
+    if (shouldFilterByTenant && user?.tenantId) {
+      setFilters((prev) => ({
+        ...prev,
+        tenantId: user.tenantId,
+      }));
+    }
+  }, [shouldFilterByTenant, user?.tenantId]);
 
   const {
     data: loansData,
@@ -198,7 +221,7 @@ export default function LoanRequests() {
       userId: loan.borrower?.userId,
     });
     // Set collateral images from existing loan
-    const collateralImageUrl = collateral.imageUrl || loan.collateralImageUrl;
+    const collateralImageUrl = collateral.imageUrl;
     if (collateralImageUrl) {
       setCollateralImages([
         {
@@ -231,7 +254,7 @@ export default function LoanRequests() {
       userId: loan.borrower?.userId,
     });
     // Set collateral images from existing loan
-    const collateralImageUrl = collateral.imageUrl || loan.collateralImageUrl;
+    const collateralImageUrl = collateral.imageUrl;
     if (collateralImageUrl) {
       setCollateralImages([
         {
@@ -293,6 +316,7 @@ export default function LoanRequests() {
   const handleReviewSubmit = async (
     status: LoanStatus,
     rejectionReason?: string,
+    approvedAmount?: number,
   ) => {
     if (!selectedLoan) return;
 
@@ -301,6 +325,7 @@ export default function LoanRequests() {
       data: {
         status,
         rejectionReason: rejectionReason?.trim() || undefined,
+        approvedAmount: approvedAmount || undefined,
       },
     }).unwrap();
 
@@ -477,6 +502,9 @@ export default function LoanRequests() {
   };
 
   const resetLoanForm = () => {
+    // Auto-assign tenant for Admin/Lender users
+    const shouldAutoSetTenant = (isAdmin || isLender) && user?.tenantId;
+
     setFormData({
       requestedAmount: 0,
       purpose: "",
@@ -485,7 +513,7 @@ export default function LoanRequests() {
       collateralValue: 0,
       collateralImageUrl: "",
       requestedTermMonths: 0,
-      tenantId: "",
+      tenantId: shouldAutoSetTenant ? user.tenantId : "",
       userId: "",
     });
     setCollateralImages([]);
@@ -705,13 +733,12 @@ export default function LoanRequests() {
   const statusFilterValues = [
     { value: "all", label: "All Statuses" },
     { value: LoanStatus.DRAFT, label: "Draft" },
-    { value: LoanStatus.PENDING_REVIEW, label: "Pending Review" },
+    { value: LoanStatus.SUBMITTED, label: "Submitted" },
+    { value: LoanStatus.UNDER_REVIEW, label: "Under Review" },
     { value: LoanStatus.APPROVED, label: "Approved" },
     { value: LoanStatus.REJECTED, label: "Rejected" },
-    { value: LoanStatus.DISBURSED, label: "Disbursed" },
-    { value: LoanStatus.ACTIVE, label: "Active" },
-    { value: LoanStatus.CLOSED, label: "Closed" },
-    { value: LoanStatus.DEFAULTED, label: "Defaulted" },
+    { value: LoanStatus.CONTRACT_GENERATED, label: "Contract Generated" },
+    { value: LoanStatus.CONTRACT_SIGNED, label: "Contract Signed" },
   ];
 
   const handleCollateralImageChange = (files: UploadedFile[]) => {
@@ -731,7 +758,7 @@ export default function LoanRequests() {
 
   const formSections = useMemo(
     () => [
-      ...(isSuperAdmin || isLender
+      ...(isSuperAdmin
         ? [
             {
               title: "Tenant Selection",
@@ -1001,7 +1028,8 @@ export default function LoanRequests() {
               onClick: handleReviewClick,
               show: (loan) =>
                 (isSuperAdmin || isLender) &&
-                (loan.status === LoanStatus.PENDING_REVIEW ||
+                (loan.status === LoanStatus.UNDER_REVIEW ||
+                  loan.status === LoanStatus.SUBMITTED ||
                   loan.status === LoanStatus.DRAFT),
             },
             {
@@ -1029,7 +1057,8 @@ export default function LoanRequests() {
               onClick: handleReviewClick,
               show: (loan) =>
                 (isSuperAdmin || isLender) &&
-                loan.status === LoanStatus.PENDING_REVIEW,
+                (loan.status === LoanStatus.UNDER_REVIEW ||
+                  loan.status === LoanStatus.SUBMITTED),
             },
           ]}
         />

@@ -1,5 +1,8 @@
 export const API_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
 
+export const APP_NAME = "ColoaNex";
+export const APP_VERSION = "1.0.0";
+
 export const Colors = {
   primary: "#10B981",
   primaryDark: "#059669",

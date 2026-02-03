@@ -59,4 +59,20 @@ export class CreateUserDto {
   @IsBoolean()
   @IsOptional()
   isEmailVerified?: boolean;
+
+  @IsString()
+  @IsOptional()
+  tenantName?: string;
+
+  @IsEmail()
+  @IsOptional()
+  tenantContactEmail?: string;
+
+  @IsString()
+  @IsOptional()
+  tenantContactPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  tenantAddress?: string;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,33 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Card, Button, useToast } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { logout } from "@/store/slices/authSlice";
-import { authApi } from "@/api";
+import { logout, setUser } from "@/store/slices/authSlice";
+import { authApi, usersApi } from "@/api";
 
 export default function ProfileScreen() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { showToast } = useToast();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadUserData();
+    }, []),
+  );
+
+  const loadUserData = async () => {
+    try {
+      const userData = await usersApi.getCurrentUser();
+      dispatch(setUser(userData));
+    } catch (error) {
+      console.error("Failed to load user data:", error);
+    }
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);

@@ -109,15 +109,47 @@ export class UsersService {
       parallelism: 2,
     });
 
+    let finalTenantId = isSuperAdmin
+      ? (createUserDto.tenantId as string | null)
+      : (currentUser.tenantId as string | null);
+
+    if (
+      !finalTenantId &&
+      createUserDto.tenantName &&
+      createUserDto.roleIds &&
+      createUserDto.roleIds.length > 0
+    ) {
+      const roleNames = await this.prisma.role.findMany({
+        where: { id: { in: createUserDto.roleIds } },
+        select: { name: true },
+      });
+
+      const isLenderRole = roleNames.some((r) => r.name === 'Lender');
+
+      if (isLenderRole) {
+        const newTenant = await this.prisma.tenant.create({
+          data: {
+            name: createUserDto.tenantName,
+            contactEmail:
+              createUserDto.tenantContactEmail || createUserDto.email,
+            contactPhone:
+              createUserDto.tenantContactPhone || createUserDto.phone || null,
+            address: createUserDto.tenantAddress || null,
+            isActive: true,
+            isBanned: false,
+          },
+        });
+        finalTenantId = newTenant.id;
+      }
+    }
+
     const user = await this.prisma.user.create({
       data: {
         fullName: createUserDto.fullName,
         email: createUserDto.email,
         phone: createUserDto.phone ?? '',
         password: hashedPassword,
-        tenantId: isSuperAdmin
-          ? (createUserDto.tenantId as string | null)
-          : (currentUser.tenantId as string | null),
+        tenantId: finalTenantId,
         isActive: createUserDto.isActive ?? true,
         isBanned: createUserDto.isBanned ?? false,
         isEmailVerified: createUserDto.isEmailVerified ?? false,
@@ -189,7 +221,17 @@ export class UsersService {
     ipAddress?: string,
     userAgent?: string,
   ) {
-    const { email, phone, password, fullName, tenantId } = createUserDto;
+    const {
+      email,
+      phone,
+      password,
+      fullName,
+      tenantId,
+      tenantName,
+      tenantContactEmail,
+      tenantContactPhone,
+      tenantAddress,
+    } = createUserDto;
 
     const phoneTrimmed = phone?.trim() || null;
     const existingUserByEmail = await this.prisma.user.findUnique({
@@ -227,13 +269,29 @@ export class UsersService {
       throw new BadRequestException('Lender role not found');
     }
 
+    let finalTenantId = tenantId;
+
+    if (!tenantId && tenantName) {
+      const newTenant = await this.prisma.tenant.create({
+        data: {
+          name: tenantName,
+          contactEmail: tenantContactEmail || email,
+          contactPhone: tenantContactPhone || phoneTrimmed,
+          address: tenantAddress || null,
+          isActive: true,
+          isBanned: false,
+        },
+      });
+      finalTenantId = newTenant.id;
+    }
+
     const user = await this.prisma.user.create({
       data: {
         fullName,
         email,
         phone: phoneTrimmed || null,
         password: hashedPassword,
-        tenantId,
+        tenantId: finalTenantId,
         isEmailVerified: false,
         isActive: true,
       },
@@ -268,10 +326,11 @@ export class UsersService {
           userId: user.id,
           role: 'Lender',
           email: user.email,
+          tenantId: finalTenantId,
         },
         ipAddress,
         userAgent,
-        tenantId,
+        tenantId: finalTenantId,
       });
     }
 
