@@ -247,11 +247,17 @@ export class KycService {
     };
   }
 
-  async getStatus(user: JwtPayload) {
+  async getStatus(user: JwtPayload, tenantId?: string) {
+    const whereClause: any = {
+      userId: user.sub,
+    };
+
+    if (tenantId) {
+      whereClause.tenantId = tenantId;
+    }
+
     const borrower = await this.prisma.borrower.findFirst({
-      where: {
-        userId: user.sub,
-      },
+      where: whereClause,
       include: {
         kycs: {
           orderBy: {
