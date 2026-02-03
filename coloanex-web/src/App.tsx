@@ -26,13 +26,76 @@ import Settings from "./pages/Settings";
 import Rules from "./pages/Rules";
 import Contracts from "./pages/Contracts";
 import Wallets from "./pages/Wallets";
+import { hasPermission } from "./lib/permissions";
+import { Lock } from "lucide-react";
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+const ProtectedRoute = ({
+  children,
+  requiredPermission,
+}: {
+  children: React.ReactNode;
+  requiredPermission?: string;
+}) => {
+  const { isAuthenticated, user } = useAuth();
   const hasToken = localStorage.getItem("token");
 
   if (!isAuthenticated && !hasToken) {
     return <Navigate to="/login" replace />;
+  }
+
+  const isSuperAdmin = user?.roles?.some(
+    (ur: any) => ur.role?.name === "Super Admin",
+  );
+
+  const isAdminOrLender = user?.roles?.some(
+    (ur: any) => ur.role?.name === "Admin" || ur.role?.name === "Lender",
+  );
+  const needsTenantId = !isSuperAdmin && isAdminOrLender && !user?.tenantId;
+
+  if (
+    needsTenantId &&
+    window.location.pathname !== "/profile" &&
+    window.location.pathname !== "/settings"
+  ) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            Access Restricted
+          </h2>
+          <p className="text-gray-600 mb-4">
+            Your account needs to be assigned to a tenant before you can access
+            this page.
+          </p>
+          <p className="text-sm text-gray-500">
+            Please contact a Super Admin to assign a tenant to your account.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (requiredPermission && !hasPermission(user, requiredPermission)) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+            Permission Required
+          </h2>
+          <p className="text-gray-600 mb-4">
+            You don't have permission to access this page.
+          </p>
+          <p className="text-sm text-gray-500">
+            Required permission:{" "}
+            <code className="bg-gray-200 px-2 py-1 rounded">
+              {requiredPermission}
+            </code>
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -153,7 +216,7 @@ function App() {
       <Route
         path="/roles"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Roles">
             <Roles />
           </ProtectedRoute>
         }
@@ -161,7 +224,7 @@ function App() {
       <Route
         path="/permissions"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Permissions">
             <Permissions />
           </ProtectedRoute>
         }
@@ -170,7 +233,7 @@ function App() {
       <Route
         path="/users"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Users">
             <Users />
           </ProtectedRoute>
         }
@@ -178,7 +241,7 @@ function App() {
       <Route
         path="/tenants"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Tenants">
             <Tenants />
           </ProtectedRoute>
         }
@@ -187,7 +250,7 @@ function App() {
       <Route
         path="/kyc-requests"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read KYC Documents">
             <KycRequests />
           </ProtectedRoute>
         }
@@ -196,7 +259,7 @@ function App() {
       <Route
         path="/loan-requests"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Loans">
             <LoanRequests />
           </ProtectedRoute>
         }
@@ -205,7 +268,7 @@ function App() {
       <Route
         path="/rules"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Loans">
             <Rules />
           </ProtectedRoute>
         }
@@ -214,7 +277,7 @@ function App() {
       <Route
         path="/contracts"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Loans">
             <Contracts />
           </ProtectedRoute>
         }
@@ -223,7 +286,7 @@ function App() {
       <Route
         path="/wallets"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="Read Payments">
             <Wallets />
           </ProtectedRoute>
         }
