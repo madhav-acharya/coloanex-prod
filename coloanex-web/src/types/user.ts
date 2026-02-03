@@ -8,6 +8,7 @@ export interface User {
   lastActiveAt?: string;
   createdAt: string;
   updatedAt: string;
+  tenantId?: string;
   roles?: Array<{
     role?: {
       id: string;
@@ -57,6 +58,7 @@ export interface CreateUserDto {
   roleIds?: string[];
   permissionIds?: string[];
   isActive?: boolean;
+  tenantId?: string;
 }
 
 export interface UpdateUserDto {
@@ -68,4 +70,5 @@ export interface UpdateUserDto {
   permissionIds?: string[];
   isActive?: boolean;
   isBanned?: boolean;
+  tenantId?: string;
 }
