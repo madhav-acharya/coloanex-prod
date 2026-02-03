@@ -1,5 +1,15 @@
 export * from "./auth";
-export * from "./loan";
 export * from "./kyc";
 export * from "./notification";
-export * from "./wallet";
+
+export {
+  LoanStatus,
+  Lender,
+  Loan,
+  CreateLoanDto,
+  LoanApplication,
+  PaymentSchedule as LoanPaymentSchedule,
+  Review,
+} from "./loan";
+
+export { Rule, Contract, PaymentSchedule, Transaction, Wallet } from "./wallet";
