@@ -87,6 +87,11 @@ export default function KycRequests() {
     [user],
   );
 
+  const isAdmin = useMemo(
+    () => user?.roles?.some((ur) => ur.role.name === "Admin") || false,
+    [user],
+  );
+
   const isLender = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
     [user],
@@ -191,6 +196,11 @@ export default function KycRequests() {
     supporting: [],
   });
 
+  // Determine if user should be filtered by tenant
+  const shouldFilterByTenant = useMemo(() => {
+    return isLender || user?.roles?.some((ur) => ur.role.name === "Admin");
+  }, [isLender, user]);
+
   const [filters, setFilters] = useState<KycDocumentsQuery>({
     page: 1,
     limit: 10,
@@ -198,7 +208,19 @@ export default function KycRequests() {
     status: KycStatus.PENDING,
     sortBy: "createdAt",
     sortOrder: "desc",
+    tenantId:
+      shouldFilterByTenant && user?.tenantId ? user.tenantId : undefined,
   });
+
+  // Update filters when user changes
+  useEffect(() => {
+    if (shouldFilterByTenant && user?.tenantId) {
+      setFilters((prev) => ({
+        ...prev,
+        tenantId: user.tenantId,
+      }));
+    }
+  }, [shouldFilterByTenant, user?.tenantId]);
 
   const {
     data: kycDocumentsData,
@@ -625,8 +647,12 @@ export default function KycRequests() {
     setEditingKyc(null);
     setIsReadOnly(false);
     setDocMetadata({});
+
+    // Auto-assign tenant for Admin/Lender users
+    const shouldAutoSetTenant = (isAdmin || isLender) && user?.tenantId;
+
     setFormData({
-      tenantId: "",
+      tenantId: shouldAutoSetTenant ? user.tenantId : "",
       firstName: "",
       middleName: "",
       lastName: "",
@@ -916,7 +942,7 @@ export default function KycRequests() {
 
   const formSections = useMemo(
     () => [
-      ...(isSuperAdmin || isLender
+      ...(isSuperAdmin
         ? [
             {
               title: "Tenant Selection",
@@ -1394,37 +1420,6 @@ export default function KycRequests() {
           </div>
         </div>
       ),
-    },
-    {
-      key: "files",
-      label: "Document Types",
-      sortable: false,
-      render: (_value, doc: Kyc) => (
-        <div className="flex flex-wrap gap-1">
-          {Array.from(new Set(doc.files?.map((f) => f.fileType))).map(
-            (type) => (
-              <Badge key={type} variant="outline" className="text-xs">
-                {type}
-              </Badge>
-            ),
-          )}
-        </div>
-      ),
-    },
-    {
-      key: "documentNumber",
-      label: "Document Number",
-      sortable: false,
-      render: (_value, doc: Kyc) => {
-        const docNumber = doc.files?.find(
-          (f) => (f.documentMetadata as any)?.documentNumber,
-        );
-        return (
-          <span>
-            {(docNumber?.documentMetadata as any)?.documentNumber || "N/A"}
-          </span>
-        );
-      },
     },
     {
       key: "status",
