@@ -14,8 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormSheet } from "@/components/shared/FormSheet";
 import {
   useGetMyWalletQuery,
   useCreateWalletMutation,
@@ -115,7 +114,7 @@ export default function Wallets() {
       key: "type",
       label: "Type",
       sortable: true,
-      render: (transaction) => (
+      render: (value, transaction) => (
         <Badge
           variant={transaction.type === "DEPOSIT" ? "default" : "secondary"}
         >
@@ -127,14 +126,14 @@ export default function Wallets() {
       key: "amount",
       label: "Amount",
       sortable: true,
-      render: (transaction) => (
+      render: (value, transaction) => (
         <span
           className={
             transaction.type === "DEPOSIT" ? "text-green-600" : "text-red-600"
           }
         >
           {transaction.type === "DEPOSIT" ? "+" : "-"}NPR{" "}
-          {transaction?.amount?.toLocaleString()}
+          {Number(value || 0).toLocaleString()}
         </span>
       ),
     },
@@ -142,7 +141,7 @@ export default function Wallets() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (transaction) => {
+      render: (value, transaction) => {
         const statusColors = {
           PENDING: "secondary",
           COMPLETED: "default",
@@ -159,13 +158,13 @@ export default function Wallets() {
     {
       key: "description",
       label: "Description",
-      render: (transaction) => transaction?.description || "-",
+      render: (value) => value || "-",
     },
     {
       key: "createdAt",
       label: "Date",
       sortable: true,
-      render: (transaction) => new Date(transaction.createdAt).toLocaleString(),
+      render: (value) => new Date(value).toLocaleString(),
     },
   ];
 
@@ -208,7 +207,6 @@ export default function Wallets() {
         amount: "",
         description: "",
       });
-      refetch();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -282,7 +280,7 @@ export default function Wallets() {
       onSearchChange={setSearchValue}
       actions={[
         {
-          label: "New Transaction",
+          label: "Load Wallet",
           onClick: () => setTransactionDialogOpen(true),
           variant: "default",
         },
@@ -325,13 +323,6 @@ export default function Wallets() {
       }}
     >
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <Button onClick={() => setTransactionDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Transaction
-          </Button>
-        </div>
-
         <div className="grid gap-6 md:grid-cols-3">
           <div className="rounded-lg border p-6">
             <p className="text-sm text-muted-foreground mb-2">Balance</p>
@@ -344,10 +335,7 @@ export default function Wallets() {
               Pending Balance
             </p>
             <p className="text-3xl font-bold">
-              NPR{" "}
-              {(wallet as any).pendingBalance
-                ? (wallet as any).pendingBalance.toLocaleString()
-                : "0"}
+              NPR {(wallet.pendingBalance || 0).toLocaleString()}
             </p>
           </div>
           <div className="rounded-lg border p-6">
@@ -385,79 +373,55 @@ export default function Wallets() {
           </div>
         </div>
 
-        <Dialog
+        <FormSheet
           open={transactionDialogOpen}
           onOpenChange={setTransactionDialogOpen}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New Transaction</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="type">Transaction Type</Label>
-                <select
-                  id="type"
-                  className="w-full p-2 border rounded"
-                  value={transactionData.type}
-                  onChange={(e) =>
-                    setTransactionData({
-                      ...transactionData,
-                      type: e.target.value as any,
-                    })
-                  }
-                >
-                  <option value="DEPOSIT">Deposit</option>
-                  <option value="WITHDRAW">Withdraw</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="amount">Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  value={transactionData.amount}
-                  onChange={(e) =>
-                    setTransactionData({
-                      ...transactionData,
-                      amount: e.target.value,
-                    })
-                  }
-                  placeholder="Enter amount"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Input
-                  id="description"
-                  value={transactionData.description}
-                  onChange={(e) =>
-                    setTransactionData({
-                      ...transactionData,
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder="Enter description"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setTransactionDialogOpen(false)}
-                disabled={isCreatingTransaction}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateTransaction}
-                disabled={isCreatingTransaction}
-              >
-                {isCreatingTransaction ? "Creating..." : "Create Transaction"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+          title="Load Wallet"
+          description="Add funds to your wallet"
+          sections={[
+            {
+              fields: [
+                {
+                  id: "type",
+                  label: "Transaction Type",
+                  value: transactionData.type,
+                  type: "select",
+                  options: [
+                    { value: "DEPOSIT", label: "Deposit" },
+                    { value: "WITHDRAW", label: "Withdraw" },
+                  ],
+                  required: true,
+                },
+                {
+                  id: "amount",
+                  label: "Amount",
+                  value: transactionData.amount,
+                  type: "number",
+                  placeholder: "Enter amount",
+                  required: true,
+                },
+                {
+                  id: "description",
+                  label: "Description (Optional)",
+                  value: transactionData.description,
+                  type: "text",
+                  placeholder: "Enter description",
+                  required: false,
+                },
+              ],
+            },
+          ]}
+          onFieldChange={(fieldId, value) => {
+            setTransactionData({
+              ...transactionData,
+              [fieldId]: value,
+            });
+          }}
+          onSubmit={handleCreateTransaction}
+          submitText="Load Wallet"
+          cancelText="Cancel"
+          isSubmitting={isCreatingTransaction}
+        />
       </div>
     </DashboardLayout>
   );
