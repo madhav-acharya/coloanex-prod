@@ -178,7 +178,7 @@ export default function LoanApplicationScreen() {
 
       await loansApi.applyForLoan(loanData);
       showToast("Loan application submitted successfully", "success");
-      router.back();
+      router.replace(`/lenders/lender-details?id=${lenderId}` as any);
     } catch (error: any) {
       showToast(error.message || "Failed to submit loan application", "error");
     } finally {
@@ -475,6 +475,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.surface,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   header: {
     flexDirection: "row",
