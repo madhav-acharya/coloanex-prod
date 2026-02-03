@@ -21,6 +21,10 @@ export default function LenderDetailsScreen() {
   const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
   const [hasExistingLoan, setHasExistingLoan] = useState(false);
   const [existingLoanId, setExistingLoanId] = useState<string | null>(null);
+  const [existingLoanStatus, setExistingLoanStatus] = useState<string | null>(
+    null,
+  );
+  const [kycId, setKycId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -41,10 +45,14 @@ export default function LenderDetailsScreen() {
 
   const checkKycStatus = async () => {
     try {
-      const data = await kycApi.getStatus();
+      const data = await kycApi.getStatus(id);
+      console.log("KYC Status Response:", data);
       setKycStatus(data.status as KycStatus);
+      setKycId(data.kycId || null);
     } catch (error) {
+      console.error("KYC Status Error:", error);
       setKycStatus(null);
+      setKycId(null);
     }
   };
 
@@ -53,8 +61,11 @@ export default function LenderDetailsScreen() {
       const data = await loansApi.checkExisting(id!);
       setHasExistingLoan(data.hasLoan);
       setExistingLoanId(data.loanId || null);
+      setExistingLoanStatus(data.status || null);
     } catch (error) {
       setHasExistingLoan(false);
+      setExistingLoanId(null);
+      setExistingLoanStatus(null);
     }
   };
 
@@ -149,10 +160,23 @@ export default function LenderDetailsScreen() {
 
   function getButtonConfig() {
     if (hasExistingLoan) {
+      const isLoanPending =
+        existingLoanStatus === "DRAFT" ||
+        existingLoanStatus === "SUBMITTED" ||
+        existingLoanStatus === "UNDER_REVIEW";
+      if (isLoanPending) {
+        return {
+          title: "View Loan Request",
+          disabled: false,
+          variant: "outline" as const,
+          message: "Your loan application is pending review",
+        };
+      }
       return {
-        title: "View Loan Application",
+        title: "View Loan Details",
         disabled: false,
         variant: "primary" as const,
+        message: null,
       };
     }
 
@@ -162,24 +186,29 @@ export default function LenderDetailsScreen() {
           title: "Apply for Loan",
           disabled: false,
           variant: "primary" as const,
+          message: null,
         };
       case KycStatus.PENDING:
         return {
-          title: "Request Pending",
-          disabled: true,
+          title: "View KYC Request",
+          disabled: false,
           variant: "outline" as const,
+          message: "Your KYC verification is pending review",
         };
       case KycStatus.REJECTED:
         return {
-          title: "KYC Rejected - Resubmit",
+          title: "Resubmit KYC",
           disabled: false,
           variant: "outline" as const,
+          message:
+            "Your KYC was rejected. Please resubmit with correct information",
         };
       default:
         return {
           title: "Verify KYC",
           disabled: false,
           variant: "primary" as const,
+          message: null,
         };
     }
   }
@@ -198,10 +227,14 @@ export default function LenderDetailsScreen() {
         });
         break;
       case KycStatus.PENDING:
-        showToast(
-          "Your KYC verification is currently being reviewed. You'll be notified once it's approved.",
-          "info",
-        );
+        if (kycId) {
+          router.push(`/kyc/kyc-details?id=${kycId}` as any);
+        } else {
+          showToast(
+            "Your KYC verification is currently being reviewed",
+            "info",
+          );
+        }
         break;
       case KycStatus.REJECTED:
         router.push(`/kyc/kyc-verification?tenantId=${lender?.id}` as any);
@@ -216,13 +249,27 @@ export default function LenderDetailsScreen() {
     const buttonConfig = getButtonConfig();
 
     return (
-      <Button
-        title={buttonConfig.title}
-        onPress={handleButtonPress}
-        disabled={buttonConfig.disabled}
-        variant={buttonConfig.variant}
-        style={styles.applyButton}
-      />
+      <View>
+        {buttonConfig.message && (
+          <View style={styles.messageCard}>
+            <View style={styles.messageContainer}>
+              <Ionicons
+                name="information-circle"
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={styles.messageText}>{buttonConfig.message}</Text>
+            </View>
+          </View>
+        )}
+        <Button
+          title={buttonConfig.title}
+          onPress={handleButtonPress}
+          disabled={buttonConfig.disabled}
+          variant={buttonConfig.variant}
+          style={styles.applyButton}
+        />
+      </View>
     );
   }
 }
@@ -259,6 +306,32 @@ const styles = StyleSheet.create({
   },
   lenderHeader: {
     marginBottom: spacing.md,
+  },
+  lenderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.md,
+  },
+  statusBadge: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+  },
+  statusBadgeActive: {
+    backgroundColor: colors.primaryLight,
+  },
+  statusText: {
+    ...typography.caption,
+    fontWeight: "600",
+    color: colors.textSecondary,
+  },
+  statusTextActive: {
+    color: colors.primary,
   },
   lenderName: {
     ...typography.h2,
@@ -348,6 +421,10 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: spacing.md,
   },
+  contactInfoDetail: {
+    marginLeft: spacing.md,
+    flex: 1,
+  },
   contactInfo: {
     marginLeft: spacing.md,
     flex: 1,
@@ -428,5 +505,24 @@ const styles = StyleSheet.create({
   applyButton: {
     marginBottom: spacing.lg,
     marginTop: spacing.md,
+  },
+  messageCard: {
+    marginBottom: spacing.md,
+    backgroundColor: colors.primaryLight,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
+  },
+  messageContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  messageText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.primary,
+    lineHeight: 20,
   },
 });
