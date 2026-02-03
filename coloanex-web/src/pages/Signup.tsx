@@ -23,6 +23,10 @@ const Signup = () => {
     email: "",
     phone: "",
     password: "",
+    role: "lender",
+    tenantName: "",
+    tenantContactEmail: "",
+    tenantContactPhone: "",
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -136,6 +140,57 @@ const Signup = () => {
                 onChange={handleInputChange}
               />
             </div>
+
+            {formData.role === "lender" && (
+              <>
+                <div className="pt-2 border-t">
+                  <h3 className="text-sm font-semibold mb-3">
+                    Lender Organization Information
+                  </h3>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Organization Name <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="text"
+                    name="tenantName"
+                    placeholder="Enter organization name"
+                    value={formData.tenantName}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Organization Email <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="email"
+                    name="tenantContactEmail"
+                    placeholder="organization@example.com"
+                    value={formData.tenantContactEmail}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Organization Phone <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="tel"
+                    name="tenantContactPhone"
+                    placeholder="Organization phone number"
+                    value={formData.tenantContactPhone}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </>
+            )}
 
             <div className="space-y-2">
               <label className="text-sm font-medium">
