@@ -2,15 +2,25 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import type { Transaction } from './entities/transaction.entity';
-import { TransactionStatus } from './entities/transaction.entity';
+import {
+  TransactionStatus,
+  TransactionType,
+} from './entities/transaction.entity';
+import { WalletsService } from '../wallets/wallets.service';
 
 @Injectable()
 export class TransactionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => WalletsService))
+    private walletsService: WalletsService,
+  ) {}
 
   async create(
     createTransactionDto: CreateTransactionDto,
@@ -21,7 +31,7 @@ export class TransactionsService {
       );
     }
 
-    return this.prisma.transaction.create({
+    const transaction = await this.prisma.transaction.create({
       data: {
         ...createTransactionDto,
         status: TransactionStatus.PENDING as any,
@@ -41,7 +51,42 @@ export class TransactionsService {
           },
         },
       },
-    }) as unknown as Transaction;
+    });
+
+    if (createTransactionDto.walletId) {
+      const amount = Number(createTransactionDto.amount);
+      let walletUpdateAmount: number;
+
+      if (
+        createTransactionDto.type === TransactionType.DEPOSIT ||
+        createTransactionDto.type === TransactionType.DISBURSEMENT
+      ) {
+        walletUpdateAmount = amount;
+      } else if (
+        createTransactionDto.type === TransactionType.WITHDRAW ||
+        createTransactionDto.type === TransactionType.INSTALLMENT_PAYMENT ||
+        createTransactionDto.type === TransactionType.PENALTY_PAYMENT ||
+        createTransactionDto.type === TransactionType.FEE
+      ) {
+        walletUpdateAmount = -amount;
+      } else {
+        walletUpdateAmount = 0;
+      }
+
+      if (walletUpdateAmount !== 0) {
+        await this.walletsService.updateBalance(
+          createTransactionDto.walletId,
+          walletUpdateAmount,
+        );
+      }
+    }
+
+    await this.prisma.transaction.update({
+      where: { id: transaction.id },
+      data: { status: TransactionStatus.COMPLETED as any },
+    });
+
+    return transaction as unknown as Transaction;
   }
 
   async findByContract(contractId: string): Promise<Transaction[]> {
