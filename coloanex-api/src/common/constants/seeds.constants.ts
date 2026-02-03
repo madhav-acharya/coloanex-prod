@@ -36,6 +36,7 @@ export const PERMISSIONS = [
   'Create Loans',
   'Update Loans',
   'Delete Loans',
+  'Approve Loans',
 
   'Read Lenders',
   'Create Lenders',
@@ -47,8 +48,40 @@ export const PERMISSIONS = [
   'Update Payments',
   'Delete Payments',
 
+  'Read Notifications',
+  'Create Notifications',
+  'Update Notifications',
+  'Delete Notifications',
+
+  'Read Contracts',
+  'Create Contracts',
+  'Update Contracts',
+  'Delete Contracts',
+
+  'Read Transactions',
+  'Create Transactions',
+  'Update Transactions',
+  'Delete Transactions',
+
+  'Read Wallets',
+  'Create Wallets',
+  'Update Wallets',
+  'Delete Wallets',
+
+  'Read Rules',
+  'Create Rules',
+  'Update Rules',
+  'Delete Rules',
+
   'Read Reports',
   'Generate Reports',
+
+  'Read Payment Schedules',
+  'Create Payment Schedules',
+  'Update Payment Schedules',
+  'Delete Payment Schedules',
+
+  'Read Activity Logs',
 ] as const;
 
 export type Role = (typeof ROLES)[number];
