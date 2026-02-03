@@ -51,10 +51,9 @@ export default function RepaymentScreen() {
   const calculateBreakdown = () => {
     if (!loan) return { principal: 0, interest: 0 };
 
-    const interestRate = Number(loan.interestRate) || 0;
-    const remainingBalance = loan.remainingBalance || loan.amount || 0;
-    const monthlyRate = interestRate / 100 / 12;
-    const interest = remainingBalance * monthlyRate;
+    const remainingBalance =
+      loan.remainingBalance ?? loan.approvedAmount ?? loan.requestedAmount;
+    const interest = 0;
     const principal = amount - interest;
 
     return {
@@ -87,8 +86,9 @@ export default function RepaymentScreen() {
   if (!loan) return null;
 
   const breakdown = calculateBreakdown();
-  const remainingBalance = loan.remainingBalance || loan.amount || 0;
-  const nextPaymentDate = loan.nextPaymentDate || loan.dueDate;
+  const remainingBalance =
+    loan.remainingBalance ?? loan.approvedAmount ?? loan.requestedAmount;
+  const nextPaymentDate = loan.nextPaymentDate;
   const daysRemaining = nextPaymentDate
     ? Math.ceil(
         (new Date(nextPaymentDate).getTime() - Date.now()) /
@@ -144,15 +144,17 @@ export default function RepaymentScreen() {
           </View>
         </Card>
 
-        <Card>
+        <Card style={styles.paymentCard}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
           <TouchableOpacity style={styles.paymentMethod}>
             <View style={styles.paymentMethodLeft}>
-              <Ionicons name="card-outline" size={24} color={colors.text} />
+              <View style={styles.esewaIcon}>
+                <Text style={styles.esewaText}>e</Text>
+              </View>
               <View style={styles.paymentMethodInfo}>
-                <Text style={styles.paymentMethodText}>Visa •••• 4532</Text>
+                <Text style={styles.paymentMethodText}>eSewa</Text>
                 <Text style={styles.paymentMethodSubtext}>
-                  Default payment method
+                  Digital wallet payment
                 </Text>
               </View>
             </View>
@@ -183,26 +185,32 @@ export default function RepaymentScreen() {
 
         <Card>
           <Text style={styles.sectionTitle}>Upcoming Payments</Text>
-          <View style={styles.upcomingPayment}>
-            <View style={styles.upcomingInfo}>
-              <Text style={styles.upcomingDate}>
-                {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-              <Text style={styles.upcomingType}>Monthly Payment</Text>
-            </View>
-            <View style={styles.upcomingRight}>
-              <Text style={styles.upcomingAmount}>
-                {formatCurrency(loan.monthlyPayment || amount)}
-              </Text>
-              <View style={styles.dueBadge}>
-                <Text style={styles.dueText}>Due Soon</Text>
+          {loan.nextPaymentDate ? (
+            <View style={styles.upcomingPayment}>
+              <View style={styles.upcomingInfo}>
+                <Text style={styles.upcomingDate}>
+                  {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
+                <Text style={styles.upcomingType}>Monthly Payment</Text>
+              </View>
+              <View style={styles.upcomingRight}>
+                <Text style={styles.upcomingAmount}>
+                  {formatCurrency(loan.monthlyPayment || amount)}
+                </Text>
+                <View style={styles.dueBadge}>
+                  <Text style={styles.dueText}>Due Soon</Text>
+                </View>
               </View>
             </View>
-          </View>
+          ) : (
+            <Text style={styles.noPaymentsText}>
+              No upcoming payments scheduled
+            </Text>
+          )}
         </Card>
 
         <TouchableOpacity style={styles.consentBox}>
@@ -306,6 +314,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
+  esewaIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#60BB46",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  esewaText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
   paymentMethodInfo: {
     marginLeft: spacing.md,
   },
@@ -326,6 +347,7 @@ const styles = StyleSheet.create({
   },
   breakdownCard: {
     backgroundColor: colors.surface,
+    marginBottom: spacing.md,
   },
   breakdownRow: {
     flexDirection: "row",
@@ -380,6 +402,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.text,
     marginBottom: 4,
+  },
+  noPaymentsText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: spacing.md,
   },
   dueBadge: {
     backgroundColor: colors.warning,
