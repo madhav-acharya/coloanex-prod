@@ -29,7 +29,7 @@ export default function EditProfileScreen() {
     fullName: "",
     phone: "",
     email: "",
-    dateOfBirth: "",
+    dateOfBirth: null as Date | null,
     address: "",
   });
   const [formData, setFormData] = useState({
@@ -88,7 +88,7 @@ export default function EditProfileScreen() {
       try {
         const uploaded = await uploadToCloudinary(
           result.assets[0].uri,
-          "profile-image.jpg"
+          "profile-image.jpg",
         );
         setProfileImageUrl(uploaded.url);
         showToast("Image uploaded successfully", "success");
@@ -137,7 +137,7 @@ export default function EditProfileScreen() {
       if (Object.keys(updatePayload).length > 0) {
         const updatedUser = await usersApi.updateUserById(
           user.id,
-          updatePayload
+          updatePayload,
         );
         dispatch(setUser(updatedUser));
       }
@@ -146,7 +146,7 @@ export default function EditProfileScreen() {
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Failed to update profile",
-        "error"
+        "error",
       );
     } finally {
       setSaving(false);
