@@ -12,7 +12,7 @@ interface RoleWithPermissions {
 }
 
 export const extractRolePermissions = (
-  roles: RoleWithPermissions[]
+  roles: RoleWithPermissions[],
 ): Set<string> => {
   const permissionIds = new Set<string>();
   roles.forEach((role) => {
@@ -64,7 +64,7 @@ export const extractUserPermissionIds = (user: User): string[] => {
 };
 
 export const extractUserRoles = (
-  user: User
+  user: User,
 ): Array<{ id: string; name: string; description?: string }> => {
   return (
     user.roles
@@ -85,13 +85,13 @@ export const extractUserRoles = (
       })
       .filter(
         (role): role is { id: string; name: string; description?: string } =>
-          role !== null
+          role !== null,
       ) || []
   );
 };
 
 export const extractUserPermissions = (
-  user: User
+  user: User,
 ): Array<{ id: string; name: string; description?: string }> => {
   return (
     user.permissions
@@ -116,14 +116,35 @@ export const extractUserPermissions = (
       })
       .filter(
         (perm): perm is { id: string; name: string; description?: string } =>
-          perm !== null
+          perm !== null,
       ) || []
   );
 };
 
 export const getAdditionalPermissionIds = (
   userPermissionIds: string[],
-  rolePermissionIds: Set<string>
+  rolePermissionIds: Set<string>,
 ): string[] => {
   return userPermissionIds.filter((permId) => !rolePermissionIds.has(permId));
+};
+
+export const hasPermission = (user: any, permissionName: string): boolean => {
+  if (!user) return false;
+
+  // Super Admin has all permissions - bypass permission checks
+  const userRoles = extractUserRoles(user);
+  const isSuperAdmin = userRoles.some((role) => role.name === "Super Admin");
+  if (isSuperAdmin) return true;
+
+  const userPermissions = extractUserPermissions(user);
+
+  const hasDirectPermission = userPermissions.some(
+    (p) => p.name === permissionName,
+  );
+
+  if (hasDirectPermission) return true;
+
+  return userRoles.some((role: any) => {
+    return role.permissions?.some((p: any) => p.name === permissionName);
+  });
 };
