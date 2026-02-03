@@ -46,9 +46,9 @@ export default function LoanDetailsScreen() {
 
   if (!loan) return null;
 
-  const principalAmount = loan.amount || 0;
+  const principalAmount = loan.approvedAmount ?? loan.requestedAmount;
   const monthlyPayment = loan.monthlyPayment || 0;
-  const remainingBalance = loan.remainingBalance || loan.amount || 0;
+  const remainingBalance = loan.remainingBalance ?? principalAmount;
   const paidAmount = principalAmount - remainingBalance;
   const progressPercent =
     principalAmount > 0 ? (paidAmount / principalAmount) * 100 : 0;
@@ -79,12 +79,14 @@ export default function LoanDetailsScreen() {
 
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Interest Rate</Text>
-              <Text style={styles.statValue}>{loan.interestRate}% APR</Text>
+              <Text style={styles.statLabel}>Requested Term</Text>
+              <Text style={styles.statValue}>
+                {loan.requestedTermMonths} months
+              </Text>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Loan Term</Text>
-              <Text style={styles.statValue}>{loan.termMonths} months</Text>
+              <Text style={styles.statLabel}>Status</Text>
+              <Text style={styles.statValue}>{loan.status}</Text>
             </View>
           </View>
 
@@ -120,8 +122,8 @@ export default function LoanDetailsScreen() {
             </Text>
           </View>
           <Text style={styles.paymentsCompleted}>
-            {loan.paymentsMade || 0} of{" "}
-            {loan.totalPayments || loan.termMonths || 0} payments completed
+            {loan.paymentsMade || 0} of {loan.totalPayments || 0} payments
+            completed
           </Text>
         </Card>
 
@@ -164,7 +166,7 @@ export default function LoanDetailsScreen() {
               </View>
               <View style={styles.scheduleRight}>
                 <Text style={styles.scheduleAmount}>
-                  {formatCurrency(payment.amount)}
+                  {formatCurrency(payment.totalAmount)}
                 </Text>
                 <View
                   style={[
@@ -195,13 +197,13 @@ export default function LoanDetailsScreen() {
         <Card>
           <Text style={styles.sectionTitle}>Additional Details</Text>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Loan Type</Text>
-            <Text style={styles.detailValue}>{loan.loanType}</Text>
+            <Text style={styles.detailLabel}>Purpose</Text>
+            <Text style={styles.detailValue}>{loan.purpose}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Disbursement Date</Text>
+            <Text style={styles.detailLabel}>Created Date</Text>
             <Text style={styles.detailValue}>
-              {new Date(loan.disbursementDate).toLocaleDateString("en-US", {
+              {new Date(loan.createdAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
@@ -209,27 +211,15 @@ export default function LoanDetailsScreen() {
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Maturity Date</Text>
+            <Text style={styles.detailLabel}>Updated Date</Text>
             <Text style={styles.detailValue}>
-              {new Date(loan.maturityDate).toLocaleDateString("en-US", {
+              {new Date(loan.updatedAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
               })}
             </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Auto-debit</Text>
-            <Text style={styles.detailValue}>
-              {loan.autoDebit ? "Enabled" : "Disabled"}
-            </Text>
-          </View>
-          {loan.paymentMethod && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Payment Method</Text>
-              <Text style={styles.detailValue}>{loan.paymentMethod}</Text>
-            </View>
-          )}
         </Card>
 
         <View style={styles.actions}>
