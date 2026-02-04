@@ -283,6 +283,7 @@ export default function Roles() {
               limit={rolesData?.limit || 12}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
+              pageSizeOptions={[12, 24, 50, 100]}
             />
           </div>
         </>
