@@ -7,14 +7,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUpdateUserMutation } from "@/apis/usersApi";
+import {
+  useGetMailAuthUrlQuery,
+  useDisconnectMailMutation,
+  useGetMailStatusQuery,
+} from "@/apis/mailApi";
 import { toast } from "sonner";
-import { Loader2, User, Lock, Bell, Eye, EyeOff } from "lucide-react";
+import {
+  Loader2,
+  User,
+  Lock,
+  Bell,
+  Eye,
+  EyeOff,
+  Mail,
+  Check,
+  X,
+  ExternalLink,
+  ChevronRight,
+  ArrowLeft,
+} from "lucide-react";
 
 const Settings = () => {
   const { user } = useAuth();
   const [updateUser, { isLoading }] = useUpdateUserMutation();
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const [accountForm, setAccountForm] = useState({
     fullName: user?.fullName || "",
@@ -43,6 +61,14 @@ const Settings = () => {
     securityAlerts: true,
   });
 
+  const {
+    data: mailStatus,
+    isLoading: isLoadingMailStatus,
+    refetch: refetchMailStatus,
+  } = useGetMailStatusQuery();
+  const [disconnectMail, { isLoading: isDisconnecting }] =
+    useDisconnectMailMutation();
+
   useEffect(() => {
     if (user) {
       setAccountForm({
@@ -52,6 +78,20 @@ const Settings = () => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const mailStatus = params.get("mail");
+
+    if (mailStatus === "success") {
+      toast.success("Mail service connected successfully");
+      refetchMailStatus();
+      window.history.replaceState({}, "", "/settings");
+    } else if (mailStatus === "error") {
+      toast.error("Failed to connect mail service");
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [refetchMailStatus]);
 
   const handleAccountUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +164,39 @@ const Settings = () => {
     toast.success("Notification preferences updated");
   };
 
+  const handleMailConnect = async () => {
+    try {
+      const API_BASE_URL =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${API_BASE_URL}/mail/connect`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      } else {
+        toast.error("Failed to get authorization URL");
+      }
+    } catch (error) {
+      toast.error("Failed to connect mail service");
+    }
+  };
+
+  const handleMailDisconnect = async () => {
+    try {
+      await disconnectMail().unwrap();
+      toast.success("Mail service disconnected successfully");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to disconnect mail service");
+    }
+  };
+
   if (!user) {
     return (
       <DashboardLayout title="Settings" description="Manage your settings">
@@ -134,38 +207,61 @@ const Settings = () => {
     );
   }
 
-  return (
-    <DashboardLayout
-      title="Settings"
-      description="Manage your account settings and preferences"
-    >
-      <div>
-        <Tabs defaultValue="account" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-            <TabsTrigger
-              value="account"
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Account</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="security"
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Lock className="w-4 h-4" />
-              <span className="hidden sm:inline">Security</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="notifications"
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="hidden sm:inline">Notifications</span>
-            </TabsTrigger>
-          </TabsList>
+  const settingsOptions = [
+    {
+      id: "account",
+      icon: User,
+      title: "Account Information",
+      description: "Update your account details",
+    },
+    {
+      id: "password",
+      icon: Lock,
+      title: "Change Password",
+      description: "Update your password",
+    },
+    {
+      id: "mail",
+      icon: Mail,
+      title: "Mail Service",
+      description: mailStatus?.isConnected
+        ? "Connected"
+        : "Not connected",
+      badge: mailStatus?.isConnected ? (
+        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+          Connected
+        </span>
+      ) : (
+        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-800">
+          Not Connected
+        </span>
+      ),
+    },
+    {
+      id: "notifications",
+      icon: Bell,
+      title: "Notifications",
+      description: "Manage notification preferences",
+    },
+  ];
 
-          <TabsContent value="account" className="space-y-6">
+  if (activeSection) {
+    return (
+      <DashboardLayout
+        title="Settings"
+        description="Manage your account settings and preferences"
+      >
+        <div className="space-y-6">
+          <Button
+            variant="ghost"
+            onClick={() => setActiveSection(null)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Settings
+          </Button>
+
+          {activeSection === "account" && (
             <Card>
               <CardHeader>
                 <CardTitle>Account Information</CardTitle>
@@ -239,61 +335,9 @@ const Settings = () => {
                 </form>
               </CardContent>
             </Card>
+          )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Status</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your current account status and activity
-                </p>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Account Status</p>
-                      <p className="text-sm text-muted-foreground">
-                        Your account is currently{" "}
-                        {user.isActive ? "active" : "inactive"}
-                      </p>
-                    </div>
-                    <div
-                      className={`px-3 py-1 ${
-                        user.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      } rounded-full text-sm font-medium`}
-                    >
-                      {user.isActive ? "Active" : "Inactive"}
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Last Active</p>
-                      <p className="text-sm text-muted-foreground">
-                        {user.lastActiveAt
-                          ? new Date(user.lastActiveAt).toLocaleString()
-                          : "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">Assigned Roles</p>
-                      <p className="text-sm text-muted-foreground">
-                        {user.roles?.length || 0} role(s) assigned
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="security" className="space-y-6">
+          {activeSection === "password" && (
             <Card>
               <CardHeader>
                 <CardTitle>Change Password</CardTitle>
@@ -439,14 +483,92 @@ const Settings = () => {
                 </form>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="notifications" className="space-y-6">
+          {activeSection === "mail" && (
             <Card>
               <CardHeader>
-                <CardTitle>Email Notifications</CardTitle>
+                <CardTitle>Mail Service Configuration</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Manage your email notification preferences
+                  Connect your email account to send notifications
+                </p>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6">
+                {isLoadingMailStatus ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : mailStatus?.isConnected ? (
+                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900">
+                        Mail Service Connected
+                      </p>
+                      <p className="text-sm text-green-700">
+                        {mailStatus.email}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleMailDisconnect}
+                      disabled={isDisconnecting}
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      {isDisconnecting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Disconnecting...
+                        </>
+                      ) : (
+                        <>
+                          <X className="mr-2 h-4 w-4" />
+                          Disconnect
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                        <X className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-red-900">
+                        Mail Service Not Connected
+                      </p>
+                      <p className="text-sm text-red-700">
+                        Connect your Google account to enable email
+                        notifications
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleMailConnect}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Connect
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "notifications" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Preferences</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Manage your notification preferences
                 </p>
               </CardHeader>
               <Separator />
@@ -499,7 +621,7 @@ const Settings = () => {
                         KYC Updates
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified about KYC verification status
+                        Notifications for KYC verification status
                       </p>
                     </div>
                     <Switch
@@ -507,41 +629,6 @@ const Settings = () => {
                       checked={notificationSettings.kycUpdates}
                       onCheckedChange={() =>
                         handleNotificationToggle("kycUpdates")
-                      }
-                      className="data-[state=checked]:bg-green-600"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Push Notifications</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Manage your push notification preferences
-                </p>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="push-notifications"
-                        className="cursor-pointer"
-                      >
-                        Push Notifications
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Receive push notifications on your devices
-                      </p>
-                    </div>
-                    <Switch
-                      id="push-notifications"
-                      checked={notificationSettings.pushNotifications}
-                      onCheckedChange={() =>
-                        handleNotificationToggle("pushNotifications")
                       }
                       className="data-[state=checked]:bg-green-600"
                     />
@@ -556,7 +643,7 @@ const Settings = () => {
                         Security Alerts
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        Get notified about security-related activities
+                        Important security notifications
                       </p>
                     </div>
                     <Switch
@@ -568,132 +655,50 @@ const Settings = () => {
                       className="data-[state=checked]:bg-green-600"
                     />
                   </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label
-                        htmlFor="system-updates"
-                        className="cursor-pointer"
-                      >
-                        System Updates
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Get notified about system updates and maintenance
-                      </p>
-                    </div>
-                    <Switch
-                      id="system-updates"
-                      checked={notificationSettings.systemUpdates}
-                      onCheckedChange={() =>
-                        handleNotificationToggle("systemUpdates")
-                      }
-                      className="data-[state=checked]:bg-green-600"
-                    />
-                  </div>
                 </div>
               </CardContent>
             </Card>
+          )}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Summary</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Overview of your notification settings
-                </p>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Email</span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          notificationSettings.emailNotifications
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {notificationSettings.emailNotifications
-                          ? "Enabled"
-                          : "Disabled"}
-                      </span>
+  return (
+    <DashboardLayout
+      title="Settings"
+      description="Manage your account settings and preferences"
+    >
+      <Card>
+        <CardContent className="p-0">
+          <div className="divide-y">
+            {settingsOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <div
+                  key={option.id}
+                  onClick={() => setActiveSection(option.id)}
+                  className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-gray-600" />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {notificationSettings.emailNotifications
-                        ? "You will receive email notifications"
-                        : "Email notifications are turned off"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900">{option.title}</p>
+                    <p className="text-sm text-gray-500 truncate">
+                      {option.description}
                     </p>
                   </div>
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Push</span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          notificationSettings.pushNotifications
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {notificationSettings.pushNotifications
-                          ? "Enabled"
-                          : "Disabled"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {notificationSettings.pushNotifications
-                        ? "You will receive push notifications"
-                        : "Push notifications are turned off"}
-                    </p>
-                  </div>
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Loan Updates</span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          notificationSettings.loanUpdates
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {notificationSettings.loanUpdates
-                          ? "Enabled"
-                          : "Disabled"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {notificationSettings.loanUpdates
-                        ? "Receive loan status updates"
-                        : "Loan updates are muted"}
-                    </p>
-                  </div>
-                  <div className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Security</span>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          notificationSettings.securityAlerts
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {notificationSettings.securityAlerts
-                          ? "Enabled"
-                          : "Disabled"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {notificationSettings.securityAlerts
-                        ? "Security alerts are enabled"
-                        : "Security alerts are muted"}
-                    </p>
-                  </div>
+                  {option.badge && <div className="flex-shrink-0">{option.badge}</div>}
+                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
     </DashboardLayout>
   );
 };

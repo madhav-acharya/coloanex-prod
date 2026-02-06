@@ -250,6 +250,10 @@ model Tenant {
   establishedYear   Int?     @map("established_year")
   totalLoansIssued  Int      @default(0) @map("total_loans_issued")
   ownerUserId       String?  @map("owner_user_id")
+  mailEmail         String?  @map("mail_email")
+  mailAccessToken   String?  @map("mail_access_token") @db.Text
+  mailRefreshToken  String?  @map("mail_refresh_token") @db.Text
+  mailTokenExpiry   DateTime? @map("mail_token_expiry")
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
