@@ -99,6 +99,7 @@ export const baseApi = createApi({
     "PaymentSchedules",
     "Transactions",
     "Wallets",
+    "MailStatus",
   ],
   endpoints: () => ({}),
 });
