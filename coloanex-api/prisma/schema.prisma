@@ -247,6 +247,7 @@ model Tenant {
   contactPhone      String?  @map("contact_phone") @db.VarChar(20)
   address           String?
   website           String?
+  primaryColor      String?  @map("primary_color") @db.VarChar(20)
   establishedYear   Int?     @map("established_year")
   totalLoansIssued  Int      @default(0) @map("total_loans_issued")
   ownerUserId       String?  @map("owner_user_id")
