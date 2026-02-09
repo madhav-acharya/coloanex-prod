@@ -3,9 +3,10 @@ import { TenantsService } from './tenants.service';
 import { TenantsController } from './tenants.controller';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [ActivityLogsModule],
+  imports: [ActivityLogsModule, MailModule],
   controllers: [TenantsController],
   providers: [TenantsService, PrismaService],
   exports: [TenantsService],
