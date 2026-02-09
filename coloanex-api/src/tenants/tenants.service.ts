@@ -11,6 +11,8 @@ import type { TenantsQueryInterface } from './interfaces/tenants.query.interface
 import { Prisma } from '@prisma/client';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { MailService } from '../mail/mail.service';
+import { tenantCreationTemplate } from '../mail/templates';
 import {
   ActivityAction,
   ActivityEntityType,
@@ -21,6 +23,7 @@ export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly mailService: MailService,
   ) {}
 
   async create(createTenantDto: CreateTenantDto, currentUser: JwtPayload) {
@@ -71,6 +74,45 @@ export class TenantsService {
       description: `Created tenant: ${tenant.name}`,
       after: { tenantName: tenant.name },
     });
+
+    if (tenant.ownerUser) {
+      try {
+        const dashboardUrl =
+          process.env.WEB_URL || 'https://web.example.com/dashboard';
+
+        await this.mailService.sendMail(
+          {
+            to: tenant.ownerUser.email,
+            subject: `Welcome to CoLoanEx - ${tenant.name} Created Successfully`,
+            html: tenantCreationTemplate({
+              tenantName: tenant.name,
+              tenantLogo: tenant.logo || undefined,
+              ownerName: tenant.ownerUser.fullName,
+              ownerEmail: tenant.ownerUser.email,
+              tenantId: tenant.id,
+              dashboardUrl,
+              supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+              tenantPrimaryColor: tenant.primaryColor || undefined,
+              contactEmail: tenant.contactEmail || undefined,
+              contactPhone: tenant.contactPhone || undefined,
+              address: tenant.address || undefined,
+              features: [
+                'Loan Management System',
+                'Borrower KYC Verification',
+                'Payment Schedule Tracking',
+                'Contract Generation',
+                'Email Notifications',
+                'Activity Logging',
+                'Multi-user Access Control',
+              ],
+            }),
+          },
+          tenant.id,
+        );
+      } catch (error) {
+        console.error('Failed to send tenant creation email:', error);
+      }
+    }
 
     return tenant;
   }
