@@ -9,6 +9,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { BorrowersModule } from '../borrowers/borrowers.module';
 import { UsersModule } from '../users/users.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { UsersModule } from '../users/users.module';
     ActivityLogsModule,
     BorrowersModule,
     UsersModule,
+    MailModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, RedisSessionService, JwtStrategy],

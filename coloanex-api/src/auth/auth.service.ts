@@ -11,6 +11,8 @@ import { LoginDto } from './dto/login.dto';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BorrowersService } from '../borrowers/borrowers.service';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
+import { registrationTemplate } from '../mail/templates';
 import type { CreateUserForSignupDto } from '../common/interfaces/create-user-signup.interface';
 import type {
   AuthTokens,
@@ -38,6 +40,7 @@ export class AuthService {
     private readonly activityLogsService: ActivityLogsService,
     private readonly borrowersService: BorrowersService,
     private readonly usersService: UsersService,
+    private readonly mailService: MailService,
   ) {}
 
   async validateUser(
@@ -235,6 +238,39 @@ export class AuthService {
     );
 
     await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
+
+    const tenant = user.tenantId
+      ? await this.prisma.tenant.findUnique({
+          where: { id: user.tenantId },
+        })
+      : null;
+
+    try {
+      const tenantId = user.tenantId || 'default';
+      const loginUrl = userRoles.some((role) => role === 'Borrower')
+        ? process.env.APP_URL || 'https://app.example.com'
+        : process.env.WEB_URL || 'https://web.example.com';
+
+      await this.mailService.sendMail(
+        {
+          to: user.email,
+          subject: `Welcome to ${tenant?.name || 'CoLoanEx'}`,
+          html: registrationTemplate({
+            tenantName: tenant?.name || 'CoLoanEx',
+            tenantLogo: tenant?.logo || undefined,
+            userName: user.fullName,
+            userEmail: user.email,
+            loginUrl,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor: tenant?.primaryColor || undefined,
+            tenantWebsite: tenant?.website || undefined,
+          }),
+        },
+        tenantId,
+      );
+    } catch (error) {
+      console.error('Failed to send registration email:', error);
+    }
 
     return {
       accessToken,

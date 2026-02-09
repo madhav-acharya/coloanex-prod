@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { MailService } from '../mail/mail.service';
+import { loanRequestTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { ReviewLoanDto } from './dto/review-loan.dto';
@@ -22,6 +24,7 @@ export class LoansService {
   constructor(
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
+    private mailService: MailService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -224,6 +227,50 @@ export class LoansService {
       userAgent,
       tenantId,
     );
+
+    if (loan.status === LoanStatus.SUBMITTED) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+      });
+
+      try {
+        const dashboardUrl =
+          process.env.APP_URL || 'https://app.example.com/loans';
+
+        await this.mailService.sendMail(
+          {
+            to: loan.borrower.user.email,
+            subject: `Loan Application Submitted - ${tenant?.name || 'CoLoanEx'}`,
+            html: loanRequestTemplate({
+              tenantName: tenant?.name || 'CoLoanEx',
+              tenantLogo: tenant?.logo || undefined,
+              userName: loan.borrower.user.fullName,
+              status: 'SUBMITTED',
+              loanAmount: `$${loan.requestedAmount.toLocaleString()}`,
+              loanPurpose: loan.purpose || undefined,
+              loanId: loan.id,
+              applicationDate: new Date(loan.createdAt).toLocaleDateString(
+                'en-US',
+                {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                },
+              ),
+              dashboardUrl,
+              supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+              tenantPrimaryColor: tenant?.primaryColor || undefined,
+              tenantWebsite: tenant?.website || undefined,
+              nextSteps:
+                'Your loan application is being reviewed. We will notify you once the review is complete.',
+            }),
+          },
+          tenantId,
+        );
+      } catch (error) {
+        console.error('Failed to send loan submission email:', error);
+      }
+    }
 
     return loan as unknown as Loan;
   }
@@ -539,6 +586,72 @@ export class LoansService {
       userAgent,
       user.tenantId,
     );
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: updated.tenantId },
+    });
+
+    const statusMap = {
+      [LoanStatus.SUBMITTED]: 'SUBMITTED' as const,
+      [LoanStatus.UNDER_REVIEW]: 'UNDER_REVIEW' as const,
+      [LoanStatus.APPROVED]: 'APPROVED' as const,
+      [LoanStatus.REJECTED]: 'REJECTED' as const,
+      [LoanStatus.DRAFT]: 'SUBMITTED' as const,
+      [LoanStatus.CONTRACT_GENERATED]: 'APPROVED' as const,
+      [LoanStatus.CONTRACT_SIGNED]: 'APPROVED' as const,
+    };
+
+    try {
+      const dashboardUrl =
+        process.env.APP_URL || 'https://app.example.com/loans';
+
+      await this.mailService.sendMail(
+        {
+          to: updated.borrower.user.email,
+          subject: `Loan Application ${reviewLoanDto.status === LoanStatus.APPROVED ? 'Approved' : reviewLoanDto.status === LoanStatus.REJECTED ? 'Status Update' : 'Update'} - ${tenant?.name || 'CoLoanEx'}`,
+          html: loanRequestTemplate({
+            tenantName: tenant?.name || 'CoLoanEx',
+            tenantLogo: tenant?.logo || undefined,
+            userName: updated.borrower.user.fullName,
+            status: statusMap[reviewLoanDto.status] || 'UNDER_REVIEW',
+            loanAmount: `$${updated.requestedAmount.toLocaleString()}`,
+            loanPurpose: updated.purpose || undefined,
+            loanId: updated.id,
+            applicationDate: new Date(updated.createdAt).toLocaleDateString(
+              'en-US',
+              {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              },
+            ),
+            reviewedDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            rejectionReason: reviewLoanDto.rejectionReason || undefined,
+            approvedAmount:
+              reviewLoanDto.status === LoanStatus.APPROVED
+                ? `$${updated.approvedAmount?.toLocaleString() || updated.requestedAmount.toLocaleString()}`
+                : undefined,
+            dashboardUrl,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor: tenant?.primaryColor || undefined,
+            tenantWebsite: tenant?.website || undefined,
+            nextSteps:
+              reviewLoanDto.status === LoanStatus.APPROVED
+                ? 'Your loan has been approved! The funds will be disbursed to your account shortly.'
+                : reviewLoanDto.status === LoanStatus.REJECTED
+                  ? 'Please review the reason provided. You may reapply after addressing the concerns.'
+                  : 'Your application is being reviewed. We will notify you of any updates.',
+          }),
+        },
+        updated.tenantId,
+      );
+    } catch (error) {
+      console.error('Failed to send loan status email:', error);
+    }
 
     return updated as unknown as Loan;
   }

@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { MailService } from '../mail/mail.service';
+import { kycApprovalTemplate } from '../mail/templates';
 import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
 import { VerifyKycDto } from './dto/verify-kyc.dto';
@@ -22,6 +24,7 @@ export class KycService {
   constructor(
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
+    private mailService: MailService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -545,6 +548,60 @@ export class KycService {
       userAgent,
       user.tenantId,
     );
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: updated.borrower.tenantId },
+    });
+
+    const statusMap = {
+      [KycStatus.VERIFIED]: 'APPROVED' as const,
+      [KycStatus.REJECTED]: 'REJECTED' as const,
+      [KycStatus.PENDING]: 'PENDING' as const,
+    };
+
+    try {
+      const dashboardUrl = process.env.APP_URL || 'https://app.example.com/kyc';
+
+      await this.mailService.sendMail(
+        {
+          to: updated.borrower.user.email,
+          subject: `KYC Verification ${verifyKycDto.status === KycStatus.VERIFIED ? 'Approved' : verifyKycDto.status === KycStatus.REJECTED ? 'Rejected' : 'Status Update'} - ${tenant?.name || 'CoLoanEx'}`,
+          html: kycApprovalTemplate({
+            tenantName: tenant?.name || 'CoLoanEx',
+            tenantLogo: tenant?.logo || undefined,
+            userName: updated.borrower.user.fullName,
+            status: statusMap[verifyKycDto.status] || 'PENDING',
+            rejectionReason: verifyKycDto.rejectionReason || undefined,
+            submittedDate: new Date(updated.createdAt).toLocaleDateString(
+              'en-US',
+              {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              },
+            ),
+            reviewedDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            dashboardUrl,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor: tenant?.primaryColor || undefined,
+            tenantWebsite: tenant?.website || undefined,
+            nextSteps:
+              verifyKycDto.status === KycStatus.VERIFIED
+                ? 'You can now proceed with your loan application.'
+                : verifyKycDto.status === KycStatus.REJECTED
+                  ? 'Please review the rejection reason and resubmit your documents with the correct information.'
+                  : 'We will notify you once your KYC verification is complete.',
+          }),
+        },
+        updated.borrower.tenantId,
+      );
+    } catch (error) {
+      console.error('Failed to send KYC status email:', error);
+    }
 
     return updated as unknown as Kyc;
   }
