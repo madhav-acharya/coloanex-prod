@@ -15,6 +15,7 @@ import { google } from 'googleapis';
 export class MailService {
   private transporters: Map<string, Transporter> = new Map();
   private oauth2Client: any;
+  private envTransporter: Transporter | null = null;
 
   constructor(private readonly prisma: PrismaService) {
     this.oauth2Client = new google.auth.OAuth2(
@@ -22,6 +23,26 @@ export class MailService {
       process.env.GOOGLE_MAIL_CLIENT_SECRET,
       process.env.GOOGLE_MAIL_CALLBACK_URL,
     );
+    this.initializeEnvTransporter();
+  }
+
+  private initializeEnvTransporter(): void {
+    if (
+      process.env.SMTP_HOST &&
+      process.env.SMTP_PORT &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASSWORD
+    ) {
+      this.envTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASSWORD,
+        },
+      });
+    }
   }
 
   getAuthUrl(tenantId: string): string {
@@ -117,6 +138,12 @@ export class MailService {
 
   async getStatus(currentUser: JwtPayload) {
     if (!currentUser.tenantId) {
+      if (this.envTransporter) {
+        return {
+          isConnected: true,
+          email: process.env.SMTP_FROM || process.env.SMTP_USER,
+        };
+      }
       return { isConnected: false };
     }
 
@@ -129,6 +156,12 @@ export class MailService {
     });
 
     if (!tenant || !tenant.mailEmail || !tenant.mailAccessToken) {
+      if (this.envTransporter) {
+        return {
+          isConnected: true,
+          email: process.env.SMTP_FROM || process.env.SMTP_USER,
+        };
+      }
       return { isConnected: false };
     }
 
@@ -139,11 +172,40 @@ export class MailService {
   }
 
   async sendMail(sendMailDto: SendMailDto, tenantId: string): Promise<void> {
+    if (tenantId === 'default' && this.envTransporter) {
+      try {
+        await this.envTransporter.sendMail({
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
+          to: sendMailDto.to,
+          subject: sendMailDto.subject,
+          html: sendMailDto.html,
+          text: sendMailDto.text,
+        });
+        return;
+      } catch (error) {
+        throw new InternalServerErrorException('Failed to send email');
+      }
+    }
+
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
     });
 
     if (!tenant || !tenant.mailAccessToken || !tenant.mailRefreshToken) {
+      if (this.envTransporter) {
+        try {
+          await this.envTransporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: sendMailDto.to,
+            subject: sendMailDto.subject,
+            html: sendMailDto.html,
+            text: sendMailDto.text,
+          });
+          return;
+        } catch (error) {
+          throw new InternalServerErrorException('Failed to send email');
+        }
+      }
       throw new BadRequestException(
         'Mail service not configured for this tenant',
       );

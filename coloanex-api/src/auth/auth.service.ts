@@ -116,7 +116,44 @@ export class AuthService {
       userAgent,
     );
 
-    return this.generateAuthResponse(newUser.id, ipAddress, userAgent);
+    const result = await this.generateAuthResponse(
+      newUser.id,
+      ipAddress,
+      userAgent,
+    );
+
+    const tenant = newUser.tenantId
+      ? await this.prisma.tenant.findUnique({
+          where: { id: newUser.tenantId },
+        })
+      : null;
+
+    try {
+      const tenantId = newUser.tenantId || 'default';
+      const loginUrl = process.env.WEB_URL || 'https://web.example.com';
+
+      await this.mailService.sendMail(
+        {
+          to: newUser.email,
+          subject: `Welcome to ${tenant?.name || 'CoLoanEx'}`,
+          html: registrationTemplate({
+            tenantName: tenant?.name || 'CoLoanEx',
+            tenantLogo: tenant?.logo || undefined,
+            userName: newUser.fullName,
+            userEmail: newUser.email,
+            loginUrl,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor: tenant?.primaryColor || undefined,
+            tenantWebsite: tenant?.website || undefined,
+          }),
+        },
+        tenantId,
+      );
+    } catch (error) {
+      console.error('Failed to send registration email:', error);
+    }
+
+    return result;
   }
 
   async signupApp(
@@ -130,7 +167,44 @@ export class AuthService {
       userAgent,
     );
 
-    return this.generateAuthResponse(newUser.id, ipAddress, userAgent);
+    const result = await this.generateAuthResponse(
+      newUser.id,
+      ipAddress,
+      userAgent,
+    );
+
+    const tenant = newUser.tenantId
+      ? await this.prisma.tenant.findUnique({
+          where: { id: newUser.tenantId },
+        })
+      : null;
+
+    try {
+      const tenantId = newUser.tenantId || 'default';
+      const loginUrl = process.env.APP_URL || 'https://app.example.com';
+
+      await this.mailService.sendMail(
+        {
+          to: newUser.email,
+          subject: `Welcome to ${tenant?.name || 'CoLoanEx'}`,
+          html: registrationTemplate({
+            tenantName: tenant?.name || 'CoLoanEx',
+            tenantLogo: tenant?.logo || undefined,
+            userName: newUser.fullName,
+            userEmail: newUser.email,
+            loginUrl,
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor: tenant?.primaryColor || undefined,
+            tenantWebsite: tenant?.website || undefined,
+          }),
+        },
+        tenantId,
+      );
+    } catch (error) {
+      console.error('Failed to send registration email:', error);
+    }
+
+    return result;
   }
 
   async loginWeb(
@@ -238,39 +312,6 @@ export class AuthService {
     );
 
     await this.usersService.markUserAsOnline(user.id, ipAddress, userAgent);
-
-    const tenant = user.tenantId
-      ? await this.prisma.tenant.findUnique({
-          where: { id: user.tenantId },
-        })
-      : null;
-
-    try {
-      const tenantId = user.tenantId || 'default';
-      const loginUrl = userRoles.some((role) => role === 'Borrower')
-        ? process.env.APP_URL || 'https://app.example.com'
-        : process.env.WEB_URL || 'https://web.example.com';
-
-      await this.mailService.sendMail(
-        {
-          to: user.email,
-          subject: `Welcome to ${tenant?.name || 'CoLoanEx'}`,
-          html: registrationTemplate({
-            tenantName: tenant?.name || 'CoLoanEx',
-            tenantLogo: tenant?.logo || undefined,
-            userName: user.fullName,
-            userEmail: user.email,
-            loginUrl,
-            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
-            tenantPrimaryColor: tenant?.primaryColor || undefined,
-            tenantWebsite: tenant?.website || undefined,
-          }),
-        },
-        tenantId,
-      );
-    } catch (error) {
-      console.error('Failed to send registration email:', error);
-    }
 
     return {
       accessToken,
