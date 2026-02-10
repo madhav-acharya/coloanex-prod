@@ -98,6 +98,17 @@ export default function RepaymentScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Make Repayment</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.headerCard}>
           <View style={styles.lenderHeader}>
@@ -244,6 +255,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  backButton: {
+    padding: spacing.xs,
+  },
+  headerTitle: {
+    ...typography.h3,
+    color: colors.text,
   },
   content: {
     flex: 1,
