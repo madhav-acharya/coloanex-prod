@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
@@ -88,7 +89,14 @@ export default function LenderDetailsScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.headerCard}>
           <View style={styles.lenderIcon}>
-            <Ionicons name="business" size={48} color={colors.primary} />
+            {lender.logo ? (
+              <Image
+                source={{ uri: lender.logo }}
+                style={styles.lenderLogoImage}
+              />
+            ) : (
+              <Ionicons name="business" size={48} color="#fff" />
+            )}
           </View>
           <Text style={styles.lenderName}>{lender.name}</Text>
           <View
@@ -315,6 +323,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  lenderLogoImage: {
+    width: "100%",
+    height: "100%",
   },
   statusBadge: {
     paddingHorizontal: spacing.md,
@@ -504,10 +517,10 @@ const styles = StyleSheet.create({
   },
   applyButton: {
     marginBottom: spacing.lg,
-    marginTop: spacing.md,
   },
   messageCard: {
-    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
     backgroundColor: colors.primaryLight,
     borderRadius: borderRadius.md,
     padding: spacing.md,
@@ -516,13 +529,13 @@ const styles = StyleSheet.create({
   },
   messageContainer: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: spacing.sm,
+    alignItems: "center",
   },
   messageText: {
     flex: 1,
     fontSize: 14,
     color: colors.primary,
     lineHeight: 20,
+    marginLeft: spacing.sm,
   },
 });
