@@ -25,7 +25,7 @@ export interface Rule {
   name: string;
   description?: string;
   ruleType: "STANDARD" | "PREMIUM" | "MICRO_LOAN" | "BUSINESS_LOAN";
-  interestRate: number;
+  interestRate: number | string;
   loanLimits: LoanLimits;
   penaltyConfig: PenaltyConfig;
   paymentConfig: PaymentConfig;
@@ -41,6 +41,7 @@ export interface Rule {
 }
 
 export interface CreateRuleDto {
+  tenantId?: string;
   name: string;
   description?: string;
   ruleType: "STANDARD" | "PREMIUM" | "MICRO_LOAN" | "BUSINESS_LOAN";
@@ -58,12 +59,27 @@ export const rulesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getRules: builder.query<Rule[], void>({
       query: () => "/rules",
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "Rules" as const, id })),
+              { type: "Rules", id: "LIST" },
+            ]
+          : [{ type: "Rules", id: "LIST" }],
     }),
     getRule: builder.query<Rule, string>({
       query: (id) => `/rules/${id}`,
+      providesTags: (result, error, id) => [{ type: "Rules", id }],
     }),
     getRulesByTenant: builder.query<Rule[], string>({
       query: (tenantId) => `/rules/tenant/${tenantId}`,
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "Rules" as const, id })),
+              { type: "Rules", id: "LIST" },
+            ]
+          : [{ type: "Rules", id: "LIST" }],
     }),
     createRule: builder.mutation<Rule, CreateRuleDto>({
       query: (data) => ({
@@ -71,6 +87,7 @@ export const rulesApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: [{ type: "Rules", id: "LIST" }],
     }),
     updateRule: builder.mutation<Rule, { id: string; data: UpdateRuleDto }>({
       query: ({ id, data }) => ({
@@ -78,12 +95,20 @@ export const rulesApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Rules", id },
+        { type: "Rules", id: "LIST" },
+      ],
     }),
     deleteRule: builder.mutation<void, string>({
       query: (id) => ({
         url: `/rules/${id}`,
         method: "DELETE",
       }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Rules", id },
+        { type: "Rules", id: "LIST" },
+      ],
     }),
   }),
 });

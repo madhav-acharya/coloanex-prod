@@ -1410,7 +1410,7 @@ export default function KycRequests() {
       key: "fullName",
       label: "Borrower Name",
       sortable: true,
-      render: (_value, doc: Kyc) => (
+      render: (doc: Kyc) => (
         <div>
           <div className="font-medium">
             {doc.borrower?.user?.fullName || doc.fullName}
@@ -1425,13 +1425,13 @@ export default function KycRequests() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (_value, doc: Kyc) => getStatusBadge(doc.status),
+      render: (doc: Kyc) => getStatusBadge(doc.status),
     },
     {
       key: "createdAt",
       label: "Submitted",
       sortable: true,
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (doc: Kyc) => new Date(doc.createdAt).toLocaleDateString(),
     },
   ];
 

@@ -17,9 +17,13 @@ import {
   Rule,
   CreateRuleDto,
 } from "@/apis/rulesApi";
+import { useGetTenantsQuery } from "@/apis/tenantsApi";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 export default function Rules() {
   const { toast } = useToast();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [ruleFormOpen, setRuleFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<Rule | null>(null);
@@ -31,6 +35,16 @@ export default function Rules() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [formData, setFormData] = useState<Record<string, any>>({});
+
+  const isSuperAdmin = user?.roles?.some(
+    (role) => role.role.name === "Super Admin",
+  );
+  const { data: tenantsData } = useGetTenantsQuery(
+    { page: 1, limit: 1000 },
+    { skip: !isSuperAdmin },
+  );
+  const tenants = tenantsData?.data || [];
 
   const { data: rules = [], isLoading } = useGetRulesQuery();
   const [createRule, { isLoading: isCreating }] = useCreateRuleMutation();
@@ -96,14 +110,16 @@ export default function Rules() {
       label: "Type",
       sortable: true,
       render: (rule) => (
-        <Badge variant="outline">{rule.ruleType.replace(/_/g, " ")}</Badge>
+        <Badge variant="outline">
+          {rule.ruleType ? rule.ruleType.replace(/_/g, " ") : "N/A"}
+        </Badge>
       ),
     },
     {
       key: "interestRate",
       label: "Interest Rate",
       sortable: true,
-      render: (rule) => `${rule.interestRate}%`,
+      render: (rule) => `${rule.interestRate || 0}%`,
     },
     {
       key: "isActive",
@@ -119,19 +135,57 @@ export default function Rules() {
       key: "createdAt",
       label: "Created At",
       sortable: true,
-      render: (rule) => new Date(rule.createdAt).toLocaleDateString(),
+      render: (rule) => {
+        try {
+          return new Date(rule.createdAt).toLocaleDateString();
+        } catch {
+          return "Invalid Date";
+        }
+      },
     },
   ];
 
   const handleView = (rule: Rule) => {
     setEditingRule(rule);
     setIsReadOnly(true);
+    setFormData({
+      tenantId: rule.tenantId || "",
+      name: rule.name,
+      description: rule.description || "",
+      ruleType: rule.ruleType,
+      interestRate: rule.interestRate?.toString() || "",
+      minAmount: rule.loanLimits?.minAmount?.toString() || "",
+      maxAmount: rule.loanLimits?.maxAmount?.toString() || "",
+      minTermMonths: rule.loanLimits?.minTermMonths?.toString() || "",
+      maxTermMonths: rule.loanLimits?.maxTermMonths?.toString() || "",
+      penaltyType: rule.penaltyConfig?.penaltyType || "",
+      penaltyAmount: rule.penaltyConfig?.penaltyAmount?.toString() || "",
+      gracePeriodDays: rule.penaltyConfig?.gracePeriodDays?.toString() || "",
+      isActive: rule.isActive,
+      isPubliclyVisible: rule.isPubliclyVisible,
+    });
     setRuleFormOpen(true);
   };
 
   const handleEdit = (rule: Rule) => {
     setEditingRule(rule);
     setIsReadOnly(false);
+    setFormData({
+      tenantId: rule.tenantId || "",
+      name: rule.name,
+      description: rule.description || "",
+      ruleType: rule.ruleType,
+      interestRate: rule.interestRate?.toString() || "",
+      minAmount: rule.loanLimits?.minAmount?.toString() || "",
+      maxAmount: rule.loanLimits?.maxAmount?.toString() || "",
+      minTermMonths: rule.loanLimits?.minTermMonths?.toString() || "",
+      maxTermMonths: rule.loanLimits?.maxTermMonths?.toString() || "",
+      penaltyType: rule.penaltyConfig?.penaltyType || "",
+      penaltyAmount: rule.penaltyConfig?.penaltyAmount?.toString() || "",
+      gracePeriodDays: rule.penaltyConfig?.gracePeriodDays?.toString() || "",
+      isActive: rule.isActive,
+      isPubliclyVisible: rule.isPubliclyVisible,
+    });
     setRuleFormOpen(true);
   };
 
@@ -160,33 +214,36 @@ export default function Rules() {
     }
   };
 
-  const handleFormSubmit = async (data: any) => {
+  const handleFormSubmit = async () => {
     try {
       const ruleData: CreateRuleDto = {
-        name: data.name,
-        description: data.description,
-        ruleType: data.ruleType,
-        interestRate: parseFloat(data.interestRate),
+        ...(isSuperAdmin && formData.tenantId
+          ? { tenantId: formData.tenantId }
+          : {}),
+        name: formData.name,
+        description: formData.description,
+        ruleType: formData.ruleType,
+        interestRate: parseFloat(formData.interestRate),
         loanLimits: {
-          minAmount: parseFloat(data.minAmount),
-          maxAmount: parseFloat(data.maxAmount),
-          minTermMonths: parseInt(data.minTermMonths),
-          maxTermMonths: parseInt(data.maxTermMonths),
+          minAmount: parseFloat(formData.minAmount),
+          maxAmount: parseFloat(formData.maxAmount),
+          minTermMonths: parseInt(formData.minTermMonths),
+          maxTermMonths: parseInt(formData.maxTermMonths),
         },
         penaltyConfig: {
-          penaltyType: data.penaltyType,
-          penaltyAmount: parseFloat(data.penaltyAmount),
-          gracePeriodDays: parseInt(data.gracePeriodDays),
+          penaltyType: formData.penaltyType,
+          penaltyAmount: parseFloat(formData.penaltyAmount),
+          gracePeriodDays: parseInt(formData.gracePeriodDays),
         },
         paymentConfig: {
-          allowedFrequencies: data.allowedFrequencies || ["MONTHLY"],
-          allowEarlyPayment: data.allowEarlyPayment || false,
-          earlyPaymentPenalty: data.earlyPaymentPenalty
-            ? parseFloat(data.earlyPaymentPenalty)
+          allowedFrequencies: formData.allowedFrequencies || ["MONTHLY"],
+          allowEarlyPayment: formData.allowEarlyPayment || false,
+          earlyPaymentPenalty: formData.earlyPaymentPenalty
+            ? parseFloat(formData.earlyPaymentPenalty)
             : undefined,
         },
-        isActive: data.isActive ?? true,
-        isPubliclyVisible: data.isPubliclyVisible ?? true,
+        isActive: formData.isActive ?? true,
+        isPubliclyVisible: formData.isPubliclyVisible ?? true,
       };
 
       if (editingRule) {
@@ -205,6 +262,7 @@ export default function Rules() {
 
       setRuleFormOpen(false);
       setEditingRule(null);
+      setFormData({});
     } catch (error: any) {
       toast({
         title: "Error",
@@ -217,6 +275,21 @@ export default function Rules() {
   };
 
   const ruleFields = [
+    ...(isSuperAdmin
+      ? [
+          {
+            name: "tenantId",
+            label: "Tenant",
+            type: "select" as const,
+            required: true,
+            options: tenants.map((tenant) => ({
+              value: tenant.id,
+              label: tenant.name,
+            })),
+            placeholder: "Select tenant",
+          },
+        ]
+      : []),
     {
       name: "name",
       label: "Rule Name",
@@ -289,10 +362,14 @@ export default function Rules() {
     },
     {
       name: "penaltyAmount",
-      label: "Penalty Amount",
+      label:
+        formData.penaltyType === "PERCENTAGE"
+          ? "Penalty Percentage (%)"
+          : "Penalty Amount",
       type: "number" as const,
       required: true,
-      placeholder: "e.g., 5",
+      placeholder:
+        formData.penaltyType === "PERCENTAGE" ? "e.g., 5" : "e.g., 500",
     },
     {
       name: "gracePeriodDays",
@@ -304,12 +381,12 @@ export default function Rules() {
     {
       name: "isActive",
       label: "Active",
-      type: "checkbox" as const,
+      type: "switch" as const,
     },
     {
       name: "isPubliclyVisible",
       label: "Publicly Visible",
-      type: "checkbox" as const,
+      type: "switch" as const,
     },
   ];
 
@@ -345,6 +422,7 @@ export default function Rules() {
           onClick: () => {
             setEditingRule(null);
             setIsReadOnly(false);
+            setFormData({});
             setRuleFormOpen(true);
           },
           variant: "default",
@@ -396,10 +474,11 @@ export default function Rules() {
         <FormSheet
           open={ruleFormOpen}
           onOpenChange={(open) => {
+            setRuleFormOpen(open);
             if (!open) {
-              setRuleFormOpen(false);
               setEditingRule(null);
               setIsReadOnly(false);
+              setFormData({});
             }
           }}
           title={
@@ -415,9 +494,7 @@ export default function Rules() {
               fields: ruleFields.map((field) => ({
                 id: field.name,
                 label: field.label,
-                value: editingRule
-                  ? String(editingRule[field.name as keyof Rule] || "")
-                  : "",
+                value: formData[field.name]?.toString() || "",
                 placeholder: field.placeholder,
                 required: field.required,
                 type: field.type,
@@ -427,18 +504,12 @@ export default function Rules() {
             },
           ]}
           onFieldChange={(fieldId, value) => {
-            // Handle field changes
+            setFormData((prev) => ({
+              ...prev,
+              [fieldId]: value,
+            }));
           }}
-          onSubmit={async () => {
-            const formData: any = {};
-            ruleFields.forEach((field) => {
-              const element = document.getElementById(
-                field.name,
-              ) as HTMLInputElement;
-              if (element) formData[field.name] = element.value;
-            });
-            await handleFormSubmit(formData);
-          }}
+          onSubmit={handleFormSubmit}
           submitText={editingRule ? "Update Rule" : "Create Rule"}
           isSubmitting={isCreating || isUpdating}
           isReadOnly={isReadOnly}

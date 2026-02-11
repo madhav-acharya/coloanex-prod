@@ -11,6 +11,7 @@ export enum LoanStatus {
 export interface Lender {
   id: string;
   name: string;
+  logo?: string;
   isActive: boolean;
   isBanned: boolean;
   contactEmail?: string;

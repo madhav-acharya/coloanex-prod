@@ -603,13 +603,13 @@ export default function LoanRequests() {
       key: "borrower.user.fullName",
       label: "Borrower",
       sortable: false,
-      render: (_value, loan) => loan?.borrower?.user?.fullName || "N/A",
+      render: (loan) => loan?.borrower?.user?.fullName || "N/A",
     },
     {
       key: "purpose",
       label: "Purpose",
       sortable: false,
-      render: (_value, loan) =>
+      render: (loan) =>
         loan?.purpose
           ? loan.purpose.substring(0, 30) +
             (loan.purpose.length > 30 ? "..." : "")
@@ -619,7 +619,7 @@ export default function LoanRequests() {
       key: "requestedAmount",
       label: "Requested Amount",
       sortable: true,
-      render: (_value, loan) =>
+      render: (loan) =>
         loan?.requestedAmount
           ? `NPR ${loan.requestedAmount.toLocaleString()}`
           : "N/A",
@@ -628,7 +628,7 @@ export default function LoanRequests() {
       key: "approvedAmount",
       label: "Approved Amount",
       sortable: true,
-      render: (_value, loan) =>
+      render: (loan) =>
         loan?.approvedAmount
           ? `NPR ${loan.approvedAmount.toLocaleString()}`
           : "Pending",
@@ -637,13 +637,13 @@ export default function LoanRequests() {
       key: "collateralDetails.type",
       label: "Collateral Type",
       sortable: false,
-      render: (_value, loan) => (loan?.collateralDetails as any)?.type || "N/A",
+      render: (loan) => (loan?.collateralDetails as any)?.type || "N/A",
     },
     {
       key: "collateralDetails.value",
       label: "Collateral Value",
       sortable: false,
-      render: (_value, loan) => {
+      render: (loan) => {
         const value = (loan?.collateralDetails as any)?.value;
         return value ? `NPR ${Number(value).toLocaleString()}` : "N/A";
       },
@@ -652,7 +652,7 @@ export default function LoanRequests() {
       key: "requestedTermMonths",
       label: "Term",
       sortable: true,
-      render: (_value, loan) =>
+      render: (loan) =>
         loan?.requestedTermMonths
           ? `${loan.requestedTermMonths} months`
           : "N/A",
@@ -661,14 +661,13 @@ export default function LoanRequests() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (_value, loan) =>
-        loan?.status ? getStatusBadge(loan.status) : "N/A",
+      render: (loan) => (loan?.status ? getStatusBadge(loan.status) : "N/A"),
     },
     {
       key: "createdAt",
       label: "Created At",
       sortable: true,
-      render: (_value, loan) =>
+      render: (loan) =>
         loan?.createdAt ? new Date(loan.createdAt).toLocaleDateString() : "N/A",
     },
   ];

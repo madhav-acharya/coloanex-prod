@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { FormLabel } from "@/components/ui/form-label";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import {
   Sheet as UISheet,
   SheetContent,
@@ -71,7 +72,7 @@ export function FormSheet({
     .every((field) => field.value && field.value.trim());
 
   const visibleSections = sections.filter(
-    (section) => section.condition !== false
+    (section) => section.condition !== false,
   );
 
   return (
@@ -153,6 +154,22 @@ export function FormSheet({
                                 required={field.required}
                                 readOnly={isReadOnly}
                               />
+                            ) : field.type === "switch" ? (
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id={field.id}
+                                  checked={
+                                    field.value === true ||
+                                    field.value === "true"
+                                  }
+                                  onCheckedChange={(checked) =>
+                                    handleFieldChange(field.id, String(checked))
+                                  }
+                                  disabled={
+                                    field.disabled || isSubmitting || isReadOnly
+                                  }
+                                />
+                              </div>
                             ) : (
                               <Input
                                 id={field.id}

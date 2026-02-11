@@ -56,6 +56,10 @@ class PaymentConfigDto {
 }
 
 export class CreateRuleDto {
+  @IsOptional()
+  @IsString()
+  tenantId?: string;
+
   @IsString()
   name: string;
 
