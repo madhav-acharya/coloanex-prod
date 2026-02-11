@@ -14,14 +14,21 @@ export class RulesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createRuleDto: CreateRuleDto, user: JwtPayload): Promise<Rule> {
-    if (!user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    const tenantId = createRuleDto.tenantId || user.tenantId;
+
+    if (!tenantId && !isSuperAdmin) {
       throw new ForbiddenException('Only tenant users can create rules');
+    }
+
+    if (!tenantId) {
+      throw new ForbiddenException('Tenant ID is required');
     }
 
     return this.prisma.rule.create({
       data: {
         ...createRuleDto,
-        tenantId: user.tenantId,
+        tenantId: tenantId,
         loanLimits: createRuleDto.loanLimits as any,
         penaltyConfig: createRuleDto.penaltyConfig as any,
         paymentConfig: createRuleDto.paymentConfig as any,
