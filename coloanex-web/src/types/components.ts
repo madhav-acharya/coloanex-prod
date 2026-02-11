@@ -20,7 +20,7 @@ export interface Column<T> {
   key: string;
   label: string;
   sortable?: boolean;
-  render?: (value: any, row: T) => ReactNode;
+  render?: (row: T) => ReactNode;
   width?: string;
 }
 
