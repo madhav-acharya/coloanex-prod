@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -90,7 +91,18 @@ export default function BrowseScreen() {
             <Card style={styles.lenderCard}>
               <View style={styles.lenderHeader}>
                 <View style={styles.lenderIcon}>
-                  <Ionicons name="business" size={32} color={colors.primary} />
+                  {lender.logo ? (
+                    <Image
+                      source={{ uri: lender.logo }}
+                      style={styles.lenderLogoImage}
+                    />
+                  ) : (
+                    <Ionicons
+                      name="business"
+                      size={32}
+                      color={colors.primary}
+                    />
+                  )}
                 </View>
                 <View style={styles.lenderInfo}>
                   <Text style={styles.lenderName}>{lender.name}</Text>
@@ -253,6 +265,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+    overflow: "hidden",
+  },
+  lenderLogoImage: {
+    width: "100%",
+    height: "100%",
   },
   lenderInfo: {
     flex: 1,
