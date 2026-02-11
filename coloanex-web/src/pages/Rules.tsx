@@ -17,9 +17,13 @@ import {
   Rule,
   CreateRuleDto,
 } from "@/apis/rulesApi";
+import { useGetTenantsQuery } from "@/apis/tenantsApi";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 export default function Rules() {
   const { toast } = useToast();
+  const user = useSelector((state: RootState) => state.auth.user);
   const [ruleFormOpen, setRuleFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ruleToDelete, setRuleToDelete] = useState<Rule | null>(null);
@@ -32,6 +36,15 @@ export default function Rules() {
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [formData, setFormData] = useState<Record<string, any>>({});
+
+  const isSuperAdmin = user?.roles?.some(
+    (role) => role.role.name === "Super Admin",
+  );
+  const { data: tenantsData } = useGetTenantsQuery(
+    { page: 1, limit: 1000 },
+    { skip: !isSuperAdmin },
+  );
+  const tenants = tenantsData?.data || [];
 
   const { data: rules = [], isLoading } = useGetRulesQuery();
   const [createRule, { isLoading: isCreating }] = useCreateRuleMutation();
@@ -97,14 +110,16 @@ export default function Rules() {
       label: "Type",
       sortable: true,
       render: (rule) => (
-        <Badge variant="outline">{rule.ruleType.replace(/_/g, " ")}</Badge>
+        <Badge variant="outline">
+          {rule.ruleType ? rule.ruleType.replace(/_/g, " ") : "N/A"}
+        </Badge>
       ),
     },
     {
       key: "interestRate",
       label: "Interest Rate",
       sortable: true,
-      render: (rule) => `${rule.interestRate}%`,
+      render: (rule) => `${rule.interestRate || 0}%`,
     },
     {
       key: "isActive",
@@ -120,7 +135,13 @@ export default function Rules() {
       key: "createdAt",
       label: "Created At",
       sortable: true,
-      render: (rule) => new Date(rule.createdAt).toLocaleDateString(),
+      render: (rule) => {
+        try {
+          return new Date(rule.createdAt).toLocaleDateString();
+        } catch {
+          return "Invalid Date";
+        }
+      },
     },
   ];
 
@@ -128,6 +149,7 @@ export default function Rules() {
     setEditingRule(rule);
     setIsReadOnly(true);
     setFormData({
+      tenantId: rule.tenantId || "",
       name: rule.name,
       description: rule.description || "",
       ruleType: rule.ruleType,
@@ -149,6 +171,7 @@ export default function Rules() {
     setEditingRule(rule);
     setIsReadOnly(false);
     setFormData({
+      tenantId: rule.tenantId || "",
       name: rule.name,
       description: rule.description || "",
       ruleType: rule.ruleType,
@@ -194,6 +217,9 @@ export default function Rules() {
   const handleFormSubmit = async () => {
     try {
       const ruleData: CreateRuleDto = {
+        ...(isSuperAdmin && formData.tenantId
+          ? { tenantId: formData.tenantId }
+          : {}),
         name: formData.name,
         description: formData.description,
         ruleType: formData.ruleType,
@@ -249,6 +275,21 @@ export default function Rules() {
   };
 
   const ruleFields = [
+    ...(isSuperAdmin
+      ? [
+          {
+            name: "tenantId",
+            label: "Tenant",
+            type: "select" as const,
+            required: true,
+            options: tenants.map((tenant) => ({
+              value: tenant.id,
+              label: tenant.name,
+            })),
+            placeholder: "Select tenant",
+          },
+        ]
+      : []),
     {
       name: "name",
       label: "Rule Name",
@@ -321,10 +362,14 @@ export default function Rules() {
     },
     {
       name: "penaltyAmount",
-      label: "Penalty Amount",
+      label:
+        formData.penaltyType === "PERCENTAGE"
+          ? "Penalty Percentage (%)"
+          : "Penalty Amount",
       type: "number" as const,
       required: true,
-      placeholder: "e.g., 5",
+      placeholder:
+        formData.penaltyType === "PERCENTAGE" ? "e.g., 5" : "e.g., 500",
     },
     {
       name: "gracePeriodDays",
@@ -336,12 +381,12 @@ export default function Rules() {
     {
       name: "isActive",
       label: "Active",
-      type: "checkbox" as const,
+      type: "switch" as const,
     },
     {
       name: "isPubliclyVisible",
       label: "Publicly Visible",
-      type: "checkbox" as const,
+      type: "switch" as const,
     },
   ];
 
@@ -429,6 +474,7 @@ export default function Rules() {
         <FormSheet
           open={ruleFormOpen}
           onOpenChange={(open) => {
+            setRuleFormOpen(open);
             if (!open) {
               setEditingRule(null);
               setIsReadOnly(false);
