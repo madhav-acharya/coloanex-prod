@@ -183,12 +183,9 @@ export function DataTable<T>({
                   {columns.map((column) => (
                     <TableCell key={`${rowId}-${column.key}`}>
                       {column.render
-                        ? column.render(
-                            (row as Record<string, unknown>)[column.key],
-                            row
-                          )
+                        ? column.render(row)
                         : String(
-                            (row as Record<string, unknown>)[column.key] || ""
+                            (row as Record<string, unknown>)[column.key] || "",
                           )}
                     </TableCell>
                   ))}
