@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -92,7 +93,10 @@ export default function ProfileScreen() {
           <View style={styles.profileHeader}>
             <View style={styles.avatar}>
               {user?.profileImage ? (
-                <View />
+                <Image
+                  source={{ uri: user.profileImage }}
+                  style={styles.avatarImage}
+                />
               ) : (
                 <Ionicons name="person" size={48} color={colors.primary} />
               )}
@@ -193,6 +197,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   profileInfo: {
     flex: 1,
