@@ -300,13 +300,13 @@ export default function Tenants() {
       key: "ownerUser",
       label: "Owner",
       width: "15%",
-      render: (_, tenant) => tenant.ownerUser?.fullName || "-",
+      render: (tenant) => tenant.ownerUser?.fullName || "-",
     },
     {
       key: "_count",
       label: "Users",
       width: "8%",
-      render: (_, tenant) => (
+      render: (tenant) => (
         <Badge variant="secondary">{tenant._count?.users || 0}</Badge>
       ),
     },
@@ -315,7 +315,7 @@ export default function Tenants() {
       label: "Status",
       sortable: true,
       width: "10%",
-      render: (_, tenant) => (
+      render: (tenant) => (
         <Badge variant={tenant.isActive ? "default" : "secondary"}>
           {tenant.isActive ? "Active" : "Inactive"}
         </Badge>
@@ -326,7 +326,7 @@ export default function Tenants() {
       label: "Created",
       sortable: true,
       width: "12%",
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (tenant) => new Date(tenant.createdAt).toLocaleDateString(),
     },
   ];
 
