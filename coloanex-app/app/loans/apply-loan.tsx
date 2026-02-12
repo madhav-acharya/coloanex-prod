@@ -156,7 +156,11 @@ export default function LoanApplicationScreen() {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
     } else {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace(`/lenders/lender-details?id=${lenderId}` as any);
+      }
     }
   };
 
