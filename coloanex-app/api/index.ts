@@ -9,4 +9,5 @@ export { contractsApi } from "./contractsApi";
 export { paymentSchedulesApi } from "./paymentSchedulesApi";
 export { transactionsApi } from "./transactionsApi";
 export { walletsApi } from "./walletsApi";
+export { default as analyticsApi } from "./analyticsApi";
 export { default as apiClient } from "./client";

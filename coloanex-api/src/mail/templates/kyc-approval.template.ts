@@ -15,7 +15,7 @@ export interface KycApprovalTemplateData {
 }
 
 export const kycApprovalTemplate = (data: KycApprovalTemplateData): string => {
-  const primaryColor = data.tenantPrimaryColor || '#4F46E5';
+  const primaryColor = data.tenantPrimaryColor || '#16A34A';
 
   const statusConfig = {
     APPROVED: {
@@ -283,10 +283,10 @@ export const kycApprovalTemplate = (data: KycApprovalTemplateData): string => {
               : ''
           }
           
-          <div class="button-container">
-            <a href="${data.dashboardUrl}" class="button">
-              ${data.status === 'APPROVED' ? 'Go to Dashboard' : data.status === 'REJECTED' ? 'Resubmit Documents' : 'View Status'}
-            </a>
+          <div class="button-container" style="background-color: ${config.bgColor}; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 16px; font-weight: 600; color: ${config.color};">
+              ${data.status === 'APPROVED' ? 'You can now proceed with your application' : data.status === 'REJECTED' ? 'Please resubmit your documents' : 'Your application is being reviewed'}
+            </p>
           </div>
           
           <hr class="divider">
@@ -302,15 +302,6 @@ export const kycApprovalTemplate = (data: KycApprovalTemplateData): string => {
           <p class="footer-text">
             © ${new Date().getFullYear()} ${data.tenantName}. All rights reserved.
           </p>
-          ${
-            data.tenantWebsite
-              ? `
-          <p class="footer-text">
-            <a href="${data.tenantWebsite}" class="footer-link">${data.tenantWebsite}</a>
-          </p>
-          `
-              : ''
-          }
           <p class="footer-text" style="margin-top: 15px;">
             This is an automated message, please do not reply to this email.
           </p>

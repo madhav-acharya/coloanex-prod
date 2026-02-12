@@ -158,10 +158,7 @@ export function FormSheet({
                               <div className="flex items-center space-x-2">
                                 <Switch
                                   id={field.id}
-                                  checked={
-                                    field.value === true ||
-                                    field.value === "true"
-                                  }
+                                  checked={Boolean(field.value)}
                                   onCheckedChange={(checked) =>
                                     handleFieldChange(field.id, String(checked))
                                   }

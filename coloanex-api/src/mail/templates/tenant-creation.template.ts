@@ -16,7 +16,7 @@ export interface TenantCreationTemplateData {
 export const tenantCreationTemplate = (
   data: TenantCreationTemplateData,
 ): string => {
-  const primaryColor = data.tenantPrimaryColor || '#4F46E5';
+  const primaryColor = data.tenantPrimaryColor || '#16A34A';
 
   return `
     <!DOCTYPE html>
@@ -284,8 +284,10 @@ export const tenantCreationTemplate = (
             </div>
           </div>
           
-          <div class="button-container">
-            <a href="${data.dashboardUrl}" class="button">Access Your Dashboard</a>
+          <div class="button-container" style="background-color: #d1fae5; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 16px; font-weight: 600; color: #16a34a;">
+              Your tenant organization is now ready to use
+            </p>
           </div>
           
           <hr class="divider">
@@ -304,10 +306,6 @@ export const tenantCreationTemplate = (
         <div class="footer">
           <p class="footer-text">
             © ${new Date().getFullYear()} CoLoanEx. All rights reserved.
-          </p>
-          <p class="footer-text">
-            <a href="${data.dashboardUrl}" class="footer-link">Dashboard</a> • 
-            <a href="mailto:${data.supportEmail}" class="footer-link">Support</a>
           </p>
           <p class="footer-text" style="margin-top: 15px;">
             This is an automated message, please do not reply to this email.

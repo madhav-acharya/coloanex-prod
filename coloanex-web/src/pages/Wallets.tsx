@@ -114,7 +114,7 @@ export default function Wallets() {
       key: "type",
       label: "Type",
       sortable: true,
-      render: (value, transaction) => (
+      render: (transaction) => (
         <Badge
           variant={transaction.type === "DEPOSIT" ? "default" : "secondary"}
         >
@@ -126,14 +126,14 @@ export default function Wallets() {
       key: "amount",
       label: "Amount",
       sortable: true,
-      render: (value, transaction) => (
+      render: (transaction) => (
         <span
           className={
             transaction.type === "DEPOSIT" ? "text-green-600" : "text-red-600"
           }
         >
           {transaction.type === "DEPOSIT" ? "+" : "-"}NPR{" "}
-          {Number(value || 0).toLocaleString()}
+          {Number(transaction.amount || 0).toLocaleString()}
         </span>
       ),
     },
@@ -141,7 +141,7 @@ export default function Wallets() {
       key: "status",
       label: "Status",
       sortable: true,
-      render: (value, transaction) => {
+      render: (transaction) => {
         const statusColors = {
           PENDING: "secondary",
           COMPLETED: "default",
@@ -156,15 +156,15 @@ export default function Wallets() {
       },
     },
     {
-      key: "description",
+      key: "paymentDetails",
       label: "Description",
-      render: (value) => value || "-",
+      render: (transaction) => transaction.paymentDetails?.remarks || "-",
     },
     {
       key: "createdAt",
       label: "Date",
       sortable: true,
-      render: (value) => new Date(value).toLocaleString(),
+      render: (transaction) => new Date(transaction.createdAt).toLocaleString(),
     },
   ];
 

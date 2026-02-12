@@ -343,7 +343,11 @@ export default function KYCVerificationScreen() {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
     } else {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/browse-lenders" as any);
+      }
     }
   };
 

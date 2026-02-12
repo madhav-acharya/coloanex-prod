@@ -439,19 +439,19 @@ export default function Users() {
       label: "Email",
       sortable: true,
       width: "20%",
-      render: (value) => value || "-",
+      render: (user) => user.email || "-",
     },
     {
       key: "phone",
       label: "Phone",
       width: "12%",
-      render: (value) => value || "-",
+      render: (user) => user.phone || "-",
     },
     {
       key: "roles",
       label: "Roles",
       width: "18%",
-      render: (_, user) => {
+      render: (user) => {
         const maxVisible = 2;
         const roles = (user.roles || [])
           .map((r) => (typeof r === "object" && "role" in r ? r.role : r))
@@ -487,7 +487,7 @@ export default function Users() {
       key: "permissions",
       label: "Permissions",
       width: "18%",
-      render: (_, user) => {
+      render: (user) => {
         const maxVisible = 2;
         const permissions = (user.permissions || [])
           .map((p) =>
@@ -532,7 +532,7 @@ export default function Users() {
       label: "Created",
       sortable: true,
       width: "12%",
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (user) => new Date(user.createdAt).toLocaleDateString(),
     },
   ];
 
