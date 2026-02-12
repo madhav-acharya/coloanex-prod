@@ -117,7 +117,7 @@ export default function LenderDetailsScreen() {
         </Card>
 
         {(lender.contactEmail || lender.contactPhone || lender.address) && (
-          <Card>
+          <Card style={{ marginTop: spacing.lg }}>
             <Text style={styles.sectionTitle}>Contact Information</Text>
             {lender.contactEmail && (
               <View style={styles.contactRow}>
@@ -257,7 +257,7 @@ export default function LenderDetailsScreen() {
     const buttonConfig = getButtonConfig();
 
     return (
-      <View>
+      <View style={{ marginTop: spacing.lg }}>
         {buttonConfig.message && (
           <View style={styles.messageCard}>
             <View style={styles.messageContainer}>
