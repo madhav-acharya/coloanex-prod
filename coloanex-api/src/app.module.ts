@@ -19,6 +19,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { CloudinaryUploadsModule } from './cloudinary-uploads/cloudinary-uploads.module';
 import { MailModule } from './mail/mail.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { IsUniqueConstraint } from './common/validators/is-unique.validator';
@@ -41,6 +42,7 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     WalletsModule,
     CloudinaryUploadsModule,
     MailModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
