@@ -12,7 +12,7 @@ export interface RegistrationTemplateData {
 export const registrationTemplate = (
   data: RegistrationTemplateData,
 ): string => {
-  const primaryColor = data.tenantPrimaryColor || '#4F46E5';
+  const primaryColor = data.tenantPrimaryColor || '#16A34A';
 
   return `
     <!DOCTYPE html>
@@ -139,19 +139,11 @@ export const registrationTemplate = (
               <div class="credentials-label">Your Email:</div>
               <div class="credentials-value">${data.userEmail}</div>
             </div>
-            <div>
-              <div class="credentials-label">Login URL:</div>
-              <div class="credentials-value">${data.loginUrl}</div>
-            </div>
           </div>
           
           <p class="message">
-            To get started, please click the button below to log in to your account:
+            You can now log in to your account using your email and the password you created during registration.
           </p>
-          
-          <div class="button-container">
-            <a href="${data.loginUrl}" class="button">Login to Your Account</a>
-          </div>
           
           <hr class="divider">
           
@@ -166,15 +158,6 @@ export const registrationTemplate = (
           <p class="footer-text">
             © ${new Date().getFullYear()} ${data.tenantName}. All rights reserved.
           </p>
-          ${
-            data.tenantWebsite
-              ? `
-          <p class="footer-text">
-            <a href="${data.tenantWebsite}" class="footer-link">${data.tenantWebsite}</a>
-          </p>
-          `
-              : ''
-          }
           <p class="footer-text" style="margin-top: 15px;">
             This is an automated message, please do not reply to this email.
           </p>
