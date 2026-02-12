@@ -29,7 +29,7 @@ export interface LoanRequestTemplateData {
 }
 
 export const loanRequestTemplate = (data: LoanRequestTemplateData): string => {
-  const primaryColor = data.tenantPrimaryColor || '#4F46E5';
+  const primaryColor = data.tenantPrimaryColor || '#16A34A';
 
   const statusConfig = {
     SUBMITTED: {
@@ -444,18 +444,18 @@ export const loanRequestTemplate = (data: LoanRequestTemplateData): string => {
               : ''
           }
           
-          <div class="button-container">
-            <a href="${data.dashboardUrl}" class="button">
+          <div class="button-container" style="background-color: ${config.bgColor}; border-radius: 8px; padding: 20px; text-align: center;">
+            <p style="margin: 0; font-size: 16px; font-weight: 600; color: ${config.color};">
               ${
                 data.status === 'APPROVED'
-                  ? 'View Loan Details'
+                  ? 'Your loan has been approved'
                   : data.status === 'PENDING_DOCUMENTS'
-                    ? 'Upload Documents'
+                    ? 'Please upload the required documents'
                     : data.status === 'DISBURSED'
-                      ? 'View Repayment Schedule'
-                      : 'View Application Status'
+                      ? 'Your loan has been disbursed'
+                      : 'Your application is being processed'
               }
-            </a>
+            </p>
           </div>
           
           <hr class="divider">
@@ -471,15 +471,6 @@ export const loanRequestTemplate = (data: LoanRequestTemplateData): string => {
           <p class="footer-text">
             © ${new Date().getFullYear()} ${data.tenantName}. All rights reserved.
           </p>
-          ${
-            data.tenantWebsite
-              ? `
-          <p class="footer-text">
-            <a href="${data.tenantWebsite}" class="footer-link">${data.tenantWebsite}</a>
-          </p>
-          `
-              : ''
-          }
           <p class="footer-text" style="margin-top: 15px;">
             This is an automated message, please do not reply to this email.
           </p>
