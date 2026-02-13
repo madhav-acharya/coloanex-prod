@@ -21,6 +21,7 @@ import {
   useGetMonthlyRevenueQuery,
   useGetMonthlyUsersQuery,
   useGetUsersByRoleQuery,
+  useGetMonthlyBorrowersQuery,
   useGetBorrowerMonthlyLoansQuery,
   useGetBorrowersByStatusQuery,
 } from "@/apis/analyticsApi";
@@ -66,7 +67,7 @@ const Dashboard = () => {
   const [endDate, setEndDate] = useState<Date>(new Date());
 
   const isSuperAdmin = user?.roles?.some(
-    (r: any) => r.role?.name === "SuperAdmin",
+    (r: any) => r.role?.name === "Super Admin",
   );
   const isLender = user?.roles?.some((r: any) => r.role?.name === "Lender");
 
@@ -74,9 +75,7 @@ const Dashboard = () => {
     skip: !isSuperAdmin,
   });
 
-  const { data: tenantData } = useGetTenantAnalyticsQuery(undefined, {
-    skip: isSuperAdmin,
-  });
+  const { data: tenantData } = useGetTenantAnalyticsQuery(undefined);
 
   const months = Math.round(
     (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
@@ -86,6 +85,12 @@ const Dashboard = () => {
   );
   const { data: monthlyLoans } = useGetMonthlyLoansQuery(
     months > 0 ? months : 1,
+  );
+  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(
+    months > 0 ? months : 1,
+    {
+      skip: isSuperAdmin,
+    },
   );
   const { data: loansByStatus } = useGetLoansByStatusQuery();
   const { data: contractsByStatus } = useGetContractsByStatusQuery();
@@ -263,13 +268,13 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StatCard
                 title="Total Loan Amount"
-                value={`NPR ${(adminData.totalLoanAmount / 1000000).toFixed(2)}M`}
+                value={`NPR ${adminData.totalLoanAmount.toLocaleString()}`}
                 icon={IndianRupee}
                 color="#16A34A"
               />
               <StatCard
                 title="Total Contract Amount"
-                value={`NPR ${(adminData.totalContractAmount / 1000000).toFixed(2)}M`}
+                value={`NPR ${adminData.totalContractAmount.toLocaleString()}`}
                 icon={IndianRupee}
                 color="#22C55E"
               />
@@ -329,19 +334,19 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Total Disbursed"
-                value={`NPR ${(tenantData.totalDisbursed / 1000000).toFixed(2)}M`}
+                value={`NPR ${tenantData.totalDisbursed.toLocaleString()}`}
                 icon={IndianRupee}
                 color="#16A34A"
               />
               <StatCard
                 title="Total Collected"
-                value={`NPR ${(tenantData.totalCollected / 1000000).toFixed(2)}M`}
+                value={`NPR ${tenantData.totalCollected.toLocaleString()}`}
                 icon={IndianRupee}
                 color="#22C55E"
               />
               <StatCard
                 title="Pending Payments"
-                value={`NPR ${(tenantData.pendingPayments / 1000000).toFixed(2)}M`}
+                value={`NPR ${tenantData.pendingPayments.toLocaleString()}`}
                 icon={IndianRupee}
                 color="#F59E0B"
               />
@@ -402,6 +407,58 @@ const Dashboard = () => {
           )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {isSuperAdmin && monthlyUsers && monthlyUsers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Users Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyUsers}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#059669"
+                      strokeWidth={2}
+                      name="Users Count"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isSuperAdmin && monthlyBorrowers && monthlyBorrowers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Borrowers Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={monthlyBorrowers}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#059669"
+                      strokeWidth={2}
+                      name="Borrowers Count"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
           {loansByStatus && loansByStatus.length > 0 && (
             <Card>
               <CardHeader>

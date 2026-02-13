@@ -8,8 +8,9 @@ import {
   RefreshControl,
   TouchableOpacity,
   Platform,
+  Modal,
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { Calendar } from "react-native-calendars";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import { Card } from "@/components/ui";
 import { colors, spacing, typography, borderRadius } from "@/constants/theme";
@@ -34,6 +35,7 @@ export default function AnalyticsScreen() {
   const [endDate, setEndDate] = useState(new Date());
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [isSelectingStart, setIsSelectingStart] = useState(true);
 
   const loadAnalytics = async () => {
     try {
@@ -228,7 +230,10 @@ export default function AnalyticsScreen() {
           <View style={styles.dateRangeContainer}>
             <TouchableOpacity
               style={styles.dateButton}
-              onPress={() => setShowStartPicker(true)}
+              onPress={() => {
+                setIsSelectingStart(true);
+                setShowStartPicker(true);
+              }}
             >
               <Ionicons
                 name="calendar-outline"
@@ -242,7 +247,10 @@ export default function AnalyticsScreen() {
             <Text style={styles.dateSeparator}>to</Text>
             <TouchableOpacity
               style={styles.dateButton}
-              onPress={() => setShowEndPicker(true)}
+              onPress={() => {
+                setIsSelectingStart(false);
+                setShowEndPicker(true);
+              }}
             >
               <Ionicons
                 name="calendar-outline"
@@ -254,43 +262,114 @@ export default function AnalyticsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          {showStartPicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, date) => {
+
+          <Modal
+            visible={showStartPicker || showEndPicker}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={() => {
+              setShowStartPicker(false);
+              setShowEndPicker(false);
+            }}
+          >
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => {
                 setShowStartPicker(false);
-                if (date) setStartDate(date);
-              }}
-            />
-          )}
-          {showEndPicker && (
-            <DateTimePicker
-              value={endDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, date) => {
                 setShowEndPicker(false);
-                if (date) setEndDate(date);
               }}
-            />
-          )}
+            >
+              <View style={styles.calendarModalContent}>
+                <View style={styles.calendarHeader}>
+                  <Text style={styles.calendarTitle}>
+                    {isSelectingStart ? "Select Start Date" : "Select End Date"}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setShowStartPicker(false);
+                      setShowEndPicker(false);
+                    }}
+                  >
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+                <Calendar
+                  current={
+                    isSelectingStart
+                      ? startDate.toISOString().split("T")[0]
+                      : endDate.toISOString().split("T")[0]
+                  }
+                  onDayPress={(day) => {
+                    if (isSelectingStart) {
+                      setStartDate(new Date(day.dateString));
+                      setShowStartPicker(false);
+                    } else {
+                      setEndDate(new Date(day.dateString));
+                      setShowEndPicker(false);
+                    }
+                  }}
+                  markedDates={{
+                    [startDate.toISOString().split("T")[0]]: {
+                      selected: isSelectingStart,
+                      selectedColor: colors.primary,
+                    },
+                    [endDate.toISOString().split("T")[0]]: {
+                      selected: !isSelectingStart,
+                      selectedColor: colors.primary,
+                    },
+                  }}
+                  theme={{
+                    backgroundColor: "#ffffff",
+                    calendarBackground: "#ffffff",
+                    textSectionTitleColor: colors.textSecondary,
+                    selectedDayBackgroundColor: colors.primary,
+                    selectedDayTextColor: "#ffffff",
+                    todayTextColor: colors.primary,
+                    dayTextColor: colors.text,
+                    textDisabledColor: colors.textLight,
+                    monthTextColor: colors.text,
+                    textMonthFontWeight: "bold",
+                    textDayFontSize: 16,
+                    textMonthFontSize: 18,
+                    textDayHeaderFontSize: 14,
+                  }}
+                  maxDate={
+                    isSelectingStart
+                      ? endDate.toISOString().split("T")[0]
+                      : undefined
+                  }
+                  minDate={
+                    !isSelectingStart
+                      ? startDate.toISOString().split("T")[0]
+                      : undefined
+                  }
+                />
+              </View>
+            </TouchableOpacity>
+          </Modal>
         </Card>
 
         {monthlyLoans.length > 0 && (
           <Card style={styles.chartCard}>
             <Text style={styles.cardTitle}>Loan Applications Trend</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.chartContainer}>
               <LineChart
                 data={lineChartData}
-                width={Math.max(screenWidth - 64, monthlyLoans.length * 80)}
-                height={220}
+                width={screenWidth - 64}
+                height={200}
                 chartConfig={chartConfig}
                 bezier
                 style={styles.chart}
+                withInnerLines={false}
+                withOuterLines={true}
+                withVerticalLines={false}
+                withHorizontalLines={true}
+                withDots={true}
+                withShadow={false}
+                fromZero={true}
               />
-            </ScrollView>
+            </View>
           </Card>
         )}
 
@@ -298,18 +377,21 @@ export default function AnalyticsScreen() {
           <Card style={styles.chartCard}>
             <Text style={styles.cardTitle}>Loans by Status</Text>
             <View style={styles.pieChartWrapper}>
-              <PieChart
-                data={pieChartData}
-                width={screenWidth - 48}
-                height={screenWidth - 48}
-                chartConfig={chartConfig}
-                accessor="count"
-                backgroundColor="transparent"
-                paddingLeft="15"
-                hasLegend={false}
-                style={styles.chart}
-                absolute
-              />
+              <View style={styles.pieChartContainer}>
+                <PieChart
+                  data={pieChartData}
+                  width={screenWidth - 64}
+                  height={220}
+                  chartConfig={chartConfig}
+                  accessor="count"
+                  backgroundColor="transparent"
+                  paddingLeft="0"
+                  hasLegend={false}
+                  style={styles.chart}
+                  absolute
+                  center={[(screenWidth - 64) / 4, 0]}
+                />
+              </View>
               <View style={styles.legendContainer}>
                 {loansByStatus.map((item, index) => (
                   <View key={item.status} style={styles.legendItem}>
@@ -486,20 +568,59 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textSecondary,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  calendarModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  calendarHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  calendarTitle: {
+    ...typography.h3,
+    color: colors.text,
+    fontWeight: "600",
+  },
   chartCard: {
     padding: spacing.lg,
     marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  chartContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
   pieChartContainer: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    width: "100%",
   },
   chart: {
-    marginVertical: spacing.sm,
     borderRadius: borderRadius.md,
   },
   pieChartWrapper: {
     alignItems: "center",
+    width: "100%",
+    overflow: "hidden",
   },
   legendContainer: {
     marginTop: spacing.md,

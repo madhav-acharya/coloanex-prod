@@ -78,8 +78,18 @@ export class AnalyticsController {
   getUsersByRole(@CurrentUser() user: any) {
     return this.analyticsService.getUsersByRole(user);
   }
-
   @Get('borrowers/monthly')
+  getMonthlyBorrowers(
+    @CurrentUser() user: any,
+    @Query('months') months?: string,
+  ) {
+    return this.analyticsService.getMonthlyBorrowers(
+      user,
+      months ? parseInt(months) : 12,
+    );
+  }
+
+  @Get('borrowers/monthly-loans')
   getBorrowerMonthlyLoans(
     @CurrentUser() user: any,
     @Query('months') months?: string,

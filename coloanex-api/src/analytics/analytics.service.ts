@@ -6,9 +6,7 @@ export class AnalyticsService {
   constructor(private prisma: PrismaService) {}
 
   async getAdminAnalytics(user: any) {
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('Access denied');
@@ -54,20 +52,37 @@ export class AnalyticsService {
   }
 
   async getTenantAnalytics(user: any, tenantId?: string) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    const isLender = user.roles?.includes('Lender');
+
     const effectiveTenantId = tenantId || user.tenantId;
 
-    if (!effectiveTenantId) {
+    if (!isSuperAdmin && !effectiveTenantId) {
       throw new ForbiddenException('Tenant ID required');
     }
-
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
-    const isLender = user.roles?.some((r: any) => r.role?.name === 'Lender');
 
     if (!isSuperAdmin && !isLender && user.tenantId !== effectiveTenantId) {
       throw new ForbiddenException('Access denied');
     }
+
+    const borrowerWhere =
+      isSuperAdmin && !effectiveTenantId ? {} : { tenantId: effectiveTenantId };
+    const loanWhere =
+      isSuperAdmin && !effectiveTenantId ? {} : { tenantId: effectiveTenantId };
+    const contractWhere =
+      isSuperAdmin && !effectiveTenantId ? {} : { tenantId: effectiveTenantId };
+    const kycWhere =
+      isSuperAdmin && !effectiveTenantId
+        ? {}
+        : { borrower: { tenantId: effectiveTenantId } };
+    const transactionContractWhere =
+      isSuperAdmin && !effectiveTenantId
+        ? {}
+        : { contract: { tenantId: effectiveTenantId } };
+    const scheduleContractWhere =
+      isSuperAdmin && !effectiveTenantId
+        ? {}
+        : { contract: { tenantId: effectiveTenantId } };
 
     const [
       totalBorrowers,
@@ -81,40 +96,37 @@ export class AnalyticsService {
       totalCollected,
       pendingPayments,
     ] = await Promise.all([
-      this.prisma.borrower.count({ where: { tenantId: effectiveTenantId } }),
-      this.prisma.loan.count({ where: { tenantId: effectiveTenantId } }),
+      this.prisma.borrower.count({ where: borrowerWhere }),
+      this.prisma.loan.count({ where: loanWhere }),
       this.prisma.loan.count({
-        where: { tenantId: effectiveTenantId, status: 'APPROVED' },
+        where: { ...loanWhere, status: 'APPROVED' },
       }),
-      this.prisma.contract.count({ where: { tenantId: effectiveTenantId } }),
+      this.prisma.contract.count({ where: contractWhere }),
       this.prisma.contract.count({
-        where: { tenantId: effectiveTenantId, status: 'ACTIVE' },
+        where: { ...contractWhere, status: 'ACTIVE' },
       }),
       this.prisma.kyc.count({
-        where: { borrower: { tenantId: effectiveTenantId }, status: 'PENDING' },
+        where: { ...kycWhere, status: 'PENDING' },
       }),
       this.prisma.kyc.count({
-        where: {
-          borrower: { tenantId: effectiveTenantId },
-          status: 'VERIFIED',
-        },
+        where: { ...kycWhere, status: 'VERIFIED' },
       }),
       this.prisma.contract.aggregate({
-        where: { tenantId: effectiveTenantId },
+        where: contractWhere,
         _sum: { loanAmount: true },
       }),
       this.prisma.transaction.aggregate({
         where: {
+          ...transactionContractWhere,
           type: { in: ['INSTALLMENT_PAYMENT', 'PENALTY_PAYMENT'] },
           status: 'COMPLETED',
-          contract: { tenantId: effectiveTenantId },
         },
         _sum: { amount: true },
       }),
       this.prisma.paymentSchedule.aggregate({
         where: {
+          ...scheduleContractWhere,
           status: 'PENDING',
-          contract: { tenantId: effectiveTenantId },
         },
         _sum: { totalAmount: true },
       }),
@@ -213,9 +225,7 @@ export class AnalyticsService {
       createdAt: { gte: startDate },
     };
 
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
@@ -242,9 +252,7 @@ export class AnalyticsService {
       createdAt: { gte: startDate },
     };
 
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
@@ -266,9 +274,7 @@ export class AnalyticsService {
   async getLoansByStatus(user: any) {
     const whereClause: any = {};
 
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
@@ -289,9 +295,7 @@ export class AnalyticsService {
   async getContractsByStatus(user: any) {
     const whereClause: any = {};
 
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
@@ -319,9 +323,7 @@ export class AnalyticsService {
       type: { in: ['INSTALLMENT_PAYMENT', 'PENALTY_PAYMENT', 'FEE'] },
     };
 
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       whereClause.contract = { tenantId: user.tenantId };
@@ -403,9 +405,7 @@ export class AnalyticsService {
   }
 
   async getMonthlyUsers(user: any, months: number = 12) {
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('Access denied');
@@ -429,9 +429,7 @@ export class AnalyticsService {
   }
 
   async getUsersByRole(user: any) {
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('Access denied');
@@ -460,10 +458,32 @@ export class AnalyticsService {
     return rolesData;
   }
 
+  async getMonthlyBorrowers(user: any, months: number = 12) {
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - months);
+
+    const whereClause: any = {
+      createdAt: { gte: startDate },
+    };
+
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+
+    if (!isSuperAdmin) {
+      whereClause.tenantId = user.tenantId;
+    }
+
+    const borrowers = await this.prisma.borrower.findMany({
+      where: whereClause,
+      select: {
+        createdAt: true,
+      },
+    });
+
+    return this.groupByMonth(borrowers, months);
+  }
+
   async getBorrowerMonthlyLoans(user: any, months: number = 12) {
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('Access denied');
@@ -487,9 +507,7 @@ export class AnalyticsService {
   }
 
   async getBorrowersByStatus(user: any) {
-    const isSuperAdmin = user.roles?.some(
-      (r: any) => r.role?.name === 'SuperAdmin',
-    );
+    const isSuperAdmin = user.roles?.includes('Super Admin');
 
     if (!isSuperAdmin) {
       throw new ForbiddenException('Access denied');

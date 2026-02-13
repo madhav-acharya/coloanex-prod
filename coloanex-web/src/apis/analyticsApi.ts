@@ -95,9 +95,15 @@ const analyticsApi = baseApi.injectEndpoints({
     getUsersByRole: builder.query<UserRoleData[], void>({
       query: () => "analytics/users/by-role",
     }),
-    getBorrowerMonthlyLoans: builder.query<MonthlyData[], number | void>({
+    getMonthlyBorrowers: builder.query<MonthlyData[], number | void>({
       query: (months = 12) => ({
         url: "analytics/borrowers/monthly",
+        params: { months },
+      }),
+    }),
+    getBorrowerMonthlyLoans: builder.query<MonthlyData[], number | void>({
+      query: (months = 12) => ({
+        url: "analytics/borrowers/monthly-loans",
         params: { months },
       }),
     }),
@@ -117,6 +123,7 @@ export const {
   useGetMonthlyRevenueQuery,
   useGetMonthlyUsersQuery,
   useGetUsersByRoleQuery,
+  useGetMonthlyBorrowersQuery,
   useGetBorrowerMonthlyLoansQuery,
   useGetBorrowersByStatusQuery,
 } = analyticsApi;
