@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, LenderLogo, Button } from "./ui";
 import { formatCurrency as formatNPR } from "@/utils/currency";
+import { useTheme } from "@/hooks/useTheme";
 
 interface LoanCardProps {
   id: string;
@@ -27,6 +28,7 @@ export default function LoanCard({
   percentagePaid,
 }: LoanCardProps) {
   const router = useRouter();
+  const { colors } = useTheme();
 
   const formatCurrency = (value: number) => {
     return formatNPR(value);
@@ -48,51 +50,74 @@ export default function LoanCard({
           <LenderLogo name={lenderName} size={40} />
           <View>
             <View style={styles.nameRow}>
-              <Text style={styles.lenderName}>{lenderName}</Text>
+              <Text style={[styles.lenderName, { color: colors.text }]}>
+                {lenderName}
+              </Text>
               <Text style={styles.verified}>✓</Text>
             </View>
-            <Text style={styles.loanType}>{loanType}</Text>
+            <Text style={[styles.loanType, { color: colors.textSecondary }]}>
+              {loanType}
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.amounts}>
         <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Loan Amount</Text>
-          <Text style={styles.amountValue}>{formatCurrency(amount)}</Text>
+          <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
+            Loan Amount
+          </Text>
+          <Text style={[styles.amountValue, { color: colors.text }]}>
+            {formatCurrency(amount)}
+          </Text>
         </View>
         <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Interest Rate</Text>
-          <Text style={styles.amountValue}>{interestRate}%</Text>
+          <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
+            Interest Rate
+          </Text>
+          <Text style={[styles.amountValue, { color: colors.text }]}>
+            {interestRate}%
+          </Text>
         </View>
       </View>
 
       <View style={styles.amounts}>
         <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Remaining Balance</Text>
-          <Text style={styles.remainingBalance}>
+          <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
+            Remaining Balance
+          </Text>
+          <Text style={[styles.remainingBalance, { color: colors.error }]}>
             {formatCurrency(remainingBalance)}
           </Text>
         </View>
         <View style={styles.amountItem}>
-          <Text style={styles.amountLabel}>Monthly Payment</Text>
-          <Text style={styles.amountValue}>
+          <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
+            Monthly Payment
+          </Text>
+          <Text style={[styles.amountValue, { color: colors.text }]}>
             {formatCurrency(monthlyPayment)}
           </Text>
         </View>
       </View>
 
       <View style={styles.progressContainer}>
-        <View style={styles.progressBar}>
+        <View style={[styles.progressBar, { backgroundColor: colors.surface }]}>
           <View
-            style={[styles.progressFill, { width: `${percentagePaid}%` }]}
+            style={[
+              styles.progressFill,
+              { width: `${percentagePaid}%`, backgroundColor: colors.primary },
+            ]}
           />
         </View>
-        <Text style={styles.progressText}>{percentagePaid}% paid</Text>
+        <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+          {percentagePaid}% paid
+        </Text>
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.dueDate}>Due Date: {formatDate(dueDate)}</Text>
+        <Text style={[styles.dueDate, { color: colors.textSecondary }]}>
+          Due Date: {formatDate(dueDate)}
+        </Text>
         <Button
           title="Make Payment"
           onPress={() => router.push(`/repayment/make-repayment?id=${id}`)}
@@ -107,7 +132,6 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 20,
     borderRadius: 20,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -138,7 +162,6 @@ const styles = StyleSheet.create({
   },
   loanType: {
     fontSize: 14,
-    color: "#6B7280",
     marginTop: 4,
     fontWeight: "500",
   },
@@ -146,7 +169,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 16,
-    backgroundColor: "#F9FAFB",
     padding: 16,
     borderRadius: 12,
   },
@@ -155,7 +177,6 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 12,
-    color: "#6B7280",
     marginBottom: 6,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -164,35 +185,26 @@ const styles = StyleSheet.create({
   amountValue: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
   },
   remainingBalance: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#16A34A",
   },
   progressContainer: {
     marginBottom: 20,
   },
   progressBar: {
     height: 10,
-    backgroundColor: "#E5E7EB",
     borderRadius: 10,
     overflow: "hidden",
     marginBottom: 10,
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#16A34A",
     borderRadius: 10,
-    shadowColor: "#16A34A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
   },
   progressText: {
     fontSize: 13,
-    color: "#6B7280",
     fontWeight: "600",
   },
   footer: {
@@ -201,16 +213,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#E5E7EB",
   },
   dueDate: {
     fontSize: 13,
-    color: "#6B7280",
     fontWeight: "600",
   },
   viewButton: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#111827",
   },
 });
