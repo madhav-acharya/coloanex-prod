@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "@/constants/theme";
 import { Platform } from "react-native";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
@@ -16,7 +18,6 @@ export default function TabsLayout() {
           height: Platform.OS === "ios" ? 88 : 68,
           paddingBottom: Platform.OS === "ios" ? 28 : 12,
           paddingTop: 12,
-          shadowColor: "#000",
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.1,
           shadowRadius: 12,
