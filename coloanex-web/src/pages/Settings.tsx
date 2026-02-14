@@ -27,10 +27,16 @@ import {
   ExternalLink,
   ChevronRight,
   ArrowLeft,
+  Palette,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "@/hooks/useTheme";
 
 const Settings = () => {
   const { user } = useAuth();
+  const { mode, setTheme } = useTheme();
   const [updateUser, { isLoading }] = useUpdateUserMutation();
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
@@ -221,18 +227,22 @@ const Settings = () => {
       description: "Update your password",
     },
     {
+      id: "appearance",
+      icon: Palette,
+      title: "Appearance",
+      description: `Theme: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}`,
+    },
+    {
       id: "mail",
       icon: Mail,
       title: "Mail Service",
-      description: mailStatus?.isConnected
-        ? "Connected"
-        : "Not connected",
+      description: mailStatus?.isConnected ? "Connected" : "Not connected",
       badge: mailStatus?.isConnected ? (
-        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
           Connected
         </span>
       ) : (
-        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-800">
+        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
           Not Connected
         </span>
       ),
@@ -485,6 +495,114 @@ const Settings = () => {
             </Card>
           )}
 
+          {activeSection === "appearance" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Appearance</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Customize how Coloanex looks on your device
+                </p>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Label className="text-base">Theme</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Select your preferred theme or sync with your system
+                    </p>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <button
+                      onClick={() => setTheme("light")}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                        mode === "light"
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                          mode === "light" ? "bg-primary" : "bg-muted"
+                        }`}
+                      >
+                        <Sun
+                          className={`w-5 h-5 ${mode === "light" ? "text-white" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Light</p>
+                        <p className="text-sm text-muted-foreground">
+                          Bright and clean appearance
+                        </p>
+                      </div>
+                      {mode === "light" && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setTheme("dark")}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                        mode === "dark"
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                          mode === "dark" ? "bg-primary" : "bg-muted"
+                        }`}
+                      >
+                        <Moon
+                          className={`w-5 h-5 ${mode === "dark" ? "text-white" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">Dark</p>
+                        <p className="text-sm text-muted-foreground">
+                          Easy on the eyes in low light
+                        </p>
+                      </div>
+                      {mode === "dark" && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => setTheme("system")}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                        mode === "system"
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                          mode === "system" ? "bg-primary" : "bg-muted"
+                        }`}
+                      >
+                        <Monitor
+                          className={`w-5 h-5 ${mode === "system" ? "text-white" : "text-muted-foreground"}`}
+                        />
+                      </div>
+                      <div className="flex-1 text-left">
+                        <p className="font-medium">System</p>
+                        <p className="text-sm text-muted-foreground">
+                          Follows your device settings
+                        </p>
+                      </div>
+                      {mode === "system" && (
+                        <Check className="w-5 h-5 text-primary" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {activeSection === "mail" && (
             <Card>
               <CardHeader>
@@ -500,17 +618,17 @@ const Settings = () => {
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : mailStatus?.isConnected ? (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
                         <Check className="w-5 h-5 text-white" />
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-green-900">
+                      <p className="font-semibold text-green-900 dark:text-green-100">
                         Mail Service Connected
                       </p>
-                      <p className="text-sm text-green-700">
+                      <p className="text-sm text-green-700 dark:text-green-300">
                         {mailStatus.email}
                       </p>
                     </div>
@@ -518,7 +636,7 @@ const Settings = () => {
                       onClick={handleMailDisconnect}
                       disabled={isDisconnecting}
                       size="sm"
-                      className="bg-red-600 hover:bg-red-700 text-white"
+                      className="cursor-pointer bg-red-600 hover:bg-red-700 text-white"
                     >
                       {isDisconnecting ? (
                         <>
@@ -534,17 +652,17 @@ const Settings = () => {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
                         <X className="w-5 h-5 text-white" />
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-red-900">
+                      <p className="font-semibold text-red-900 dark:text-red-100">
                         Mail Service Not Connected
                       </p>
-                      <p className="text-sm text-red-700">
+                      <p className="text-sm text-red-700 dark:text-red-300">
                         Connect your Google account to enable email
                         notifications
                       </p>
@@ -552,7 +670,7 @@ const Settings = () => {
                     <Button
                       onClick={handleMailConnect}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="cursor-pointer bg-green-600 hover:bg-green-700 text-white"
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Connect
@@ -678,21 +796,25 @@ const Settings = () => {
                 <div
                   key={option.id}
                   onClick={() => setActiveSection(option.id)}
-                  className="flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                  className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                 >
                   <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-gray-600" />
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Icon className="w-5 h-5 text-muted-foreground" />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{option.title}</p>
-                    <p className="text-sm text-gray-500 truncate">
+                    <p className="font-medium text-foreground">
+                      {option.title}
+                    </p>
+                    <p className="text-sm text-muted-foreground truncate">
                       {option.description}
                     </p>
                   </div>
-                  {option.badge && <div className="flex-shrink-0">{option.badge}</div>}
-                  <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  {option.badge && (
+                    <div className="flex-shrink-0">{option.badge}</div>
+                  )}
+                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                 </div>
               );
             })}
