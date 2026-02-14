@@ -11,11 +11,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card, Button } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import { rulesApi } from "@/api";
 import type { Rule } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function RulesScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,15 +55,22 @@ export default function RulesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.title}>Loan Rules</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Loan Rules</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -71,7 +81,7 @@ export default function RulesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <Text style={styles.subtitle}>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Browse available loan rules and configurations
         </Text>
 
@@ -95,22 +105,50 @@ export default function RulesScreen() {
                 />
               </View>
               <View style={styles.ruleInfo}>
-                <Text style={styles.ruleName}>{rule.name}</Text>
-                <View style={styles.ruleTypeBadge}>
-                  <Text style={styles.ruleTypeText}>
+                <Text style={[styles.ruleName, { color: colors.text }]}>
+                  {rule.name}
+                </Text>
+                <View
+                  style={[
+                    styles.ruleTypeBadge,
+                    { backgroundColor: colors.textLight + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.ruleTypeText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {rule.ruleType.replace(/_/g, " ")}
                   </Text>
                 </View>
               </View>
               {rule.isActive && (
-                <View style={styles.activeBadge}>
-                  <Text style={styles.activeBadgeText}>Active</Text>
+                <View
+                  style={[
+                    styles.activeBadge,
+                    { backgroundColor: colors.success + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[styles.activeBadgeText, { color: colors.success }]}
+                  >
+                    Active
+                  </Text>
                 </View>
               )}
             </View>
 
             {rule.description && (
-              <Text style={styles.ruleDescription}>{rule.description}</Text>
+              <Text
+                style={[
+                  styles.ruleDescription,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {rule.description}
+              </Text>
             )}
 
             <View style={styles.ruleDetails}>
@@ -120,14 +158,24 @@ export default function RulesScreen() {
                   size={16}
                   color={colors.textLight}
                 />
-                <Text style={styles.detailLabel}>Interest Rate</Text>
-                <Text style={styles.detailValue}>{rule.interestRate}%</Text>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Interest Rate
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
+                  {rule.interestRate}%
+                </Text>
               </View>
 
               <View style={styles.detailRow}>
                 <Ionicons name="cash" size={16} color={colors.textLight} />
-                <Text style={styles.detailLabel}>Loan Amount</Text>
-                <Text style={styles.detailValue}>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Loan Amount
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   NPR {rule.loanLimits.minAmount.toLocaleString()} - NPR{" "}
                   {rule.loanLimits.maxAmount.toLocaleString()}
                 </Text>
@@ -135,8 +183,12 @@ export default function RulesScreen() {
 
               <View style={styles.detailRow}>
                 <Ionicons name="calendar" size={16} color={colors.textLight} />
-                <Text style={styles.detailLabel}>Loan Term</Text>
-                <Text style={styles.detailValue}>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Loan Term
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   {rule.loanLimits.minTermMonths} -{" "}
                   {rule.loanLimits.maxTermMonths} months
                 </Text>
@@ -144,8 +196,12 @@ export default function RulesScreen() {
 
               <View style={styles.detailRow}>
                 <Ionicons name="warning" size={16} color={colors.textLight} />
-                <Text style={styles.detailLabel}>Late Penalty</Text>
-                <Text style={styles.detailValue}>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Late Penalty
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   {rule.penaltyConfig.penaltyType === "PERCENTAGE"
                     ? `${rule.penaltyConfig.penaltyAmount}%`
                     : `NPR ${rule.penaltyConfig.penaltyAmount}`}
@@ -154,21 +210,32 @@ export default function RulesScreen() {
 
               <View style={styles.detailRow}>
                 <Ionicons name="time" size={16} color={colors.textLight} />
-                <Text style={styles.detailLabel}>Grace Period</Text>
-                <Text style={styles.detailValue}>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Grace Period
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
                   {rule.penaltyConfig.gracePeriodDays} days
                 </Text>
               </View>
             </View>
 
             {rule.paymentConfig.allowEarlyPayment && (
-              <View style={styles.earlyPaymentInfo}>
+              <View
+                style={[
+                  styles.earlyPaymentInfo,
+                  { backgroundColor: colors.success + "10" },
+                ]}
+              >
                 <Ionicons
                   name="checkmark-circle"
                   size={16}
                   color={colors.success}
                 />
-                <Text style={styles.earlyPaymentText}>
+                <Text
+                  style={[styles.earlyPaymentText, { color: colors.success }]}
+                >
                   Early payment allowed
                   {rule.paymentConfig.earlyPaymentPenalty
                     ? ` (${rule.paymentConfig.earlyPaymentPenalty}% penalty)`
@@ -186,7 +253,9 @@ export default function RulesScreen() {
               size={64}
               color={colors.textLight}
             />
-            <Text style={styles.emptyText}>No loan rules available</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No loan rules available
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -194,132 +263,117 @@ export default function RulesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700" as any,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
-  },
-  ruleCard: {
-    marginBottom: spacing.md,
-  },
-  ruleHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  ruleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  ruleInfo: {
-    flex: 1,
-  },
-  ruleName: {
-    fontSize: 16,
-    fontWeight: "600" as any,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  ruleTypeBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    backgroundColor: colors.textLight + "20",
-    borderRadius: borderRadius.sm,
-  },
-  ruleTypeText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textTransform: "capitalize",
-  },
-  activeBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: colors.success + "20",
-    borderRadius: borderRadius.sm,
-  },
-  activeBadgeText: {
-    fontSize: 12,
-    color: colors.success,
-    fontWeight: "600" as any,
-  },
-  ruleDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  ruleDetails: {
-    gap: spacing.sm,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  detailLabel: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: "500" as any,
-    color: colors.text,
-  },
-  earlyPaymentInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-    padding: spacing.sm,
-    backgroundColor: colors.success + "10",
-    borderRadius: borderRadius.sm,
-  },
-  earlyPaymentText: {
-    fontSize: 14,
-    color: colors.success,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xl * 2,
-  },
-  emptyText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "700" as any,
+    },
+    content: {
+      flex: 1,
+      padding: spacing.lg,
+    },
+    subtitle: {
+      fontSize: 14,
+      marginBottom: spacing.lg,
+    },
+    ruleCard: {
+      marginBottom: spacing.md,
+    },
+    ruleHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    ruleIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.lg,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: spacing.md,
+    },
+    ruleInfo: {
+      flex: 1,
+    },
+    ruleName: {
+      fontSize: 16,
+      fontWeight: "600" as any,
+      marginBottom: spacing.xs,
+    },
+    ruleTypeBadge: {
+      alignSelf: "flex-start",
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+    },
+    ruleTypeText: {
+      fontSize: 12,
+      textTransform: "capitalize",
+    },
+    activeBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: borderRadius.sm,
+    },
+    activeBadgeText: {
+      fontSize: 12,
+      fontWeight: "600" as any,
+    },
+    ruleDescription: {
+      fontSize: 14,
+      marginBottom: spacing.md,
+    },
+    ruleDetails: {
+      gap: spacing.sm,
+    },
+    detailRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    detailLabel: {
+      flex: 1,
+      fontSize: 14,
+    },
+    detailValue: {
+      fontSize: 14,
+      fontWeight: "500" as any,
+    },
+    earlyPaymentInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.md,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+    },
+    earlyPaymentText: {
+      fontSize: 14,
+    },
+    emptyState: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.xl * 2,
+    },
+    emptyText: {
+      marginTop: spacing.md,
+      fontSize: 16,
+    },
+  });
