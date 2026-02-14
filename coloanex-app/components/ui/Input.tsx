@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
+import { useTheme } from "@/hooks/useTheme";
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -28,28 +29,35 @@ export default function Input({
   ...props
 }: InputProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const { colors } = useTheme();
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && (
+        <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+      )}
       <View style={styles.inputContainer}>
         {icon && (
           <Ionicons
             name={icon as any}
             size={20}
-            color="#9CA3AF"
+            color={colors.textLight}
             style={styles.icon}
           />
         )}
         <TextInput
           style={[
             styles.input,
-            error && styles.inputError,
+            {
+              backgroundColor: colors.card,
+              borderColor: error ? colors.error : colors.border,
+              color: colors.text,
+            },
             icon && styles.inputWithIcon,
             isPassword && styles.inputWithPassword,
             style,
           ]}
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textLight}
           secureTextEntry={isPassword && !showPassword}
           {...props}
         />
@@ -61,12 +69,14 @@ export default function Input({
             <Ionicons
               name={showPassword ? "eye-off" : "eye"}
               size={20}
-              color="#9CA3AF"
+              color={colors.textLight}
             />
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error && (
+        <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
+      )}
     </View>
   );
 }
@@ -78,7 +88,6 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#1F2937",
     marginBottom: 10,
   },
   inputContainer: {
@@ -88,18 +97,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
     borderWidth: 2,
-    borderColor: "#E5E7EB",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 14,
     fontSize: 16,
-    color: "#111827",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
     elevation: 2,
   },
   inputWithIcon: {
@@ -107,9 +109,6 @@ const styles = StyleSheet.create({
   },
   inputWithPassword: {
     paddingRight: 44,
-  },
-  inputError: {
-    borderColor: "#EF4444",
   },
   icon: {
     position: "absolute",
@@ -123,7 +122,6 @@ const styles = StyleSheet.create({
   },
   error: {
     fontSize: 12,
-    color: "#EF4444",
     marginTop: 4,
   },
 });
