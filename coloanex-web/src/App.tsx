@@ -17,6 +17,7 @@ import Dashboard from "./pages/Dashboard";
 import Roles from "./pages/Roles";
 import Permissions from "./pages/Permissions";
 import { useAuth } from "./hooks/useAuth";
+import { useTheme } from "./hooks/useTheme";
 import Users from "./pages/Users";
 import Tenants from "./pages/Tenants";
 import KycRequests from "./pages/KycRequests";
@@ -58,17 +59,17 @@ const ProtectedRoute = ({
     window.location.pathname !== "/settings"
   ) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
-          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+          <Lock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-foreground mb-2">
             Access Restricted
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Your account needs to be assigned to a tenant before you can access
             this page.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Please contact a Super Admin to assign a tenant to your account.
           </p>
         </div>
@@ -78,18 +79,18 @@ const ProtectedRoute = ({
 
   if (requiredPermission && !hasPermission(user, requiredPermission)) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center">
-          <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+          <Lock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-foreground mb-2">
             Permission Required
           </h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             You don't have permission to access this page.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             Required permission:{" "}
-            <code className="bg-gray-200 px-2 py-1 rounded">
+            <code className="bg-muted px-2 py-1 rounded">
               {requiredPermission}
             </code>
           </p>
@@ -135,6 +136,7 @@ const Logout = () => {
 
 function App() {
   const { isAuthenticated } = useAuth();
+  const { isDark } = useTheme();
   const [logVisit] = useLogVisitMutation();
   const [logLeave] = useLogLeaveMutation();
 
