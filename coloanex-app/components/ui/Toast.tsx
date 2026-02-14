@@ -131,7 +131,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <View style={styles.container} pointerEvents="box-none">
+      <View style={styles.container}>
         {toasts.map((toast) => (
           <ToastItem
             key={toast.id}
@@ -152,6 +152,7 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 9999,
     elevation: 9999,
+    pointerEvents: "box-none",
   },
   toast: {
     flexDirection: "row",
@@ -159,10 +160,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
     elevation: 5,
   },
   toastText: {
