@@ -11,13 +11,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import { lendersApi } from "@/api";
 import type { Lender } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
 
 const FILTERS = ["All", "Active", "Inactive"];
 
 export default function BrowseScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [lenders, setLenders] = useState<Lender[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchVisible, setSearchVisible] = useState(false);
@@ -43,9 +46,13 @@ export default function BrowseScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Browse Lenders</Text>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.surface }]}
+    >
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Browse Lenders
+        </Text>
         <TouchableOpacity onPress={() => setSearchVisible(!searchVisible)}>
           <Ionicons name="search" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -54,21 +61,33 @@ export default function BrowseScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
+        style={[styles.filterContainer, { backgroundColor: colors.background }]}
       >
         {FILTERS.map((filter) => (
           <TouchableOpacity
             key={filter}
             style={[
               styles.filterChip,
-              selectedFilter === filter && styles.filterChipActive,
+              { backgroundColor: colors.surface },
+              selectedFilter === filter && [
+                styles.filterChipActive,
+                {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                  shadowColor: colors.primary,
+                },
+              ],
             ]}
             onPress={() => setSelectedFilter(filter)}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedFilter === filter && styles.filterTextActive,
+                { color: colors.text },
+                selectedFilter === filter && [
+                  styles.filterTextActive,
+                  { color: colors.background },
+                ],
               ]}
             >
               {filter}
@@ -90,7 +109,15 @@ export default function BrowseScreen() {
           >
             <Card style={styles.lenderCard}>
               <View style={styles.lenderHeader}>
-                <View style={styles.lenderIcon}>
+                <View
+                  style={[
+                    styles.lenderIcon,
+                    {
+                      backgroundColor: colors.primaryLight,
+                      shadowColor: colors.primary,
+                    },
+                  ]}
+                >
                   {lender.logo ? (
                     <Image
                       source={{ uri: lender.logo }}
@@ -105,17 +132,27 @@ export default function BrowseScreen() {
                   )}
                 </View>
                 <View style={styles.lenderInfo}>
-                  <Text style={styles.lenderName}>{lender.name}</Text>
+                  <Text style={[styles.lenderName, { color: colors.text }]}>
+                    {lender.name}
+                  </Text>
                   <View
                     style={[
                       styles.statusBadge,
-                      lender.isActive && styles.statusBadgeActive,
+                      { backgroundColor: colors.surface },
+                      lender.isActive && [
+                        styles.statusBadgeActive,
+                        { backgroundColor: colors.primaryLight },
+                      ],
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusText,
-                        lender.isActive && styles.statusTextActive,
+                        { color: colors.textSecondary },
+                        lender.isActive && [
+                          styles.statusTextActive,
+                          { color: colors.primary },
+                        ],
                       ]}
                     >
                       {lender.isActive ? "Active" : "Inactive"}
@@ -127,7 +164,9 @@ export default function BrowseScreen() {
               {(lender.contactEmail ||
                 lender.contactPhone ||
                 lender.address) && (
-                <View style={styles.contactInfo}>
+                <View
+                  style={[styles.contactInfo, { borderColor: colors.border }]}
+                >
                   {lender.contactEmail && (
                     <View style={styles.contactRow}>
                       <Ionicons
@@ -135,7 +174,12 @@ export default function BrowseScreen() {
                         size={14}
                         color={colors.textSecondary}
                       />
-                      <Text style={styles.contactText}>
+                      <Text
+                        style={[
+                          styles.contactText,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {lender.contactEmail}
                       </Text>
                     </View>
@@ -147,7 +191,12 @@ export default function BrowseScreen() {
                         size={14}
                         color={colors.textSecondary}
                       />
-                      <Text style={styles.contactText}>
+                      <Text
+                        style={[
+                          styles.contactText,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {lender.contactPhone}
                       </Text>
                     </View>
@@ -159,7 +208,13 @@ export default function BrowseScreen() {
                         size={14}
                         color={colors.textSecondary}
                       />
-                      <Text style={styles.contactText} numberOfLines={1}>
+                      <Text
+                        style={[
+                          styles.contactText,
+                          { color: colors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
                         {lender.address}
                       </Text>
                     </View>
@@ -168,7 +223,13 @@ export default function BrowseScreen() {
               )}
 
               <TouchableOpacity
-                style={styles.viewButton}
+                style={[
+                  styles.viewButton,
+                  {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                  },
+                ]}
                 onPress={() =>
                   router.push({
                     pathname: "/lenders/lender-details",
@@ -176,7 +237,11 @@ export default function BrowseScreen() {
                   })
                 }
               >
-                <Text style={styles.viewButtonText}>View Details</Text>
+                <Text
+                  style={[styles.viewButtonText, { color: colors.background }]}
+                >
+                  View Details
+                </Text>
                 <Ionicons
                   name="arrow-forward"
                   size={16}
@@ -191,150 +256,127 @@ export default function BrowseScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  title: {
-    ...typography.h2,
-    color: colors.text,
-  },
-  filterContainer: {
-    backgroundColor: colors.background,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    maxHeight: 60,
-  },
-  filterChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    marginRight: spacing.sm,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  filterText: {
-    ...typography.bodySmall,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  filterTextActive: {
-    color: colors.background,
-    fontWeight: "700",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  lenderCard: {
-    marginBottom: spacing.md,
-  },
-  lenderHeader: {
-    flexDirection: "row",
-    marginBottom: spacing.md,
-  },
-  lenderIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: "hidden",
-  },
-  lenderLogoImage: {
-    width: "100%",
-    height: "100%",
-  },
-  lenderInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-    justifyContent: "center",
-  },
-  lenderName: {
-    ...typography.h3,
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-    alignSelf: "flex-start",
-  },
-  statusBadgeActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  statusText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: "600",
-  },
-  statusTextActive: {
-    color: colors.primary,
-  },
-  viewButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  viewButtonText: {
-    ...typography.bodySmall,
-    color: colors.background,
-    fontWeight: "700",
-    marginRight: spacing.xs,
-  },
-  contactInfo: {
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  contactText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-    flex: 1,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+    },
+    title: {
+      ...typography.h2,
+    },
+    filterContainer: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+      maxHeight: 60,
+    },
+    filterChip: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 10,
+      borderRadius: borderRadius.full,
+      marginRight: spacing.sm,
+      borderWidth: 2,
+      borderColor: "transparent",
+    },
+    filterChipActive: {
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    filterText: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+    },
+    filterTextActive: {
+      fontWeight: "700",
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+    },
+    lenderCard: {
+      marginBottom: spacing.md,
+    },
+    lenderHeader: {
+      flexDirection: "row",
+      marginBottom: spacing.md,
+    },
+    lenderIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+      overflow: "hidden",
+    },
+    lenderLogoImage: {
+      width: "100%",
+      height: "100%",
+    },
+    lenderInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+      justifyContent: "center",
+    },
+    lenderName: {
+      ...typography.h3,
+      fontSize: 18,
+      marginBottom: 4,
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 12,
+      alignSelf: "flex-start",
+    },
+    statusBadgeActive: {},
+    statusText: {
+      ...typography.caption,
+      fontWeight: "600",
+    },
+    statusTextActive: {},
+    viewButton: {
+      paddingVertical: 12,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.md,
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    viewButtonText: {
+      ...typography.bodySmall,
+      fontWeight: "700",
+      marginRight: spacing.xs,
+    },
+    contactInfo: {
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      marginBottom: spacing.sm,
+    },
+    contactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 4,
+    },
+    contactText: {
+      ...typography.caption,
+      marginLeft: spacing.xs,
+      flex: 1,
+    },
+  });
