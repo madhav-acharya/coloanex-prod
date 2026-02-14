@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { useState } from "react";
+import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -80,6 +81,7 @@ export default function PublicLayout({
 
               {/* Desktop Auth Buttons */}
               <div className="hidden md:flex items-center gap-3 text-white">
+                <ThemeSwitcher />
                 {user ? (
                   <>
                     <Link to="/dashboard">
@@ -122,14 +124,20 @@ export default function PublicLayout({
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden bg-background border-b border-border animate-fade-in text-white">
+            <div className="md:hidden bg-background dark:bg-card border-b border-border animate-fade-in text-white">
               <div className="px-4 py-4 space-y-3">
+                <div className="flex items-center justify-between py-2 mb-2 pb-2 border-b border-border">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    Theme
+                  </span>
+                  <ThemeSwitcher />
+                </div>
                 <Link
                   to="/"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/"
                       ? "text-green-500 font-bold"
-                      : "text-white hover:text-foreground"
+                      : "text-white dark:text-foreground hover:text-foreground"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -140,7 +148,7 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/features"
                       ? "text-green-500 font-bold"
-                      : "text-white hover:text-foreground"
+                      : "text-white dark:text-foreground hover:text-foreground"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -151,7 +159,7 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/use-cases"
                       ? "text-green-500 font-bold"
-                      : "text-white hover:text-foreground"
+                      : "text-white dark:text-foreground hover:text-foreground"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -162,7 +170,7 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/security"
                       ? "text-green-500 font-bold"
-                      : "text-white hover:text-foreground"
+                      : "text-white dark:text-foreground hover:text-foreground"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
