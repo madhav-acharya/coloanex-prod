@@ -92,7 +92,7 @@ export default function Features() {
   return (
     <PublicLayout>
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-hero text-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-hero dark:bg-gradient-dark text-white">
         <div className="max-w-7xl mx-auto text-center">
           <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-6">
             <BrainCircuit className="w-10 h-10" />
@@ -108,29 +108,29 @@ export default function Features() {
       </section>
 
       {/* Features Grid */}
-      <section className="bg-green-100 py-20 px-4 sm:px-6 lg:px-8">
+      <section className="bg-primary/10 dark:bg-card py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <Card
                 key={index}
-                className="bg-gradient-dark text-white border-0 shadow-card hover:shadow-soft transition-all duration-300"
+                className="bg-gradient-dark dark:bg-popover text-white dark:text-foreground border-0 shadow-card hover:shadow-soft transition-all duration-300"
               >
                 <CardContent className="p-8">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6">
                     <feature.icon className="w-7 h-7 text-primary-foreground" />
                   </div>
-                  <h3 className="text-2xl font-semibold text-foreground mb-3">
+                  <h3 className="text-2xl font-semibold text-white dark:text-foreground mb-3">
                     {feature.title}
                   </h3>
-                  <p className="text-muted-foreground mb-6">
+                  <p className="text-white/60 dark:text-muted-foreground mb-6">
                     {feature.description}
                   </p>
                   <div className="space-y-2">
                     {feature.details.map((detail, idx) => (
                       <div key={idx} className="flex items-start gap-2">
                         <Check className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-sm text-muted-foreground">
+                        <span className="text-sm text-white/60 dark:text-muted-foreground">
                           {detail}
                         </span>
                       </div>
@@ -144,7 +144,7 @@ export default function Features() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30 dark:bg-background">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
             Ready to Experience These Features?
