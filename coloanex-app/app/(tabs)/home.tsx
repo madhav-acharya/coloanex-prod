@@ -11,15 +11,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card } from "@/components/ui";
-import { colors, spacing, typography } from "@/constants/theme";
+import { spacing, typography } from "@/constants/theme";
 import { lendersApi, notificationsApi } from "@/api";
 import type { Lender } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function HomeScreen() {
   const [lenders, setLenders] = useState<Lender[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
 
   const loadLenders = async () => {
     try {
@@ -54,12 +57,16 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
         <View style={styles.headerContent}>
           <View>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.title}>CoLoanex</Text>
+            <Text style={[styles.welcomeText, { color: colors.textSecondary }]}>
+              Welcome to
+            </Text>
+            <Text style={[styles.title, { color: colors.text }]}>CoLoanex</Text>
           </View>
           <TouchableOpacity
             style={styles.notificationButton}
@@ -71,7 +78,12 @@ export default function HomeScreen() {
               color={colors.text}
             />
             {unreadCount > 0 && (
-              <View style={styles.notificationBadge}>
+              <View
+                style={[
+                  styles.notificationBadge,
+                  { backgroundColor: colors.error },
+                ]}
+              >
                 <Text style={styles.notificationBadgeText}>
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </Text>
@@ -79,7 +91,9 @@ export default function HomeScreen() {
             )}
           </TouchableOpacity>
         </View>
-        <Text style={styles.subtitle}>Find the best loan options for you</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Find the best loan options for you
+        </Text>
       </View>
 
       <ScrollView
@@ -199,160 +213,160 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  welcomeText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: "500",
-  },
-  title: {
-    ...typography.h1,
-    color: colors.primary,
-    fontWeight: "800",
-    marginTop: 4,
-  },
-  notificationButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  notificationBadge: {
-    position: "absolute",
-    top: -2,
-    right: -2,
-    backgroundColor: "#EF4444",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  notificationBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  lenderCard: {
-    marginBottom: spacing.md,
-  },
-  lenderHeader: {
-    flexDirection: "row",
-    marginBottom: spacing.md,
-  },
-  lenderIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  lenderInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-    justifyContent: "center",
-  },
-  lenderName: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-  },
-  statusBadgeActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  statusText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    fontWeight: "600",
-  },
-  statusTextActive: {
-    color: colors.primary,
-  },
-  viewButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginTop: spacing.sm,
-  },
-  viewButtonText: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: "600",
-    marginRight: spacing.xs,
-  },
-  contactInfo: {
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderColor: colors.border,
-  },
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  contactText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    header: {
+      backgroundColor: colors.background,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    headerContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    welcomeText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: "500",
+    },
+    title: {
+      ...typography.h1,
+      color: colors.primary,
+      fontWeight: "800",
+      marginTop: 4,
+    },
+    notificationButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    notificationBadge: {
+      position: "absolute",
+      top: -2,
+      right: -2,
+      backgroundColor: "#EF4444",
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      paddingHorizontal: 4,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    notificationBadgeText: {
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginTop: spacing.xs,
+    },
+    content: {
+      flex: 1,
+    },
+    section: {
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
+    },
+    sectionTitle: {
+      ...typography.h3,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    lenderCard: {
+      marginBottom: spacing.md,
+    },
+    lenderHeader: {
+      flexDirection: "row",
+      marginBottom: spacing.md,
+    },
+    lenderIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: 16,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    lenderInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+      justifyContent: "center",
+    },
+    lenderName: {
+      ...typography.h3,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    statusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+    },
+    statusBadgeActive: {
+      backgroundColor: colors.primaryLight,
+    },
+    statusText: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      fontWeight: "600",
+    },
+    statusTextActive: {
+      color: colors.primary,
+    },
+    viewButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      marginTop: spacing.sm,
+    },
+    viewButtonText: {
+      ...typography.bodySmall,
+      color: colors.primary,
+      fontWeight: "600",
+      marginRight: spacing.xs,
+    },
+    contactInfo: {
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    contactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.xs,
+    },
+    contactText: {
+      ...typography.bodySmall,
+      color: colors.textSecondary,
+      marginLeft: spacing.xs,
+    },
+  });
