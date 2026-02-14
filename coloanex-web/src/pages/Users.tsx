@@ -572,7 +572,7 @@ export default function Users() {
         columns={columns}
         isLoading={isLoading}
         emptyMessage="No users found"
-        emptyIcon={<UsersIcon className="w-12 h-12 text-gray-400" />}
+        emptyIcon={<UsersIcon className="w-12 h-12 text-muted-foreground" />}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onSort={handleSort}
@@ -639,7 +639,7 @@ export default function Users() {
         <div className="space-y-4">
           {!isReadOnly && isSuperAdmin && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Tenant
                 {selectedRoles.some((roleId) => {
                   const role = allRoles.find((r) => r.id === roleId);
@@ -740,9 +740,9 @@ export default function Users() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="space-y-3 p-4 border rounded-md bg-gray-50">
+                    <div className="space-y-3 p-4 border rounded-md bg-muted">
                       <div>
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-foreground">
                           Organization Name{" "}
                           <span className="text-red-500">*</span>
                         </label>
@@ -758,7 +758,7 @@ export default function Users() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-foreground">
                           Contact Email <span className="text-red-500">*</span>
                         </label>
                         <Input
@@ -774,7 +774,7 @@ export default function Users() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-foreground">
                           Contact Phone
                         </label>
                         <Input
@@ -790,7 +790,7 @@ export default function Users() {
                         />
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-foreground">
                           Address
                         </label>
                         <Input
@@ -837,11 +837,11 @@ export default function Users() {
           )}
           {!isReadOnly && (isAdmin || isLender) && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Tenant
               </label>
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
-                <p className="text-sm text-gray-700">
+              <div className="p-3 bg-muted rounded-md border">
+                <p className="text-sm text-foreground">
                   {currentUser?.tenant?.name || "No tenant assigned"}
                 </p>
               </div>
@@ -853,10 +853,10 @@ export default function Users() {
           {isReadOnly ? (
             <>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-foreground">
                   Assigned Roles
                 </label>
-                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200 min-h-[60px]">
+                <div className="flex flex-wrap gap-2 p-3 bg-muted rounded-md border min-h-[60px]">
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
                     return userRoles.length > 0 ? (
@@ -864,7 +864,7 @@ export default function Users() {
                         <Badge
                           key={roleData.id}
                           variant="secondary"
-                          className="bg-green-100 text-green-700"
+                          className="bg-primary/10 text-primary dark:bg-primary/20"
                         >
                           {roleData.name}
                         </Badge>
@@ -878,10 +878,10 @@ export default function Users() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-foreground">
                   Role-Based Permissions
                 </label>
-                <div className="flex flex-wrap gap-2 p-3 bg-blue-50 rounded-md border border-blue-200 min-h-[60px]">
+                <div className="flex flex-wrap gap-2 p-3 bg-primary/5 dark:bg-primary/10 rounded-md border min-h-[60px]">
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
                     const selectedRoleObjects = allRoles.filter((r) =>
@@ -900,7 +900,7 @@ export default function Users() {
                         <Badge
                           key={permData.id}
                           variant="secondary"
-                          className="bg-blue-100 text-blue-700"
+                          className="bg-primary/20 text-primary dark:bg-primary/30"
                         >
                           {permData.name}
                         </Badge>
@@ -914,10 +914,10 @@ export default function Users() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-foreground">
                   Additional Permissions
                 </label>
-                <div className="flex flex-wrap gap-2 p-3 bg-purple-50 rounded-md border border-purple-200 min-h-[60px]">
+                <div className="flex flex-wrap gap-2 p-3 bg-accent/20 dark:bg-accent/30 rounded-md border min-h-[60px]">
                   {(() => {
                     const userRoles = extractUserRoles(selectedUser);
                     const selectedRoleObjects = allRoles.filter((r) =>
@@ -936,7 +936,7 @@ export default function Users() {
                         <Badge
                           key={permData.id}
                           variant="secondary"
-                          className="bg-purple-100 text-purple-700"
+                          className="bg-accent/40 text-accent-foreground dark:bg-accent/50"
                         >
                           {permData.name}
                         </Badge>
