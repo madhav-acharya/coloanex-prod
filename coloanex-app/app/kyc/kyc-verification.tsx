@@ -18,7 +18,7 @@ import {
   PickerInput,
   useToast,
 } from "@/components/ui";
-import { Colors } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
 import { uploadToCloudinary } from "@/utils/upload";
 
@@ -60,6 +60,8 @@ type DocumentInfo = {
 };
 
 export default function KYCVerificationScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const params = useLocalSearchParams<{ tenantId: string }>();
   const tenantId = Array.isArray(params.tenantId)
     ? params.tenantId[0]
@@ -476,22 +478,40 @@ export default function KYCVerificationScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>KYC Verification</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          KYC Verification
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.progressContainer}>
+      <View
+        style={[styles.progressContainer, { backgroundColor: colors.card }]}
+      >
         {[1, 2, 3, 4].map((step) => (
-          <View key={step} style={styles.progressStepContainer}>
+          <View
+            key={step}
+            style={[styles.progressStepContainer, step < 4 && { flex: 1 }]}
+          >
             <View
               style={[
                 styles.progressStep,
-                currentStep >= step && styles.progressStepActive,
+                {
+                  backgroundColor:
+                    currentStep >= step ? colors.primary : colors.border,
+                },
               ]}
             >
               {currentStep > step ? (
@@ -500,7 +520,10 @@ export default function KYCVerificationScreen() {
                 <Text
                   style={[
                     styles.progressStepText,
-                    currentStep >= step && styles.progressStepTextActive,
+                    {
+                      color:
+                        currentStep >= step ? "#fff" : colors.textSecondary,
+                    },
                   ]}
                 >
                   {step}
@@ -511,7 +534,10 @@ export default function KYCVerificationScreen() {
               <View
                 style={[
                   styles.progressLine,
-                  currentStep > step && styles.progressLineActive,
+                  {
+                    backgroundColor:
+                      currentStep > step ? colors.primary : colors.border,
+                  },
                 ]}
               />
             )}
@@ -520,17 +546,21 @@ export default function KYCVerificationScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>
           Step {currentStep} of 4 - Please provide accurate information.{" "}
-          <Text style={styles.required}>*</Text> = required
+          <Text style={[styles.required, { color: colors.error }]}>*</Text> =
+          required
         </Text>
 
         {currentStep === 1 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Personal Information
+            </Text>
 
-            <Text style={styles.label}>
-              First Name <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              First Name{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={personalInfo.firstName}
@@ -540,7 +570,9 @@ export default function KYCVerificationScreen() {
               placeholder="Enter your first name"
             />
 
-            <Text style={styles.label}>Middle Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Middle Name
+            </Text>
             <Input
               value={personalInfo.middleName}
               onChangeText={(text) =>
@@ -549,8 +581,9 @@ export default function KYCVerificationScreen() {
               placeholder="Enter your middle name"
             />
 
-            <Text style={styles.label}>
-              Last Name <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Last Name{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={personalInfo.lastName}
@@ -591,7 +624,9 @@ export default function KYCVerificationScreen() {
               placeholder="Select marital status"
             />
 
-            <Text style={styles.label}>Father's Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Father's Name
+            </Text>
             <Input
               value={personalInfo.fatherName}
               onChangeText={(text) =>
@@ -600,7 +635,9 @@ export default function KYCVerificationScreen() {
               placeholder="Enter father's name"
             />
 
-            <Text style={styles.label}>Mother's Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Mother's Name
+            </Text>
             <Input
               value={personalInfo.motherName}
               onChangeText={(text) =>
@@ -609,7 +646,9 @@ export default function KYCVerificationScreen() {
               placeholder="Enter mother's name"
             />
 
-            <Text style={styles.label}>Grandfather's Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Grandfather's Name
+            </Text>
             <Input
               value={personalInfo.grandfatherName}
               onChangeText={(text) =>
@@ -622,10 +661,13 @@ export default function KYCVerificationScreen() {
 
         {currentStep === 2 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Permanent Address</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Permanent Address
+            </Text>
 
-            <Text style={styles.label}>
-              Province <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Province{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={address.province}
@@ -635,8 +677,9 @@ export default function KYCVerificationScreen() {
               placeholder="e.g., Bagmati"
             />
 
-            <Text style={styles.label}>
-              District <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              District{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={address.district}
@@ -646,8 +689,9 @@ export default function KYCVerificationScreen() {
               placeholder="e.g., Kathmandu"
             />
 
-            <Text style={styles.label}>
-              Municipality <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Municipality{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={address.municipality}
@@ -657,8 +701,9 @@ export default function KYCVerificationScreen() {
               placeholder="Enter municipality"
             />
 
-            <Text style={styles.label}>
-              Ward Number <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Ward Number{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={address.ward}
@@ -667,7 +712,9 @@ export default function KYCVerificationScreen() {
               keyboardType="numeric"
             />
 
-            <Text style={styles.label}>Tole/Street</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Tole/Street
+            </Text>
             <Input
               value={address.tole}
               onChangeText={(text) => setAddress({ ...address, tole: text })}
@@ -678,10 +725,13 @@ export default function KYCVerificationScreen() {
 
         {currentStep === 3 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Financial Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Financial Information
+            </Text>
 
-            <Text style={styles.label}>
-              Occupation <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Occupation{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={financialInfo.occupation}
@@ -691,8 +741,9 @@ export default function KYCVerificationScreen() {
               placeholder="Your occupation"
             />
 
-            <Text style={styles.label}>
-              Monthly Income (NPR) <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Monthly Income (NPR){" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={financialInfo.monthlyIncome}
@@ -703,7 +754,9 @@ export default function KYCVerificationScreen() {
               keyboardType="numeric"
             />
 
-            <Text style={styles.label}>Bank Name</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Bank Name
+            </Text>
             <Input
               value={financialInfo.bankName}
               onChangeText={(text) =>
@@ -712,7 +765,9 @@ export default function KYCVerificationScreen() {
               placeholder="Your bank name"
             />
 
-            <Text style={styles.label}>Bank Account Number</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Bank Account Number
+            </Text>
             <Input
               value={financialInfo.bankAccountNumber}
               onChangeText={(text) =>
@@ -721,7 +776,9 @@ export default function KYCVerificationScreen() {
               placeholder="Your account number"
             />
 
-            <Text style={styles.label}>Bank Branch</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Bank Branch
+            </Text>
             <Input
               value={financialInfo.bankBranch}
               onChangeText={(text) =>
@@ -734,13 +791,16 @@ export default function KYCVerificationScreen() {
 
         {currentStep === 4 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Document Upload</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Document Upload
+            </Text>
 
-            <Text style={styles.label}>
-              Passport Size Photo <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Passport Size Photo{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <TouchableOpacity
-              style={styles.uploadButton}
+              style={[styles.uploadButton, { borderColor: colors.border }]}
               onPress={() => pickImage("", "passport")}
               disabled={uploadingImage}
             >
@@ -750,21 +810,26 @@ export default function KYCVerificationScreen() {
                   style={styles.uploadedImage}
                 />
               ) : uploadingImage ? (
-                <ActivityIndicator size="large" color={Colors.primary} />
+                <ActivityIndicator size="large" color={colors.primary} />
               ) : (
                 <>
                   <Ionicons
                     name="cloud-upload-outline"
                     size={32}
-                    color={Colors.primary}
+                    color={colors.primary}
                   />
-                  <Text style={styles.uploadText}>Upload Passport Photo</Text>
+                  <Text
+                    style={[styles.uploadText, { color: colors.textSecondary }]}
+                  >
+                    Upload Passport Photo
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <Text style={styles.label}>
-              Select Document Type(s) <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Select Document Type(s){" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <View style={styles.documentTypesContainer}>
               {DOCUMENT_TYPE_OPTIONS.map((option) => {
@@ -774,7 +839,14 @@ export default function KYCVerificationScreen() {
                     key={option.value}
                     style={[
                       styles.documentTypeChip,
-                      isSelected && styles.documentTypeChipSelected,
+                      {
+                        borderColor: isSelected
+                          ? colors.primary
+                          : colors.border,
+                        backgroundColor: isSelected
+                          ? colors.primary
+                          : colors.card,
+                      },
                     ]}
                     onPress={() => {
                       if (isSelected) {
@@ -792,7 +864,7 @@ export default function KYCVerificationScreen() {
                     <Text
                       style={[
                         styles.documentTypeText,
-                        isSelected && styles.documentTypeTextSelected,
+                        { color: isSelected ? "#fff" : colors.text },
                       ]}
                     >
                       {option.label}
@@ -817,13 +889,27 @@ export default function KYCVerificationScreen() {
               const detail = getDocumentDetail(docType);
 
               return (
-                <View key={docType} style={styles.documentDetailSection}>
-                  <Text style={styles.documentDetailTitle}>
+                <View
+                  key={docType}
+                  style={[
+                    styles.documentDetailSection,
+                    { borderTopColor: colors.border },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.documentDetailTitle,
+                      { color: colors.primary },
+                    ]}
+                  >
                     {option?.label} Details
                   </Text>
 
-                  <Text style={styles.label}>
-                    {option?.numberLabel} <Text style={styles.required}>*</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    {option?.numberLabel}{" "}
+                    <Text style={[styles.required, { color: colors.error }]}>
+                      *
+                    </Text>
                   </Text>
                   <Input
                     value={detail.documentNumber}
@@ -853,7 +939,9 @@ export default function KYCVerificationScreen() {
                     placeholder="Select expiry date"
                   />
 
-                  <Text style={styles.label}>Issue District</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    Issue District
+                  </Text>
                   <Input
                     value={detail.issueDistrict}
                     onChangeText={(text) =>
@@ -862,11 +950,17 @@ export default function KYCVerificationScreen() {
                     placeholder="Enter issue district"
                   />
 
-                  <Text style={styles.label}>
-                    Front Image <Text style={styles.required}>*</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>
+                    Front Image{" "}
+                    <Text style={[styles.required, { color: colors.error }]}>
+                      *
+                    </Text>
                   </Text>
                   <TouchableOpacity
-                    style={styles.uploadButton}
+                    style={[
+                      styles.uploadButton,
+                      { borderColor: colors.border },
+                    ]}
                     onPress={() => pickImage(docType, "front")}
                     disabled={uploadingImage}
                   >
@@ -880,9 +974,14 @@ export default function KYCVerificationScreen() {
                         <Ionicons
                           name="cloud-upload-outline"
                           size={24}
-                          color={Colors.primary}
+                          color={colors.primary}
                         />
-                        <Text style={styles.uploadText}>
+                        <Text
+                          style={[
+                            styles.uploadText,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
                           Upload Front Image
                         </Text>
                       </>
@@ -891,11 +990,19 @@ export default function KYCVerificationScreen() {
 
                   {docType !== "PAN" && (
                     <>
-                      <Text style={styles.label}>
-                        Back Image <Text style={styles.required}>*</Text>
+                      <Text style={[styles.label, { color: colors.text }]}>
+                        Back Image{" "}
+                        <Text
+                          style={[styles.required, { color: colors.error }]}
+                        >
+                          *
+                        </Text>
                       </Text>
                       <TouchableOpacity
-                        style={styles.uploadButton}
+                        style={[
+                          styles.uploadButton,
+                          { borderColor: colors.border },
+                        ]}
                         onPress={() => pickImage(docType, "back")}
                         disabled={uploadingImage}
                       >
@@ -909,9 +1016,14 @@ export default function KYCVerificationScreen() {
                             <Ionicons
                               name="cloud-upload-outline"
                               size={24}
-                              color={Colors.primary}
+                              color={colors.primary}
                             />
-                            <Text style={styles.uploadText}>
+                            <Text
+                              style={[
+                                styles.uploadText,
+                                { color: colors.textSecondary },
+                              ]}
+                            >
                               Upload Back Image
                             </Text>
                           </>
@@ -925,33 +1037,58 @@ export default function KYCVerificationScreen() {
 
             {selectedDocumentTypes.length > 0 && (
               <>
-                <Text style={styles.label}>
-                  Selfie with Document <Text style={styles.required}>*</Text>
+                <Text style={[styles.label, { color: colors.text }]}>
+                  Selfie with Document{" "}
+                  <Text style={[styles.required, { color: colors.error }]}>
+                    *
+                  </Text>
                 </Text>
                 <View style={styles.selfieButtons}>
                   <TouchableOpacity
-                    style={[styles.uploadButton, styles.halfButton]}
+                    style={[
+                      styles.uploadButton,
+                      styles.halfButton,
+                      { borderColor: colors.border },
+                    ]}
                     onPress={takeSelfie}
                     disabled={uploadingImage}
                   >
                     <Ionicons
                       name="camera-outline"
                       size={24}
-                      color={Colors.primary}
+                      color={colors.primary}
                     />
-                    <Text style={styles.uploadText}>Take Selfie</Text>
+                    <Text
+                      style={[
+                        styles.uploadText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Take Selfie
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.uploadButton, styles.halfButton]}
+                    style={[
+                      styles.uploadButton,
+                      styles.halfButton,
+                      { borderColor: colors.border },
+                    ]}
                     onPress={() => pickImage("", "selfie")}
                     disabled={uploadingImage}
                   >
                     <Ionicons
                       name="images-outline"
                       size={24}
-                      color={Colors.primary}
+                      color={colors.primary}
                     />
-                    <Text style={styles.uploadText}>From Gallery</Text>
+                    <Text
+                      style={[
+                        styles.uploadText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      From Gallery
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 {selfie && (
@@ -968,7 +1105,12 @@ export default function KYCVerificationScreen() {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
         {currentStep < 4 ? (
           <Button title="Next" onPress={handleNext} disabled={!isStepValid} />
         ) : (
@@ -983,182 +1125,144 @@ export default function KYCVerificationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: "#fff",
-  },
-  progressStepContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  progressStep: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressStepActive: {
-    backgroundColor: Colors.primary,
-  },
-  progressStepText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
-  progressStepTextActive: {
-    color: "#fff",
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.border,
-    marginHorizontal: 4,
-  },
-  progressLineActive: {
-    backgroundColor: Colors.primary,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  description: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  required: {
-    color: Colors.error,
-  },
-  section: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  documentTypesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 16,
-  },
-  documentTypeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: "#fff",
-  },
-  documentTypeChipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  documentTypeText: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  documentTypeTextSelected: {
-    color: "#fff",
-  },
-  documentDetailSection: {
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  documentDetailTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.primary,
-    marginBottom: 12,
-  },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: "dashed",
-    borderRadius: 12,
-    padding: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  uploadedImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 8,
-  },
-  uploadedSmallImage: {
-    width: "100%",
-    height: 150,
-    borderRadius: 8,
-  },
-  uploadText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 8,
-  },
-  selfieButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  halfButton: {
-    flex: 1,
-    padding: 16,
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    progressContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+    },
+    progressStepContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    progressStep: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    progressStepText: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    progressLine: {
+      flex: 1,
+      height: 2,
+      marginHorizontal: 8,
+    },
+    content: {
+      flex: 1,
+      padding: 20,
+    },
+    description: {
+      fontSize: 14,
+      marginBottom: 20,
+      lineHeight: 20,
+    },
+    required: {},
+    section: {
+      backgroundColor: colors.background,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 16,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 8,
+      marginTop: 12,
+    },
+    documentTypesContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 16,
+    },
+    documentTypeChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    documentTypeText: {
+      fontSize: 14,
+    },
+    documentDetailSection: {
+      marginTop: 20,
+      paddingTop: 16,
+      borderTopWidth: 1,
+    },
+    documentDetailTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 12,
+    },
+    uploadButton: {
+      borderWidth: 2,
+      borderStyle: "dashed",
+      borderRadius: 12,
+      padding: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    uploadedImage: {
+      width: "100%",
+      height: 200,
+      borderRadius: 8,
+    },
+    uploadedSmallImage: {
+      width: "100%",
+      height: 150,
+      borderRadius: 8,
+    },
+    uploadText: {
+      fontSize: 14,
+      marginTop: 8,
+    },
+    selfieButtons: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    halfButton: {
+      flex: 1,
+      padding: 16,
+    },
+    footer: {
+      padding: 20,
+      borderTopWidth: 1,
+    },
+  });
