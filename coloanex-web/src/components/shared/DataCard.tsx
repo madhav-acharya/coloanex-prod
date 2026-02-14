@@ -15,7 +15,7 @@ export function DataCard({
   deleteTitle = "Delete",
 }: DataCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow">
+    <div className="bg-card rounded-lg border p-3 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           {Icon && (
@@ -24,12 +24,12 @@ export function DataCard({
             </div>
           )}
           <div>
-            <h3 className="font-semibold text-gray-900">{title}</h3>
+            <h3 className="font-semibold text-foreground">{title}</h3>
             {subtitle && (
-              <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+              <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
             )}
             {metadata && (
-              <p className="text-xs text-gray-400 mt-1">{metadata}</p>
+              <p className="text-xs text-muted-foreground mt-1">{metadata}</p>
             )}
           </div>
         </div>
@@ -37,22 +37,22 @@ export function DataCard({
           {onView && (
             <button
               onClick={() => onView(id)}
-              className="p-2 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+              className="p-2 hover:bg-muted/50 rounded transition-colors cursor-pointer"
               title={viewTitle}
             >
-              <Eye className="w-4 h-4 text-gray-600" />
+              <Eye className="w-4 h-4 text-muted-foreground" />
             </button>
           )}
           <button
             onClick={() => onEdit(id)}
-            className="p-2 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+            className="p-2 hover:bg-muted/50 rounded transition-colors cursor-pointer"
             title={editTitle}
           >
-            <Edit className="w-4 h-4 text-gray-600" />
+            <Edit className="w-4 h-4 text-muted-foreground" />
           </button>
           <button
             onClick={() => onDelete(id)}
-            className="p-2 hover:bg-red-50 rounded transition-colors cursor-pointer"
+            className="p-2 hover:bg-destructive/10 rounded transition-colors cursor-pointer"
             title={deleteTitle}
           >
             <Trash2 className="w-4 h-4 text-red-600" />
