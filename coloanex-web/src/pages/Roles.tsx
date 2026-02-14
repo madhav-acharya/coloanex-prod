@@ -236,13 +236,13 @@ export default function Roles() {
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading roles...</p>
+            <p className="mt-4 text-muted-foreground">Loading roles...</p>
           </div>
         </div>
       ) : roles.length === 0 ? (
         <div className="text-center py-12">
-          <Shield className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No roles found</p>
+          <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">No roles found</p>
         </div>
       ) : (
         <>
