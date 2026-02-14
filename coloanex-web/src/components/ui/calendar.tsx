@@ -32,8 +32,9 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
+      style={{ backgroundColor: "hsl(var(--popover))" }}
       className={cn(
-        "bg-white group/calendar p-3 [--cell-size:--spacing(8)]",
+        "!bg-popover group/calendar p-3 [--cell-size:--spacing(8)]",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className,
@@ -78,7 +79,7 @@ function Calendar({
           defaultClassNames.dropdown_root,
         ),
         dropdown: cn(
-          "absolute bg-popover inset-0 opacity-0",
+          "absolute !bg-popover inset-0 opacity-0",
           defaultClassNames.dropdown,
         ),
         caption_label: cn(
