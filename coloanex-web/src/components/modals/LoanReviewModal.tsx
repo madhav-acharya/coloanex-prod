@@ -104,21 +104,21 @@ export function LoanReviewModal({
   const getStatusColor = (status: LoanStatus) => {
     switch (status) {
       case LoanStatus.DRAFT:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground";
       case LoanStatus.SUBMITTED:
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400";
       case LoanStatus.UNDER_REVIEW:
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-500/10 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400";
       case LoanStatus.APPROVED:
-        return "bg-green-100 text-green-800";
+        return "bg-primary/10 text-primary dark:bg-primary/20";
       case LoanStatus.REJECTED:
-        return "bg-red-100 text-red-800";
+        return "bg-destructive/10 text-destructive dark:bg-destructive/20";
       case LoanStatus.CONTRACT_GENERATED:
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400";
       case LoanStatus.CONTRACT_SIGNED:
-        return "bg-indigo-100 text-indigo-800";
+        return "bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -128,7 +128,7 @@ export function LoanReviewModal({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-white w-full sm:max-w-[100vw] p-0"
+        className="!bg-background w-full sm:max-w-[100vw] p-0"
       >
         <SheetHeader className="px-6 pt-6 pb-4 space-y-2">
           <div className="flex items-start justify-between">
@@ -285,7 +285,7 @@ export function LoanReviewModal({
                       <img
                         src={(loan.collateralDetails as any)?.imageUrl}
                         alt="Collateral"
-                        className="max-w-full h-auto rounded-lg border border-gray-200 max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                        className="max-w-full h-auto rounded-lg border max-h-96 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={openLightbox}
                       />
                       <p className="text-xs text-muted-foreground mt-1">
@@ -382,6 +382,7 @@ export function LoanReviewModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
@@ -393,7 +394,7 @@ export function LoanReviewModal({
                   isSubmitting ||
                   (status === LoanStatus.REJECTED && !rejectionReason.trim())
                 }
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
               >
                 {isSubmitting
                   ? "Submitting..."
@@ -440,7 +441,7 @@ export function LoanReviewModal({
           }}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6 relative pointer-events-auto"
+            className="bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 relative pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between mb-4">
@@ -463,7 +464,7 @@ export function LoanReviewModal({
               <button
                 onClick={() => setConfirmDialogOpen(false)}
                 disabled={isSubmitting}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X size={20} />
               </button>
@@ -510,7 +511,7 @@ export function LoanReviewModal({
                   <Label className="text-sm font-medium">
                     Rejection Reason
                   </Label>
-                  <p className="text-sm mt-1 bg-red-50 p-2 rounded border border-red-200">
+                  <p className="text-sm mt-1 bg-red-50 dark:bg-red-950 p-2 rounded border border-red-200 dark:border-red-800 dark:text-red-100">
                     {rejectionReason || "No reason provided"}
                   </p>
                 </div>
