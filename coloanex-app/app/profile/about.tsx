@@ -1,30 +1,17 @@
 import React from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { Card } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { Card, AppHeader } from "@/components/ui";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import { APP_NAME, APP_VERSION } from "@/constants/app";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function AboutScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>About</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader title="About" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.logoCard}>
@@ -96,85 +83,69 @@ export default function AboutScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  logoCard: {
-    padding: spacing.xl,
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  appName: {
-    ...typography.h2,
-    marginBottom: spacing.xs,
-  },
-  version: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  infoCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.md,
-  },
-  infoText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 24,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  featureText: {
-    ...typography.body,
-    marginLeft: spacing.sm,
-  },
-  contactText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  copyright: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    textAlign: "center",
-    marginVertical: spacing.xl,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    content: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    logoCard: {
+      padding: spacing.xl,
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    logoContainer: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    appName: {
+      ...typography.h2,
+      marginBottom: spacing.xs,
+    },
+    version: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    infoCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    sectionTitle: {
+      ...typography.h3,
+      marginBottom: spacing.md,
+    },
+    infoText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      lineHeight: 24,
+    },
+    featureItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    featureText: {
+      ...typography.body,
+      marginLeft: spacing.sm,
+    },
+    contactText: {
+      ...typography.body,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    copyright: {
+      ...typography.caption,
+      color: colors.textSecondary,
+      textAlign: "center",
+      marginVertical: spacing.xl,
+    },
+  });

@@ -1,11 +1,13 @@
-import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice';
-import loansReducer from './slices/loansSlice';
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer from "./slices/authSlice";
+import loansReducer from "./slices/loansSlice";
+import themeReducer from "./slices/themeSlice";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     loans: loansReducer,
+    theme: themeReducer,
   },
 });
 

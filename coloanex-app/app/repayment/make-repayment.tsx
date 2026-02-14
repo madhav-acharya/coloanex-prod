@@ -10,12 +10,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import Slider from "@react-native-community/slider";
 import { Card, LenderLogo, Button, useToast } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { loansApi } from "@/api";
 import type { Loan } from "@/types";
 import { formatCurrency } from "@/utils/currency";
 
 export default function RepaymentScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { showToast } = useToast();
   const [loan, setLoan] = useState<Loan | null>(null);
@@ -97,15 +100,25 @@ export default function RepaymentScreen() {
     : 30;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Make Repayment</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Make Repayment
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -118,14 +131,18 @@ export default function RepaymentScreen() {
               verified
             />
             <View style={styles.lenderInfo}>
-              <Text style={styles.lenderName}>
+              <Text style={[styles.lenderName, { color: colors.text }]}>
                 {loan.borrower?.tenant?.name || "Lender"}
               </Text>
-              <Text style={styles.loanType}>Personal Loan</Text>
+              <Text style={[styles.loanType, { color: colors.textSecondary }]}>
+                Personal Loan
+              </Text>
             </View>
           </View>
-          <View style={styles.dueBox}>
-            <Text style={styles.dueText}>
+          <View
+            style={[styles.dueBox, { backgroundColor: colors.primaryLight }]}
+          >
+            <Text style={[styles.dueText, { color: colors.primary }]}>
               {nextPaymentDate
                 ? `Next payment due in ${daysRemaining} days`
                 : "Payment schedule pending"}
@@ -134,8 +151,12 @@ export default function RepaymentScreen() {
         </Card>
 
         <Card>
-          <Text style={styles.sectionTitle}>Payment Amount</Text>
-          <Text style={styles.amount}>{formatCurrency(amount)}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Payment Amount
+          </Text>
+          <Text style={[styles.amount, { color: colors.text }]}>
+            {formatCurrency(amount)}
+          </Text>
           <Slider
             style={styles.slider}
             minimumValue={100}
@@ -148,85 +169,134 @@ export default function RepaymentScreen() {
             thumbTintColor={colors.primary}
           />
           <View style={styles.range}>
-            <Text style={styles.rangeText}>Rs 100</Text>
-            <Text style={styles.rangeText}>
+            <Text style={[styles.rangeText, { color: colors.textLight }]}>
+              Rs 100
+            </Text>
+            <Text style={[styles.rangeText, { color: colors.textLight }]}>
               Full Balance: {formatCurrency(remainingBalance)}
             </Text>
           </View>
         </Card>
 
         <Card style={styles.paymentCard}>
-          <Text style={styles.sectionTitle}>Payment Method</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Payment Method
+          </Text>
           <TouchableOpacity style={styles.paymentMethod}>
             <View style={styles.paymentMethodLeft}>
               <View style={styles.esewaIcon}>
                 <Text style={styles.esewaText}>e</Text>
               </View>
               <View style={styles.paymentMethodInfo}>
-                <Text style={styles.paymentMethodText}>eSewa</Text>
-                <Text style={styles.paymentMethodSubtext}>
+                <Text
+                  style={[styles.paymentMethodText, { color: colors.text }]}
+                >
+                  eSewa
+                </Text>
+                <Text
+                  style={[
+                    styles.paymentMethodSubtext,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Digital wallet payment
                 </Text>
               </View>
             </View>
             <TouchableOpacity>
-              <Text style={styles.changeText}>Change</Text>
+              <Text style={[styles.changeText, { color: colors.primary }]}>
+                Change
+              </Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </Card>
 
-        <Card style={styles.breakdownCard}>
+        <Card
+          style={[styles.breakdownCard, { backgroundColor: colors.surface }]}
+        >
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Principal Amount</Text>
-            <Text style={styles.breakdownValue}>
+            <Text
+              style={[styles.breakdownLabel, { color: colors.textSecondary }]}
+            >
+              Principal Amount
+            </Text>
+            <Text style={[styles.breakdownValue, { color: colors.text }]}>
               {formatCurrency(breakdown.principal)}
             </Text>
           </View>
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Interest Amount</Text>
-            <Text style={styles.breakdownValue}>
+            <Text
+              style={[styles.breakdownLabel, { color: colors.textSecondary }]}
+            >
+              Interest Amount
+            </Text>
+            <Text style={[styles.breakdownValue, { color: colors.text }]}>
               {formatCurrency(breakdown.interest)}
             </Text>
           </View>
-          <View style={[styles.breakdownRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total Payment</Text>
-            <Text style={styles.totalValue}>{formatCurrency(amount)}</Text>
+          <View
+            style={[
+              styles.breakdownRow,
+              styles.totalRow,
+              { borderTopColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: colors.text }]}>
+              Total Payment
+            </Text>
+            <Text style={[styles.totalValue, { color: colors.text }]}>
+              {formatCurrency(amount)}
+            </Text>
           </View>
         </Card>
 
         <Card>
-          <Text style={styles.sectionTitle}>Upcoming Payments</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Upcoming Payments
+          </Text>
           {loan.nextPaymentDate ? (
             <View style={styles.upcomingPayment}>
               <View style={styles.upcomingInfo}>
-                <Text style={styles.upcomingDate}>
+                <Text style={[styles.upcomingDate, { color: colors.text }]}>
                   {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
                   })}
                 </Text>
-                <Text style={styles.upcomingType}>Monthly Payment</Text>
+                <Text
+                  style={[styles.upcomingType, { color: colors.textSecondary }]}
+                >
+                  Monthly Payment
+                </Text>
               </View>
               <View style={styles.upcomingRight}>
-                <Text style={styles.upcomingAmount}>
+                <Text style={[styles.upcomingAmount, { color: colors.text }]}>
                   {formatCurrency(loan.monthlyPayment || amount)}
                 </Text>
-                <View style={styles.dueBadge}>
-                  <Text style={styles.dueText}>Due Soon</Text>
+                <View
+                  style={[styles.dueBadge, { backgroundColor: colors.warning }]}
+                >
+                  <Text style={[styles.dueText, { color: colors.primary }]}>
+                    Due Soon
+                  </Text>
                 </View>
               </View>
             </View>
           ) : (
-            <Text style={styles.noPaymentsText}>
+            <Text
+              style={[styles.noPaymentsText, { color: colors.textSecondary }]}
+            >
               No upcoming payments scheduled
             </Text>
           )}
         </Card>
 
-        <TouchableOpacity style={styles.consentBox}>
+        <TouchableOpacity
+          style={[styles.consentBox, { backgroundColor: colors.primaryLight }]}
+        >
           <Ionicons name="checkbox" size={24} color={colors.primary} />
-          <Text style={styles.consentText}>
+          <Text style={[styles.consentText, { color: colors.text }]}>
             I confirm this payment and authorize deduction from my account
           </Text>
         </TouchableOpacity>
@@ -251,222 +321,197 @@ export default function RepaymentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  headerCard: {
-    marginBottom: spacing.md,
-  },
-  lenderHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  lenderInfo: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  lenderName: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  loanType: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
-  dueBox: {
-    backgroundColor: colors.primaryLight,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-  },
-  dueText: {
-    ...typography.bodySmall,
-    color: colors.primary,
-  },
-  sectionTitle: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  amount: {
-    ...typography.h1,
-    fontSize: 40,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  slider: {
-    width: "100%",
-    height: 40,
-  },
-  range: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  rangeText: {
-    ...typography.caption,
-    color: colors.textLight,
-  },
-  paymentMethod: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  paymentMethodLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  esewaIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#60BB46",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  esewaText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  paymentMethodInfo: {
-    marginLeft: spacing.md,
-  },
-  paymentMethodText: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 4,
-  },
-  paymentMethodSubtext: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  changeText: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  breakdownCard: {
-    backgroundColor: colors.surface,
-    marginBottom: spacing.md,
-  },
-  breakdownRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: spacing.sm,
-  },
-  breakdownLabel: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  breakdownValue: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-    marginTop: spacing.sm,
-  },
-  totalLabel: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  totalValue: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  upcomingPayment: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  upcomingInfo: {},
-  upcomingDate: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 4,
-  },
-  upcomingType: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  upcomingRight: {
-    alignItems: "flex-end",
-  },
-  upcomingAmount: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 4,
-  },
-  noPaymentsText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-    paddingVertical: spacing.md,
-  },
-  dueBadge: {
-    backgroundColor: colors.warning,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-  },
-  consentBox: {
-    flexDirection: "row",
-    backgroundColor: colors.primaryLight,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-    marginTop: spacing.md,
-  },
-  consentText: {
-    ...typography.caption,
-    color: colors.text,
-    marginLeft: spacing.sm,
-    flex: 1,
-    lineHeight: 18,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  scheduleButton: {
-    flex: 1,
-  },
-  payButton: {
-    flex: 1,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...typography.h3,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+    },
+    headerCard: {
+      marginBottom: spacing.md,
+    },
+    lenderHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    lenderInfo: {
+      flex: 1,
+      marginLeft: spacing.md,
+    },
+    lenderName: {
+      ...typography.h3,
+      marginBottom: 4,
+    },
+    loanType: {
+      ...typography.bodySmall,
+    },
+    dueBox: {
+      padding: spacing.sm,
+      borderRadius: borderRadius.md,
+    },
+    dueText: {
+      ...typography.bodySmall,
+    },
+    sectionTitle: {
+      ...typography.body,
+      fontWeight: "600",
+      marginBottom: spacing.md,
+    },
+    amount: {
+      ...typography.h1,
+      fontSize: 40,
+      marginBottom: spacing.md,
+    },
+    slider: {
+      width: "100%",
+      height: 40,
+    },
+    range: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    rangeText: {
+      ...typography.caption,
+    },
+    paymentCard: {},
+    paymentMethod: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    paymentMethodLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+    },
+    esewaIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "#60BB46",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    esewaText: {
+      fontSize: 20,
+      fontWeight: "bold",
+      color: "#FFFFFF",
+    },
+    paymentMethodInfo: {
+      marginLeft: spacing.md,
+    },
+    paymentMethodText: {
+      ...typography.body,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    paymentMethodSubtext: {
+      ...typography.caption,
+    },
+    changeText: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+    },
+    breakdownCard: {
+      marginBottom: spacing.md,
+    },
+    breakdownRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: spacing.sm,
+    },
+    breakdownLabel: {
+      ...typography.body,
+    },
+    breakdownValue: {
+      ...typography.body,
+      fontWeight: "600",
+    },
+    totalRow: {
+      borderTopWidth: 1,
+      paddingTop: spacing.md,
+      marginTop: spacing.sm,
+    },
+    totalLabel: {
+      ...typography.body,
+      fontWeight: "600",
+    },
+    totalValue: {
+      ...typography.h3,
+    },
+    upcomingPayment: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    upcomingInfo: {},
+    upcomingDate: {
+      ...typography.body,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    upcomingType: {
+      ...typography.caption,
+    },
+    upcomingRight: {
+      alignItems: "flex-end",
+    },
+    upcomingAmount: {
+      ...typography.body,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    noPaymentsText: {
+      ...typography.body,
+      textAlign: "center",
+      paddingVertical: spacing.md,
+    },
+    dueBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: borderRadius.sm,
+    },
+    consentBox: {
+      flexDirection: "row",
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.md,
+      marginTop: spacing.md,
+    },
+    consentText: {
+      ...typography.caption,
+      marginLeft: spacing.sm,
+      flex: 1,
+      lineHeight: 18,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    scheduleButton: {
+      flex: 1,
+    },
+    payButton: {
+      flex: 1,
+    },
+  });

@@ -6,6 +6,7 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ButtonProps {
   title: string;
@@ -28,12 +29,37 @@ export default function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const { colors } = useTheme();
+
+  const getBackgroundColor = () => {
+    if (variant === "primary") return colors.primary;
+    if (variant === "outline") return "transparent";
+    return "transparent";
+  };
+
+  const getTextColor = () => {
+    return variant === "primary"
+      ? colors.buttonText || "#FFFFFF"
+      : colors.primary;
+  };
+
+  const getBorderColor = () => {
+    if (variant === "outline") return colors.primary;
+    return "transparent";
+  };
+
   return (
     <TouchableOpacity
       style={[
         styles.button,
-        styles[variant],
+        {
+          backgroundColor: getBackgroundColor(),
+          borderColor: getBorderColor(),
+          borderWidth: variant === "outline" ? 2 : 0,
+        },
         styles[`${size}Button`],
+        variant === "outline" && styles.outline,
+        variant === "text" && styles.textButton,
         (disabled || loading) && styles.disabled,
         style,
       ]}
@@ -42,14 +68,12 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator
-          color={variant === "primary" ? "#FFFFFF" : "#10B981"}
-        />
+        <ActivityIndicator color={getTextColor()} />
       ) : (
         <Text
           style={[
             styles.text,
-            styles[`${variant}Text`],
+            { color: getTextColor() },
             styles[`${size}Text`],
             textStyle,
           ]}
@@ -67,26 +91,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 14,
     flexDirection: "row",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
     elevation: 4,
   },
-  primary: {
-    backgroundColor: "#16A34A",
-  },
   outline: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: "#16A34A",
-    shadowOpacity: 0,
+    elevation: 0,
+  },
+  textButton: {
     elevation: 0,
   },
   text: {
-    backgroundColor: "transparent",
-    shadowOpacity: 0,
-    elevation: 0,
+    fontWeight: "600",
   },
   smallButton: {
     paddingVertical: 10,
@@ -102,21 +116,6 @@ const styles = StyleSheet.create({
   },
   disabled: {
     opacity: 0.5,
-  },
-  primaryText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  outlineText: {
-    color: "#10B981",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  textText: {
-    color: "#10B981",
-    fontSize: 16,
-    fontWeight: "500",
   },
   smallText: {
     fontSize: 14,

@@ -10,9 +10,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function SupportScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const supportOptions = [
     {
       icon: "mail-outline",
@@ -91,71 +94,72 @@ export default function SupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    padding: spacing.md,
-  },
-  infoCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  infoTitle: {
-    ...typography.h3,
-    marginBottom: spacing.sm,
-  },
-  infoText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.background,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primaryLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.md,
-  },
-  optionContent: {
-    flex: 1,
-  },
-  optionTitle: {
-    ...typography.body,
-    fontWeight: "600",
-    marginBottom: spacing.xs / 2,
-  },
-  optionSubtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.surface,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...typography.h3,
+      color: colors.text,
+    },
+    content: {
+      flex: 1,
+      padding: spacing.md,
+    },
+    infoCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    infoTitle: {
+      ...typography.h3,
+      marginBottom: spacing.sm,
+    },
+    infoText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    optionCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.sm,
+    },
+    optionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: spacing.md,
+    },
+    optionContent: {
+      flex: 1,
+    },
+    optionTitle: {
+      ...typography.body,
+      fontWeight: "600",
+      marginBottom: spacing.xs / 2,
+    },
+    optionSubtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+  });

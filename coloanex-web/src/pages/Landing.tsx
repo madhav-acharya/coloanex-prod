@@ -23,18 +23,17 @@ export default function Landing() {
   return (
     <PublicLayout showFooter={false}>
       {/* Main Content */}
-      <div className="bg-green-100 h-[calc(100vh-3.5rem)] overflow-hidden grid md:grid-cols-2">
+      <div className="bg-primary/10 dark:bg-primary/5 h-[calc(100vh-3.5rem)] overflow-hidden grid md:grid-cols-2">
         {/* Left Side - Content */}
         <div className="flex-col hidden sm:block justify-center px-8 md:px-16 lg:px-24 py-12 bg-background">
+          ;
           <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
             Streamline Your Loan Operations
           </h1>
-
           <p className="text-lg text-muted-foreground mb-8 hidden md:block leading-relaxed">
             Comprehensive loan management, KYC verification, and secure document
             exchange for modern lending institutions.
           </p>
-
           <div className="space-y-4 mb-8">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-1">
@@ -78,7 +77,6 @@ export default function Landing() {
               </div>
             </div>
           </div>
-
           <div className="absolute bottom-2 hidden md:block gap-3 text-sm text-muted-foreground">
             <span className="px-3 py-1 rounded-full bg-muted">
               ISO 17025 Compliant

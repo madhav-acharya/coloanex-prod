@@ -257,10 +257,15 @@ export default function Wallets() {
                   variant="outline"
                   onClick={() => setCreateDialogOpen(false)}
                   disabled={isCreating}
+                  className="cursor-pointer"
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateWallet} disabled={isCreating}>
+                <Button
+                  onClick={handleCreateWallet}
+                  disabled={isCreating}
+                  className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                >
                   {isCreating ? "Creating..." : "Create Wallet"}
                 </Button>
               </DialogFooter>
@@ -353,7 +358,7 @@ export default function Wallets() {
             data={paginatedTransactions}
             isLoading={false}
             emptyMessage="No transactions found"
-            emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+            emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
             onSort={handleSort}
             sortBy={sortBy}
             sortOrder={sortOrder}

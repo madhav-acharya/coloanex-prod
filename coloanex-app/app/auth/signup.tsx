@@ -10,12 +10,15 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { Button, Input, useToast } from "@/components/ui";
-import { colors, spacing, typography } from "@/constants/theme";
+import { spacing, typography } from "@/constants/theme";
 import { authApi } from "@/api";
 import { useAppDispatch } from "@/store/hooks";
 import { setAuth } from "@/store/slices/authSlice";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function SignupScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
   const [fullName, setFullName] = useState("");
@@ -187,55 +190,56 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: spacing.lg,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-  },
-  header: {
-    marginBottom: spacing.lg,
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  form: {
-    flex: 1,
-  },
-  button: {
-    marginTop: spacing.lg,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: spacing.lg,
-  },
-  footerText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  link: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: "600",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.lg,
+    },
+    logoContainer: {
+      alignItems: "center",
+      marginBottom: spacing.lg,
+    },
+    logo: {
+      width: 100,
+      height: 100,
+    },
+    header: {
+      marginBottom: spacing.lg,
+    },
+    title: {
+      ...typography.h1,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    form: {
+      flex: 1,
+    },
+    button: {
+      marginTop: spacing.lg,
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginTop: spacing.lg,
+    },
+    footerText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    link: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: "600",
+    },
+  });

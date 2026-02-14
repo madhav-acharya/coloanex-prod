@@ -13,7 +13,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Slider from "@react-native-community/slider";
 import { Input, Button, PickerInput, useToast } from "@/components/ui";
-import { Colors } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
 import { formatCurrency } from "@/utils/currency";
 import { uploadToCloudinary } from "@/utils/upload";
@@ -39,6 +40,8 @@ const LOAN_PURPOSE_OPTIONS = [
 ];
 
 export default function LoanApplicationScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { lenderId } = useLocalSearchParams();
   const { showToast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
@@ -192,8 +195,14 @@ export default function LoanApplicationScreen() {
 
   if (!lender) {
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View
+        style={[
+          styles.container,
+          styles.loadingContainer,
+          { backgroundColor: colors.surface },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -206,12 +215,14 @@ export default function LoanApplicationScreen() {
   const totalAmount = monthlyPayment * termMonths;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Apply for Loan</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Apply for Loan
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -222,7 +233,10 @@ export default function LoanApplicationScreen() {
             <View
               style={[
                 styles.progressStep,
-                currentStep >= step && styles.progressStepActive,
+                {
+                  backgroundColor:
+                    currentStep >= step ? colors.primary : colors.border,
+                },
               ]}
             >
               {currentStep > step ? (
@@ -231,7 +245,10 @@ export default function LoanApplicationScreen() {
                 <Text
                   style={[
                     styles.progressStepText,
-                    currentStep >= step && styles.progressStepTextActive,
+                    {
+                      color:
+                        currentStep >= step ? "#fff" : colors.textSecondary,
+                    },
                   ]}
                 >
                   {step}
@@ -242,7 +259,10 @@ export default function LoanApplicationScreen() {
               <View
                 style={[
                   styles.progressLine,
-                  currentStep > step && styles.progressLineActive,
+                  {
+                    backgroundColor:
+                      currentStep > step ? colors.primary : colors.border,
+                  },
                 ]}
               />
             )}
@@ -252,16 +272,24 @@ export default function LoanApplicationScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.lenderInfo}>
-          <Text style={styles.lenderName}>{lender.name}</Text>
-          <Text style={styles.lenderContact}>{lender.contactEmail}</Text>
+          <Text style={[styles.lenderName, { color: colors.text }]}>
+            {lender.name}
+          </Text>
+          <Text style={[styles.lenderContact, { color: colors.textSecondary }]}>
+            {lender.contactEmail}
+          </Text>
         </View>
 
         {/* Step 1: Loan Amount & Term */}
         {currentStep === 1 && (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Loan Amount</Text>
-              <Text style={styles.amount}>{formatCurrency(loanAmount)}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Loan Amount
+              </Text>
+              <Text style={[styles.amount, { color: colors.primary }]}>
+                {formatCurrency(loanAmount)}
+              </Text>
               <Slider
                 style={styles.slider}
                 minimumValue={10000}
@@ -269,19 +297,31 @@ export default function LoanApplicationScreen() {
                 step={5000}
                 value={loanAmount}
                 onValueChange={setLoanAmount}
-                minimumTrackTintColor={Colors.primary}
-                maximumTrackTintColor={Colors.border}
-                thumbTintColor={Colors.primary}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.border}
+                thumbTintColor={colors.primary}
               />
               <View style={styles.range}>
-                <Text style={styles.rangeText}>{formatCurrency(10000)}</Text>
-                <Text style={styles.rangeText}>{formatCurrency(500000)}</Text>
+                <Text
+                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                >
+                  {formatCurrency(10000)}
+                </Text>
+                <Text
+                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                >
+                  {formatCurrency(500000)}
+                </Text>
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Loan Term (Months)</Text>
-              <Text style={styles.amount}>{termMonths} months</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Loan Term (Months)
+              </Text>
+              <Text style={[styles.amount, { color: colors.primary }]}>
+                {termMonths} months
+              </Text>
               <Slider
                 style={styles.slider}
                 minimumValue={6}
@@ -289,13 +329,21 @@ export default function LoanApplicationScreen() {
                 step={6}
                 value={termMonths}
                 onValueChange={setTermMonths}
-                minimumTrackTintColor={Colors.primary}
-                maximumTrackTintColor={Colors.border}
-                thumbTintColor={Colors.primary}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.border}
+                thumbTintColor={colors.primary}
               />
               <View style={styles.range}>
-                <Text style={styles.rangeText}>6 months</Text>
-                <Text style={styles.rangeText}>60 months</Text>
+                <Text
+                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                >
+                  6 months
+                </Text>
+                <Text
+                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                >
+                  60 months
+                </Text>
               </View>
             </View>
           </>
@@ -304,7 +352,9 @@ export default function LoanApplicationScreen() {
         {/* Step 2: Loan Purpose */}
         {currentStep === 2 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Loan Purpose</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Loan Purpose
+            </Text>
             <PickerInput
               label="Purpose"
               value={loanPurpose}
@@ -319,7 +369,9 @@ export default function LoanApplicationScreen() {
         {/* Step 3: Collateral Information */}
         {currentStep === 3 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Collateral Information</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Collateral Information
+            </Text>
 
             <PickerInput
               label="Collateral Type"
@@ -330,8 +382,9 @@ export default function LoanApplicationScreen() {
               placeholder="Select collateral type"
             />
 
-            <Text style={styles.label}>
-              Description <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Description{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={collateralDescription}
@@ -341,8 +394,9 @@ export default function LoanApplicationScreen() {
               numberOfLines={3}
             />
 
-            <Text style={styles.label}>
-              Estimated Value (NPR) <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Estimated Value (NPR){" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <Input
               value={collateralValue}
@@ -351,11 +405,12 @@ export default function LoanApplicationScreen() {
               keyboardType="numeric"
             />
 
-            <Text style={styles.label}>
-              Collateral Image <Text style={styles.required}>*</Text>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Collateral Image{" "}
+              <Text style={[styles.required, { color: colors.error }]}>*</Text>
             </Text>
             <TouchableOpacity
-              style={styles.uploadButton}
+              style={[styles.uploadButton, { borderColor: colors.border }]}
               onPress={pickImage}
               disabled={uploadingImage}
             >
@@ -366,17 +421,25 @@ export default function LoanApplicationScreen() {
                 />
               ) : uploadingImage ? (
                 <>
-                  <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text style={styles.uploadText}>Uploading...</Text>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text
+                    style={[styles.uploadText, { color: colors.textSecondary }]}
+                  >
+                    Uploading...
+                  </Text>
                 </>
               ) : (
                 <>
                   <Ionicons
                     name="cloud-upload-outline"
                     size={32}
-                    color={Colors.primary}
+                    color={colors.primary}
                   />
-                  <Text style={styles.uploadText}>Upload Collateral Image</Text>
+                  <Text
+                    style={[styles.uploadText, { color: colors.textSecondary }]}
+                  >
+                    Upload Collateral Image
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -387,52 +450,139 @@ export default function LoanApplicationScreen() {
         {currentStep === 4 && (
           <>
             <View style={styles.summarySection}>
-              <Text style={styles.sectionTitle}>Application Summary</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Application Summary
+              </Text>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Lender</Text>
-                <Text style={styles.summaryValue}>{lender.name}</Text>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Lender
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                  {lender.name}
+                </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Loan Amount</Text>
-                <Text style={styles.summaryValue}>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Loan Amount
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
                   {formatCurrency(loanAmount)}
                 </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Term</Text>
-                <Text style={styles.summaryValue}>{termMonths} months</Text>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Term
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                  {termMonths} months
+                </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Purpose</Text>
-                <Text style={styles.summaryValue}>{loanPurpose}</Text>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Purpose
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                  {loanPurpose}
+                </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Collateral Type</Text>
-                <Text style={styles.summaryValue}>{collateralType}</Text>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Collateral Type
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                  {collateralType}
+                </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Collateral Value</Text>
-                <Text style={styles.summaryValue}>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Collateral Value
+                </Text>
+                <Text style={[styles.summaryValue, { color: colors.text }]}>
                   {formatCurrency(parseFloat(collateralValue || "0"))}
                 </Text>
               </View>
 
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Monthly Payment</Text>
-                <Text style={[styles.summaryValue, styles.highlight]}>
+              <View
+                style={[
+                  styles.summaryRow,
+                  { borderBottomColor: colors.border },
+                ]}
+              >
+                <Text
+                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                >
+                  Monthly Payment
+                </Text>
+                <Text
+                  style={[
+                    styles.summaryValue,
+                    styles.highlight,
+                    { color: colors.primary },
+                  ]}
+                >
                   {formatCurrency(monthlyPayment)}
                 </Text>
               </View>
 
-              <View style={[styles.summaryRow, styles.totalRow]}>
-                <Text style={styles.totalLabel}>Total Repayment</Text>
-                <Text style={styles.totalValue}>
+              <View
+                style={[
+                  styles.summaryRow,
+                  styles.totalRow,
+                  { borderTopColor: colors.border },
+                ]}
+              >
+                <Text style={[styles.totalLabel, { color: colors.text }]}>
+                  Total Repayment
+                </Text>
+                <Text style={[styles.totalValue, { color: colors.primary }]}>
                   {formatCurrency(totalAmount)}
                 </Text>
               </View>
@@ -440,7 +590,9 @@ export default function LoanApplicationScreen() {
 
             {collateralImage && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Collateral Image</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Collateral Image
+                </Text>
                 <Image
                   source={{ uri: collateralImage }}
                   style={styles.previewImage}
@@ -453,7 +605,7 @@ export default function LoanApplicationScreen() {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
         {currentStep < 4 ? (
           <Button title="Next" onPress={handleNext} disabled={!isStepValid} />
         ) : (
@@ -466,7 +618,7 @@ export default function LoanApplicationScreen() {
         {loading && (
           <ActivityIndicator
             size="small"
-            color={Colors.primary}
+            color={colors.primary}
             style={{ marginTop: 10 }}
           />
         )}
@@ -475,213 +627,185 @@ export default function LoanApplicationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  loadingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  progressContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: "#fff",
-  },
-  progressStepContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  progressStep: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  progressStepActive: {
-    backgroundColor: Colors.primary,
-  },
-  progressStepText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
-  progressStepTextActive: {
-    color: "#fff",
-  },
-  progressLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.border,
-    marginHorizontal: 4,
-  },
-  progressLineActive: {
-    backgroundColor: Colors.primary,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  lenderInfo: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  lenderName: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  lenderContact: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  section: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 8,
-    marginTop: 12,
-  },
-  required: {
-    color: Colors.error,
-  },
-  amount: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.primary,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  slider: {
-    width: "100%",
-    height: 40,
-  },
-  range: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  rangeText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  uploadButton: {
-    borderWidth: 2,
-    borderColor: Colors.border,
-    borderStyle: "dashed",
-    borderRadius: 12,
-    padding: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
-  uploadedImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 8,
-  },
-  uploadText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 8,
-  },
-  previewImage: {
-    width: "100%",
-    height: 250,
-    borderRadius: 8,
-  },
-  summarySection: {
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.text,
-    textAlign: "right",
-    flex: 1,
-    marginLeft: 12,
-  },
-  highlight: {
-    color: Colors.primary,
-  },
-  totalRow: {
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    marginTop: 8,
-    borderTopWidth: 2,
-    borderTopColor: Colors.border,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    loadingContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 20,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    progressContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      backgroundColor: colors.card,
+    },
+    progressStepContainer: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    progressStep: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    progressStepActive: {},
+    progressStepText: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    progressStepTextActive: {
+      color: "#fff",
+    },
+    progressLine: {
+      flex: 1,
+      height: 2,
+      marginHorizontal: 4,
+    },
+    progressLineActive: {},
+    content: {
+      flex: 1,
+      padding: 20,
+    },
+    lenderInfo: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 20,
+    },
+    lenderName: {
+      fontSize: 20,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    lenderContact: {
+      fontSize: 14,
+    },
+    section: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      marginBottom: 12,
+    },
+    label: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginBottom: 8,
+      marginTop: 12,
+    },
+    required: {},
+    amount: {
+      fontSize: 24,
+      fontWeight: "700",
+      marginBottom: 16,
+      textAlign: "center",
+    },
+    slider: {
+      width: "100%",
+      height: 40,
+    },
+    range: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    rangeText: {
+      fontSize: 12,
+    },
+    uploadButton: {
+      borderWidth: 2,
+      borderStyle: "dashed",
+      borderRadius: 12,
+      padding: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+    },
+    uploadedImage: {
+      width: "100%",
+      height: 200,
+      borderRadius: 8,
+    },
+    uploadText: {
+      fontSize: 14,
+      marginTop: 8,
+    },
+    previewImage: {
+      width: "100%",
+      height: 250,
+      borderRadius: 8,
+    },
+    summarySection: {
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 20,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+    },
+    summaryLabel: {
+      fontSize: 14,
+    },
+    summaryValue: {
+      fontSize: 14,
+      fontWeight: "600",
+      textAlign: "right",
+      flex: 1,
+      marginLeft: 12,
+    },
+    highlight: {},
+    totalRow: {
+      borderBottomWidth: 0,
+      paddingTop: 16,
+      marginTop: 8,
+      borderTopWidth: 2,
+    },
+    totalLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    totalValue: {
+      fontSize: 18,
+      fontWeight: "700",
+    },
+    footer: {
+      padding: 20,
+      backgroundColor: colors.background,
+      borderTopWidth: 1,
+    },
+  });

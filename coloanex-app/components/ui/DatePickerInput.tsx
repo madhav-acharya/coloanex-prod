@@ -9,7 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 interface DatePickerInputProps {
   label: string;
@@ -30,6 +30,8 @@ export default function DatePickerInput({
   minimumDate,
   maximumDate,
 }: DatePickerInputProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [show, setShow] = useState(false);
 
   const formatDate = (date: Date | null) => {
@@ -74,12 +76,14 @@ export default function DatePickerInput({
             style={{
               width: "100%",
               padding: 12,
-              fontSize: 16,
-              border: `1px solid ${Colors.border}`,
-              borderRadius: 8,
-              backgroundColor: Colors.background,
-              color: Colors.text,
-              fontFamily: "System",
+              fontSize: 15,
+              fontWeight: "400",
+              border: `2px solid ${colors.border}`,
+              borderRadius: 12,
+              backgroundColor: colors.card,
+              color: colors.text,
+              fontFamily:
+                "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
           />
         </View>
@@ -114,7 +118,7 @@ export default function DatePickerInput({
         <Text style={[styles.text, !value && styles.placeholder]}>
           {formatDate(value)}
         </Text>
-        <Ionicons name="calendar-outline" size={20} color={Colors.textLight} />
+        <Ionicons name="calendar-outline" size={20} color={colors.text} />
       </TouchableOpacity>
 
       {Platform.OS === "ios" ? (
@@ -157,60 +161,63 @@ export default function DatePickerInput({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  required: {
-    color: Colors.error,
-  },
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: Colors.background,
-  },
-  text: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-  placeholder: {
-    color: Colors.textLight,
-  },
-  webInputWrapper: {
-    width: "100%",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: Colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalButton: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.primary,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: 20,
+      width: "92%",
+    },
+    label: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 10,
+    },
+    required: {
+      color: colors.error,
+    },
+    input: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: colors.card,
+    },
+    text: {
+      fontSize: 15,
+      fontWeight: "400",
+      color: colors.text,
+    },
+    placeholder: {
+      color: colors.textLight,
+    },
+    webInputWrapper: {
+      width: "100%",
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingBottom: 20,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalButton: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+  });

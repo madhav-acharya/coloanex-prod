@@ -77,7 +77,7 @@ export function FormSheet({
 
   return (
     <UISheet open={open} onOpenChange={handleOpenChange}>
-      <SheetContent className="flex flex-col h-full bg-white">
+      <SheetContent className="flex flex-col h-full !bg-background">
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
           <div className="shrink-0">
             <SheetHeader>
@@ -122,7 +122,7 @@ export function FormSheet({
                                 onChange={(e) =>
                                   handleFieldChange(field.id, e.target.value)
                                 }
-                                className="w-full h-10 px-3 py-2 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                                className="w-full h-10 px-3 py-2 text-sm bg-input text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer hover:bg-muted transition-colors"
                                 disabled={
                                   field.disabled || isSubmitting || isReadOnly
                                 }

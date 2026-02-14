@@ -13,17 +13,20 @@ import {
 import { Calendar } from "react-native-calendars";
 import { LineChart, PieChart } from "react-native-chart-kit";
 import { Card } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import analyticsApi, {
   BorrowerAnalytics,
   MonthlyData,
   StatusData,
 } from "@/api/analyticsApi";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks/useTheme";
 
 const screenWidth = Dimensions.get("window").width;
 
 export default function AnalyticsScreen() {
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [analytics, setAnalytics] = useState<BorrowerAnalytics | null>(null);
   const [monthlyLoans, setMonthlyLoans] = useState<MonthlyData[]>([]);
   const [loansByStatus, setLoansByStatus] = useState<StatusData[]>([]);
@@ -70,8 +73,8 @@ export default function AnalyticsScreen() {
   };
 
   const chartConfig = {
-    backgroundGradientFrom: "#ffffff",
-    backgroundGradientTo: "#ffffff",
+    backgroundGradientFrom: colors.card,
+    backgroundGradientTo: colors.card,
     color: (opacity = 1) => `rgba(22, 163, 74, ${opacity})`,
     strokeWidth: 2,
     barPercentage: 0.5,
@@ -116,9 +119,15 @@ export default function AnalyticsScreen() {
           )}
         </View>
         <View style={styles.statInfo}>
-          <Text style={styles.statTitle}>{title}</Text>
+          <Text style={[styles.statTitle, { color: colors.textSecondary }]}>
+            {title}
+          </Text>
           <Text style={[styles.statValue, { color }]}>{value}</Text>
-          {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
+          {subtitle && (
+            <Text style={[styles.statSubtitle, { color: colors.textLight }]}>
+              {subtitle}
+            </Text>
+          )}
         </View>
       </View>
     </Card>
@@ -126,20 +135,22 @@ export default function AnalyticsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
           <Text style={styles.headerTitle}>Analytics</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading analytics...</Text>
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading analytics...
+          </Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.primary }]}>
         <Text style={styles.headerTitle}>Analytics</Text>
         <Text style={styles.headerSubtitle}>Your financial overview</Text>
       </View>
@@ -200,19 +211,32 @@ export default function AnalyticsScreen() {
 
             {analytics.totalBorrowed > 0 && (
               <Card style={styles.progressCard}>
-                <Text style={styles.cardTitle}>Repayment Progress</Text>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  Repayment Progress
+                </Text>
                 <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      { backgroundColor: colors.border },
+                    ]}
+                  >
                     <View
                       style={[
                         styles.progressFill,
                         {
                           width: `${(analytics.totalPaid / analytics.totalBorrowed) * 100}%`,
+                          backgroundColor: colors.primary,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={styles.progressText}>
+                  <Text
+                    style={[
+                      styles.progressText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {(
                       (analytics.totalPaid / analytics.totalBorrowed) *
                       100
@@ -226,10 +250,15 @@ export default function AnalyticsScreen() {
         )}
 
         <Card style={styles.filterCard}>
-          <Text style={styles.filterLabel}>Date Range</Text>
+          <Text style={[styles.filterLabel, { color: colors.text }]}>
+            Date Range
+          </Text>
           <View style={styles.dateRangeContainer}>
             <TouchableOpacity
-              style={styles.dateButton}
+              style={[
+                styles.dateButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
               onPress={() => {
                 setIsSelectingStart(true);
                 setShowStartPicker(true);
@@ -240,13 +269,20 @@ export default function AnalyticsScreen() {
                 size={20}
                 color={colors.primary}
               />
-              <Text style={styles.dateButtonText}>
+              <Text style={[styles.dateButtonText, { color: colors.text }]}>
                 {startDate.toLocaleDateString()}
               </Text>
             </TouchableOpacity>
-            <Text style={styles.dateSeparator}>to</Text>
+            <Text
+              style={[styles.dateSeparator, { color: colors.textSecondary }]}
+            >
+              to
+            </Text>
             <TouchableOpacity
-              style={styles.dateButton}
+              style={[
+                styles.dateButton,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
               onPress={() => {
                 setIsSelectingStart(false);
                 setShowEndPicker(true);
@@ -257,7 +293,7 @@ export default function AnalyticsScreen() {
                 size={20}
                 color={colors.primary}
               />
-              <Text style={styles.dateButtonText}>
+              <Text style={[styles.dateButtonText, { color: colors.text }]}>
                 {endDate.toLocaleDateString()}
               </Text>
             </TouchableOpacity>
@@ -280,9 +316,14 @@ export default function AnalyticsScreen() {
                 setShowEndPicker(false);
               }}
             >
-              <View style={styles.calendarModalContent}>
+              <View
+                style={[
+                  styles.calendarModalContent,
+                  { backgroundColor: colors.card },
+                ]}
+              >
                 <View style={styles.calendarHeader}>
-                  <Text style={styles.calendarTitle}>
+                  <Text style={[styles.calendarTitle, { color: colors.text }]}>
                     {isSelectingStart ? "Select Start Date" : "Select End Date"}
                   </Text>
                   <TouchableOpacity
@@ -320,8 +361,8 @@ export default function AnalyticsScreen() {
                     },
                   }}
                   theme={{
-                    backgroundColor: "#ffffff",
-                    calendarBackground: "#ffffff",
+                    backgroundColor: colors.card,
+                    calendarBackground: colors.card,
                     textSectionTitleColor: colors.textSecondary,
                     selectedDayBackgroundColor: colors.primary,
                     selectedDayTextColor: "#ffffff",
@@ -352,7 +393,9 @@ export default function AnalyticsScreen() {
 
         {monthlyLoans.length > 0 && (
           <Card style={styles.chartCard}>
-            <Text style={styles.cardTitle}>Loan Applications Trend</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              Loan Applications Trend
+            </Text>
             <View style={styles.chartContainer}>
               <LineChart
                 data={lineChartData}
@@ -375,7 +418,9 @@ export default function AnalyticsScreen() {
 
         {loansByStatus.length > 0 && (
           <Card style={styles.chartCard}>
-            <Text style={styles.cardTitle}>Loans by Status</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              Loans by Status
+            </Text>
             <View style={styles.pieChartWrapper}>
               <View style={styles.pieChartContainer}>
                 <PieChart
@@ -410,7 +455,7 @@ export default function AnalyticsScreen() {
                         },
                       ]}
                     />
-                    <Text style={styles.legendText}>
+                    <Text style={[styles.legendText, { color: colors.text }]}>
                       {item.status}: {item.count}
                     </Text>
                   </View>
@@ -426,219 +471,201 @@ export default function AnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.primary,
-  },
-  headerTitle: {
-    ...typography.h2,
-    color: "#fff",
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    ...typography.body,
-    color: "rgba(255, 255, 255, 0.9)",
-  },
-  content: {
-    flex: 1,
-    padding: spacing.lg,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loadingText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  statCard: {
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  statContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  rupeeIcon: {
-    fontSize: 28,
-    fontWeight: "700",
-  },
-  statInfo: {
-    flex: 1,
-  },
-  statTitle: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  statValue: {
-    ...typography.h3,
-    fontWeight: "700",
-  },
-  statSubtitle: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginTop: 2,
-  },
-  progressCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  cardTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  progressContainer: {
-    marginTop: spacing.sm,
-  },
-  progressBar: {
-    height: 12,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.full,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: colors.primary,
-  },
-  progressText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    textAlign: "center",
-  },
-  filterCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  filterLabel: {
-    ...typography.bodySmall,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  dateRangeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  dateButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    padding: spacing.md,
-    backgroundColor: "#FFFFFF",
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  dateButtonText: {
-    ...typography.body,
-    color: colors.text,
-  },
-  dateSeparator: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: spacing.lg,
-  },
-  calendarModalContent: {
-    backgroundColor: "#ffffff",
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    width: "100%",
-    maxWidth: 400,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  calendarTitle: {
-    ...typography.h3,
-    color: colors.text,
-    fontWeight: "600",
-  },
-  chartCard: {
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    overflow: "hidden",
-  },
-  chartContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  pieChartContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    width: "100%",
-  },
-  chart: {
-    borderRadius: borderRadius.md,
-  },
-  pieChartWrapper: {
-    alignItems: "center",
-    width: "100%",
-    overflow: "hidden",
-  },
-  legendContainer: {
-    marginTop: spacing.md,
-    width: "100%",
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  legendColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: spacing.sm,
-  },
-  legendText: {
-    ...typography.body,
-    color: colors.text,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 60,
+      paddingBottom: spacing.lg,
+    },
+    headerTitle: {
+      ...typography.h2,
+      color: "#fff",
+      marginBottom: 4,
+    },
+    headerSubtitle: {
+      ...typography.body,
+      color: "rgba(255, 255, 255, 0.9)",
+    },
+    content: {
+      flex: 1,
+      padding: spacing.lg,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loadingText: {
+      ...typography.body,
+    },
+    statsGrid: {
+      flexDirection: "row",
+      gap: spacing.md,
+      marginBottom: spacing.md,
+    },
+    statCard: {
+      padding: spacing.md,
+      marginBottom: spacing.md,
+    },
+    statContent: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    statIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.md,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: spacing.md,
+    },
+    rupeeIcon: {
+      fontSize: 28,
+      fontWeight: "700",
+    },
+    statInfo: {
+      flex: 1,
+    },
+    statTitle: {
+      ...typography.caption,
+      marginBottom: 4,
+    },
+    statValue: {
+      ...typography.h3,
+      fontWeight: "700",
+    },
+    statSubtitle: {
+      ...typography.caption,
+      marginTop: 2,
+    },
+    progressCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    cardTitle: {
+      ...typography.h3,
+      marginBottom: spacing.md,
+    },
+    progressContainer: {
+      marginTop: spacing.sm,
+    },
+    progressBar: {
+      height: 12,
+      borderRadius: borderRadius.full,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+    },
+    progressText: {
+      ...typography.bodySmall,
+      marginTop: spacing.sm,
+      textAlign: "center",
+    },
+    filterCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    filterLabel: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+      marginBottom: spacing.sm,
+    },
+    dateRangeContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    dateButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.1,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    dateButtonText: {
+      ...typography.body,
+    },
+    dateSeparator: {
+      ...typography.bodySmall,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: spacing.lg,
+    },
+    calendarModalContent: {
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      width: "100%",
+      maxWidth: 400,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    calendarHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    calendarTitle: {
+      ...typography.h3,
+      fontWeight: "600",
+    },
+    chartCard: {
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      overflow: "hidden",
+    },
+    chartContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    pieChartContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      width: "100%",
+    },
+    chart: {
+      borderRadius: borderRadius.md,
+    },
+    pieChartWrapper: {
+      alignItems: "center",
+      width: "100%",
+      overflow: "hidden",
+    },
+    legendContainer: {
+      marginTop: spacing.md,
+      width: "100%",
+    },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    legendColor: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      marginRight: spacing.sm,
+    },
+    legendText: {
+      ...typography.body,
+    },
+  });

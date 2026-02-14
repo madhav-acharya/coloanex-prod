@@ -11,13 +11,16 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import { walletsApi, transactionsApi } from "@/api";
 import type { Wallet } from "@/api/walletsApi";
 import type { Transaction } from "@/api/transactionsApi";
 import { formatCurrency } from "@/utils/currency";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function WalletScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -318,182 +321,167 @@ export default function WalletScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-  },
-  balanceCard: {
-    margin: spacing.lg,
-    padding: spacing.xl,
-    alignItems: "center",
-  },
-  balanceHeader: {
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-  },
-  balanceValue: {
-    fontSize: 36,
-    fontWeight: "700",
-    color: colors.primary,
-    marginBottom: spacing.sm,
-  },
-  pendingBalance: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.warning + "10",
-    borderRadius: borderRadius.full,
-  },
-  pendingText: {
-    fontSize: 12,
-    color: colors.warning,
-    fontWeight: "600",
-  },
-  actionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  actionButton: {
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.full,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionText: {
-    fontSize: 14,
-    color: colors.text,
-  },
-  transactionsSection: {
-    padding: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  transactionCard: {
-    marginBottom: spacing.sm,
-    padding: spacing.md,
-  },
-  transactionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: spacing.md,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionType: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-    textTransform: "capitalize",
-    marginBottom: spacing.xs,
-  },
-  transactionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  transactionStatus: {
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  transactionStatusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  transactionDescription: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  noTransactions: {
-    alignItems: "center",
-    paddingVertical: spacing.xl * 2,
-  },
-  noTransactionsText: {
-    marginTop: spacing.md,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    marginTop: spacing.md,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.primary,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xl * 2,
-  },
-  emptyText: {
-    marginTop: spacing.md,
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    title: {
+      fontSize: 20,
+      fontWeight: "700",
+    },
+    content: {
+      flex: 1,
+    },
+    balanceCard: {
+      margin: spacing.lg,
+      padding: spacing.xl,
+      alignItems: "center",
+    },
+    balanceHeader: {
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    balanceLabel: {
+      fontSize: 14,
+      marginTop: spacing.sm,
+    },
+    balanceValue: {
+      fontSize: 36,
+      fontWeight: "700",
+      marginBottom: spacing.sm,
+    },
+    pendingBalance: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+    },
+    pendingText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    actionsRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      paddingHorizontal: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    actionButton: {
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    actionIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.full,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    actionText: {
+      fontSize: 14,
+    },
+    transactionsSection: {
+      padding: spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginBottom: spacing.md,
+    },
+    transactionCard: {
+      marginBottom: spacing.sm,
+      padding: spacing.md,
+    },
+    transactionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    transactionIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.full,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: spacing.md,
+    },
+    transactionInfo: {
+      flex: 1,
+    },
+    transactionType: {
+      fontSize: 14,
+      fontWeight: "600",
+      textTransform: "capitalize",
+      marginBottom: spacing.xs,
+    },
+    transactionMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    transactionDate: {
+      fontSize: 12,
+    },
+    transactionStatus: {
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+    },
+    transactionStatusText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    transactionDescription: {
+      fontSize: 12,
+      marginTop: spacing.xs,
+    },
+    transactionAmount: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    noTransactions: {
+      alignItems: "center",
+      paddingVertical: spacing.xl * 2,
+    },
+    noTransactionsText: {
+      marginTop: spacing.md,
+      fontSize: 14,
+    },
+    viewAllButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      marginTop: spacing.md,
+    },
+    viewAllText: {
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.xl * 2,
+    },
+    emptyText: {
+      marginTop: spacing.md,
+      fontSize: 16,
+    },
+  });

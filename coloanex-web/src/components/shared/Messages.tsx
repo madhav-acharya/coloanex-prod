@@ -10,23 +10,27 @@ interface MessagesProps {
 const messageConfig = {
   success: {
     icon: CheckCircle2,
-    className: "border-green-200 bg-green-50 text-green-800",
-    iconClassName: "text-green-500",
+    className:
+      "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-100",
+    iconClassName: "text-green-500 dark:text-green-400",
   },
   error: {
     icon: XCircle,
-    className: "border-red-200 bg-red-50 text-red-800",
-    iconClassName: "text-red-500",
+    className:
+      "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-100",
+    iconClassName: "text-red-500 dark:text-red-400",
   },
   warning: {
     icon: AlertCircle,
-    className: "border-yellow-200 bg-yellow-50 text-yellow-800",
-    iconClassName: "text-yellow-500",
+    className:
+      "border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-100",
+    iconClassName: "text-yellow-500 dark:text-yellow-400",
   },
   info: {
     icon: Info,
-    className: "border-blue-200 bg-blue-50 text-blue-800",
-    iconClassName: "text-blue-500",
+    className:
+      "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-100",
+    iconClassName: "text-blue-500 dark:text-blue-400",
   },
 };
 
@@ -47,7 +51,7 @@ export function Messages({ messages, className }: MessagesProps) {
             key={messageId}
             className={cn(
               "flex items-start gap-3 p-4 rounded-lg border",
-              config.className
+              config.className,
             )}
           >
             <Icon className={cn("h-5 w-5 mt-0.5", config.iconClassName)} />

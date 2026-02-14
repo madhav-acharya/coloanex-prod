@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
+import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Search,
@@ -201,10 +202,10 @@ export default function DashboardLayout({
                   <div
                     key={item.title}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-not-allowed opacity-60",
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-not-allowed opacity-60",
                       isActive
-                        ? "bg-green-100 text-green-700 font-medium"
-                        : "text-muted-foreground",
+                        ? "bg-primary/10 text-primary font-medium shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/30",
                       isCollapsed && "justify-center px-2",
                     )}
                     title={
@@ -229,10 +230,10 @@ export default function DashboardLayout({
                   key={item.title}
                   to={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-pointer",
                     isActive
-                      ? "bg-green-100 text-green-700 font-medium"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-primary/15 text-primary font-semibold shadow-md scale-[1.02] border border-primary/30"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] active:bg-primary/12",
                     isCollapsed && "justify-center px-2",
                   )}
                 >
@@ -280,10 +281,10 @@ export default function DashboardLayout({
             {needsTenantId ? (
               <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-not-allowed opacity-60",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-not-allowed opacity-60",
                   location.pathname === "/dashboard"
-                    ? "bg-green-100 text-green-700 font-medium"
-                    : "text-muted-foreground",
+                    ? "bg-primary/10 text-primary font-medium shadow-sm"
+                    : "text-muted-foreground hover:bg-muted/30",
                   isCollapsed && "justify-center px-2",
                 )}
                 title="Tenant assignment required"
@@ -300,10 +301,10 @@ export default function DashboardLayout({
               <Link
                 to="/dashboard"
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-pointer",
                   location.pathname === "/dashboard"
-                    ? "bg-green-100 text-green-700 font-medium"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-primary/15 text-primary font-semibold shadow-md scale-[1.02] border border-primary/30"
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] active:bg-primary/12",
                   isCollapsed && "justify-center px-2",
                 )}
               >
@@ -360,19 +361,22 @@ export default function DashboardLayout({
         {sidebarContent}
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="bg-white border-b sticky top-0 z-10">
+      <main className="flex-1 overflow-y-auto bg-background">
+        <div className="bg-card border-b sticky top-0 z-10">
           <div className="px-3 sm:px-4 md:px-6 py-3 md:py-4">
             <div className="mb-3 md:mb-4 flex items-center justify-between">
               <div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
+                <h1 className="text-xl md:text-2xl font-bold text-foreground">
                   {title}
                 </h1>
                 {description && (
-                  <p className="text-sm text-gray-500 mt-1">{description}</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {description}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2 md:gap-3">
+                <ThemeSwitcher />
                 <NotificationsDropdown />
                 <ProfileDropdown />
               </div>
@@ -382,7 +386,7 @@ export default function DashboardLayout({
               <div className="flex flex-1 flex-col sm:flex-row gap-3 md:gap-4 items-stretch sm:items-center w-full">
                 {onSearchChange && (
                   <div className="relative w-full sm:flex-1 sm:max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder={searchPlaceholder}
                       value={searchValue}

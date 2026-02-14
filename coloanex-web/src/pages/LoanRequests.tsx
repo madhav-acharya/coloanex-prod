@@ -1007,7 +1007,7 @@ export default function LoanRequests() {
           columns={columns}
           isLoading={isLoading}
           emptyMessage="No loan requests found"
-          emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+          emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
           onSort={handleSort}
           sortBy={filters.sortBy}
           sortOrder={filters.sortOrder}

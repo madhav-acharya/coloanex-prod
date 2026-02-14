@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { notificationsApi } from "@/api";
 import { useToast } from "@/components/ui";
-import { Colors } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 import type { NotificationItem, ActivityAction } from "@/types/notification";
 
 const getActivityIcon = (action: ActivityAction) => {
@@ -38,46 +38,41 @@ const getActivityIcon = (action: ActivityAction) => {
   }
 };
 
-const getActivityColor = (action: ActivityAction) => {
-  switch (action) {
-    case "CREATE":
-      return "#3B82F6";
-    case "UPDATE":
-      return "#F59E0B";
-    case "DELETE":
-      return "#EF4444";
-    case "KYC_VERIFY":
-      return "#10B981";
-    case "KYC_REJECT":
-      return "#EF4444";
-    case "LOGIN":
-      return "#3B82F6";
-    case "LOGOUT":
-      return "#6B7280";
-    case "VISIT":
-      return "#8B5CF6";
-    default:
-      return "#6B7280";
-  }
+const getActivityColor = (action: ActivityAction, isDark: boolean) => {
+  const colors: Record<ActivityAction, string> = {
+    CREATE: "#3B82F6",
+    UPDATE: "#F59E0B",
+    DELETE: "#EF4444",
+    KYC_VERIFY: "#10B981",
+    KYC_REJECT: "#EF4444",
+    LOGIN: "#3B82F6",
+    LOGOUT: isDark ? "#9CA3AF" : "#6B7280",
+    VISIT: "#8B5CF6",
+    PASSWORD_RESET: "#F59E0B",
+    LEAVE: isDark ? "#9CA3AF" : "#6B7280",
+  };
+  return colors[action] || (isDark ? "#9CA3AF" : "#6B7280");
 };
 
 const getActivityBackgroundColor = (
   action: ActivityAction,
   isRead: boolean,
+  cardColor: string,
+  surfaceColor: string,
 ) => {
-  if (isRead) return "#F9FAFB";
+  if (isRead) return surfaceColor;
 
   switch (action) {
     case "KYC_VERIFY":
-      return "#D1FAE5";
+      return "rgba(16, 185, 129, 0.1)";
     case "KYC_REJECT":
-      return "#FEE2E2";
+      return "rgba(239, 68, 68, 0.1)";
     case "CREATE":
-      return "#DBEAFE";
+      return "rgba(59, 130, 246, 0.1)";
     case "DELETE":
-      return "#FED7AA";
+      return "rgba(245, 158, 11, 0.1)";
     default:
-      return "#FFFFFF";
+      return cardColor;
   }
 };
 
@@ -113,6 +108,8 @@ const formatTimeAgo = (dateString: string) => {
 
 export default function ActivityLogsScreen() {
   const { showToast } = useToast();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -214,18 +211,25 @@ export default function ActivityLogsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Activity Logs</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Activity Logs
+          </Text>
           {unreadCount > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
               <Text style={styles.badgeText}>
                 {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
@@ -239,12 +243,12 @@ export default function ActivityLogsScreen() {
             style={styles.markAllButton}
           >
             {markingAllAsRead ? (
-              <ActivityIndicator size="small" color={Colors.primary} />
+              <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <Ionicons
                 name="checkmark-done"
                 size={24}
-                color={Colors.primary}
+                color={colors.primary}
               />
             )}
           </TouchableOpacity>
@@ -254,18 +258,22 @@ export default function ActivityLogsScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Loading notifications...</Text>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+            Loading notifications...
+          </Text>
         </View>
       ) : notifications.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons
             name="notifications-off-outline"
             size={64}
-            color={Colors.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyText}>No notifications yet</Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptyText, { color: colors.text }]}>
+            No notifications yet
+          </Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
             Your activity logs will appear here
           </Text>
         </View>
@@ -286,7 +294,10 @@ export default function ActivityLogsScreen() {
                   backgroundColor: getActivityBackgroundColor(
                     notification.action,
                     notification.isRead,
+                    colors.card,
+                    colors.surface,
                   ),
+                  borderBottomColor: colors.border,
                 },
                 index === notifications.length - 1 && styles.lastItem,
               ]}
@@ -295,7 +306,12 @@ export default function ActivityLogsScreen() {
               <View
                 style={[
                   styles.iconContainer,
-                  { backgroundColor: getActivityColor(notification.action) },
+                  {
+                    backgroundColor: getActivityColor(
+                      notification.action,
+                      isDark,
+                    ),
+                  },
                 ]}
               >
                 <Ionicons
@@ -309,6 +325,7 @@ export default function ActivityLogsScreen() {
                 <Text
                   style={[
                     styles.notificationText,
+                    { color: colors.text },
                     !notification.isRead && styles.notificationTextUnread,
                   ]}
                 >
@@ -316,13 +333,27 @@ export default function ActivityLogsScreen() {
                 </Text>
 
                 <View style={styles.notificationMeta}>
-                  <Text style={styles.metaText}>
+                  <Text
+                    style={[styles.metaText, { color: colors.textSecondary }]}
+                  >
                     {formatTimeAgo(notification.createdAt)}
                   </Text>
                   {notification.actorUser && (
                     <>
-                      <Text style={styles.metaDot}>•</Text>
-                      <Text style={styles.metaText}>
+                      <Text
+                        style={[
+                          styles.metaDot,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        •
+                      </Text>
+                      <Text
+                        style={[
+                          styles.metaText,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {notification.actorUser.fullName}
                       </Text>
                     </>
@@ -330,8 +361,21 @@ export default function ActivityLogsScreen() {
                 </View>
 
                 {notification.entityType && (
-                  <View style={styles.entityBadge}>
-                    <Text style={styles.entityBadgeText}>
+                  <View
+                    style={[
+                      styles.entityBadge,
+                      {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.entityBadgeText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
                       {notification.entityType}
                     </Text>
                   </View>
@@ -339,9 +383,16 @@ export default function ActivityLogsScreen() {
               </View>
 
               <View style={styles.notificationRight}>
-                {!notification.isRead && <View style={styles.unreadDot} />}
+                {!notification.isRead && (
+                  <View
+                    style={[
+                      styles.unreadDot,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  />
+                )}
                 {notification.isRead && (
-                  <Ionicons name="checkmark" size={18} color="#10B981" />
+                  <Ionicons name="checkmark" size={18} color={colors.success} />
                 )}
               </View>
             </TouchableOpacity>
@@ -352,153 +403,138 @@ export default function ActivityLogsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  badge: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  markAllButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    textAlign: "center",
-  },
-  content: {
-    flex: 1,
-  },
-  notificationItem: {
-    flexDirection: "row",
-    padding: 16,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  lastItem: {
-    borderBottomWidth: 0,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  notificationContent: {
-    flex: 1,
-    gap: 6,
-  },
-  notificationText: {
-    fontSize: 14,
-    color: Colors.text,
-    lineHeight: 20,
-  },
-  notificationTextUnread: {
-    fontWeight: "600",
-  },
-  notificationMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  metaText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  metaDot: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  entityBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: "#fff",
-  },
-  entityBadgeText: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
-  notificationRight: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.primary,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 60,
+      paddingBottom: 20,
+      borderBottomWidth: 1,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    badge: {
+      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      minWidth: 24,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    badgeText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    markAllButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 12,
+    },
+    loadingText: {
+      fontSize: 14,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 40,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      textAlign: "center",
+    },
+    content: {
+      flex: 1,
+    },
+    notificationItem: {
+      flexDirection: "row",
+      padding: 16,
+      gap: 12,
+      borderBottomWidth: 1,
+    },
+    lastItem: {
+      borderBottomWidth: 0,
+    },
+    iconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    notificationContent: {
+      flex: 1,
+      gap: 6,
+    },
+    notificationText: {
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    notificationTextUnread: {
+      fontWeight: "600",
+    },
+    notificationMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    metaText: {
+      fontSize: 12,
+    },
+    metaDot: {
+      fontSize: 12,
+    },
+    entityBadge: {
+      alignSelf: "flex-start",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      borderWidth: 1,
+    },
+    entityBadgeText: {
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    notificationRight: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+  });

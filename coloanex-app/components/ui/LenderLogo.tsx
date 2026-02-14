@@ -1,5 +1,6 @@
 import { View, Image, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/hooks/useTheme";
 
 interface LenderLogoProps {
   source?: any;
@@ -16,6 +17,7 @@ export default function LenderLogo({
   size = 56,
   verified,
 }: LenderLogoProps) {
+  const { colors } = useTheme();
   const imageSource = source || (logo ? { uri: logo } : null);
 
   return (
@@ -35,14 +37,19 @@ export default function LenderLogo({
               { width: size, height: size, borderRadius: size / 2 },
             ]}
           >
-            <Text style={styles.placeholderText}>
+            <Text
+              style={[
+                styles.placeholderText,
+                { color: colors.buttonText || "#FFFFFF" },
+              ]}
+            >
               {name.charAt(0).toUpperCase()}
             </Text>
           </View>
         )}
       </View>
       {verified && (
-        <View style={styles.verifiedBadge}>
+        <View style={[styles.verifiedBadge, { backgroundColor: colors.card }]}>
           <Ionicons name="checkmark-circle" size={18} color="#10B981" />
         </View>
       )}
@@ -67,7 +74,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   placeholderText: {
-    color: "#FFFFFF",
     fontSize: 24,
     fontWeight: "600",
   },
@@ -75,7 +81,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -2,
     right: -2,
-    backgroundColor: "#FFFFFF",
     borderRadius: 10,
   },
 });

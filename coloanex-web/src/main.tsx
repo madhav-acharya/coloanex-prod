@@ -15,5 +15,5 @@ createRoot(document.getElementById("root")!).render(
         <Toaster position="top-right" expand={false} richColors />
       </BrowserRouter>
     </Provider>
-  </StrictMode>
+  </StrictMode>,
 );

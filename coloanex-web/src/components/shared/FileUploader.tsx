@@ -110,14 +110,14 @@ export function FileUploader({
             fileName: validFiles[index].name,
             mimeType: validFiles[index].type,
             sizeInBytes: uploaded.bytes,
-          })
+          }),
         );
 
         onChange([...value, ...newFiles]);
         toast.success(
           `${newFiles.length} file${
             newFiles.length > 1 ? "s" : ""
-          } uploaded successfully`
+          } uploaded successfully`,
         );
       } else {
         const formData = new FormData();
@@ -190,12 +190,12 @@ export function FileUploader({
               className="w-full h-full object-cover"
             />
           ) : isPdf(file.mimeType) ? (
-            <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center">
+            <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
               <FileText className="w-16 h-16 text-red-500 mb-2" />
-              <span className="text-sm text-gray-600 px-2 text-center truncate w-full">
+              <span className="text-sm text-foreground px-2 text-center truncate w-full">
                 {file.fileName}
               </span>
-              <span className="text-xs text-gray-400 mt-1">
+              <span className="text-xs text-muted-foreground mt-1">
                 {formatFileSize(file.sizeInBytes)}
               </span>
             </div>
@@ -238,9 +238,9 @@ export function FileUploader({
                   className="w-full h-full object-cover"
                 />
               ) : isPdf(file.mimeType) ? (
-                <div className="w-full h-full bg-gray-100 flex flex-col items-center justify-center p-2">
+                <div className="w-full h-full bg-muted flex flex-col items-center justify-center p-2">
                   <FileText className="w-8 h-8 text-red-500 mb-1" />
-                  <span className="text-xs text-gray-600 text-center truncate w-full">
+                  <span className="text-xs text-foreground text-center truncate w-full">
                     {file.fileName}
                   </span>
                 </div>
@@ -273,23 +273,23 @@ export function FileUploader({
           className={cn(
             "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
             isDragging
-              ? "border-green-500 bg-green-50"
-              : "border-gray-300 hover:border-green-400",
-            (disabled || isUploading) && "opacity-50 cursor-not-allowed"
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-primary/50",
+            (disabled || isUploading) && "opacity-50 cursor-not-allowed",
           )}
         >
           {isUploading ? (
             <>
-              <Loader2 className="w-8 h-8 mx-auto mb-2 text-green-500 animate-spin" />
-              <p className="text-sm text-gray-600">Uploading...</p>
+              <Loader2 className="w-8 h-8 mx-auto mb-2 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">Uploading...</p>
             </>
           ) : (
             <>
-              <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p className="text-sm text-gray-600 mb-1">
+              <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm text-foreground mb-1">
                 Click to upload or drag and drop
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 {accept === "image" && "Images only"}
                 {accept === "pdf" && "PDF only"}
                 {accept === "image,pdf" && "Images or PDF"}

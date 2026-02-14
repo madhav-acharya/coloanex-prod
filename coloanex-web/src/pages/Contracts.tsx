@@ -479,7 +479,7 @@ export default function Contracts() {
           actions={actions}
           isLoading={isLoading}
           emptyMessage="No contracts found"
-          emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+          emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
           onSort={handleSort}
           sortBy={sortBy}
           sortOrder={sortOrder}
@@ -589,10 +589,15 @@ export default function Contracts() {
                 variant="outline"
                 onClick={() => setSignDialogOpen(false)}
                 disabled={isSigning}
+                className="cursor-pointer"
               >
                 Cancel
               </Button>
-              <Button onClick={confirmSign} disabled={isSigning}>
+              <Button
+                onClick={confirmSign}
+                disabled={isSigning}
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+              >
                 {isSigning ? "Signing..." : "Sign Contract"}
               </Button>
             </DialogFooter>
@@ -673,10 +678,15 @@ export default function Contracts() {
                 variant="outline"
                 onClick={() => setDisburseDialogOpen(false)}
                 disabled={isDisbursing}
+                className="cursor-pointer"
               >
                 Cancel
               </Button>
-              <Button onClick={confirmDisburse} disabled={isDisbursing}>
+              <Button
+                onClick={confirmDisburse}
+                disabled={isDisbursing}
+                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+              >
                 {isDisbursing ? "Disbursing..." : "Disburse"}
               </Button>
             </DialogFooter>

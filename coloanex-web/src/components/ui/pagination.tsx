@@ -96,10 +96,10 @@ export function Pagination({
           onClick={() => onPageChange(1)}
           disabled={!hasPreviousPage}
           className={cn(
-            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
             hasPreviousPage
-              ? "cursor-pointer text-green-700"
-              : "cursor-not-allowed opacity-40"
+              ? "cursor-pointer text-green-700 dark:text-green-400"
+              : "cursor-not-allowed opacity-40",
           )}
         >
           <ChevronsLeft className="h-4 w-4" />
@@ -110,10 +110,10 @@ export function Pagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
           className={cn(
-            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
             hasPreviousPage
-              ? "cursor-pointer text-green-700"
-              : "cursor-not-allowed opacity-40"
+              ? "cursor-pointer text-green-700 dark:text-green-400"
+              : "cursor-not-allowed opacity-40",
           )}
         >
           <ChevronLeft className="h-4 w-4" />
@@ -136,8 +136,8 @@ export function Pagination({
                 page === currentPage
                   ? "bg-green-600 hover:bg-green-700 text-white hover:shadow-lg scale-105 cursor-pointer border-green-600"
                   : page === "..."
-                  ? "cursor-not-allowed border-transparent hover:border-transparent"
-                  : "cursor-pointer border-green-200 hover:bg-green-50 hover:border-green-400 hover:text-green-700 text-neutral-dark"
+                    ? "cursor-not-allowed border-transparent hover:border-transparent"
+                    : "cursor-pointer border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 hover:text-green-700 dark:hover:text-green-400 text-neutral-dark dark:text-foreground",
               )}
             >
               {page}
@@ -151,10 +151,10 @@ export function Pagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
           className={cn(
-            "border-green-200 hover:bg-green-50 hover:border-green-400 transition-all duration-200",
+            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
             hasNextPage
-              ? "cursor-pointer text-green-700"
-              : "cursor-not-allowed opacity-40"
+              ? "cursor-pointer text-green-700 dark:text-green-400"
+              : "cursor-not-allowed opacity-40",
           )}
         >
           <ChevronRight className="h-4 w-4" />
@@ -165,10 +165,10 @@ export function Pagination({
           onClick={() => onPageChange(totalPages)}
           disabled={!hasNextPage}
           className={cn(
-            "border-gray-300 hover:bg-gray-100 transition-all duration-200",
+            "border hover:bg-muted/50 transition-all duration-200",
             hasNextPage
-              ? "cursor-pointer text-gray-700 hover:border-gray-400"
-              : "cursor-not-allowed opacity-40"
+              ? "cursor-pointer text-foreground hover:border-border"
+              : "cursor-not-allowed opacity-40",
           )}
         >
           <ChevronsRight className="h-4 w-4" />
@@ -176,16 +176,16 @@ export function Pagination({
 
         {onPageSizeChange && (
           <>
-            <div className="h-6 w-px bg-gray-300" />
+            <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              <span className="text-sm font-medium text-foreground whitespace-nowrap">
                 Per page
               </span>
               <Select
                 value={limit.toString()}
                 onValueChange={(value) => onPageSizeChange(Number(value))}
               >
-                <SelectTrigger className="w-[70px] h-9 cursor-pointer border-gray-300 hover:border-gray-400 focus:ring-green-500">
+                <SelectTrigger className="w-[70px] h-9 cursor-pointer border hover:border-primary/50 focus:ring-primary">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -193,7 +193,7 @@ export function Pagination({
                     <SelectItem
                       key={size}
                       value={size.toString()}
-                      className="hover:bg-green-50 focus:bg-green-50"
+                      className="hover:bg-green-50 dark:hover:bg-green-950 focus:bg-green-50 dark:focus:bg-green-950"
                     >
                       {size}
                     </SelectItem>

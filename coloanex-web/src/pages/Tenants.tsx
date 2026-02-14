@@ -365,7 +365,7 @@ export default function Tenants() {
         columns={columns}
         isLoading={isLoading}
         emptyMessage="No tenants found"
-        emptyIcon={<Building2 className="w-12 h-12 text-gray-400" />}
+        emptyIcon={<Building2 className="w-12 h-12 text-muted-foreground" />}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onSort={handleSort}
@@ -436,7 +436,7 @@ export default function Tenants() {
           {isReadOnly ? (
             <>
               <FormLabel required>Owner</FormLabel>
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div className="p-3 bg-muted rounded-md border">
                 <span className="text-sm">
                   {selectedTenant?.ownerUser?.fullName || "-"}
                 </span>

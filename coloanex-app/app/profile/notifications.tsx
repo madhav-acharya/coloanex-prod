@@ -11,10 +11,12 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usersApi } from "@/api";
-import { Colors } from "@/constants/theme";
-import { useToast } from "@/components/ui";
+import { useTheme } from "@/hooks/useTheme";
+import { AppHeader, useToast } from "@/components/ui";
 
 export default function NotificationSettingsScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
@@ -32,7 +34,7 @@ export default function NotificationSettingsScreen() {
     } catch (error: any) {
       showToast(
         error.response?.data?.message || "Failed to update settings",
-        "error"
+        "error",
       );
     } finally {
       setLoading(false);
@@ -40,33 +42,40 @@ export default function NotificationSettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={Colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Notifications" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notification Preferences</Text>
-          <Text style={styles.sectionSubtitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Notification Preferences
+          </Text>
+          <Text
+            style={[styles.sectionSubtitle, { color: colors.textSecondary }]}
+          >
             Choose how you want to receive notifications
           </Text>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="mail" size={20} color={Colors.primary} />
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: `${colors.primary}15` },
+                ]}
+              >
+                <Ionicons name="mail" size={20} color={colors.primary} />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Email Notifications</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>
+                  Email Notifications
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Receive updates via email
                 </Text>
               </View>
@@ -76,23 +85,35 @@ export default function NotificationSettingsScreen() {
               onValueChange={(value) =>
                 setSettings({ ...settings, emailNotifications: value })
               }
-              trackColor={{ false: "#D1D5DB", true: Colors.primary }}
+              trackColor={{ false: "#D1D5DB", true: colors.primary }}
               thumbColor="#fff"
             />
           </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.iconContainer}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: `${colors.primary}15` },
+                ]}
+              >
                 <Ionicons
                   name="notifications"
                   size={20}
-                  color={Colors.primary}
+                  color={colors.primary}
                 />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>Push Notifications</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>
+                  Push Notifications
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Receive push notifications on your device
                 </Text>
               </View>
@@ -102,19 +123,31 @@ export default function NotificationSettingsScreen() {
               onValueChange={(value) =>
                 setSettings({ ...settings, pushNotifications: value })
               }
-              trackColor={{ false: "#D1D5DB", true: Colors.primary }}
+              trackColor={{ false: "#D1D5DB", true: colors.primary }}
               thumbColor="#fff"
             />
           </View>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <View style={styles.iconContainer}>
-                <Ionicons name="chatbubble" size={20} color={Colors.primary} />
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: `${colors.primary}15` },
+                ]}
+              >
+                <Ionicons name="chatbubble" size={20} color={colors.primary} />
               </View>
               <View style={styles.settingText}>
-                <Text style={styles.settingTitle}>SMS Notifications</Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[styles.settingTitle, { color: colors.text }]}>
+                  SMS Notifications
+                </Text>
+                <Text
+                  style={[
+                    styles.settingDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Receive SMS for important updates
                 </Text>
               </View>
@@ -124,16 +157,25 @@ export default function NotificationSettingsScreen() {
               onValueChange={(value) =>
                 setSettings({ ...settings, smsNotifications: value })
               }
-              trackColor={{ false: "#D1D5DB", true: Colors.primary }}
+              trackColor={{ false: "#D1D5DB", true: colors.primary }}
               thumbColor="#fff"
             />
           </View>
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View
+        style={[
+          styles.footer,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+          style={[
+            styles.button,
+            { backgroundColor: colors.primary },
+            loading && styles.buttonDisabled,
+          ]}
           onPress={handleSave}
           disabled={loading}
         >
@@ -148,105 +190,75 @@ export default function NotificationSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-  },
-  settingItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  settingInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 16,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: `${Colors.primary}15`,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  settingText: {
-    flex: 1,
-  },
-  settingTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: 2,
-  },
-  settingDescription: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  button: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+    },
+    section: {
+      padding: 20,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    sectionSubtitle: {
+      fontSize: 14,
+      marginBottom: 20,
+    },
+    settingItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.background,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    settingInfo: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      marginRight: 16,
+    },
+    iconContainer: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    settingText: {
+      flex: 1,
+    },
+    settingTitle: {
+      fontSize: 15,
+      fontWeight: "600",
+      marginBottom: 2,
+    },
+    settingDescription: {
+      fontSize: 13,
+    },
+    footer: {
+      padding: 20,
+      borderTopWidth: 1,
+    },
+    button: {
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: "center",
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+    buttonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#fff",
+    },
+  });

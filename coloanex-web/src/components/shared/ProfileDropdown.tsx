@@ -40,7 +40,7 @@ export function ProfileDropdown() {
               {user.email}
             </p>
           </div>
-          <ChevronDown className="w-4 h-4 text-gray-600" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 z-1000">

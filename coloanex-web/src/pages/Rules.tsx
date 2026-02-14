@@ -452,7 +452,7 @@ export default function Rules() {
           actions={actions}
           isLoading={isLoading}
           emptyMessage="No loan rules found"
-          emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+          emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
           onSort={handleSort}
           sortBy={sortBy}
           sortOrder={sortOrder}

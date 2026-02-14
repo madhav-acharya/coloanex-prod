@@ -10,12 +10,15 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { Card, Button, useToast } from "@/components/ui";
-import { colors, spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi } from "@/api";
 import type { Lender } from "@/types";
 import { KycStatus } from "@/types";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function LenderDetailsScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { showToast } = useToast();
   const [lender, setLender] = useState<Lender | null>(null);
@@ -47,7 +50,6 @@ export default function LenderDetailsScreen() {
   const checkKycStatus = async () => {
     try {
       const data = await kycApi.getStatus(id);
-      console.log("KYC Status Response:", data);
       setKycStatus(data.status as KycStatus);
       setKycId(data.kycId || null);
     } catch (error) {
@@ -282,260 +284,260 @@ export default function LenderDetailsScreen() {
   }
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    padding: spacing.xs,
-  },
-  headerTitle: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  headerCard: {
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  lenderHeader: {
-    marginBottom: spacing.md,
-  },
-  lenderIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-    overflow: "hidden",
-  },
-  lenderLogoImage: {
-    width: "100%",
-    height: "100%",
-  },
-  statusBadge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-  },
-  statusBadgeActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  statusText: {
-    ...typography.caption,
-    fontWeight: "600",
-    color: colors.textSecondary,
-  },
-  statusTextActive: {
-    color: colors.primary,
-  },
-  lenderName: {
-    ...typography.h2,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  rating: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-    marginLeft: 4,
-  },
-  reviewCount: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-  },
-  responseTag: {
-    ...typography.bodySmall,
-    color: colors.primary,
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  statsCard: {
-    marginBottom: spacing.md,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  stat: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    ...typography.h3,
-    color: colors.primary,
-    marginBottom: spacing.xs,
-  },
-  statLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  termRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  termInfo: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  termValue: {
-    ...typography.body,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  termLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
-  requirementRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  requirementText: {
-    ...typography.body,
-    color: colors.text,
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  contactRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: spacing.md,
-  },
-  contactInfoDetail: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  contactInfo: {
-    marginLeft: spacing.md,
-    flex: 1,
-  },
-  contactLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  contactValue: {
-    ...typography.body,
-    fontWeight: "500",
-    color: colors.text,
-  },
-  aboutText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    lineHeight: 24,
-  },
-  reviewsHeader: {
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  reviewsTitle: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  reviewCard: {
-    marginBottom: spacing.md,
-  },
-  reviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  reviewAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: spacing.sm,
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: borderRadius.full,
-  },
-  reviewInfo: {
-    flex: 1,
-  },
-  reviewerName: {
-    ...typography.bodySmall,
-    fontWeight: "600",
-    color: colors.text,
-    marginBottom: 4,
-  },
-  reviewDate: {
-    ...typography.caption,
-    color: colors.textLight,
-  },
-  reviewComment: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    lineHeight: 22,
-  },
-  helpfulButton: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  helpfulText: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginLeft: spacing.xs,
-  },
-  applyButton: {
-    marginBottom: spacing.lg,
-  },
-  messageCard: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.primaryLight,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  messageContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  messageText: {
-    flex: 1,
-    fontSize: 14,
-    color: colors.primary,
-    lineHeight: 20,
-    marginLeft: spacing.sm,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.card,
+    },
+    backButton: {
+      padding: spacing.xs,
+    },
+    headerTitle: {
+      ...typography.h3,
+      color: colors.text,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+    },
+    headerCard: {
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    lenderHeader: {
+      marginBottom: spacing.md,
+    },
+    lenderIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: borderRadius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+      overflow: "hidden",
+      backgroundColor: colors.primary,
+    },
+    lenderLogoImage: {
+      width: "100%",
+      height: "100%",
+    },
+    statusBadge: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.border,
+    },
+    statusBadgeActive: {
+      backgroundColor: colors.primaryLight,
+    },
+    statusText: {
+      ...typography.caption,
+      fontWeight: "600",
+      color: colors.textSecondary,
+    },
+    statusTextActive: {
+      color: colors.primary,
+    },
+    lenderName: {
+      ...typography.h2,
+      marginBottom: spacing.xs,
+      color: colors.text,
+    },
+    ratingContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    rating: {
+      ...typography.body,
+      fontWeight: "600",
+      marginLeft: 4,
+      color: colors.text,
+    },
+    reviewCount: {
+      ...typography.body,
+      marginLeft: spacing.xs,
+      color: colors.textSecondary,
+    },
+    responseTag: {
+      ...typography.bodySmall,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.full,
+      color: colors.textSecondary,
+    },
+    statsCard: {
+      marginBottom: spacing.md,
+    },
+    statsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+    stat: {
+      alignItems: "center",
+      flex: 1,
+    },
+    statValue: {
+      ...typography.h3,
+      marginBottom: spacing.xs,
+      color: colors.text,
+    },
+    statLabel: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    sectionTitle: {
+      ...typography.h3,
+      marginBottom: spacing.md,
+      color: colors.text,
+    },
+    termRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    termInfo: {
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+    termValue: {
+      ...typography.body,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    termLabel: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    requirementRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    requirementText: {
+      ...typography.body,
+      marginLeft: spacing.md,
+      flex: 1,
+      color: colors.text,
+    },
+    contactRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      marginBottom: spacing.md,
+    },
+    contactInfoDetail: {
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+    contactInfo: {
+      marginLeft: spacing.md,
+      flex: 1,
+    },
+    contactLabel: {
+      ...typography.caption,
+      marginBottom: 4,
+      color: colors.textSecondary,
+    },
+    contactValue: {
+      ...typography.body,
+      fontWeight: "500",
+      color: colors.text,
+    },
+    aboutText: {
+      ...typography.body,
+      lineHeight: 24,
+      color: colors.text,
+    },
+    reviewsHeader: {
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    reviewsTitle: {
+      ...typography.h3,
+      color: colors.text,
+    },
+    reviewCard: {
+      marginBottom: spacing.md,
+    },
+    reviewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    reviewAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: borderRadius.full,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: spacing.sm,
+      backgroundColor: colors.primaryLight,
+    },
+    avatarImage: {
+      width: "100%",
+      height: "100%",
+      borderRadius: borderRadius.full,
+    },
+    reviewInfo: {
+      flex: 1,
+    },
+    reviewerName: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+      marginBottom: 4,
+      color: colors.text,
+    },
+    reviewDate: {
+      ...typography.caption,
+      color: colors.textSecondary,
+    },
+    reviewComment: {
+      ...typography.body,
+      marginBottom: spacing.sm,
+      lineHeight: 22,
+      color: colors.text,
+    },
+    helpfulButton: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    helpfulText: {
+      ...typography.caption,
+      marginLeft: spacing.xs,
+      color: colors.textSecondary,
+    },
+    applyButton: {
+      marginBottom: spacing.lg,
+    },
+    messageCard: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.lg,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderLeftWidth: 4,
+      backgroundColor: colors.primaryLight,
+      borderLeftColor: colors.primary,
+    },
+    messageContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    messageText: {
+      flex: 1,
+      fontSize: 14,
+      lineHeight: 20,
+      marginLeft: spacing.sm,
+      color: colors.text,
+    },
+  });

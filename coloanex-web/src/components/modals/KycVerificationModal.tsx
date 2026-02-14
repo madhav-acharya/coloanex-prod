@@ -113,7 +113,7 @@ export function KycVerificationModal({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-white w-full sm:max-w-[100vw] p-0"
+        className="!bg-background w-full sm:max-w-[100vw] p-0"
       >
         <SheetHeader className="px-6 pt-6 pb-4 space-y-2">
           <div className="flex items-start justify-between">
@@ -690,7 +690,7 @@ export function KycVerificationModal({
                           key={file.id || index}
                           className="border rounded-lg p-3 space-y-2"
                         >
-                          <div className="aspect-video bg-gray-100 rounded overflow-hidden">
+                          <div className="aspect-video bg-muted rounded overflow-hidden">
                             {isImage ? (
                               <img
                                 src={file.fileUrl}
@@ -743,7 +743,7 @@ export function KycVerificationModal({
                   className="w-full"
                 />
                 {document.notes && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                  <div className="mt-2 p-3 bg-muted rounded-lg">
                     <Label className="text-xs text-muted-foreground">
                       Previous Notes
                     </Label>
@@ -763,13 +763,14 @@ export function KycVerificationModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button
-              variant="hero"
               onClick={handleSubmit}
               disabled={isSubmitting}
+              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
             >
               {isSubmitting
                 ? "Saving..."

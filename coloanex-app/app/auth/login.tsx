@@ -10,12 +10,15 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { Button, Input, useToast } from "@/components/ui";
-import { colors, spacing, typography } from "@/constants/theme";
+import { spacing, typography } from "@/constants/theme";
 import { authApi } from "@/api";
 import { useAppDispatch } from "@/store/hooks";
 import { setAuth } from "@/store/slices/authSlice";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const dispatch = useAppDispatch();
   const { showToast } = useToast();
   const [email, setEmail] = useState("");
@@ -134,60 +137,61 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl * 1.5,
-    paddingBottom: spacing.lg,
-  },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: spacing.xl * 1.5,
-  },
-  logo: {
-    width: 120,
-    height: 120,
-  },
-  header: {
-    marginBottom: spacing.xl,
-    alignItems: "center",
-  },
-  title: {
-    ...typography.h1,
-    color: colors.text,
-    marginBottom: spacing.sm,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: "center",
-  },
-  form: {
-    flex: 1,
-  },
-  button: {
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: spacing.lg,
-  },
-  footerText: {
-    ...typography.body,
-    color: colors.textSecondary,
-  },
-  link: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: "700",
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xxl * 1.5,
+      paddingBottom: spacing.lg,
+    },
+    logoContainer: {
+      alignItems: "center",
+      marginBottom: spacing.xl * 1.5,
+    },
+    logo: {
+      width: 120,
+      height: 120,
+    },
+    header: {
+      marginBottom: spacing.xl,
+      alignItems: "center",
+    },
+    title: {
+      ...typography.h1,
+      color: colors.text,
+      marginBottom: spacing.sm,
+      fontWeight: "800",
+      textAlign: "center",
+    },
+    subtitle: {
+      ...typography.body,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    form: {
+      flex: 1,
+    },
+    button: {
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginTop: spacing.lg,
+    },
+    footerText: {
+      ...typography.body,
+      color: colors.textSecondary,
+    },
+    link: {
+      ...typography.body,
+      color: colors.primary,
+      fontWeight: "700",
+    },
+  });

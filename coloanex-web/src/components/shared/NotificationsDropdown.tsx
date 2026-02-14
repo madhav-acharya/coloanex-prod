@@ -43,28 +43,28 @@ const getActivityIcon = (action: string) => {
     case "LOGIN":
       return <LogIn className="h-5 w-5 text-blue-600" />;
     case "LOGOUT":
-      return <LogOut className="h-5 w-5 text-gray-600" />;
+      return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "VISIT":
       return <Eye className="h-5 w-5 text-purple-600" />;
     default:
-      return <FileText className="h-5 w-5 text-gray-600" />;
+      return <FileText className="h-5 w-5 text-muted-foreground" />;
   }
 };
 
 const getActivityColor = (action: string, isRead: boolean) => {
-  if (isRead) return "bg-gray-50";
+  if (isRead) return "bg-muted/30";
 
   switch (action) {
     case "KYC_VERIFY":
-      return "bg-green-50";
+      return "bg-primary/5 dark:bg-primary/10";
     case "KYC_REJECT":
-      return "bg-red-50";
+      return "bg-destructive/5 dark:bg-destructive/10";
     case "CREATE":
-      return "bg-blue-50";
+      return "bg-blue-500/5 dark:bg-blue-500/10";
     case "DELETE":
-      return "bg-orange-50";
+      return "bg-orange-500/5 dark:bg-orange-500/10";
     default:
-      return "bg-white";
+      return "bg-card";
   }
 };
 
@@ -94,7 +94,7 @@ export const NotificationsDropdown = () => {
     { limit: 50, offset: 0 },
     {
       skip: !isOpen,
-    }
+    },
   );
 
   const [markAsRead] = useMarkAsReadMutation();
@@ -167,8 +167,11 @@ export const NotificationsDropdown = () => {
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div
+          className="absolute right-0 mt-2 w-96 !bg-popover rounded-lg shadow-lg border z-50"
+          style={{ backgroundColor: "hsl(var(--popover))" }}
+        >
+          <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-lg">Notifications</h3>
               {unreadCount > 0 && (
@@ -204,25 +207,25 @@ export const NotificationsDropdown = () => {
           <ScrollArea className="h-[500px]">
             {isFetchingNotifications ? (
               <div className="p-8 text-center">
-                <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin text-gray-400" />
-                <p className="text-sm text-gray-500">
+                <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
                   Loading notifications...
                 </p>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-muted-foreground">
                 <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No notifications yet</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y">
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${getActivityColor(
+                    className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${getActivityColor(
                       notification.action,
-                      notification.isRead
+                      notification.isRead,
                     )}`}
                   >
                     <div className="flex items-start gap-3">
@@ -245,18 +248,20 @@ export const NotificationsDropdown = () => {
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(
                               new Date(notification.createdAt),
                               {
                                 addSuffix: true,
-                              }
+                              },
                             )}
                           </span>
                           {notification.actorUser && (
                             <>
-                              <span className="text-xs text-gray-400">•</span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted-foreground/50">
+                                •
+                              </span>
+                              <span className="text-xs text-muted-foreground">
                                 {notification.actorUser.fullName}
                               </span>
                             </>
@@ -285,7 +290,7 @@ export const NotificationsDropdown = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-xs text-gray-600 hover:text-gray-900"
+                  className="text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => {
                     setIsOpen(false);
                   }}

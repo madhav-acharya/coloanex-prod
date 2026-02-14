@@ -8,7 +8,7 @@ import {
   FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/constants/theme";
+import { useTheme } from "@/hooks/useTheme";
 
 interface PickerOption {
   label: string;
@@ -32,6 +32,8 @@ export default function PickerInput({
   required = false,
   placeholder = "Select an option",
 }: PickerInputProps) {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const [visible, setVisible] = React.useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -49,7 +51,7 @@ export default function PickerInput({
         <Ionicons
           name="chevron-down-outline"
           size={20}
-          color={Colors.textLight}
+          color={colors.textLight}
         />
       </TouchableOpacity>
 
@@ -63,7 +65,7 @@ export default function PickerInput({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{label}</Text>
               <TouchableOpacity onPress={() => setVisible(false)}>
-                <Ionicons name="close" size={24} color={Colors.text} />
+                <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -82,7 +84,7 @@ export default function PickerInput({
                     <Ionicons
                       name="checkmark"
                       size={20}
-                      color={Colors.primary}
+                      color={colors.primary}
                     />
                   )}
                 </TouchableOpacity>
@@ -95,70 +97,72 @@ export default function PickerInput({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  required: {
-    color: Colors.error,
-  },
-  input: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: Colors.background,
-  },
-  text: {
-    fontSize: 14,
-    color: Colors.text,
-  },
-  placeholder: {
-    color: Colors.textLight,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: Colors.text,
-  },
-  optionItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  optionText: {
-    fontSize: 16,
-    color: Colors.text,
-  },
-});
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: 20,
+    },
+    label: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 10,
+    },
+    required: {
+      color: colors.error,
+    },
+    input: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 2,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      backgroundColor: colors.card,
+    },
+    text: {
+      fontSize: 15,
+      fontWeight: "400",
+      color: colors.text,
+    },
+    placeholder: {
+      color: colors.textLight,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: "70%",
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+    },
+    optionItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    optionText: {
+      fontSize: 16,
+      color: colors.text,
+    },
+  });

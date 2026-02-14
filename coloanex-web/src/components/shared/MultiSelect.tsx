@@ -60,35 +60,34 @@ export function MultiSelect({
   const selectedOptions = options.filter((opt) => selectedIds.includes(opt.id));
 
   const filteredOptions = options.filter((option) =>
-    option.name.toLowerCase().includes(searchQuery.toLowerCase())
+    option.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
     <div className="space-y-2">
       {label && (
-        <label className="text-sm font-medium text-gray-700">{label}</label>
+        <label className="text-sm font-medium text-foreground">{label}</label>
       )}
 
       {selectedOptions.length > 0 && (
         <ScrollArea className="max-h-[220px] w-full overflow-auto">
-          <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-md border border-gray-200">
+          <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-md border">
             {selectedOptions.map((option) => (
-              <Badge
+              <span
                 key={option.id}
-                variant="secondary"
-                className="pl-3 pr-1 py-1 flex items-center gap-1 bg-green-100 text-green-700 hover:bg-green-200"
+                className="inline-flex items-center pl-3 pr-1 py-1.5 gap-1.5 bg-white dark:bg-green-900/30 text-green-700 dark:text-green-200 border-2 border-green-500 dark:border-green-700/50 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors shadow-sm rounded-full text-sm font-semibold"
               >
-                <span className="text-sm">{option.name}</span>
+                <span>{option.name}</span>
                 {!disabled && (
                   <button
                     type="button"
                     onClick={() => handleRemove(option.id)}
-                    className="ml-1 hover:bg-green-300 rounded-full p-0.5 cursor-pointer"
+                    className="ml-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full p-1 cursor-pointer transition-colors"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-4 h-4 text-red-600 dark:text-red-400" />
                   </button>
                 )}
-              </Badge>
+              </span>
             ))}
           </div>
         </ScrollArea>
@@ -105,7 +104,7 @@ export function MultiSelect({
             disabled={isLoading}
             className="w-full justify-between cursor-pointer"
           >
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               {selectedOptions.length > 0
                 ? `${selectedOptions.length} selected`
                 : placeholder}
@@ -113,18 +112,21 @@ export function MultiSelect({
             <ChevronDown
               className={cn(
                 "w-4 h-4 transition-transform",
-                isOpen && "transform rotate-180"
+                isOpen && "transform rotate-180",
               )}
             />
           </Button>
 
           {/* Dropdown Menu */}
           {isOpen && !disabled && (
-            <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-md shadow-lg">
+            <div
+              className="absolute z-50 w-full mt-2 !bg-popover border rounded-md shadow-lg"
+              style={{ backgroundColor: "hsl(var(--popover))" }}
+            >
               {/* Search Bar */}
               <div className="p-2 border-b">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="Search..."
@@ -136,11 +138,11 @@ export function MultiSelect({
               </div>
               <ScrollArea className="max-h-[250px]">
                 {isLoading ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     Loading...
                   </div>
                 ) : filteredOptions.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     {searchQuery ? "No results found" : "No options available"}
                   </div>
                 ) : (
@@ -155,16 +157,16 @@ export function MultiSelect({
                           className={cn(
                             "w-full flex items-start gap-3 p-2 rounded-md text-left transition-colors cursor-pointer",
                             isSelected
-                              ? "bg-green-50 hover:bg-green-100"
-                              : "hover:bg-gray-50"
+                              ? "bg-primary/10 hover:bg-primary/20"
+                              : "hover:bg-muted",
                           )}
                         >
                           <div
                             className={cn(
                               "w-4 h-4 mt-0.5 border rounded flex items-center justify-center shrink-0",
                               isSelected
-                                ? "bg-green-600 border-green-600"
-                                : "border-gray-300"
+                                ? "bg-primary border-primary"
+                                : "border-input",
                             )}
                           >
                             {isSelected && (
@@ -174,14 +176,14 @@ export function MultiSelect({
                           <div className="flex-1 min-w-0">
                             <div
                               className={cn(
-                                "text-sm font-medium",
-                                isSelected ? "text-green-700" : "text-gray-900"
+                                "text-sm font-medium truncate",
+                                isSelected ? "text-primary" : "text-foreground",
                               )}
                             >
                               {option.name}
                             </div>
                             {option.description && (
-                              <div className="text-xs text-gray-500 mt-0.5">
+                              <div className="text-xs text-muted-foreground mt-0.5 truncate">
                                 {option.description}
                               </div>
                             )}

@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, LenderLogo, RatingStars, Button } from "./ui";
 import { formatCurrencyShort } from "@/utils/currency";
+import { useTheme } from "@/hooks/useTheme";
 
 interface LenderCardProps {
   id: string;
@@ -27,6 +28,7 @@ export default function LenderCard({
   verified = false,
 }: LenderCardProps) {
   const router = useRouter();
+  const { colors } = useTheme();
 
   return (
     <Card style={styles.card}>
@@ -35,7 +37,7 @@ export default function LenderCard({
           <LenderLogo name={name} size={48} verified={verified} />
           <View style={styles.nameContainer}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>{name}</Text>
+              <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
               {verified && <Text style={styles.verified}>✓</Text>}
             </View>
           </View>
@@ -45,25 +47,37 @@ export default function LenderCard({
 
       <View style={styles.stats}>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{interestRate}%</Text>
-          <Text style={styles.statLabel}>Interest Rate</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {interestRate}%
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Interest Rate
+          </Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
             {formatCurrencyShort(minAmount)}-{formatCurrencyShort(maxAmount)}
           </Text>
-          <Text style={styles.statLabel}>Amount</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Amount
+          </Text>
         </View>
         <View style={styles.stat}>
-          <Text style={styles.statValue}>{successRate}%</Text>
-          <Text style={styles.statLabel}>Success Rate</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>
+            {successRate}%
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+            Success Rate
+          </Text>
         </View>
       </View>
 
       <View style={styles.footer}>
         <View style={styles.responseTime}>
           <Text style={styles.clockIcon}>🕐</Text>
-          <Text style={styles.responseText}>{responseTime}</Text>
+          <Text style={[styles.responseText, { color: colors.textSecondary }]}>
+            {responseTime}
+          </Text>
         </View>
         <Button
           title="View Details"
@@ -78,7 +92,6 @@ export default function LenderCard({
 const styles = StyleSheet.create({
   card: {
     marginBottom: 20,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -107,7 +120,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 19,
     fontWeight: "700",
-    color: "#111827",
   },
   verified: {
     fontSize: 18,
@@ -120,9 +132,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#E5E7EB",
     marginBottom: 16,
-    backgroundColor: "#F9FAFB",
     marginHorizontal: -20,
     paddingHorizontal: 20,
   },
@@ -132,12 +142,10 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 17,
     fontWeight: "700",
-    color: "#16A34A",
     marginBottom: 6,
   },
   statLabel: {
     fontSize: 12,
-    color: "#6B7280",
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -157,7 +165,6 @@ const styles = StyleSheet.create({
   },
   responseText: {
     fontSize: 14,
-    color: "#6B7280",
     fontWeight: "500",
   },
 });

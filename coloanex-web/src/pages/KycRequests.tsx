@@ -984,7 +984,7 @@ export default function KycRequests() {
         customContent: (
           <div className="space-y-2">
             <FormLabel required>Document Types</FormLabel>
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               Select one or more document types you want to submit
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -1397,11 +1397,21 @@ export default function KycRequests() {
   const getStatusBadge = (status: KycStatus) => {
     switch (status) {
       case KycStatus.VERIFIED:
-        return <Badge className="bg-green-500">Verified</Badge>;
+        return (
+          <Badge className="bg-primary text-primary-foreground">Verified</Badge>
+        );
       case KycStatus.REJECTED:
-        return <Badge className="bg-red-500">Rejected</Badge>;
+        return (
+          <Badge className="bg-destructive text-destructive-foreground">
+            Rejected
+          </Badge>
+        );
       default:
-        return <Badge className="bg-yellow-500">Pending</Badge>;
+        return (
+          <Badge className="bg-yellow-500 dark:bg-yellow-600 text-white">
+            Pending
+          </Badge>
+        );
     }
   };
 
@@ -1415,7 +1425,7 @@ export default function KycRequests() {
           <div className="font-medium">
             {doc.borrower?.user?.fullName || doc.fullName}
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {doc.borrower?.user?.email || "N/A"}
           </div>
         </div>
@@ -1481,7 +1491,7 @@ export default function KycRequests() {
         columns={columns}
         isLoading={isLoading}
         emptyMessage="No KYC documents found"
-        emptyIcon={<FileText className="w-12 h-12 text-gray-400" />}
+        emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
         onSort={handleSort}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
