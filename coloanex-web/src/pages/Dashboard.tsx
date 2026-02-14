@@ -123,7 +123,7 @@ const Dashboard = () => {
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-600">{title}</p>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
             <h3 className="text-2xl font-bold mt-1">
               {value?.toLocaleString() || 0}
             </h3>
@@ -158,7 +158,7 @@ const Dashboard = () => {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4 flex-wrap">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Date Range:
               </label>
               <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ const Dashboard = () => {
                     />
                   </PopoverContent>
                 </Popover>
-                <span className="text-gray-500">to</span>
+                <span className="text-muted-foreground">to</span>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
