@@ -53,8 +53,8 @@ export function ConfirmationDialog({
             disabled={isLoading}
             className={
               variant === "destructive"
-                ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none"
-                : ""
+                ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                : "bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             }
           >
             {isLoading ? "Loading..." : confirmText}
