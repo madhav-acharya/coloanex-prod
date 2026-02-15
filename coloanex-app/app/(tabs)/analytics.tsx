@@ -136,8 +136,13 @@ export default function AnalyticsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={styles.headerTitle}>Analytics</Text>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+          >
+            Your financial overview
+          </Text>
         </View>
         <View style={styles.loadingContainer}>
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
@@ -150,9 +155,11 @@ export default function AnalyticsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Analytics</Text>
-        <Text style={styles.headerSubtitle}>Your financial overview</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+          Your financial overview
+        </Text>
       </View>
 
       <ScrollView
@@ -478,17 +485,24 @@ const createStyles = (colors: any) =>
     },
     header: {
       paddingHorizontal: spacing.lg,
-      paddingTop: 60,
-      paddingBottom: spacing.lg,
+      paddingVertical: spacing.lg,
+      backgroundColor: colors.card,
+      borderBottomLeftRadius: 24,
+      borderBottomRightRadius: 24,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      elevation: 4,
     },
     headerTitle: {
       ...typography.h2,
-      color: "#fff",
+      color: colors.text,
+      fontWeight: "800",
       marginBottom: 4,
     },
     headerSubtitle: {
       ...typography.body,
-      color: "rgba(255, 255, 255, 0.9)",
+      color: colors.textSecondary,
     },
     content: {
       flex: 1,
@@ -501,6 +515,7 @@ const createStyles = (colors: any) =>
     },
     loadingText: {
       ...typography.body,
+      color: colors.textSecondary,
     },
     statsGrid: {
       flexDirection: "row",
@@ -532,14 +547,17 @@ const createStyles = (colors: any) =>
     },
     statTitle: {
       ...typography.caption,
+      color: colors.textSecondary,
       marginBottom: 4,
     },
     statValue: {
       ...typography.h3,
+      color: colors.text,
       fontWeight: "700",
     },
     statSubtitle: {
       ...typography.caption,
+      color: colors.textSecondary,
       marginTop: 2,
     },
     progressCard: {
@@ -548,6 +566,7 @@ const createStyles = (colors: any) =>
     },
     cardTitle: {
       ...typography.h3,
+      color: colors.text,
       marginBottom: spacing.md,
     },
     progressContainer: {
@@ -563,6 +582,7 @@ const createStyles = (colors: any) =>
     },
     progressText: {
       ...typography.bodySmall,
+      color: colors.textSecondary,
       marginTop: spacing.sm,
       textAlign: "center",
     },
@@ -572,6 +592,7 @@ const createStyles = (colors: any) =>
     },
     filterLabel: {
       ...typography.bodySmall,
+      color: colors.text,
       fontWeight: "600",
       marginBottom: spacing.sm,
     },
@@ -595,9 +616,11 @@ const createStyles = (colors: any) =>
     },
     dateButtonText: {
       ...typography.body,
+      color: colors.text,
     },
     dateSeparator: {
       ...typography.bodySmall,
+      color: colors.textSecondary,
     },
     modalOverlay: {
       flex: 1,
