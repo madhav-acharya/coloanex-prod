@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import { Card, Button, useToast } from "@/components/ui";
+import { Card, Button, useToast, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi } from "@/api";
 import type { Lender } from "@/types";
@@ -78,16 +78,7 @@ export default function LenderDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lender Details</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader title="Lender Details" />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.headerCard}>
           <View style={styles.lenderIcon}>
@@ -525,9 +516,7 @@ const createStyles = (colors: any) =>
       marginBottom: spacing.lg,
       borderRadius: borderRadius.md,
       padding: spacing.md,
-      borderLeftWidth: 4,
       backgroundColor: colors.primaryLight,
-      borderLeftColor: colors.primary,
     },
     messageContainer: {
       flexDirection: "row",
