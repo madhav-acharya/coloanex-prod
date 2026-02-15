@@ -119,8 +119,9 @@ export class TenantsService {
 
   async findAll(query: TenantsQueryInterface) {
     const {
-      page = 1,
+      page,
       limit = 10,
+      offset,
       search = '',
       sortBy = 'name',
       sortOrder = 'asc',
@@ -128,9 +129,12 @@ export class TenantsService {
       isBanned,
     } = query;
 
-    const pageNum = Number(page);
     const limitNum = Number(limit);
-    const skip = (pageNum - 1) * limitNum;
+    // Support both page-based and offset-based pagination
+    const skip =
+      offset !== undefined
+        ? Number(offset)
+        : (Number(page || 1) - 1) * limitNum;
     const where: Prisma.TenantWhereInput = {};
 
     if (search) {
@@ -182,15 +186,17 @@ export class TenantsService {
     ]);
 
     const totalPages = Math.ceil(total / limitNum);
+    const currentPage = page ? Number(page) : Math.floor(skip / limitNum) + 1;
 
     return {
       data: tenants,
       total,
       totalPages,
-      currentPage: pageNum,
+      currentPage,
       limit: limitNum,
-      hasNextPage: pageNum < totalPages,
-      hasPreviousPage: pageNum > 1,
+      hasNextPage: skip + limitNum < total,
+      hasPreviousPage: skip > 0,
+      hasMore: skip + limitNum < total,
     };
   }
 
