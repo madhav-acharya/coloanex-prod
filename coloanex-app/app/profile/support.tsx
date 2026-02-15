@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card } from "@/components/ui";
+import { Card, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -45,16 +45,7 @@ export default function SupportScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Help & Support</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader title="Help & Support" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card style={styles.infoCard}>
@@ -100,23 +91,6 @@ const createStyles = (colors: any) =>
       flex: 1,
       backgroundColor: colors.surface,
     },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      backgroundColor: colors.background,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backButton: {
-      padding: spacing.xs,
-    },
-    headerTitle: {
-      ...typography.h3,
-      color: colors.text,
-    },
     content: {
       flex: 1,
       padding: spacing.md,
@@ -127,6 +101,7 @@ const createStyles = (colors: any) =>
     },
     infoTitle: {
       ...typography.h3,
+      color: colors.text,
       marginBottom: spacing.sm,
     },
     infoText: {
@@ -155,6 +130,7 @@ const createStyles = (colors: any) =>
     },
     optionTitle: {
       ...typography.body,
+      color: colors.text,
       fontWeight: "600",
       marginBottom: spacing.xs / 2,
     },
