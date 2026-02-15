@@ -2,9 +2,18 @@ import apiClient from "./client";
 import type { Lender, Review } from "@/types";
 
 export const lendersApi = {
-  getAll: async (): Promise<Lender[]> => {
-    const { data } = await apiClient.get("/tenants");
-    return data.data || [];
+  getAll: async (params?: {
+    limit?: number;
+    offset?: number;
+    search?: string;
+    isActive?: boolean;
+  }): Promise<{ data: Lender[]; total: number; hasMore: boolean }> => {
+    const { data } = await apiClient.get("/tenants", { params });
+    return {
+      data: data.data || [],
+      total: data.total || 0,
+      hasMore: data.hasMore || false,
+    };
   },
 
   getById: async (id: string): Promise<any> => {
