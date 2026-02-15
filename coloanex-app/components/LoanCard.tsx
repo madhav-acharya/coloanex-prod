@@ -53,7 +53,9 @@ export default function LoanCard({
               <Text style={[styles.lenderName, { color: colors.text }]}>
                 {lenderName}
               </Text>
-              <Text style={styles.verified}>✓</Text>
+              <Text style={[styles.verified, { color: colors.primary }]}>
+                ✓
+              </Text>
             </View>
             <Text style={[styles.loanType, { color: colors.textSecondary }]}>
               {loanType}
@@ -153,11 +155,9 @@ const styles = StyleSheet.create({
   lenderName: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#111827",
   },
   verified: {
     fontSize: 16,
-    color: "#16A34A",
     fontWeight: "700",
   },
   loanType: {

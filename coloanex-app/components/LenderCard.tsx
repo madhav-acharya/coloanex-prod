@@ -38,7 +38,11 @@ export default function LenderCard({
           <View style={styles.nameContainer}>
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
-              {verified && <Text style={styles.verified}>✓</Text>}
+              {verified && (
+                <Text style={[styles.verified, { color: colors.primary }]}>
+                  ✓
+                </Text>
+              )}
             </View>
           </View>
         </View>
@@ -123,7 +127,6 @@ const styles = StyleSheet.create({
   },
   verified: {
     fontSize: 18,
-    color: "#16A34A",
     fontWeight: "700",
   },
   stats: {

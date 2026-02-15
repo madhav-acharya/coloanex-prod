@@ -118,6 +118,7 @@ const createStyles = (colors: any) =>
     },
     title: {
       ...typography.h3,
+      color: colors.text,
       fontWeight: "700",
       marginLeft: spacing.sm,
     },

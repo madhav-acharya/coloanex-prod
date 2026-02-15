@@ -82,6 +82,12 @@ const formatDescription = (notification: NotificationItem) => {
 
 export const NotificationsDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [allNotifications, setAllNotifications] = useState<NotificationItem[]>(
+    [],
+  );
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 20;
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: unreadCountData } = useGetUnreadCountQuery();
@@ -91,7 +97,7 @@ export const NotificationsDropdown = () => {
     isFetching: isFetchingNotifications,
     refetch: refetchNotifications,
   } = useGetNotificationsQuery(
-    { limit: 50, offset: 0 },
+    { limit: LIMIT, offset },
     {
       skip: !isOpen,
     },
@@ -104,10 +110,21 @@ export const NotificationsDropdown = () => {
   const unreadCount = unreadCountData?.count || 0;
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && offset === 0) {
       refetchNotifications();
     }
-  }, [isOpen, refetchNotifications]);
+  }, [isOpen, offset, refetchNotifications]);
+
+  useEffect(() => {
+    if (notifications.length > 0) {
+      if (offset === 0) {
+        setAllNotifications(notifications);
+      } else {
+        setAllNotifications((prev) => [...prev, ...notifications]);
+      }
+      setHasMore(notifications.length === LIMIT);
+    }
+  }, [notifications, offset]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -144,6 +161,21 @@ export const NotificationsDropdown = () => {
     }
   };
 
+  const handleLoadMore = () => {
+    if (!isFetchingNotifications && hasMore) {
+      setOffset((prev) => prev + LIMIT);
+    }
+  };
+
+  const handleOpen = () => {
+    if (!isOpen) {
+      setOffset(0);
+      setAllNotifications([]);
+      setHasMore(true);
+    }
+    setIsOpen(!isOpen);
+  };
+
   const handleNotificationClick = (notification: NotificationItem) => {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
@@ -156,7 +188,7 @@ export const NotificationsDropdown = () => {
         variant="ghost"
         size="icon"
         className="relative"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleOpen}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -205,21 +237,21 @@ export const NotificationsDropdown = () => {
           </div>
 
           <ScrollArea className="h-[500px]">
-            {isFetchingNotifications ? (
+            {isFetchingNotifications && offset === 0 ? (
               <div className="p-8 text-center">
                 <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
                   Loading notifications...
                 </p>
               </div>
-            ) : notifications.length === 0 ? (
+            ) : allNotifications.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No notifications yet</p>
               </div>
             ) : (
               <div className="divide-y">
-                {notifications.map((notification) => (
+                {allNotifications.map((notification) => (
                   <div
                     key={notification.id}
                     onClick={() => handleNotificationClick(notification)}
@@ -279,11 +311,31 @@ export const NotificationsDropdown = () => {
                     </div>
                   </div>
                 ))}
+                {hasMore && (
+                  <div className="p-4 text-center border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLoadMore}
+                      disabled={isFetchingNotifications}
+                      className="text-xs"
+                    >
+                      {isFetchingNotifications ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        "Show More"
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </ScrollArea>
 
-          {notifications.length > 0 && (
+          {allNotifications.length > 0 && (
             <>
               <Separator />
               <div className="p-3 text-center">

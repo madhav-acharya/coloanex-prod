@@ -26,8 +26,8 @@ export default function HomeScreen() {
 
   const loadLenders = async () => {
     try {
-      const data = await lendersApi.getAll();
-      setLenders(data);
+      const result = await lendersApi.getAll({ limit: 10, offset: 0 });
+      setLenders(result.data);
     } catch (error) {
       console.error("Failed to load lenders:", error);
     } finally {
