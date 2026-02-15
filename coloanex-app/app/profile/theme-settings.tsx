@@ -176,11 +176,13 @@ const createStyles = (colors: any) =>
     },
     optionLabel: {
       ...typography.body,
+      color: colors.text,
       fontWeight: "600",
       marginBottom: 4,
     },
     optionDescription: {
       ...typography.bodySmall,
+      color: colors.textSecondary,
     },
     radioButton: {
       width: 24,
@@ -200,11 +202,13 @@ const createStyles = (colors: any) =>
     },
     previewTitle: {
       ...typography.h3,
+      color: colors.text,
       fontWeight: "700",
       marginBottom: spacing.sm,
     },
     previewText: {
       ...typography.body,
+      color: colors.textSecondary,
       marginBottom: spacing.lg,
     },
     previewColors: {
