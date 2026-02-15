@@ -109,6 +109,7 @@ const createStyles = (colors: any) =>
     },
     appName: {
       ...typography.h2,
+      color: colors.text,
       marginBottom: spacing.xs,
     },
     version: {
@@ -121,6 +122,7 @@ const createStyles = (colors: any) =>
     },
     sectionTitle: {
       ...typography.h3,
+      color: colors.text,
       marginBottom: spacing.md,
     },
     infoText: {
@@ -135,6 +137,7 @@ const createStyles = (colors: any) =>
     },
     featureText: {
       ...typography.body,
+      color: colors.text,
       marginLeft: spacing.sm,
     },
     contactText: {
