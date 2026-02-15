@@ -11,9 +11,10 @@ import {
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { notificationsApi } from "@/api";
-import { useToast } from "@/components/ui";
+import { useToast, AppHeader } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import type { NotificationItem, ActivityAction } from "@/types/notification";
+import { spacing, typography, borderRadius } from "@/constants/theme";
 
 const getActivityIcon = (action: ActivityAction) => {
   switch (action) {
@@ -113,16 +114,33 @@ export default function ActivityLogsScreen() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const LIMIT = 20;
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (reset = false) => {
     try {
+      const currentOffset = reset ? 0 : offset;
       const [notificationsData, unreadData] = await Promise.all([
-        notificationsApi.getNotifications({ limit: 50, offset: 0 }),
+        notificationsApi.getNotifications({
+          limit: LIMIT,
+          offset: currentOffset,
+        }),
         notificationsApi.getUnreadCount(),
       ]);
-      setNotifications(notificationsData);
+
+      if (reset) {
+        setNotifications(notificationsData);
+        setOffset(LIMIT);
+      } else {
+        setNotifications([...notifications, ...notificationsData]);
+        setOffset(currentOffset + LIMIT);
+      }
+
+      setHasMore(notificationsData.length === LIMIT);
       setUnreadCount(unreadData.count);
 
       // Auto-mark unread notifications as read after a short delay
@@ -139,17 +157,26 @@ export default function ActivityLogsScreen() {
       );
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadNotifications();
+    loadNotifications(true);
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadNotifications();
+    setOffset(0);
+    loadNotifications(true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore && !loading) {
+      setLoadingMore(true);
+      loadNotifications(false);
+    }
   };
 
   const handleMarkAsRead = async (id: string) => {
@@ -212,49 +239,37 @@ export default function ActivityLogsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomColor: colors.border },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Activity Logs
-          </Text>
-          {unreadCount > 0 && (
-            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.badgeText}>
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </Text>
-            </View>
-          )}
-        </View>
-        {unreadCount > 0 && (
-          <TouchableOpacity
-            onPress={handleMarkAllAsRead}
-            disabled={markingAllAsRead}
-            style={styles.markAllButton}
-          >
-            {markingAllAsRead ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Ionicons
-                name="checkmark-done"
-                size={24}
-                color={colors.primary}
-              />
+      <AppHeader
+        title="Activity Logs"
+        rightElement={
+          <View style={styles.headerRight}>
+            {unreadCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
             )}
-          </TouchableOpacity>
-        )}
-        {unreadCount === 0 && <View style={{ width: 40 }} />}
-      </View>
+            {unreadCount > 0 && (
+              <TouchableOpacity
+                onPress={handleMarkAllAsRead}
+                disabled={markingAllAsRead}
+                style={styles.markAllButton}
+              >
+                {markingAllAsRead ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons
+                    name="checkmark-done"
+                    size={24}
+                    color={colors.primary}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+      />
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -397,6 +412,47 @@ export default function ActivityLogsScreen() {
               </View>
             </TouchableOpacity>
           ))}
+
+          {hasMore && (
+            <TouchableOpacity
+              style={[
+                styles.loadMoreButton,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
+              onPress={handleLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text
+                    style={[
+                      styles.loadMoreText,
+                      { color: colors.textSecondary, marginLeft: 8 },
+                    ]}
+                  >
+                    Loading...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text
+                    style={[styles.loadMoreText, { color: colors.primary }]}
+                  >
+                    Show More
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
     </View>
@@ -408,29 +464,10 @@ const createStyles = (colors: any) =>
     container: {
       flex: 1,
     },
-    header: {
+    headerRight: {
       flexDirection: "row",
       alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingTop: 60,
-      paddingBottom: 20,
-      borderBottomWidth: 1,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerTitleContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: "600",
+      gap: spacing.sm,
     },
     badge: {
       borderRadius: 12,
@@ -536,5 +573,21 @@ const createStyles = (colors: any) =>
       width: 8,
       height: 8,
       borderRadius: 4,
+    },
+    loadMoreButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      marginHorizontal: 16,
+      marginVertical: 16,
+      borderWidth: 1,
+    },
+    loadMoreText: {
+      fontSize: 14,
+      fontWeight: "600",
+      marginRight: 6,
     },
   });
