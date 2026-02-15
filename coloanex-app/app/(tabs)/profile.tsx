@@ -195,6 +195,7 @@ const createStyles = (colors: any) =>
     },
     title: {
       ...typography.h2,
+      color: colors.text,
       fontWeight: "800",
     },
     content: {
@@ -232,12 +233,14 @@ const createStyles = (colors: any) =>
     },
     userName: {
       ...typography.h3,
+      color: colors.text,
       marginBottom: 6,
       fontWeight: "700",
       fontSize: 20,
     },
     userEmail: {
       ...typography.body,
+      color: colors.textSecondary,
     },
     menuSection: {
       borderRadius: borderRadius.lg,
@@ -264,6 +267,7 @@ const createStyles = (colors: any) =>
     },
     menuItemText: {
       ...typography.body,
+      color: colors.text,
       marginLeft: spacing.md,
       fontWeight: "600",
     },
@@ -272,6 +276,7 @@ const createStyles = (colors: any) =>
     },
     version: {
       ...typography.caption,
+      color: colors.textSecondary,
       textAlign: "center",
       marginBottom: spacing.lg,
     },
