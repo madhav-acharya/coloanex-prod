@@ -12,7 +12,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { usersApi } from "@/api";
 import { useTheme } from "@/hooks/useTheme";
-import { useToast } from "@/components/ui";
+import { useToast, AppHeader } from "@/components/ui";
 
 export default function ChangePasswordScreen() {
   const { colors } = useTheme();
@@ -78,26 +78,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Change Password
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader title="Change Password" />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.form}>
@@ -250,25 +231,6 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingTop: 60,
-      paddingBottom: 20,
-      borderBottomWidth: 1,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: "600",
     },
     content: {
       flex: 1,
