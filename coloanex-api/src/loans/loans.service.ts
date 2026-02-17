@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
+import { ContractsService } from '../contracts/contracts.service';
 import { loanRequestTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -25,6 +26,7 @@ export class LoansService {
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
+    private contractsService: ContractsService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -549,11 +551,39 @@ export class LoansService {
       );
     }
 
+    if (reviewLoanDto.status === LoanStatus.APPROVED) {
+      if (!reviewLoanDto.ruleId) {
+        throw new BadRequestException('Rule is required when approving loan');
+      }
+      if (!reviewLoanDto.approvedAmount) {
+        throw new BadRequestException(
+          'Approved amount is required when approving loan',
+        );
+      }
+      if (!reviewLoanDto.approvedTermMonths) {
+        throw new BadRequestException(
+          'Approved term is required when approving loan',
+        );
+      }
+    }
+
+    const updateData: any = {
+      status:
+        reviewLoanDto.status === LoanStatus.APPROVED
+          ? LoanStatus.CONTRACT_GENERATED
+          : reviewLoanDto.status,
+      rejectionReason: reviewLoanDto.rejectionReason,
+    };
+
+    if (reviewLoanDto.status === LoanStatus.APPROVED) {
+      updateData.approvedAmount = reviewLoanDto.approvedAmount;
+      updateData.approvedTermMonths = reviewLoanDto.approvedTermMonths;
+      updateData.ruleId = reviewLoanDto.ruleId;
+    }
+
     const updated = await this.prisma.loan.update({
       where: { id },
-      data: {
-        status: reviewLoanDto.status,
-      },
+      data: updateData,
       include: {
         borrower: {
           include: {
@@ -569,19 +599,35 @@ export class LoansService {
       },
     });
 
+    if (reviewLoanDto.status === LoanStatus.APPROVED) {
+      try {
+        await this.contractsService.generateFromLoanApproval(
+          id,
+          reviewLoanDto.ruleId!,
+          reviewLoanDto.approvedAmount!,
+          reviewLoanDto.approvedTermMonths!,
+          user.tenantId!,
+        );
+      } catch (error) {
+        console.error('Failed to generate contract:', error);
+      }
+    }
+
     const action =
       reviewLoanDto.status === LoanStatus.APPROVED
-        ? ActivityAction.UPDATE
-        : ActivityAction.UPDATE;
+        ? ActivityAction.LOAN_APPROVE
+        : reviewLoanDto.status === LoanStatus.REJECTED
+          ? ActivityAction.LOAN_REJECT
+          : ActivityAction.UPDATE;
 
     await this.activityLogsService.logUserActivity(
       user.sub,
       action,
-      ActivityEntityType.KYC,
+      ActivityEntityType.LOAN,
       id,
-      `Loan ${reviewLoanDto.status.toLowerCase()}`,
+      `Loan ${reviewLoanDto.status === LoanStatus.APPROVED ? 'approved and contract generated' : reviewLoanDto.status.toLowerCase()}`,
       { status: loan.status },
-      { status: reviewLoanDto.status, reason: reviewLoanDto.rejectionReason },
+      { status: updated.status, reason: reviewLoanDto.rejectionReason },
       ipAddress,
       userAgent,
       user.tenantId,
@@ -599,6 +645,7 @@ export class LoansService {
       [LoanStatus.DRAFT]: 'SUBMITTED' as const,
       [LoanStatus.CONTRACT_GENERATED]: 'APPROVED' as const,
       [LoanStatus.CONTRACT_SIGNED]: 'APPROVED' as const,
+      [LoanStatus.LOAN_PROVIDED]: 'APPROVED' as const,
     };
 
     try {
@@ -608,12 +655,12 @@ export class LoansService {
       await this.mailService.sendMail(
         {
           to: updated.borrower.user.email,
-          subject: `Loan Application ${reviewLoanDto.status === LoanStatus.APPROVED ? 'Approved' : reviewLoanDto.status === LoanStatus.REJECTED ? 'Status Update' : 'Update'} - ${tenant?.name || 'CoLoanEx'}`,
+          subject: `Loan Application ${reviewLoanDto.status === LoanStatus.APPROVED ? 'Approved - Contract Ready' : reviewLoanDto.status === LoanStatus.REJECTED ? 'Status Update' : 'Update'} - ${tenant?.name || 'CoLoanEx'}`,
           html: loanRequestTemplate({
             tenantName: tenant?.name || 'CoLoanEx',
             tenantLogo: tenant?.logo || undefined,
             userName: updated.borrower.user.fullName,
-            status: statusMap[reviewLoanDto.status] || 'UNDER_REVIEW',
+            status: statusMap[updated.status] || 'UNDER_REVIEW',
             loanAmount: `$${updated.requestedAmount.toLocaleString()}`,
             loanPurpose: updated.purpose || undefined,
             loanId: updated.id,
@@ -641,7 +688,7 @@ export class LoansService {
             tenantWebsite: tenant?.website || undefined,
             nextSteps:
               reviewLoanDto.status === LoanStatus.APPROVED
-                ? 'Your loan has been approved! The funds will be disbursed to your account shortly.'
+                ? 'Your loan has been approved and the contract has been generated! Please review and sign the contract to proceed.'
                 : reviewLoanDto.status === LoanStatus.REJECTED
                   ? 'Please review the reason provided. You may reapply after addressing the concerns.'
                   : 'Your application is being reviewed. We will notify you of any updates.',
