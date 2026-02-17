@@ -1,9 +1,12 @@
 export enum ContractStatus {
   DRAFT = 'DRAFT',
+  GENERATED = 'GENERATED',
+  SIGNED = 'SIGNED',
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
   DEFAULTED = 'DEFAULTED',
   CANCELLED = 'CANCELLED',
+  REPORTED = 'REPORTED',
 }
 
 export enum PaymentFrequency {
@@ -14,7 +17,7 @@ export enum PaymentFrequency {
 
 export interface Signature {
   signedBy: 'BORROWER' | 'TENANT';
-  signature: string; // base64
+  signature: string;
   signedAt: Date;
   ipAddress?: string;
 }
@@ -60,6 +63,8 @@ export interface Contract {
   blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
+  reportReason?: string;
+  signedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   tenant?: {
