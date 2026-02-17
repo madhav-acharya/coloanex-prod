@@ -4,9 +4,10 @@ import { LoansController } from './loans.controller';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { MailModule } from '../mail/mail.module';
+import { ContractsModule } from '../contracts/contracts.module';
 
 @Module({
-  imports: [ActivityLogsModule, MailModule],
+  imports: [ActivityLogsModule, MailModule, ContractsModule],
   controllers: [LoansController],
   providers: [LoansService, PrismaService],
   exports: [LoansService],
