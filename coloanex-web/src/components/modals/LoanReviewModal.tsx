@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoanStatus, type Loan } from "@/types/loan";
+import { useGetRulesQuery } from "@/apis/rulesApi";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -45,6 +46,8 @@ interface LoanReviewModalProps {
     status: LoanStatus,
     rejectionReason?: string,
     approvedAmount?: number,
+    ruleId?: string,
+    approvedTermMonths?: number,
   ) => Promise<void>;
   hasNext: boolean;
 }
@@ -62,6 +65,14 @@ export function LoanReviewModal({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [approvedAmount, setApprovedAmount] = useState("");
+  const [approvedTermMonths, setApprovedTermMonths] = useState("");
+  const [selectedRuleId, setSelectedRuleId] = useState("");
+
+  const {
+    data: rulesData,
+    isLoading: isLoadingRules,
+    error: rulesError,
+  } = useGetRulesQuery();
 
   useEffect(() => {
     if (loan) {
@@ -70,6 +81,11 @@ export function LoanReviewModal({
       setApprovedAmount(
         loan.approvedAmount?.toString() || loan.requestedAmount.toString(),
       );
+      setApprovedTermMonths(
+        loan.approvedTermMonths?.toString() ||
+          loan.requestedTermMonths.toString(),
+      );
+      setSelectedRuleId((loan as any).ruleId || "");
     }
   }, [loan]);
 
@@ -92,9 +108,20 @@ export function LoanReviewModal({
         status === LoanStatus.APPROVED && approvedAmount
           ? parseFloat(approvedAmount)
           : undefined;
-      await onSubmit(status, rejectionReason, approvedAmountNumber);
+      const approvedTermNumber =
+        status === LoanStatus.APPROVED && approvedTermMonths
+          ? parseInt(approvedTermMonths)
+          : undefined;
+      await onSubmit(
+        status,
+        rejectionReason,
+        approvedAmountNumber,
+        selectedRuleId || undefined,
+        approvedTermNumber,
+      );
       setRejectionReason("");
       setStatus(LoanStatus.UNDER_REVIEW);
+      setSelectedRuleId("");
       setConfirmDialogOpen(false);
     } finally {
       setIsSubmitting(false);
@@ -117,6 +144,8 @@ export function LoanReviewModal({
         return "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400";
       case LoanStatus.CONTRACT_SIGNED:
         return "bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400";
+      case LoanStatus.LOAN_PROVIDED:
+        return "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -169,6 +198,9 @@ export function LoanReviewModal({
                     </SelectItem>
                     <SelectItem value={LoanStatus.CONTRACT_SIGNED}>
                       Contract Signed
+                    </SelectItem>
+                    <SelectItem value={LoanStatus.LOAN_PROVIDED}>
+                      Loan Provided
                     </SelectItem>
                   </SelectContent>
                 </Select>
@@ -434,19 +466,27 @@ export function LoanReviewModal({
       {/* Custom Confirmation Dialog */}
       {confirmDialogOpen && (
         <div
-          className="fixed inset-0 z-[150] bg-black/50 flex items-center justify-center"
+          className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm flex items-center justify-center"
           onClick={(e) => {
             e.stopPropagation();
             if (!isSubmitting) setConfirmDialogOpen(false);
           }}
         >
           <div
-            className="bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6 relative pointer-events-auto"
+            className="bg-background border border-border rounded-lg shadow-2xl max-w-md w-full mx-4 p-6 relative pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-6 pb-4 border-b border-border">
               <div>
-                <h3 className="text-lg font-semibold">
+                <h3
+                  className={`text-xl font-bold ${
+                    status === LoanStatus.APPROVED
+                      ? "text-green-600 dark:text-green-400"
+                      : status === LoanStatus.REJECTED
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-blue-600 dark:text-blue-400"
+                  }`}
+                >
                   {status === LoanStatus.APPROVED
                     ? "Approve Loan"
                     : status === LoanStatus.REJECTED
@@ -470,67 +510,186 @@ export function LoanReviewModal({
               </button>
             </div>
 
-            <div className="space-y-4 mb-6">
-              <div>
-                <Label className="text-sm font-medium">Borrower</Label>
-                <p className="text-sm mt-1">
-                  {loan.borrower?.user?.fullName || "N/A"}
-                </p>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Requested Amount</Label>
-                <p className="text-sm mt-1">
-                  {formatCurrency(loan.requestedAmount)}
-                </p>
+            <div className="space-y-5 mb-6">
+              {/* Borrower Info Section */}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Loan Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Borrower
+                    </Label>
+                    <p className="text-sm font-medium mt-1">
+                      {loan.borrower?.user?.fullName || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Requested Amount
+                    </Label>
+                    <p className="text-sm font-medium mt-1 text-blue-600 dark:text-blue-400">
+                      {formatCurrency(loan.requestedAmount)}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {status === LoanStatus.APPROVED && (
-                <div>
-                  <Label
-                    htmlFor="approvedAmount"
-                    className="text-sm font-medium"
-                  >
-                    Approved Amount <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="approvedAmount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={approvedAmount}
-                    onChange={(e) => setApprovedAmount(e.target.value)}
-                    placeholder="Enter approved amount"
-                    className="mt-1"
-                    disabled={isSubmitting}
-                  />
-                </div>
+                <>
+                  {/* Approval Details Section */}
+                  <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 space-y-4 border border-green-200 dark:border-green-800">
+                    <h4 className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
+                      <span className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full"></span>
+                      Approval Details
+                    </h4>
+
+                    <div className="space-y-4">
+                      <div>
+                        <Label
+                          htmlFor="approvedAmount"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Approved Amount{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="approvedAmount"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={approvedAmount}
+                          onChange={(e) => setApprovedAmount(e.target.value)}
+                          placeholder="Enter approved amount"
+                          className="mt-2 bg-background"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor="approvedTermMonths"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Approved Term (Months){" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="approvedTermMonths"
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={approvedTermMonths}
+                          onChange={(e) =>
+                            setApprovedTermMonths(e.target.value)
+                          }
+                          placeholder="Enter term in months"
+                          className="mt-2 bg-background"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor="ruleId"
+                          className="text-sm font-medium text-foreground"
+                        >
+                          Select Loan Rule{" "}
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={selectedRuleId}
+                          onValueChange={setSelectedRuleId}
+                          disabled={isSubmitting || isLoadingRules}
+                        >
+                          <SelectTrigger className="mt-2 bg-background">
+                            <SelectValue
+                              placeholder={
+                                isLoadingRules
+                                  ? "Loading rules..."
+                                  : "Select a rule"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent className="z-[200]">
+                            {isLoadingRules ? (
+                              <SelectItem value="loading" disabled>
+                                Loading rules...
+                              </SelectItem>
+                            ) : rulesError ? (
+                              <SelectItem value="error" disabled>
+                                Error loading rules
+                              </SelectItem>
+                            ) : rulesData && rulesData.length > 0 ? (
+                              rulesData.map((rule) => (
+                                <SelectItem key={rule.id} value={rule.id}>
+                                  {rule.name} - {rule.interestRate}% (
+                                  {rule.ruleType})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="no-rules" disabled>
+                                No rules available. Please create rules first.
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {rulesError
+                            ? "⚠️ Failed to load rules. Please refresh the page."
+                            : rulesData && rulesData.length === 0
+                              ? "⚠️ No loan rules found. Please create rules in the Rules page before approving loans."
+                              : "💡 The selected rule will be used for contract generation"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
 
               {status === LoanStatus.REJECTED && (
-                <div>
-                  <Label className="text-sm font-medium">
-                    Rejection Reason
-                  </Label>
-                  <p className="text-sm mt-1 bg-red-50 dark:bg-red-950 p-2 rounded border border-red-200 dark:border-red-800 dark:text-red-100">
-                    {rejectionReason || "No reason provided"}
-                  </p>
+                <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                  <h4 className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></span>
+                    Rejection Details
+                  </h4>
+                  <div>
+                    <Label className="text-sm font-medium text-foreground">
+                      Rejection Reason
+                    </Label>
+                    <p className="text-sm mt-2 bg-background p-3 rounded border border-red-200 dark:border-red-800">
+                      {rejectionReason || "No reason provided"}
+                    </p>
+                  </div>
                 </div>
               )}
 
               {status !== LoanStatus.APPROVED &&
                 status !== LoanStatus.REJECTED && (
-                  <div>
-                    <Label className="text-sm font-medium">New Status</Label>
-                    <p className="text-sm mt-1">{status.replace(/_/g, " ")}</p>
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2 mb-3">
+                      <span className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                      Status Update
+                    </h4>
+                    <div>
+                      <Label className="text-sm font-medium text-foreground">
+                        New Status
+                      </Label>
+                      <p className="text-sm font-medium mt-2">
+                        {status.replace(/_/g, " ")}
+                      </p>
+                    </div>
                   </div>
                 )}
             </div>
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-end pt-4 border-t border-border">
               <Button
                 variant="outline"
                 onClick={() => setConfirmDialogOpen(false)}
                 disabled={isSubmitting}
+                className="min-w-[100px]"
               >
                 Cancel
               </Button>
@@ -538,13 +697,26 @@ export function LoanReviewModal({
                 onClick={handleConfirmSubmit}
                 disabled={
                   isSubmitting ||
+                  isLoadingRules ||
                   (status === LoanStatus.APPROVED &&
-                    (!approvedAmount || parseFloat(approvedAmount) <= 0))
+                    (!approvedAmount ||
+                      parseFloat(approvedAmount) <= 0 ||
+                      !approvedTermMonths ||
+                      parseInt(approvedTermMonths) <= 0 ||
+                      !selectedRuleId ||
+                      !rulesData ||
+                      rulesData.length === 0))
                 }
-                className={
+                className={`min-w-[120px] ${
                   status === LoanStatus.REJECTED
                     ? "bg-red-600 hover:bg-red-700 text-white"
                     : "bg-green-600 hover:bg-green-700 text-white"
+                }`}
+                title={
+                  status === LoanStatus.APPROVED &&
+                  (!rulesData || rulesData.length === 0)
+                    ? "Please create at least one loan rule before approving loans"
+                    : undefined
                 }
               >
                 {isSubmitting

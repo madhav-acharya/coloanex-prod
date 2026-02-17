@@ -69,6 +69,7 @@ enum LoanStatus {
   REJECTED
   CONTRACT_GENERATED
   CONTRACT_SIGNED
+  LOAN_PROVIDED
 
   @@schema("finance")
 }
@@ -120,10 +121,13 @@ enum PenaltyType {
 
 enum ContractStatus {
   DRAFT
+  GENERATED
+  SIGNED
   ACTIVE
   COMPLETED
   DEFAULTED
   CANCELLED
+  REPORTED
 
   @@schema("finance")
 }
@@ -401,11 +405,13 @@ model Loan {
   id                  String     @id @default(uuid())
   borrowerId          String     @map("borrower_id")
   tenantId            String     @map("tenant_id")
+  ruleId              String?    @map("rule_id")
   requestedAmount     Decimal    @map("requested_amount") @db.Decimal(20, 2)
   approvedAmount      Decimal?   @map("approved_amount") @db.Decimal(20, 2)
   purpose             String
   collateralDetails   Json       @map("collateral_details")
   requestedTermMonths Int        @map("requested_term_months")
+  approvedTermMonths  Int?       @map("approved_term_months")
   status              LoanStatus @default(DRAFT)
   rejectionReason     String?    @map("rejection_reason")
   createdAt           DateTime   @default(now()) @map("created_at")
@@ -413,10 +419,12 @@ model Loan {
 
   tenant   Tenant    @relation(fields: [tenantId], references: [id])
   borrower Borrower  @relation(fields: [borrowerId], references: [id])
+  rule     Rule?     @relation(fields: [ruleId], references: [id])
   contract Contract?
 
   @@index([tenantId])
   @@index([borrowerId])
+  @@index([ruleId])
   @@index([status])
   @@map("loans")
   @@schema("finance")
@@ -434,6 +442,7 @@ model Rule {
   paymentConfig     Json     @map("payment_config")
   isActive          Boolean  @default(true) @map("is_active")
   isPubliclyVisible Boolean  @default(true) @map("is_publicly_visible")
+  loans     Loan[]
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
@@ -472,6 +481,8 @@ model Contract {
   blockchainData     Json?            @map("blockchain_data")
   termsAndConditions String           @map("terms_and_conditions") @db.Text
   disbursementInfo   Json?            @map("disbursement_info")
+  reportReason       String?          @map("report_reason") @db.Text
+  signedAt           DateTime?        @map("signed_at")
   createdAt          DateTime         @default(now()) @map("created_at")
   updatedAt          DateTime         @updatedAt @map("updated_at")
 

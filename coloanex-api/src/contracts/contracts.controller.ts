@@ -58,6 +58,19 @@ export class ContractsController {
     return this.contractsService.signContract(id, signContractDto, req.user);
   }
 
+  @Post(':id/report')
+  report(
+    @Param('id') id: string,
+    @Body() body: { reportReason: string },
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.contractsService.reportContract(
+      id,
+      body.reportReason,
+      req.user,
+    );
+  }
+
   @Post(':id/disburse')
   disburse(
     @Param('id') id: string,

@@ -6,6 +6,7 @@ export enum LoanStatus {
   REJECTED = 'REJECTED',
   CONTRACT_GENERATED = 'CONTRACT_GENERATED',
   CONTRACT_SIGNED = 'CONTRACT_SIGNED',
+  LOAN_PROVIDED = 'LOAN_PROVIDED',
 }
 
 export interface CollateralDetails {
@@ -20,11 +21,13 @@ export interface Loan {
   id: string;
   borrowerId: string;
   tenantId: string;
+  ruleId?: string;
   requestedAmount: number;
   approvedAmount?: number;
   purpose: string;
   collateralDetails: CollateralDetails;
   requestedTermMonths: number;
+  approvedTermMonths?: number;
   status: LoanStatus;
   rejectionReason?: string;
   createdAt: Date;
@@ -43,5 +46,10 @@ export interface Loan {
     id: string;
     name: string;
     logo?: string;
+  };
+  contract?: {
+    id: string;
+    status: string;
+    contractNumber: string;
   };
 }

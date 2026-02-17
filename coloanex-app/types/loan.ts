@@ -6,6 +6,7 @@ export enum LoanStatus {
   REJECTED = "REJECTED",
   CONTRACT_GENERATED = "CONTRACT_GENERATED",
   CONTRACT_SIGNED = "CONTRACT_SIGNED",
+  LOAN_PROVIDED = "LOAN_PROVIDED",
 }
 
 export interface Lender {
