@@ -317,6 +317,8 @@ export default function LoanRequests() {
     status: LoanStatus,
     rejectionReason?: string,
     approvedAmount?: number,
+    ruleId?: string,
+    approvedTermMonths?: number,
   ) => {
     if (!selectedLoan) return;
 
@@ -326,12 +328,14 @@ export default function LoanRequests() {
         status,
         rejectionReason: rejectionReason?.trim() || undefined,
         approvedAmount: approvedAmount || undefined,
+        ruleId: ruleId || undefined,
+        approvedTermMonths: approvedTermMonths || undefined,
       },
     }).unwrap();
 
     toast({
       title: "Success",
-      description: `Loan request ${status.toLowerCase()} successfully`,
+      description: `Loan request ${status === LoanStatus.APPROVED ? "approved and contract generated" : status.toLowerCase()} successfully`,
     });
 
     const selectedArray = Array.from(selectedRows);
