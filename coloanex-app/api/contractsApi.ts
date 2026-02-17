@@ -31,7 +31,15 @@ export interface Contract {
   borrowerId: string;
   loanId: string;
   ruleId: string;
-  status: "DRAFT" | "ACTIVE" | "COMPLETED" | "DEFAULTED" | "CANCELLED";
+  status:
+    | "DRAFT"
+    | "GENERATED"
+    | "SIGNED"
+    | "ACTIVE"
+    | "COMPLETED"
+    | "DEFAULTED"
+    | "CANCELLED"
+    | "REPORTED";
   startDate: string;
   endDate: string;
   loanAmount: number;
@@ -48,6 +56,8 @@ export interface Contract {
   blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
+  reportReason?: string;
+  signedAt?: string;
   createdAt: string;
   updatedAt: string;
   tenant?: {
@@ -80,6 +90,10 @@ export interface SignContractDto {
   ipAddress?: string;
 }
 
+export interface ReportContractDto {
+  reportReason: string;
+}
+
 export const contractsApi = {
   getAll: async (): Promise<Contract[]> => {
     const response = await client.get("/contracts");
@@ -93,6 +107,11 @@ export const contractsApi = {
 
   sign: async (id: string, data: SignContractDto): Promise<Contract> => {
     const response = await client.post(`/contracts/${id}/sign`, data);
+    return response.data;
+  },
+
+  report: async (id: string, data: ReportContractDto): Promise<Contract> => {
+    const response = await client.post(`/contracts/${id}/report`, data);
     return response.data;
   },
 };
