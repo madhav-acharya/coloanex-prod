@@ -46,40 +46,16 @@ export default function ContractsScreen() {
     loadContracts();
   };
 
-  const handleSignContract = async (contractId: string) => {
-    Alert.prompt(
-      "Sign Contract",
-      "Enter your digital signature to sign the contract",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Sign",
-          onPress: async (signature?: string) => {
-            if (!signature) return;
-            try {
-              await contractsApi.sign(contractId, { signature });
-              Alert.alert("Success", "Contract signed successfully");
-              loadContracts();
-            } catch (error: any) {
-              Alert.alert("Error", error.message || "Failed to sign contract");
-            }
-          },
-        },
-      ],
-      "plain-text",
-    );
-  };
-
   const getStatusColor = (status: string) => {
     const colors_map: Record<string, string> = {
       DRAFT: colors.textLight,
+      GENERATED: colors.info,
+      SIGNED: colors.primary,
       ACTIVE: colors.success,
       COMPLETED: colors.primary,
       DEFAULTED: colors.error,
       CANCELLED: colors.textLight,
+      REPORTED: colors.warning,
     };
     return colors_map[status] || colors.textLight;
   };
@@ -87,10 +63,13 @@ export default function ContractsScreen() {
   const getStatusIcon = (status: string) => {
     const icons: Record<string, string> = {
       DRAFT: "document-text",
+      GENERATED: "document-attach",
+      SIGNED: "checkmark-done",
       ACTIVE: "checkmark-circle",
       COMPLETED: "trophy",
       DEFAULTED: "alert-circle",
       CANCELLED: "close-circle",
+      REPORTED: "flag",
     };
     return icons[status] || "document-text";
   };
@@ -118,36 +97,56 @@ export default function ContractsScreen() {
         <Text style={styles.subtitle}>View and manage your loan contracts</Text>
 
         {contracts.map((contract) => (
-          <Card key={contract.id} style={styles.contractCard}>
-            <View style={styles.contractHeader}>
-              <View
-                style={[
-                  styles.statusIcon,
-                  { backgroundColor: getStatusColor(contract.status) + "20" },
-                ]}
-              >
-                <Ionicons
-                  name={getStatusIcon(contract.status) as any}
-                  size={24}
-                  color={getStatusColor(contract.status)}
-                />
-              </View>
-              <View style={styles.contractInfo}>
-                <Text style={styles.contractNumber}>
-                  {contract.contractNumber}
-                </Text>
+          <TouchableOpacity
+            key={contract.id}
+            onPress={() => router.push(`/contracts/${contract.id}` as any)}
+            activeOpacity={0.7}
+          >
+            <Card style={styles.contractCard}>
+              <View style={styles.contractHeader}>
                 <View
                   style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(contract.status) + "20" },
+                    styles.statusIcon,
+                    {
+                      backgroundColor: getStatusColor(contract.status) + "20",
+                    },
                   ]}
                 >
-                  <Text
+                  <Ionicons
+                    name={getStatusIcon(contract.status) as any}
+                    size={24}
+                    color={getStatusColor(contract.status)}
+                  />
+                </View>
+                <View style={styles.contractInfo}>
+                  <Text style={styles.contractNumber}>
+                    {contract.contractNumber}
+                  </Text>
+                  <View
                     style={[
-                      styles.statusText,
-                      { color: getStatusColor(contract.status) },
+                      styles.statusBadge,
+                      {
+                        backgroundColor:
+                          getStatusColor(contract.status) + "20",
+                      },
                     ]}
                   >
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: getStatusColor(contract.status) },
+                      ]}
+                    >
+                      {contract.status}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.textLight}
+                />
+              </View>
                     {contract.status}
                   </Text>
                 </View>
@@ -213,32 +212,20 @@ export default function ContractsScreen() {
               </View>
             )}
 
-            {contract.status === "DRAFT" && (
-              <Button
-                title="Sign Contract"
-                onPress={() => handleSignContract(contract.id)}
-                style={styles.signButton}
-              />
-            )}
-
             {contract.status === "ACTIVE" && (
-              <TouchableOpacity
-                style={styles.viewScheduleButton}
-                onPress={() =>
-                  router.push(`/payment-schedules/${contract.id}` as any)
-                }
-              >
-                <Text style={styles.viewScheduleText}>
-                  View Payment Schedule
-                </Text>
+              <View style={styles.dateRow}>
                 <Ionicons
-                  name="chevron-forward"
+                  name="calendar-outline"
                   size={16}
                   color={colors.primary}
                 />
-              </TouchableOpacity>
+                <Text style={[styles.dateText, { color: colors.primary }]}>
+                  View Payment Schedule →
+                </Text>
+              </View>
             )}
           </Card>
+          </TouchableOpacity>
         ))}
 
         {contracts.length === 0 && !loading && (
