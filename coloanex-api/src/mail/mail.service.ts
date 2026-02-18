@@ -172,95 +172,87 @@ export class MailService {
   }
 
   async sendMail(sendMailDto: SendMailDto, tenantId: string): Promise<void> {
-    if (tenantId === 'default' && this.envTransporter) {
-      try {
-        await this.envTransporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
-          to: sendMailDto.to,
-          subject: sendMailDto.subject,
-          html: sendMailDto.html,
-          text: sendMailDto.text,
-        });
-        return;
-      } catch (error) {
-        throw new InternalServerErrorException('Failed to send email');
-      }
-    }
-
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-
-    if (!tenant || !tenant.mailAccessToken || !tenant.mailRefreshToken) {
-      if (this.envTransporter) {
-        try {
-          await this.envTransporter.sendMail({
-            from: process.env.SMTP_FROM || process.env.SMTP_USER,
-            to: sendMailDto.to,
-            subject: sendMailDto.subject,
-            html: sendMailDto.html,
-            text: sendMailDto.text,
-          });
-          return;
-        } catch (error) {
-          throw new InternalServerErrorException('Failed to send email');
-        }
-      }
-      throw new BadRequestException(
-        'Mail service not configured for this tenant',
-      );
-    }
-
-    try {
-      this.oauth2Client.setCredentials({
-        access_token: tenant.mailAccessToken,
-        refresh_token: tenant.mailRefreshToken,
-      });
-
-      if (tenant.mailTokenExpiry && new Date() >= tenant.mailTokenExpiry) {
-        const { credentials } = await this.oauth2Client.refreshAccessToken();
-
-        await this.prisma.tenant.update({
-          where: { id: tenantId },
-          data: {
-            mailAccessToken: credentials.access_token,
-            mailTokenExpiry: credentials.expiry_date
-              ? new Date(credentials.expiry_date)
-              : null,
-          },
-        });
-
-        this.oauth2Client.setCredentials(credentials);
-      }
-
-      let transporter = this.transporters.get(tenantId);
-
-      if (!transporter) {
-        transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            type: 'OAuth2',
-            user: tenant.mailEmail!,
-            clientId: process.env.GOOGLE_MAIL_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_MAIL_CLIENT_SECRET,
-            refreshToken: tenant.mailRefreshToken,
-            accessToken: tenant.mailAccessToken,
-          },
-        });
-
-        this.transporters.set(tenantId, transporter);
-      }
-
-      await transporter.sendMail({
-        from: tenant.mailEmail!,
-        to: sendMailDto.to,
-        subject: sendMailDto.subject,
-        html: sendMailDto.html,
-        text: sendMailDto.text,
-      });
-    } catch (error) {
-      this.transporters.delete(tenantId);
-      throw new InternalServerErrorException('Failed to send email');
-    }
+    // uncomment this to enable mail sending functionality.
+    console.log('sendMail called with:', { sendMailDto, tenantId });
+    // if (tenantId === 'default' && this.envTransporter) {
+    //   try {
+    //     await this.envTransporter.sendMail({
+    //       from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    //       to: sendMailDto.to,
+    //       subject: sendMailDto.subject,
+    //       html: sendMailDto.html,
+    //       text: sendMailDto.text,
+    //     });
+    //     return;
+    //   } catch (error) {
+    //     throw new InternalServerErrorException('Failed to send email');
+    //   }
+    // }
+    // const tenant = await this.prisma.tenant.findUnique({
+    //   where: { id: tenantId },
+    // });
+    // if (!tenant || !tenant.mailAccessToken || !tenant.mailRefreshToken) {
+    //   if (this.envTransporter) {
+    //     try {
+    //       await this.envTransporter.sendMail({
+    //         from: process.env.SMTP_FROM || process.env.SMTP_USER,
+    //         to: sendMailDto.to,
+    //         subject: sendMailDto.subject,
+    //         html: sendMailDto.html,
+    //         text: sendMailDto.text,
+    //       });
+    //       return;
+    //     } catch (error) {
+    //       throw new InternalServerErrorException('Failed to send email');
+    //     }
+    //   }
+    //   throw new BadRequestException(
+    //     'Mail service not configured for this tenant',
+    //   );
+    // }
+    // try {
+    //   this.oauth2Client.setCredentials({
+    //     access_token: tenant.mailAccessToken,
+    //     refresh_token: tenant.mailRefreshToken,
+    //   });
+    //   if (tenant.mailTokenExpiry && new Date() >= tenant.mailTokenExpiry) {
+    //     const { credentials } = await this.oauth2Client.refreshAccessToken();
+    //     await this.prisma.tenant.update({
+    //       where: { id: tenantId },
+    //       data: {
+    //         mailAccessToken: credentials.access_token,
+    //         mailTokenExpiry: credentials.expiry_date
+    //           ? new Date(credentials.expiry_date)
+    //           : null,
+    //       },
+    //     });
+    //     this.oauth2Client.setCredentials(credentials);
+    //   }
+    //   let transporter = this.transporters.get(tenantId);
+    //   if (!transporter) {
+    //     transporter = nodemailer.createTransport({
+    //       service: 'gmail',
+    //       auth: {
+    //         type: 'OAuth2',
+    //         user: tenant.mailEmail!,
+    //         clientId: process.env.GOOGLE_MAIL_CLIENT_ID,
+    //         clientSecret: process.env.GOOGLE_MAIL_CLIENT_SECRET,
+    //         refreshToken: tenant.mailRefreshToken,
+    //         accessToken: tenant.mailAccessToken,
+    //       },
+    //     });
+    //     this.transporters.set(tenantId, transporter);
+    //   }
+    //   await transporter.sendMail({
+    //     from: tenant.mailEmail!,
+    //     to: sendMailDto.to,
+    //     subject: sendMailDto.subject,
+    //     html: sendMailDto.html,
+    //     text: sendMailDto.text,
+    //   });
+    // } catch (error) {
+    //   this.transporters.delete(tenantId);
+    //   throw new InternalServerErrorException('Failed to send email');
+    // }
   }
 }
