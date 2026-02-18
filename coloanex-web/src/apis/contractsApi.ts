@@ -31,7 +31,15 @@ export interface Contract {
   borrowerId: string;
   loanId: string;
   ruleId: string;
-  status: "DRAFT" | "ACTIVE" | "COMPLETED" | "DEFAULTED" | "CANCELLED";
+  status:
+    | "DRAFT"
+    | "GENERATED"
+    | "SIGNED"
+    | "ACTIVE"
+    | "COMPLETED"
+    | "DEFAULTED"
+    | "CANCELLED"
+    | "REPORTED";
   startDate: string;
   endDate: string;
   loanAmount: number;
@@ -48,6 +56,8 @@ export interface Contract {
   blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
+  reportReason?: string;
+  signedAt?: string;
   createdAt: string;
   updatedAt: string;
   tenant?: {
@@ -87,7 +97,15 @@ export interface CreateContractDto {
 }
 
 export interface UpdateContractDto {
-  status?: "DRAFT" | "ACTIVE" | "COMPLETED" | "DEFAULTED" | "CANCELLED";
+  status?:
+    | "DRAFT"
+    | "GENERATED"
+    | "SIGNED"
+    | "ACTIVE"
+    | "COMPLETED"
+    | "DEFAULTED"
+    | "CANCELLED"
+    | "REPORTED";
 }
 
 export interface SignContractDto {
@@ -106,9 +124,11 @@ export const contractsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getContracts: builder.query<Contract[], void>({
       query: () => "/contracts",
+      providesTags: [{ type: "Contracts", id: "LIST" }],
     }),
     getContract: builder.query<Contract, string>({
       query: (id) => `/contracts/${id}`,
+      providesTags: (result, error, id) => [{ type: "Contracts", id }],
     }),
     createContract: builder.mutation<Contract, CreateContractDto>({
       query: (data) => ({
@@ -116,6 +136,7 @@ export const contractsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: [{ type: "Contracts", id: "LIST" }],
     }),
     updateContract: builder.mutation<
       Contract,
@@ -126,6 +147,10 @@ export const contractsApi = baseApi.injectEndpoints({
         method: "PATCH",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
     }),
     signContract: builder.mutation<
       Contract,
@@ -136,6 +161,10 @@ export const contractsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
     }),
     disburseContract: builder.mutation<
       Contract,
@@ -146,12 +175,20 @@ export const contractsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
     }),
     deleteContract: builder.mutation<void, string>({
       query: (id) => ({
         url: `/contracts/${id}`,
         method: "DELETE",
       }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
     }),
   }),
 });
