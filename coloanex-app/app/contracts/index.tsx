@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, Button } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/types";
@@ -49,7 +48,7 @@ export default function ContractsScreen() {
   const getStatusColor = (status: string) => {
     const colors_map: Record<string, string> = {
       DRAFT: colors.textLight,
-      GENERATED: colors.info,
+      GENERATED: "#3b82f6",
       SIGNED: colors.primary,
       ACTIVE: colors.success,
       COMPLETED: colors.primary,
@@ -126,8 +125,7 @@ export default function ContractsScreen() {
                     style={[
                       styles.statusBadge,
                       {
-                        backgroundColor:
-                          getStatusColor(contract.status) + "20",
+                        backgroundColor: getStatusColor(contract.status) + "20",
                       },
                     ]}
                   >
@@ -147,84 +145,109 @@ export default function ContractsScreen() {
                   color={colors.textLight}
                 />
               </View>
-                    {contract.status}
+
+              <View style={styles.amountSection}>
+                <Text style={styles.amountLabel}>Loan Amount</Text>
+                <Text style={styles.amountValue}>
+                  {formatCurrency(contract.loanAmount)}
+                </Text>
+              </View>
+
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailLabel}>Interest Rate</Text>
+                  <Text style={styles.detailValue}>
+                    {contract.interestRate}%
+                  </Text>
+                </View>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailLabel}>Term</Text>
+                  <Text style={styles.detailValue}>
+                    {contract.termMonths} months
                   </Text>
                 </View>
               </View>
-            </View>
 
-            <View style={styles.amountSection}>
-              <Text style={styles.amountLabel}>Loan Amount</Text>
-              <Text style={styles.amountValue}>
-                {formatCurrency(contract.loanAmount)}
-              </Text>
-            </View>
-
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailBox}>
-                <Text style={styles.detailLabel}>Interest Rate</Text>
-                <Text style={styles.detailValue}>{contract.interestRate}%</Text>
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailLabel}>Outstanding Balance</Text>
+                  <Text style={styles.detailValue}>
+                    {formatCurrency(contract.outstandingBalance)}
+                  </Text>
+                </View>
+                <View style={styles.detailBox}>
+                  <Text style={styles.detailLabel}>Payment Frequency</Text>
+                  <Text style={styles.detailValue}>
+                    {contract.paymentFrequency}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.detailBox}>
-                <Text style={styles.detailLabel}>Term</Text>
-                <Text style={styles.detailValue}>
-                  {contract.termMonths} months
-                </Text>
-              </View>
-            </View>
 
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailBox}>
-                <Text style={styles.detailLabel}>Outstanding Balance</Text>
-                <Text style={styles.detailValue}>
-                  {formatCurrency(contract.outstandingBalance)}
-                </Text>
-              </View>
-              <View style={styles.detailBox}>
-                <Text style={styles.detailLabel}>Payment Frequency</Text>
-                <Text style={styles.detailValue}>
-                  {contract.paymentFrequency}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.dateRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={16}
-                color={colors.textLight}
-              />
-              <Text style={styles.dateText}>
-                Start Date: {new Date(contract.startDate).toLocaleDateString()}
-              </Text>
-            </View>
-
-            {contract.signedAt && (
-              <View style={styles.dateRow}>
-                <Ionicons
-                  name="checkmark-done-outline"
-                  size={16}
-                  color={colors.success}
-                />
-                <Text style={[styles.dateText, { color: colors.success }]}>
-                  Signed on: {new Date(contract.signedAt).toLocaleDateString()}
-                </Text>
-              </View>
-            )}
-
-            {contract.status === "ACTIVE" && (
               <View style={styles.dateRow}>
                 <Ionicons
                   name="calendar-outline"
                   size={16}
-                  color={colors.primary}
+                  color={colors.textLight}
                 />
-                <Text style={[styles.dateText, { color: colors.primary }]}>
-                  View Payment Schedule →
+                <Text style={styles.dateText}>
+                  Start Date:{" "}
+                  {new Date(contract.startDate).toLocaleDateString()}
                 </Text>
               </View>
-            )}
-          </Card>
+
+              {contract.signedAt && (
+                <View style={styles.dateRow}>
+                  <Ionicons
+                    name="checkmark-done-outline"
+                    size={16}
+                    color={colors.success}
+                  />
+                  <Text style={[styles.dateText, { color: colors.success }]}>
+                    Signed on:{" "}
+                    {new Date(contract.signedAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+
+              {contract.status === "ACTIVE" && (
+                <View style={styles.dateRow}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text style={[styles.dateText, { color: colors.primary }]}>
+                    View Payment Schedule →
+                  </Text>
+                </View>
+              )}
+
+              {contract.status === "GENERATED" && (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBanner,
+                    {
+                      backgroundColor: colors.primary + "15",
+                      borderColor: colors.primary + "40",
+                    },
+                  ]}
+                  onPress={() =>
+                    router.push(`/contracts/${contract.id}` as any)
+                  }
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={16}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={[styles.actionBannerText, { color: colors.primary }]}
+                  >
+                    Tap to review and sign this contract
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </Card>
           </TouchableOpacity>
         ))}
 
@@ -384,5 +407,18 @@ const createStyles = (colors: any) =>
       marginTop: spacing.md,
       fontSize: 16,
       color: colors.textSecondary,
+    },
+    actionBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+    },
+    actionBannerText: {
+      fontSize: 13,
+      fontWeight: "600" as any,
     },
   });
