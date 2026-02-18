@@ -66,6 +66,34 @@ export class CloudinaryUploadsService {
     return Promise.all(uploadPromises);
   }
 
+  async uploadBuffer(
+    buffer: Buffer,
+    options: { folder?: string; filename?: string } = {},
+  ): Promise<UploadApiResponse> {
+    const { folder = 'coloanex', filename } = options;
+    return new Promise((resolve, reject) => {
+      const uploadOptions: Record<string, unknown> = {
+        folder,
+        resource_type: 'image',
+        format: 'pdf',
+      };
+      if (filename) {
+        uploadOptions.public_id = filename;
+      }
+      const uploadStream = cloudinary.uploader.upload_stream(
+        uploadOptions,
+        (
+          error: UploadApiErrorResponse | undefined,
+          result: UploadApiResponse | undefined,
+        ) => {
+          if (error) return reject(new Error(error.message));
+          if (result) resolve(result);
+        },
+      );
+      uploadStream.end(buffer);
+    });
+  }
+
   async deleteFile(publicId: string): Promise<unknown> {
     return cloudinary.uploader.destroy(publicId);
   }
