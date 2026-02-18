@@ -97,7 +97,7 @@ export default function ContractDetailsScreen() {
   const getStatusColor = (status: string) => {
     const colors_map: Record<string, string> = {
       DRAFT: colors.textLight,
-      GENERATED: colors.textLight,
+      GENERATED: "#3b82f6",
       SIGNED: colors.primary,
       ACTIVE: colors.success,
       COMPLETED: colors.primary,
@@ -108,10 +108,21 @@ export default function ContractDetailsScreen() {
     return colors_map[status] || colors.textLight;
   };
 
+  const CONTRACT_STEPS = ["GENERATED", "SIGNED", "ACTIVE", "COMPLETED"];
+
+  const getStepIndex = (status: string) => {
+    const idx = CONTRACT_STEPS.indexOf(status);
+    return idx === -1 ? 0 : idx;
+  };
+
   const hasBorrowerSigned = () => {
     return contract?.signatures?.some(
       (sig: any) => sig.signedBy === "BORROWER",
     );
+  };
+
+  const hasTenantSigned = () => {
+    return contract?.signatures?.some((sig: any) => sig.signedBy === "TENANT");
   };
 
   const canSign = () => {
@@ -206,6 +217,108 @@ export default function ContractDetailsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.timelineContainer}>
+          {CONTRACT_STEPS.map((step, idx) => {
+            const currentIdx = getStepIndex(contract.status);
+            const isCompleted = idx <= currentIdx;
+            const isActive = idx === currentIdx;
+            return (
+              <React.Fragment key={step}>
+                <View style={styles.timelineStep}>
+                  <View
+                    style={[
+                      styles.timelineDot,
+                      {
+                        backgroundColor: isCompleted
+                          ? getStatusColor(contract.status)
+                          : colors.border,
+                        borderColor: isActive
+                          ? getStatusColor(contract.status)
+                          : "transparent",
+                        borderWidth: isActive ? 2 : 0,
+                      },
+                    ]}
+                  >
+                    {isCompleted && (
+                      <Ionicons name="checkmark" size={10} color="#fff" />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.timelineLabel,
+                      {
+                        color: isCompleted
+                          ? getStatusColor(contract.status)
+                          : colors.textLight,
+                        fontWeight: isActive ? "700" : "400",
+                      },
+                    ]}
+                  >
+                    {step.charAt(0) + step.slice(1).toLowerCase()}
+                  </Text>
+                </View>
+                {idx < CONTRACT_STEPS.length - 1 && (
+                  <View
+                    style={[
+                      styles.timelineLine,
+                      {
+                        backgroundColor:
+                          idx < currentIdx
+                            ? getStatusColor(contract.status)
+                            : colors.border,
+                      },
+                    ]}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </View>
+
+        {canSign() && (
+          <TouchableOpacity
+            style={[
+              styles.signBanner,
+              {
+                backgroundColor: colors.primary + "15",
+                borderColor: colors.primary + "40",
+              },
+            ]}
+            onPress={() => setSignModalVisible(true)}
+          >
+            <Ionicons name="create-outline" size={20} color={colors.primary} />
+            <View style={styles.signBannerText}>
+              <Text style={[styles.signBannerTitle, { color: colors.primary }]}>
+                Your Signature Required
+              </Text>
+              <Text style={[styles.signBannerSub, { color: colors.textLight }]}>
+                Tap to review & sign this contract
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+
+        {contract.status === "GENERATED" &&
+          hasBorrowerSigned() &&
+          !hasTenantSigned() && (
+            <View
+              style={[
+                styles.pendingBanner,
+                {
+                  backgroundColor: colors.warning + "15",
+                  borderColor: colors.warning + "40",
+                },
+              ]}
+            >
+              <Ionicons name="time-outline" size={20} color={colors.warning} />
+              <Text
+                style={[styles.pendingBannerText, { color: colors.warning }]}
+              >
+                Waiting for lender to sign
+              </Text>
+            </View>
+          )}
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Lender</Text>
@@ -335,7 +448,7 @@ export default function ContractDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Sign Contract</Text>
+              <Text style={styles.modalTitle}>Sign Loan Agreement</Text>
               <TouchableOpacity
                 onPress={() => setSignModalVisible(false)}
                 disabled={submitting}
@@ -344,14 +457,45 @@ export default function ContractDetailsScreen() {
               </TouchableOpacity>
             </View>
 
+            {contract && (
+              <View style={styles.signSummary}>
+                <Text style={styles.signSummaryRow}>
+                  <Text style={styles.signSummaryLabel}>Contract No.: </Text>
+                  {contract.contractNumber}
+                </Text>
+                <Text style={styles.signSummaryRow}>
+                  <Text style={styles.signSummaryLabel}>Loan Amount: </Text>
+                  NPR {contract.loanAmount.toLocaleString()}
+                </Text>
+                <Text style={styles.signSummaryRow}>
+                  <Text style={styles.signSummaryLabel}>Interest Rate: </Text>
+                  {contract.interestRate}% per month
+                </Text>
+                <Text style={styles.signSummaryRow}>
+                  <Text style={styles.signSummaryLabel}>Term: </Text>
+                  {contract.termMonths} months &bull;{" "}
+                  {contract.totalInstallments} installments
+                </Text>
+                <Text style={styles.signSummaryRow}>
+                  <Text style={styles.signSummaryLabel}>Total Due: </Text>
+                  NPR {contract.totalAmountDue.toLocaleString()}
+                </Text>
+              </View>
+            )}
+
             <Text style={styles.modalDescription}>
-              By signing this contract, you agree to all terms and conditions.
-              Please enter your full name as your digital signature.
+              By entering your full legal name below, you acknowledge that you
+              have read, understood, and voluntarily agree to be bound by all
+              terms and conditions of this Loan Agreement. Your typed name
+              constitutes your electronic signature.
             </Text>
 
+            <Text style={styles.inputLabel}>
+              Full Legal Name (Electronic Signature)
+            </Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter your full name"
+              placeholder="Type your full legal name exactly"
               placeholderTextColor={colors.textLight}
               value={signature}
               onChangeText={setSignature}
@@ -367,9 +511,12 @@ export default function ContractDetailsScreen() {
                 disabled={submitting}
               />
               <Button
-                title={submitting ? "Signing..." : "Sign Contract"}
+                title={submitting ? "Signing..." : "I Agree & Sign"}
                 onPress={handleSignContract}
-                style={styles.modalButton}
+                style={StyleSheet.flatten([
+                  styles.modalButton,
+                  styles.signConfirmButton,
+                ])}
                 disabled={submitting}
               />
             </View>
@@ -634,6 +781,36 @@ const createStyles = (colors: any) =>
       color: colors.textLight,
       marginBottom: spacing.lg,
       lineHeight: 22,
+      fontSize: 12,
+    },
+    signSummary: {
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      gap: spacing.xs,
+    },
+    signSummaryRow: {
+      ...typography.body,
+      color: colors.text,
+      fontSize: 12,
+      lineHeight: 20,
+    },
+    signSummaryLabel: {
+      fontWeight: "700" as any,
+      color: colors.text,
+    },
+    inputLabel: {
+      ...typography.caption,
+      color: colors.text,
+      fontWeight: "600" as any,
+      marginBottom: spacing.xs,
+      fontSize: 12,
+    },
+    signConfirmButton: {
+      backgroundColor: "#000",
     },
     input: {
       ...typography.body,
@@ -658,5 +835,69 @@ const createStyles = (colors: any) =>
     reportModalButton: {
       flex: 1,
       backgroundColor: colors.error,
+    },
+    timelineContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginHorizontal: spacing.md,
+      marginTop: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    timelineStep: {
+      alignItems: "center",
+      gap: 4,
+    },
+    timelineDot: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    timelineLabel: {
+      fontSize: 10,
+      textAlign: "center",
+      maxWidth: 60,
+    },
+    timelineLine: {
+      flex: 1,
+      height: 2,
+      marginBottom: 14,
+      marginHorizontal: 2,
+    },
+    signBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      gap: spacing.sm,
+    },
+    signBannerText: {
+      flex: 1,
+    },
+    signBannerTitle: {
+      fontSize: 14,
+      fontWeight: "700" as any,
+    },
+    signBannerSub: {
+      fontSize: 12,
+      marginTop: 2,
+    },
+    pendingBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      gap: spacing.sm,
+    },
+    pendingBannerText: {
+      fontSize: 13,
+      fontWeight: "600" as any,
     },
   });

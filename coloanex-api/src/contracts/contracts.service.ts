@@ -517,8 +517,8 @@ export class ContractsService {
     const startDate = new Date();
     const endDate = this.calculateEndDate(startDate, approvedTermMonths);
     const interestRate = Number(rule.interestRate);
-    const paymentFrequency =
-      (rule.paymentConfig as any)?.frequency || 'MONTHLY';
+    const paymentFrequency: string =
+      (rule.paymentConfig as any)?.allowedFrequencies?.[0] || 'MONTHLY';
 
     const { installmentAmount, totalInstallments, totalAmountDue } =
       this.calculateInstallments(
@@ -537,7 +537,9 @@ export class ContractsService {
       rule,
     );
 
-    const contractHtml = this.generateContractHtml(
+    const contractNumber = this.generateContractNumber();
+
+    const contractPdfUrl = this.buildContractHtml(
       loan.tenant,
       loan.borrower.user,
       approvedAmount,
@@ -550,12 +552,14 @@ export class ContractsService {
       endDate,
       rule,
       termsAndConditions,
+      paymentFrequency,
+      contractNumber,
     );
 
     const contract = await this.prisma.contract.create({
       data: {
-        contractNumber: this.generateContractNumber(),
-        tenantId,
+        contractNumber,
+        tenantId: loan.tenantId,
         borrowerId: loan.borrowerId,
         loanId,
         ruleId,
@@ -572,7 +576,7 @@ export class ContractsService {
         totalAmountPaid: 0,
         outstandingBalance: totalAmountDue,
         termsAndConditions,
-        contractPdfUrl: contractHtml,
+        contractPdfUrl,
       },
       include: {
         tenant: {
@@ -606,50 +610,17 @@ export class ContractsService {
     rule: any,
   ): string {
     const penaltyConfig = rule.penaltyConfig as any;
-    const loanLimits = rule.loanLimits as any;
+    const graceDays = penaltyConfig?.gracePeriodDays ?? 7;
 
-    return `
-LOAN AGREEMENT
+    const penaltyClause =
+      penaltyConfig?.penaltyType === 'PERCENTAGE'
+        ? `${penaltyConfig.penaltyAmount}% of the overdue amount`
+        : `NPR ${(penaltyConfig?.penaltyAmount ?? 0).toLocaleString()} (fixed)`;
 
-This Loan Agreement ("Agreement") is entered into as of the date of signing between:
-
-LENDER: ${tenantName}
-BORROWER: ${borrowerName}
-
-1. LOAN DETAILS
-   - Loan Amount: $${loanAmount.toLocaleString()}
-   - Interest Rate: ${interestRate}% per annum
-   - Loan Term: ${termMonths} months
-   - Rule Type: ${rule.name}
-
-2. REPAYMENT TERMS
-   The Borrower agrees to repay the loan in ${termMonths} monthly installments. Each payment will include both principal and interest as calculated according to the payment schedule.
-
-3. INTEREST
-   Interest shall accrue at a rate of ${interestRate}% per annum on the outstanding principal balance.
-
-4. LATE PAYMENT PENALTY
-   ${penaltyConfig?.type === 'PERCENTAGE' ? `A penalty of ${penaltyConfig.value}% will be charged on overdue amounts.` : `A fixed penalty of $${penaltyConfig?.value} will be charged for late payments.`}
-
-5. PREPAYMENT
-   The Borrower may prepay the loan in full or in part at any time without penalty.
-
-6. DEFAULT
-   The loan will be considered in default if:
-   - Payment is not received within ${penaltyConfig?.gracePeriod || 15} days of the due date
-   - The Borrower breaches any other term of this Agreement
-
-7. GOVERNING LAW
-   This Agreement shall be governed by and construed in accordance with applicable laws.
-
-8. ENTIRE AGREEMENT
-   This Agreement constitutes the entire agreement between the parties and supersedes all prior agreements and understandings.
-
-By signing this Agreement, both parties acknowledge that they have read, understood, and agree to be bound by its terms and conditions.
-    `.trim();
+    return `This Loan Agreement is entered into between ${tenantName} (the "Lender") and ${borrowerName} (the "Borrower"). The Lender agrees to provide a loan of NPR ${loanAmount.toLocaleString()} at an interest rate of ${interestRate}% per month for a term of ${termMonths} months. The Borrower agrees to repay the loan plus accrued interest in equal installments as specified in the payment schedule. Payments received after ${graceDays} days from the due date shall be subject to a late fee of ${penaltyClause} per month until the overdue amount is settled in full. The Borrower covenants to notify the Lender promptly of any event that may affect the ability to repay. The Borrower shall be liable for all reasonable costs and expenses incurred by the Lender in enforcing this Agreement, including legal fees. Prepayment of the outstanding principal is permitted at any time without penalty. This Agreement shall be governed by the applicable laws of the jurisdiction in which the Lender operates. Both parties acknowledge that they have read, understood, and voluntarily agree to be bound by these terms.`;
   }
 
-  private generateContractHtml(
+  private buildContractHtml(
     tenant: any,
     borrower: any,
     loanAmount: number,
@@ -662,16 +633,86 @@ By signing this Agreement, both parties acknowledge that they have read, underst
     endDate: Date,
     rule: any,
     termsAndConditions: string,
+    paymentFrequency: string,
+    contractNumber: string,
   ): string {
-    const contractNumber = this.generateContractNumber();
+    const penaltyConfig = rule.penaltyConfig as any;
+    const graceDays = penaltyConfig?.gracePeriodDays ?? 7;
+    const penaltyAmount =
+      penaltyConfig?.penaltyType === 'PERCENTAGE'
+        ? `${penaltyConfig.penaltyAmount}% of the overdue amount`
+        : `NPR ${(penaltyConfig?.penaltyAmount ?? 0).toLocaleString()}`;
 
-    return `
-<!DOCTYPE html>
+    const frequencyLabel: Record<string, string> = {
+      WEEKLY: 'weekly',
+      MONTHLY: 'monthly',
+      QUARTERLY: 'quarterly',
+    };
+    const freqLabel = frequencyLabel[paymentFrequency] ?? 'monthly';
+    const periodLabel: Record<string, string> = {
+      WEEKLY: 'week',
+      MONTHLY: 'month',
+      QUARTERLY: 'quarter',
+    };
+    const periodWord = periodLabel[paymentFrequency] ?? 'month';
+
+    const fmt = (d: Date) =>
+      d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+    const numberToWords = (n: number): string => {
+      const ones = [
+        '',
+        'one',
+        'two',
+        'three',
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+        'nine',
+        'ten',
+        'eleven',
+        'twelve',
+        'thirteen',
+        'fourteen',
+        'fifteen',
+        'sixteen',
+        'seventeen',
+        'eighteen',
+        'nineteen',
+      ];
+      const tens = [
+        '',
+        '',
+        'twenty',
+        'thirty',
+        'forty',
+        'fifty',
+        'sixty',
+        'seventy',
+        'eighty',
+        'ninety',
+      ];
+      if (n < 20) return ones[n];
+      if (n < 100)
+        return tens[Math.floor(n / 10)] + (n % 10 ? '-' + ones[n % 10] : '');
+      return n.toString();
+    };
+
+    const installmentsInWords =
+      numberToWords(totalInstallments) + ' (' + totalInstallments + ')';
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loan Contract - ${contractNumber}</title>
+    <title>Loan Agreement - ${contractNumber}</title>
     <style>
         * {
             margin: 0;
@@ -679,224 +720,215 @@ By signing this Agreement, both parties acknowledge that they have read, underst
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.75;
+            color: #000;
             background: #fff;
-            padding: 40px 20px;
         }
-        .container {
-            max-width: 800px;
+        .page {
+            width: 210mm;
+            min-height: 297mm;
             margin: 0 auto;
-            background: white;
-            border: 1px solid #ddd;
-            padding: 40px;
+            padding: 20mm 25mm 25mm 25mm;
+            background: #fff;
         }
-        .header {
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6mm;
+        }
+        .contract-ref {
+            font-size: 9pt;
+            color: #000;
+        }
+        .logo-wrap img {
+            height: 52px;
+            width: auto;
+        }
+        .logo-placeholder {
+            font-size: 10pt;
+            font-weight: bold;
+            text-align: right;
+        }
+        h1.doc-title {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 18pt;
+            font-weight: bold;
             text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .logo {
-            width: 120px;
-            height: auto;
-            margin-bottom: 15px;
-        }
-        h1 {
-            color: #1e40af;
-            font-size: 28px;
-            margin-bottom: 10px;
-        }
-        .contract-number {
-            color: #64748b;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        .section {
-            margin-bottom: 25px;
-        }
-        .section-title {
-            color: #1e40af;
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e2e8f0;
-            padding-bottom: 8px;
-        }
-        .parties {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .party {
-            padding: 15px;
-            background: #f8fafc;
-            border-left: 3px solid #2563eb;
-        }
-        .party-label {
-            font-size: 12px;
-            color: #64748b;
-            text-transform: uppercase;
+            margin-bottom: 8mm;
             letter-spacing: 0.5px;
-            margin-bottom: 5px;
         }
-        .party-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1e293b;
+        p {
+            text-align: justify;
+            margin-bottom: 4mm;
         }
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+        .section-list {
+            list-style-type: decimal;
+            padding-left: 6mm;
+            margin-bottom: 4mm;
         }
-        .info-item {
-            padding: 12px;
-            background: #f8fafc;
-            border-radius: 4px;
+        .section-list li {
+            text-align: justify;
+            margin-bottom: 4mm;
+            padding-left: 2mm;
         }
-        .info-label {
-            font-size: 12px;
-            color: #64748b;
-            margin-bottom: 4px;
+        .section-list li p {
+            margin-top: 2mm;
+            margin-bottom: 2mm;
         }
-        .info-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1e293b;
+        strong.section-head {
+            font-weight: bold;
         }
-        .terms-content {
-            white-space: pre-wrap;
-            font-size: 14px;
-            line-height: 1.8;
-            padding: 20px;
-            background: #f8fafc;
-            border-radius: 4px;
+        u {
+            text-decoration: underline;
         }
-        .signature-section {
-            margin-top: 50px;
+        .sig-area {
+            margin-top: 14mm;
+            page-break-inside: avoid;
+        }
+        .sig-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            gap: 20mm;
+            margin-top: 8mm;
         }
-        .signature-box {
-            border-top: 2px solid #cbd5e1;
-            padding-top: 10px;
+        .sig-block {
+            border-top: 1px solid #000;
+            padding-top: 3mm;
         }
-        .signature-label {
-            font-size: 14px;
-            color: #64748b;
-            margin-bottom: 5px;
+        .sig-block p {
+            margin-bottom: 1mm;
+            text-align: left;
         }
-        .signature-name {
-            font-weight: 600;
-            color: #1e293b;
+        .sig-name {
+            font-size: 11pt;
+            font-weight: bold;
         }
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
+        .sig-role {
+            font-size: 9pt;
+        }
+        .sig-date {
+            font-size: 9pt;
+            margin-top: 2mm;
+        }
+        .sig-value {
+            font-size: 11pt;
+            margin-top: 1mm;
+            min-height: 10mm;
+            border-bottom: 1px solid #000;
+            padding-bottom: 1mm;
+        }
+        .footer-note {
+            margin-top: 10mm;
+            font-size: 8.5pt;
             text-align: center;
-            font-size: 12px;
-            color: #64748b;
+            border-top: 1px solid #000;
+            padding-top: 3mm;
         }
         @media print {
-            body {
-                padding: 0;
-            }
-            .container {
-                border: none;
-                padding: 20px;
-            }
+            body { background: #fff; }
+            .page { width: 100%; padding: 15mm 20mm; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            ${tenant.logo ? `<img src="${tenant.logo}" alt="${tenant.name}" class="logo">` : ''}
-            <h1>LOAN AGREEMENT</h1>
-            <div class="contract-number">Contract No: ${contractNumber}</div>
-        </div>
+<div class="page">
 
-        <div class="parties">
-            <div class="party">
-                <div class="party-label">Lender</div>
-                <div class="party-name">${tenant.name}</div>
-            </div>
-            <div class="party">
-                <div class="party-label">Borrower</div>
-                <div class="party-name">${borrower.fullName}</div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Loan Summary</div>
-            <div class="info-grid">
-                <div class="info-item">
-                    <div class="info-label">Loan Amount</div>
-                    <div class="info-value">$${loanAmount.toLocaleString()}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Interest Rate</div>
-                    <div class="info-value">${interestRate}% per annum</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Loan Term</div>
-                    <div class="info-value">${termMonths} months</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Total Amount Due</div>
-                    <div class="info-value">$${totalAmountDue.toLocaleString()}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Number of Installments</div>
-                    <div class="info-value">${totalInstallments}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Installment Amount</div>
-                    <div class="info-value">$${installmentAmount.toLocaleString()}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Start Date</div>
-                    <div class="info-value">${startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">End Date</div>
-                    <div class="info-value">${endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Terms and Conditions</div>
-            <div class="terms-content">${termsAndConditions}</div>
-        </div>
-
-        <div class="signature-section">
-            <div class="signature-box">
-                <div class="signature-label">Lender Signature</div>
-                <div class="signature-name">${tenant.name}</div>
-                <div style="margin-top: 5px; font-size: 12px; color: #64748b;">Date: _____________</div>
-            </div>
-            <div class="signature-box">
-                <div class="signature-label">Borrower Signature</div>
-                <div class="signature-name">${borrower.fullName}</div>
-                <div style="margin-top: 5px; font-size: 12px; color: #64748b;">Date: _____________</div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>This is a legally binding agreement. Please read carefully before signing.</p>
-            <p>Generated on ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+    <div class="top-bar">
+        <div class="contract-ref">Contract No.: <strong>${contractNumber}</strong></div>
+        <div class="logo-wrap">
+            ${tenant.logo ? `<img src="${tenant.logo}" alt="${tenant.name}" />` : `<div class="logo-placeholder">${tenant.name}</div>`}
         </div>
     </div>
+
+    <h1 class="doc-title">Loan Agreement</h1>
+
+    <p>
+        This Loan Agreement shall become effective on <u>${fmt(startDate)}</u> (the &ldquo;Execution Date&rdquo;) and is subject to the terms and conditions stated below by and between <u>${tenant.name}</u> (the &ldquo;Lender&rdquo;) and <u>${borrower.fullName}</u> (the &ldquo;Borrower&rdquo;), collectively referred to as the &ldquo;Parties&rdquo;.
+    </p>
+
+    <p>
+        <strong>WHEREAS</strong> upon the terms and conditions outlined in this Agreement, the Parties wish to mutually acknowledge the debt that binds them under the Lender&rsquo;s amount to the Borrower.
+    </p>
+
+    <ol class="section-list">
+
+        <li>
+            <strong class="section-head">LOAN AMOUNT.</strong> Subject to the terms and conditions herein, the Lender agreed to loan NPR <u>${loanAmount.toLocaleString()}</u> (Nepalese Rupees) to the Borrower on <u>${fmt(startDate)}</u>.
+        </li>
+
+        <li>
+            <strong class="section-head">PAYMENTS.</strong> The Borrower agrees to repay this amount to the Lender, with interest at the rate of <u>${interestRate}% per month</u> from the due amount.
+            <p>
+                The Borrower shall repay the loan in <u>${installmentsInWords} consecutive ${freqLabel} installments</u> of principal and interest of NPR <u>${installmentAmount.toLocaleString()}</u> each, on the first day of each <u>${periodWord}</u>, starting on <u>${fmt(startDate)}</u>, and continuing until <u>${fmt(endDate)}</u>. The total repayable amount is NPR <u>${totalAmountDue.toLocaleString()}</u>. The repayment shall be considered late if received by the Lender <u>seven (7) days</u> after its due date.
+            </p>
+        </li>
+
+        <li>
+            <strong class="section-head">PENALTY.</strong> If the Lender is not paid on the due date, the Borrower shall pay a late fee of <u>${penaltyAmount}</u> per ${periodWord} for every ${periodWord} or part thereof that the payment remains overdue, commencing after a grace period of <u>${graceDays} days</u> from the due date.
+        </li>
+
+        <li>
+            <strong class="section-head">COVENANTS.</strong> The Borrower shall notify the Lender of any event of default, and the steps, if any, being taken to remedy it, promptly upon becoming aware of its occurrence.
+            <p>
+                The Borrower shall be liable for all costs, expenses, and expenditures incurred, including, and without limitation, the complete legal costs and fees of the Lender in enforcing this Agreement in the event of default.
+            </p>
+        </li>
+
+        <li>
+            <strong class="section-head">PREPAYMENT.</strong> The Borrower may prepay the outstanding principal balance in full or in part at any time without incurring any prepayment penalty.
+        </li>
+
+        <li>
+            <strong class="section-head">DEFAULT.</strong> The Borrower shall be deemed in default if: (a) any payment is not received within <u>${graceDays} days</u> of the due date; (b) the Borrower breaches any representation, warranty, or covenant under this Agreement; or (c) the Borrower becomes insolvent or is subject to bankruptcy proceedings. Upon default, the entire unpaid balance, together with accrued interest and penalties, shall become immediately due and payable at the option of the Lender.
+        </li>
+
+        <li>
+            <strong class="section-head">CONFIDENTIALITY.</strong> Both Parties agree to keep the terms of this Agreement confidential and shall not disclose the same to any third party without the prior written consent of the other Party, except as required by law.
+        </li>
+
+        <li>
+            <strong class="section-head">GOVERNING LAW.</strong> This Agreement shall be governed by and construed in accordance with the applicable laws of the jurisdiction in which the Lender is registered. Any dispute arising out of or in connection with this Agreement shall be resolved through amicable negotiation between the Parties, failing which it shall be referred to the appropriate courts of competent jurisdiction.
+        </li>
+
+        <li>
+            <strong class="section-head">ENTIRE AGREEMENT.</strong> This Agreement constitutes the entire agreement between the Parties with respect to the subject matter hereof and supersedes all prior negotiations, representations, warranties, and understandings of the Parties with respect hereto. No amendment or modification of this Agreement shall be valid unless made in writing and duly signed by both Parties.
+        </li>
+
+    </ol>
+
+    <p>
+        By signing below, both Parties acknowledge that they have read, fully understood, and voluntarily agree to be bound by all the terms and conditions of this Agreement.
+    </p>
+
+    <div class="sig-area">
+        <div class="sig-grid">
+            <div class="sig-block">
+                <p class="sig-role"><strong>LENDER</strong></p>
+                <p class="sig-name">${tenant.name}</p>
+                <p class="sig-value">&nbsp;</p>
+                <p class="sig-role">Authorized Signatory</p>
+                <p class="sig-date">Date: ___________________________</p>
+            </div>
+            <div class="sig-block">
+                <p class="sig-role"><strong>BORROWER</strong></p>
+                <p class="sig-name">${borrower.fullName}</p>
+                <p class="sig-value">&nbsp;</p>
+                <p class="sig-role">Borrower Signature</p>
+                <p class="sig-date">Date: ___________________________</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        <p>This is a legally binding agreement. Please read carefully before signing. &nbsp;&bull;&nbsp; Generated on ${fmt(new Date())} &nbsp;&bull;&nbsp; ${tenant.name}</p>
+    </div>
+
+</div>
 </body>
-</html>
-    `.trim();
+</html>`.trim();
   }
 
   async reportContract(

@@ -73,6 +73,7 @@ export const loansApi = baseApi.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [
         { type: "Loans", id },
         { type: "Loans", id: "LIST" },
+        { type: "Contracts", id: "LIST" },
       ],
     }),
   }),

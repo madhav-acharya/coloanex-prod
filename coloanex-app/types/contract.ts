@@ -69,7 +69,15 @@ export interface Contract {
   borrowerId: string;
   loanId: string;
   ruleId: string;
-  status: "DRAFT" | "ACTIVE" | "COMPLETED" | "DEFAULTED" | "CANCELLED";
+  status:
+    | "DRAFT"
+    | "GENERATED"
+    | "SIGNED"
+    | "ACTIVE"
+    | "COMPLETED"
+    | "DEFAULTED"
+    | "CANCELLED"
+    | "REPORTED";
   startDate: string;
   endDate: string;
   loanAmount: number;
@@ -86,6 +94,8 @@ export interface Contract {
   blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
+  reportReason?: string;
+  signedAt?: string;
   createdAt: string;
   updatedAt: string;
   tenant?: {
