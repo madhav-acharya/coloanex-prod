@@ -5,8 +5,8 @@ import {
   FileSignature,
   Send,
   FileText,
-  Printer,
-  Download,
+  ExternalLink,
+  FilePlus,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
@@ -30,6 +30,7 @@ import {
   useDeleteContractMutation,
   useSignContractMutation,
   useDisburseContractMutation,
+  useGenerateContractPdfMutation,
   Contract,
   SignContractDto,
   DisburseContractDto,
@@ -85,25 +86,8 @@ function ContractStatusBadge({ status }: { status: ContractStatus }) {
   );
 }
 
-function printContractHtml(html: string) {
-  const win = window.open("", "_blank");
-  if (!win) return;
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.addEventListener("load", () => setTimeout(() => win.print(), 400));
-}
-
-function exportContractHtml(html: string, contractNumber: string) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${contractNumber}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+function openPdfUrl(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export default function Contracts() {
@@ -146,6 +130,8 @@ export default function Contracts() {
     useDisburseContractMutation();
   const [deleteContract, { isLoading: isDeleting }] =
     useDeleteContractMutation();
+  const [generateContractPdf, { isLoading: isGenerating }] =
+    useGenerateContractPdfMutation();
 
   const handleSort = useCallback(
     (key: string) => {
@@ -230,6 +216,22 @@ export default function Contracts() {
     },
   ];
 
+  const handleGenerateContract = async (contract: Contract) => {
+    try {
+      await generateContractPdf(contract.id).unwrap();
+      toast({
+        title: "Success",
+        description: "Contract PDF generated successfully",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.data?.message || "Failed to generate contract PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     if (!contractToDelete) return;
     try {
@@ -294,9 +296,17 @@ export default function Contracts() {
 
   const actions = [
     {
+      label: "Generate Contract",
+      icon: <FilePlus className="w-4 h-4" />,
+      onClick: (c: Contract) => handleGenerateContract(c),
+      show: (c: Contract) => c.status === "DRAFT" && !c.contractPdfUrl,
+      isLoading: isGenerating,
+    },
+    {
       label: "View Contract",
       icon: <Eye className="w-4 h-4" />,
       onClick: (c: Contract) => setViewContract(c),
+      show: (c: Contract) => !!c.contractPdfUrl,
     },
     {
       label: "Sign",
@@ -419,10 +429,9 @@ export default function Contracts() {
           <div className="flex-1 overflow-hidden rounded border bg-white">
             {viewContract?.contractPdfUrl ? (
               <iframe
-                srcDoc={viewContract.contractPdfUrl}
+                src={viewContract.contractPdfUrl}
                 title="Contract Preview"
                 className="w-full h-full border-0"
-                sandbox="allow-same-origin allow-popups"
               />
             ) : (
               <div className="p-6 h-full overflow-auto">
@@ -439,27 +448,12 @@ export default function Contracts() {
               className="cursor-pointer gap-2"
               onClick={() =>
                 viewContract?.contractPdfUrl &&
-                exportContractHtml(
-                  viewContract.contractPdfUrl,
-                  viewContract.contractNumber,
-                )
+                openPdfUrl(viewContract.contractPdfUrl)
               }
               disabled={!viewContract?.contractPdfUrl}
             >
-              <Download className="w-4 h-4" />
-              Export
-            </Button>
-            <Button
-              variant="outline"
-              className="cursor-pointer gap-2"
-              onClick={() =>
-                viewContract?.contractPdfUrl &&
-                printContractHtml(viewContract.contractPdfUrl)
-              }
-              disabled={!viewContract?.contractPdfUrl}
-            >
-              <Printer className="w-4 h-4" />
-              Print
+              <ExternalLink className="w-4 h-4" />
+              Open PDF
             </Button>
             {viewContract?.status === "GENERATED" && (
               <Button
