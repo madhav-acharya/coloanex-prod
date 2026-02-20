@@ -74,7 +74,7 @@ export class CloudinaryUploadsService {
     return new Promise((resolve, reject) => {
       const uploadOptions: Record<string, unknown> = {
         folder,
-        resource_type: 'image',
+        resource_type: 'raw',
         format: 'pdf',
       };
       if (filename) {
