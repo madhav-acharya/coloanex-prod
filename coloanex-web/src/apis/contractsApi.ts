@@ -190,6 +190,16 @@ export const contractsApi = baseApi.injectEndpoints({
         { type: "Contracts", id: "LIST" },
       ],
     }),
+    generateContractPdf: builder.mutation<Contract, string>({
+      query: (id) => ({
+        url: `/contracts/${id}/generate`,
+        method: "POST",
+      }),
+      invalidatesTags: (result, error, id) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -201,4 +211,5 @@ export const {
   useSignContractMutation,
   useDisburseContractMutation,
   useDeleteContractMutation,
+  useGenerateContractPdfMutation,
 } = contractsApi;
