@@ -568,10 +568,7 @@ export class LoansService {
     }
 
     const updateData: any = {
-      status:
-        reviewLoanDto.status === LoanStatus.APPROVED
-          ? LoanStatus.CONTRACT_GENERATED
-          : reviewLoanDto.status,
+      status: reviewLoanDto.status,
       rejectionReason: reviewLoanDto.rejectionReason,
     };
 
@@ -625,7 +622,7 @@ export class LoansService {
       action,
       ActivityEntityType.LOAN,
       id,
-      `Loan ${reviewLoanDto.status === LoanStatus.APPROVED ? 'approved and contract generated' : reviewLoanDto.status.toLowerCase()}`,
+      `Loan ${reviewLoanDto.status === LoanStatus.APPROVED ? 'approved and contract created' : reviewLoanDto.status.toLowerCase()}`,
       { status: loan.status },
       { status: updated.status, reason: reviewLoanDto.rejectionReason },
       ipAddress,

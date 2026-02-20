@@ -49,6 +49,11 @@ export class ContractsController {
     return this.contractsService.update(id, updateContractDto, req.user);
   }
 
+  @Post(':id/generate')
+  generatePdf(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
+    return this.contractsService.generateContractPdf(id, req.user);
+  }
+
   @Post(':id/sign')
   sign(
     @Param('id') id: string,
