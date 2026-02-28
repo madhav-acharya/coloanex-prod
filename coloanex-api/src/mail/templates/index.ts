@@ -6,3 +6,7 @@ export { loanRequestTemplate } from './loan-request.template';
 export type { LoanRequestTemplateData } from './loan-request.template';
 export { tenantCreationTemplate } from './tenant-creation.template';
 export type { TenantCreationTemplateData } from './tenant-creation.template';
+export { loanApprovalTemplate } from './loan-approval.template';
+export type { LoanApprovalTemplateData } from './loan-approval.template';
+export { contractGeneratedTemplate } from './contract-generated.template';
+export type { ContractGeneratedTemplateData } from './contract-generated.template';
