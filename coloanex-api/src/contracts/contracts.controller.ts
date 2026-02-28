@@ -14,6 +14,7 @@ import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { SignContractDto } from './dto/sign-contract.dto';
 import { DisburseContractDto } from './dto/disburse-contract.dto';
+import { SignAndDisburseContractDto } from './dto/sign-and-disburse-contract.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
@@ -61,6 +62,15 @@ export class ContractsController {
     @Request() req: { user: JwtPayload },
   ) {
     return this.contractsService.signContract(id, signContractDto, req.user);
+  }
+
+  @Post(':id/sign-and-disburse')
+  signAndDisburse(
+    @Param('id') id: string,
+    @Body() dto: SignAndDisburseContractDto,
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.contractsService.signAndDisburse(id, dto, req.user);
   }
 
   @Post(':id/report')
