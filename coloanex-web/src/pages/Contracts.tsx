@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { toast as sonnerToast } from "sonner";
 import {
   Eye,
   Trash2,
@@ -217,13 +218,19 @@ export default function Contracts() {
   ];
 
   const handleGenerateContract = async (contract: Contract) => {
+    const toastId = sonnerToast.loading("Generating contract PDF…", {
+      description: `Preparing ${contract.contractNumber}`,
+      duration: Infinity,
+    });
     try {
       await generateContractPdf(contract.id).unwrap();
+      sonnerToast.dismiss(toastId);
       toast({
         title: "Success",
         description: "Contract PDF generated successfully",
       });
     } catch (err: any) {
+      sonnerToast.dismiss(toastId);
       toast({
         title: "Error",
         description: err?.data?.message || "Failed to generate contract PDF",
@@ -299,7 +306,8 @@ export default function Contracts() {
       label: "Generate Contract",
       icon: <FilePlus className="w-4 h-4" />,
       onClick: (c: Contract) => handleGenerateContract(c),
-      show: (c: Contract) => c.status === "DRAFT" && !c.contractPdfUrl,
+      show: (c: Contract) =>
+        (c.status === "DRAFT" && !c.contractPdfUrl) || c.status === "GENERATED",
       isLoading: isGenerating,
     },
     {

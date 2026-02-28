@@ -621,9 +621,12 @@ export class ContractsService {
       );
     }
 
-    if (contract.status !== ContractStatus.DRAFT) {
+    if (
+      contract.status !== ContractStatus.DRAFT &&
+      contract.status !== ContractStatus.GENERATED
+    ) {
       throw new BadRequestException(
-        'Contract PDF can only be generated for DRAFT contracts',
+        'Contract PDF can only be generated for DRAFT or GENERATED contracts',
       );
     }
 
