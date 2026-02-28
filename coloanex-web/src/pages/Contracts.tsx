@@ -1,4 +1,6 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/store";
 import { toast as sonnerToast } from "sonner";
 import {
   Eye,
@@ -8,6 +10,11 @@ import {
   FileText,
   ExternalLink,
   FilePlus,
+  ShieldCheck,
+  CreditCard,
+  CheckCircle2,
+  AlertCircle,
+  Banknote,
 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
@@ -29,13 +36,18 @@ import { Label } from "@/components/ui/label";
 import {
   useGetContractsQuery,
   useDeleteContractMutation,
-  useSignContractMutation,
   useDisburseContractMutation,
   useGenerateContractPdfMutation,
+  useSignAndDisburseContractMutation,
   Contract,
-  SignContractDto,
   DisburseContractDto,
+  SignAndDisburseContractDto,
 } from "@/apis/contractsApi";
+import {
+  useInitiatePaymentMutation,
+  useVerifyPaymentMutation,
+} from "@/apis/paymentsApi";
+import { useGetMyWalletQuery } from "@/apis/walletsApi";
 
 type ContractStatus =
   | "DRAFT"
@@ -95,20 +107,23 @@ export default function Contracts() {
   const { toast } = useToast();
 
   const [viewContract, setViewContract] = useState<Contract | null>(null);
-  const [signDialogOpen, setSignDialogOpen] = useState(false);
+  // Sign & Disburse dialog state
+  const [sdDialogOpen, setSdDialogOpen] = useState(false);
+  const [contractToSd, setContractToSd] = useState<Contract | null>(null);
+  const [sdMethod, setSdMethod] =
+    useState<SignAndDisburseContractDto["method"]>("BANK_TRANSFER");
+  const [sdTransactionId, setSdTransactionId] = useState("");
+  const [sdAccountNumber, setSdAccountNumber] = useState("");
+  const [sdAccountName, setSdAccountName] = useState("");
+
   const [disburseDialogOpen, setDisburseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [contractToSign, setContractToSign] = useState<Contract | null>(null);
   const [contractToDisburse, setContractToDisburse] = useState<Contract | null>(
     null,
   );
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null,
   );
-  const [signatureData, setSignatureData] = useState({
-    signature: "",
-    ipAddress: "",
-  });
   const [disburseData, setDisburseData] = useState<DisburseContractDto>({
     method: "WALLET",
     accountNumber: "",
@@ -123,16 +138,26 @@ export default function Contracts() {
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: myWallet } = useGetMyWalletQuery();
+
   const { data: contracts = [], isLoading } = useGetContractsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
-  const [signContract, { isLoading: isSigning }] = useSignContractMutation();
+  const [signAndDisburseContract, { isLoading: isSd }] =
+    useSignAndDisburseContractMutation();
   const [disburseContract, { isLoading: isDisbursing }] =
     useDisburseContractMutation();
   const [deleteContract, { isLoading: isDeleting }] =
     useDeleteContractMutation();
   const [generateContractPdf, { isLoading: isGenerating }] =
     useGenerateContractPdfMutation();
+  const [initiatePayment, { isLoading: isInitiatingPayment }] =
+    useInitiatePaymentMutation();
+  const [verifyPayment] = useVerifyPaymentMutation();
+
+  const hasBorrowerSigned = (c: Contract) =>
+    c.signatures?.some((s) => s.signedBy === "BORROWER") ?? false;
 
   const handleSort = useCallback(
     (key: string) => {
@@ -255,22 +280,161 @@ export default function Contracts() {
     }
   };
 
-  const confirmSign = async () => {
-    if (!contractToSign) return;
+  // Detect eSewa callback after redirect for sign-and-disburse flow
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const transactionUuid = params.get("transaction_uuid");
+    const status = params.get("status");
+    const isSdCallback = params.get("sd_esewa") === "1";
+
+    if (!transactionUuid || !isSdCallback) return;
+
+    const pendingRaw = sessionStorage.getItem("coloanex_pending_sd");
+    if (!pendingRaw) return;
+
+    const pending = JSON.parse(pendingRaw) as {
+      contractId: string;
+      signature: string;
+      transactionId: string;
+      transactionUuid: string;
+      amount: number;
+    };
+    sessionStorage.removeItem("coloanex_pending_sd");
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (status !== "COMPLETE") {
+      toast({
+        title: "Payment Failed",
+        description: "eSewa payment was not completed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    verifyPayment({
+      transactionId: pending.transactionId,
+      transactionUuid,
+      totalAmount: pending.amount,
+    })
+      .unwrap()
+      .then((result) => {
+        if (!result.success) throw new Error("Payment verification failed");
+        return signAndDisburseContract({
+          id: pending.contractId,
+          data: {
+            signature: pending.signature,
+            method: "ESEWA",
+            transactionId: result.transactionId,
+          },
+        }).unwrap();
+      })
+      .then(() => {
+        toast({
+          title: "Success",
+          description:
+            "Contract signed and loan disbursed successfully via eSewa.",
+        });
+      })
+      .catch((err: any) => {
+        toast({
+          title: "Error",
+          description:
+            err?.data?.message ||
+            err?.message ||
+            "Failed to complete sign & disburse",
+          variant: "destructive",
+        });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const openSdDialog = (c: Contract) => {
+    setContractToSd(c);
+    setSdMethod("BANK_TRANSFER");
+    setSdTransactionId("");
+    setSdAccountNumber("");
+    setSdAccountName("");
+    setSdDialogOpen(true);
+  };
+
+  const confirmSignAndDisburse = async () => {
+    if (!contractToSd) return;
     try {
-      const data: SignContractDto = {
-        signature: signatureData.signature,
-        ipAddress: signatureData.ipAddress || undefined,
-      };
-      await signContract({ id: contractToSign.id, data }).unwrap();
-      toast({ title: "Success", description: "Contract signed successfully" });
-      setSignDialogOpen(false);
-      setContractToSign(null);
-      setSignatureData({ signature: "", ipAddress: "" });
+      await signAndDisburseContract({
+        id: contractToSd.id,
+        data: {
+          signature: user?.fullName ?? "",
+          method: sdMethod,
+          transactionId: sdTransactionId || undefined,
+          accountNumber: sdAccountNumber || undefined,
+          accountName: sdAccountName || undefined,
+        },
+      }).unwrap();
+      toast({
+        title: "Success",
+        description: "Contract signed and loan disbursed successfully.",
+      });
+      setSdDialogOpen(false);
+      setContractToSd(null);
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err?.data?.message || "Failed to sign contract",
+        description: err?.data?.message || "Failed to sign & disburse",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEsewaPay = async () => {
+    if (!contractToSd || !myWallet) {
+      toast({
+        title: "Error",
+        description: "Wallet not found. Please set up your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const successUrl = `${window.location.origin}${window.location.pathname}?sd_esewa=1`;
+      const failureUrl = `${window.location.origin}${window.location.pathname}?sd_esewa_fail=1`;
+
+      const result = await initiatePayment({
+        walletId: myWallet.id,
+        contractId: contractToSd.id,
+        amount: contractToSd.loanAmount,
+        type: "WITHDRAW",
+        gateway: "ESEWA",
+        successUrl,
+        failureUrl,
+      }).unwrap();
+
+      sessionStorage.setItem(
+        "coloanex_pending_sd",
+        JSON.stringify({
+          contractId: contractToSd.id,
+          signature: user?.fullName ?? "",
+          transactionId: result.transactionId,
+          transactionUuid: result.transactionUuid,
+          amount: contractToSd.loanAmount,
+        }),
+      );
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = result.paymentUrl;
+      Object.entries(result.formData).forEach(([key, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.data?.message || "Failed to initiate eSewa payment",
         variant: "destructive",
       });
     }
@@ -317,12 +481,9 @@ export default function Contracts() {
       show: (c: Contract) => !!c.contractPdfUrl,
     },
     {
-      label: "Sign",
+      label: "Sign & Disburse",
       icon: <FileSignature className="w-4 h-4" />,
-      onClick: (c: Contract) => {
-        setContractToSign(c);
-        setSignDialogOpen(true);
-      },
+      onClick: (c: Contract) => openSdDialog(c),
       show: (c: Contract) => c.status === "GENERATED",
     },
     {
@@ -467,13 +628,13 @@ export default function Contracts() {
               <Button
                 className="cursor-pointer gap-2 bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
-                  setContractToSign(viewContract);
+                  const c = viewContract;
                   setViewContract(null);
-                  setSignDialogOpen(true);
+                  openSdDialog(c);
                 }}
               >
                 <FileSignature className="w-4 h-4" />
-                Sign Contract
+                Sign &amp; Disburse
               </Button>
             )}
             {viewContract?.status === "SIGNED" && (
@@ -493,102 +654,182 @@ export default function Contracts() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={signDialogOpen} onOpenChange={setSignDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <FileSignature className="w-5 h-5" />
-              Sign Loan Agreement
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {contractToSign && (
-              <div className="rounded border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-relaxed text-gray-700 font-serif">
-                <p className="mb-1">
-                  <span className="font-semibold">Contract No.:</span>{" "}
-                  {contractToSign.contractNumber}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold">Borrower:</span>{" "}
-                  {contractToSign.borrower?.user?.fullName ?? "—"}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold">Loan Amount:</span> NPR{" "}
-                  {contractToSign.loanAmount.toLocaleString()}
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold">Interest Rate:</span>{" "}
-                  {contractToSign.interestRate}% per month
-                </p>
-                <p className="mb-1">
-                  <span className="font-semibold">Term:</span>{" "}
-                  {contractToSign.termMonths} months &bull;{" "}
-                  {contractToSign.totalInstallments} installments
-                </p>
-                <p>
-                  <span className="font-semibold">Total Amount Due:</span> NPR{" "}
-                  {contractToSign.totalAmountDue.toLocaleString()}
-                </p>
-              </div>
-            )}
-            <p className="text-xs leading-relaxed text-gray-600 font-serif border-l-2 border-gray-300 pl-3">
-              By entering your full legal name below, you acknowledge that you
-              have read, understood, and voluntarily agree to be bound by all
-              terms and conditions of this Loan Agreement. Your typed name will
-              serve as your electronic signature.
-            </p>
-            <div className="space-y-1">
-              <Label htmlFor="signature" className="text-sm font-semibold">
-                Full Legal Name (Electronic Signature)
-              </Label>
-              <Input
-                id="signature"
-                value={signatureData.signature}
-                onChange={(e) =>
-                  setSignatureData({
-                    ...signatureData,
-                    signature: e.target.value,
-                  })
-                }
-                placeholder="Type your full legal name exactly"
-                className="font-serif text-sm"
-              />
+      <Dialog open={sdDialogOpen} onOpenChange={setSdDialogOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden gap-0">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-green-100 text-green-700 shrink-0">
+              <FileSignature className="w-[18px] h-[18px]" />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="ipAddress" className="text-sm text-gray-500">
-                IP Address (optional)
-              </Label>
-              <Input
-                id="ipAddress"
-                value={signatureData.ipAddress}
-                onChange={(e) =>
-                  setSignatureData({
-                    ...signatureData,
-                    ipAddress: e.target.value,
-                  })
-                }
-                placeholder="e.g. 192.168.1.1"
-                className="text-sm"
-              />
+            <div>
+              <DialogTitle className="text-sm font-semibold text-foreground leading-tight">
+                Sign &amp; Disburse Loan
+              </DialogTitle>
+              {contractToSd && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {contractToSd.contractNumber}
+                </p>
+              )}
             </div>
           </div>
-          <DialogFooter>
+
+          <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Contract Summary Grid */}
+            {contractToSd && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="col-span-3 flex items-center justify-between rounded-lg bg-muted/50 border px-3.5 py-2.5">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Borrower
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {contractToSd.borrower?.user?.fullName ?? "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg bg-muted/50 border px-3 py-2.5">
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Amount
+                  </span>
+                  <span className="text-xs font-bold text-foreground mt-1">
+                    NPR {contractToSd.loanAmount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg bg-muted/50 border px-3 py-2.5">
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Rate
+                  </span>
+                  <span className="text-xs font-semibold text-foreground mt-1">
+                    {contractToSd.interestRate}% / mo
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg bg-muted/50 border px-3 py-2.5">
+                  <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Term
+                  </span>
+                  <span className="text-xs font-semibold text-foreground mt-1">
+                    {contractToSd.termMonths} mo
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Borrower signature status */}
+            {contractToSd && hasBorrowerSigned(contractToSd) ? (
+              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <span className="text-xs text-green-800">
+                  Borrower has signed — complete payment below to activate
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="text-xs text-amber-800">
+                  Borrower must sign before the lender can activate this
+                  contract.
+                </span>
+              </div>
+            )}
+
+            {/* Payment + signature — only if borrower signed */}
+            {contractToSd && hasBorrowerSigned(contractToSd) && (
+              <>
+                {/* eSewa payment card */}
+                <div className="flex items-center gap-3 rounded-xl border-2 border-[#60B246] bg-[#f6fff0] px-4 py-3">
+                  <img
+                    src="https://esewa.com.np/common/images/esewa_logo.png"
+                    alt="eSewa"
+                    className="h-8 w-auto object-contain"
+                    onError={(e) => {
+                      const t = e.currentTarget;
+                      t.style.display = "none";
+                      const fallback =
+                        t.nextElementSibling as HTMLElement | null;
+                      if (fallback) fallback.style.display = "flex";
+                    }}
+                  />
+                  {/* Fallback if image fails to load */}
+                  <span
+                    style={{ display: "none" }}
+                    className="items-center justify-center w-8 h-8 rounded-full bg-[#60B246] text-white font-black text-lg leading-none"
+                  >
+                    e
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-[#3a7a1e]">
+                      Pay via eSewa
+                    </p>
+                    <p className="text-[10px] text-[#5a9a30] mt-0.5">
+                      NPR {contractToSd?.loanAmount.toLocaleString()}
+                    </p>
+                  </div>
+                  <CheckCircle2 className="w-5 h-5 text-[#60B246] shrink-0" />
+                </div>
+
+                {/* eSewa redirect notice */}
+                <div className="flex gap-2.5 rounded-lg bg-green-50 border border-green-200 px-3.5 py-3 text-xs text-green-800 leading-relaxed">
+                  <Banknote className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                  <p>
+                    You will be redirected to{" "}
+                    <span className="font-semibold">eSewa</span> to complete the
+                    payment. Contract is signed &amp; loan activated
+                    automatically on success.
+                  </p>
+                </div>
+
+                {/* Lender signature */}
+                <div className="rounded-xl border-2 border-green-200 bg-green-50/60 px-4 pt-3 pb-2.5">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                    Lender Electronic Signature
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {user?.fullName ?? "—"}
+                  </p>
+                  <div className="mt-2 pt-1.5 border-t border-green-200 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 text-green-600" />
+                    <p className="text-[10px] text-green-700">
+                      Signed digitally &middot;{" "}
+                      {new Date().toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t bg-muted/20">
             <Button
               variant="outline"
-              onClick={() => setSignDialogOpen(false)}
-              disabled={isSigning}
-              className="cursor-pointer"
+              size="sm"
+              onClick={() => setSdDialogOpen(false)}
+              disabled={isSd || isInitiatingPayment}
+              className="cursor-pointer h-8 text-xs"
             >
               Cancel
             </Button>
-            <Button
-              onClick={confirmSign}
-              disabled={isSigning || !signatureData.signature.trim()}
-              className="bg-black hover:bg-gray-900 text-white cursor-pointer font-serif"
-            >
-              {isSigning ? "Signing…" : "I Agree & Sign"}
-            </Button>
-          </DialogFooter>
+            {contractToSd && hasBorrowerSigned(contractToSd) && (
+              <Button
+                size="sm"
+                onClick={handleEsewaPay}
+                disabled={isInitiatingPayment || !myWallet}
+                className="cursor-pointer h-8 text-xs bg-[#60B246] hover:bg-[#4e9a38] text-white gap-2"
+              >
+                <img
+                  src="https://esewa.com.np/common/images/esewa_logo.png"
+                  alt="eSewa"
+                  className="h-4 w-auto object-contain brightness-0 invert"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+                {isInitiatingPayment ? "Redirecting…" : "Pay with eSewa"}
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
