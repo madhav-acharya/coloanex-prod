@@ -335,7 +335,7 @@ export default function LoanRequests() {
 
     toast({
       title: "Success",
-      description: `Loan request ${status === LoanStatus.APPROVED ? "approved and contract generated" : status.toLowerCase()} successfully`,
+      description: `Loan request ${status === LoanStatus.APPROVED ? "approved. Generate contract now" : status.toLowerCase()} successfully`,
     });
 
     const selectedArray = Array.from(selectedRows);
