@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { ContractsService } from '../contracts/contracts.service';
-import { loanRequestTemplate } from '../mail/templates';
+import { loanRequestTemplate, loanApprovalTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
 import { ReviewLoanDto } from './dto/review-loan.dto';
@@ -646,53 +646,81 @@ export class LoansService {
     };
 
     try {
-      const dashboardUrl =
-        process.env.APP_URL || 'https://app.example.com/loans';
-
-      await this.mailService.sendMail(
-        {
-          to: updated.borrower.user.email,
-          subject: `Loan Application ${reviewLoanDto.status === LoanStatus.APPROVED ? 'Approved - Contract Ready' : reviewLoanDto.status === LoanStatus.REJECTED ? 'Status Update' : 'Update'} - ${tenant?.name || 'CoLoanEx'}`,
-          html: loanRequestTemplate({
-            tenantName: tenant?.name || 'CoLoanEx',
-            tenantLogo: tenant?.logo || undefined,
-            userName: updated.borrower.user.fullName,
-            status: statusMap[updated.status] || 'UNDER_REVIEW',
-            loanAmount: `$${updated.requestedAmount.toLocaleString()}`,
-            loanPurpose: updated.purpose || undefined,
-            loanId: updated.id,
-            applicationDate: new Date(updated.createdAt).toLocaleDateString(
-              'en-US',
-              {
+      if (reviewLoanDto.status === LoanStatus.APPROVED) {
+        // Dedicated approval email
+        await this.mailService.sendMail(
+          {
+            to: updated.borrower.user.email,
+            subject: `Your Loan Has Been Approved – ${tenant?.name || 'CoLoanEx'}`,
+            html: loanApprovalTemplate({
+              tenantName: tenant?.name || 'CoLoanEx',
+              tenantLogo: tenant?.logo || undefined,
+              userName: updated.borrower.user.fullName,
+              approvedAmount: `$${updated.approvedAmount?.toLocaleString() || updated.requestedAmount.toLocaleString()}`,
+              requestedAmount: `$${updated.requestedAmount.toLocaleString()}`,
+              interestRate: 'Per agreed terms',
+              termMonths:
+                updated.approvedTermMonths ||
+                reviewLoanDto.approvedTermMonths ||
+                0,
+              loanPurpose: updated.purpose || undefined,
+              loanId: updated.id,
+              approvalDate: new Date().toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
-              },
-            ),
-            reviewedDate: new Date().toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+              }),
+              contractUrl: `${process.env.APP_URL || 'https://app.example.com'}/contracts`,
+              supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+              tenantPrimaryColor: tenant?.primaryColor || undefined,
+              tenantWebsite: tenant?.website || undefined,
             }),
-            rejectionReason: reviewLoanDto.rejectionReason || undefined,
-            approvedAmount:
-              reviewLoanDto.status === LoanStatus.APPROVED
-                ? `$${updated.approvedAmount?.toLocaleString() || updated.requestedAmount.toLocaleString()}`
-                : undefined,
-            dashboardUrl,
-            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
-            tenantPrimaryColor: tenant?.primaryColor || undefined,
-            tenantWebsite: tenant?.website || undefined,
-            nextSteps:
-              reviewLoanDto.status === LoanStatus.APPROVED
-                ? 'Your loan has been approved and the contract has been generated! Please review and sign the contract to proceed.'
-                : reviewLoanDto.status === LoanStatus.REJECTED
+          },
+          updated.tenantId,
+        );
+      } else {
+        const dashboardUrl =
+          process.env.APP_URL || 'https://app.example.com/loans';
+
+        await this.mailService.sendMail(
+          {
+            to: updated.borrower.user.email,
+            subject: `Loan Application ${reviewLoanDto.status === LoanStatus.REJECTED ? 'Status Update' : 'Update'} - ${tenant?.name || 'CoLoanEx'}`,
+            html: loanRequestTemplate({
+              tenantName: tenant?.name || 'CoLoanEx',
+              tenantLogo: tenant?.logo || undefined,
+              userName: updated.borrower.user.fullName,
+              status: statusMap[updated.status] || 'UNDER_REVIEW',
+              loanAmount: `$${updated.requestedAmount.toLocaleString()}`,
+              loanPurpose: updated.purpose || undefined,
+              loanId: updated.id,
+              applicationDate: new Date(updated.createdAt).toLocaleDateString(
+                'en-US',
+                {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                },
+              ),
+              reviewedDate: new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              }),
+              rejectionReason: reviewLoanDto.rejectionReason || undefined,
+              dashboardUrl,
+              supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+              tenantPrimaryColor: tenant?.primaryColor || undefined,
+              tenantWebsite: tenant?.website || undefined,
+              nextSteps:
+                reviewLoanDto.status === LoanStatus.REJECTED
                   ? 'Please review the reason provided. You may reapply after addressing the concerns.'
                   : 'Your application is being reviewed. We will notify you of any updates.',
-          }),
-        },
-        updated.tenantId,
-      );
+            }),
+          },
+          updated.tenantId,
+        );
+      }
     } catch (error) {
       console.error('Failed to send loan status email:', error);
     }

@@ -6,6 +6,9 @@ export enum ActivityEntityType {
   BORROWER = "BORROWER",
   KYC = "KYC",
   LOAN = "LOAN",
+  CONTRACT = "CONTRACT",
+  RULE = "RULE",
+  PAYMENT = "PAYMENT",
 }
 
 export enum ActivityAction {
@@ -19,6 +22,11 @@ export enum ActivityAction {
   PASSWORD_RESET = "PASSWORD_RESET",
   VISIT = "VISIT",
   LEAVE = "LEAVE",
+  LOAN_APPROVE = "LOAN_APPROVE",
+  LOAN_REJECT = "LOAN_REJECT",
+  LOAN_DISBURSE = "LOAN_DISBURSE",
+  CONTRACT_SIGN = "CONTRACT_SIGN",
+  PAYMENT_RECEIVED = "PAYMENT_RECEIVED",
 }
 
 export interface ActivityLogActor {

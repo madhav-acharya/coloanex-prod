@@ -30,21 +30,44 @@ export interface Rule {
 export interface Contract {
   id: string;
   contractNumber: string;
+  tenantId?: string;
+  borrowerId?: string;
   loanId: string;
   ruleId: string;
-  status: "DRAFT" | "ACTIVE" | "COMPLETED" | "DEFAULTED" | "CANCELLED";
+  status:
+    | "DRAFT"
+    | "GENERATED"
+    | "SIGNED"
+    | "ACTIVE"
+    | "COMPLETED"
+    | "DEFAULTED"
+    | "CANCELLED"
+    | "REPORTED";
   loanAmount: number;
   interestRate: number;
   termMonths: number;
-  startDate: string;
+  installmentAmount?: number;
+  totalInstallments?: number;
+  totalAmountDue?: number;
+  totalAmountPaid?: number;
+  outstandingBalance: number;
   paymentFrequency: "WEEKLY" | "MONTHLY" | "QUARTERLY";
   termsAndConditions: string;
+  contractPdfUrl?: string;
+  startDate: string;
+  endDate?: string;
   signedAt?: string;
   signature?: string;
   signedByIp?: string;
-  outstandingBalance: number;
   createdAt: string;
   updatedAt: string;
+  tenant?: { id: string; name: string; logo?: string };
+  borrower?: {
+    id: string;
+    userId: string;
+    user?: { id: string; fullName: string; email: string };
+  };
+  loan?: { id: string; purpose: string };
 }
 
 export interface PaymentSchedule {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Check,
@@ -14,6 +15,9 @@ import {
   LogOut,
   Eye,
   FileText,
+  FileCheck,
+  BadgeCheck,
+  Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +50,14 @@ const getActivityIcon = (action: string) => {
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "VISIT":
       return <Eye className="h-5 w-5 text-purple-600" />;
+    case "LOAN_APPROVE":
+      return <BadgeCheck className="h-5 w-5 text-green-600" />;
+    case "LOAN_REJECT":
+      return <ShieldX className="h-5 w-5 text-red-600" />;
+    case "CONTRACT_SIGN":
+      return <FileCheck className="h-5 w-5 text-blue-600" />;
+    case "PAYMENT_RECEIVED":
+      return <Banknote className="h-5 w-5 text-green-600" />;
     default:
       return <FileText className="h-5 w-5 text-muted-foreground" />;
   }
@@ -81,6 +93,7 @@ const formatDescription = (notification: NotificationItem) => {
 };
 
 export const NotificationsDropdown = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [allNotifications, setAllNotifications] = useState<NotificationItem[]>(
@@ -179,6 +192,17 @@ export const NotificationsDropdown = () => {
   const handleNotificationClick = (notification: NotificationItem) => {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
+    }
+    // Navigate based on entity type
+    if (notification.entityType === "CONTRACT") {
+      navigate("/contracts");
+      setIsOpen(false);
+    } else if (notification.entityType === "LOAN") {
+      navigate("/loan-requests");
+      setIsOpen(false);
+    } else if (notification.entityType === "KYC") {
+      navigate("/kyc");
+      setIsOpen(false);
     }
   };
 

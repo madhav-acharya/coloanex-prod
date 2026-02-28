@@ -120,6 +120,14 @@ export interface DisburseContractDto {
   transactionId?: string;
 }
 
+export interface SignAndDisburseContractDto {
+  signature: string;
+  method: "ESEWA" | "FONEPAY" | "KHALTI" | "WALLET" | "BANK_TRANSFER";
+  accountNumber?: string;
+  accountName?: string;
+  transactionId?: string;
+}
+
 export const contractsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getContracts: builder.query<Contract[], void>({
@@ -200,6 +208,20 @@ export const contractsApi = baseApi.injectEndpoints({
         { type: "Contracts", id: "LIST" },
       ],
     }),
+    signAndDisburseContract: builder.mutation<
+      Contract,
+      { id: string; data: SignAndDisburseContractDto }
+    >({
+      query: ({ id, data }) => ({
+        url: `/contracts/${id}/sign-and-disburse`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Contracts", id },
+        { type: "Contracts", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -212,4 +234,5 @@ export const {
   useDisburseContractMutation,
   useDeleteContractMutation,
   useGenerateContractPdfMutation,
+  useSignAndDisburseContractMutation,
 } = contractsApi;

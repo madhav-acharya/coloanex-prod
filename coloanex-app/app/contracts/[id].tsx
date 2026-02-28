@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Dimensions,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -29,6 +30,7 @@ export default function ContractDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [signModalVisible, setSignModalVisible] = useState(false);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [signature, setSignature] = useState("");
@@ -36,12 +38,17 @@ export default function ContractDetailsScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadContract = async () => {
+    setErrorMessage(null);
     try {
       const data = await contractsApi.getById(id);
       setContract(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load contract:", error);
-      Alert.alert("Error", "Failed to load contract details");
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to load contract details";
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -52,14 +59,16 @@ export default function ContractDetailsScreen() {
   }, [id]);
 
   const handleSignContract = async () => {
-    if (!signature.trim()) {
-      Alert.alert("Error", "Please enter your signature");
+    const sig =
+      signature.trim() || contract?.borrower?.user?.fullName?.trim() || "";
+    if (!sig) {
+      Alert.alert("Error", "Unable to retrieve borrower name for signing");
       return;
     }
 
     setSubmitting(true);
     try {
-      await contractsApi.sign(id, { signature: signature.trim() });
+      await contractsApi.sign(id, { signature: sig });
       Alert.alert("Success", "Contract signed successfully!");
       setSignModalVisible(false);
       setSignature("");
@@ -178,7 +187,18 @@ export default function ContractDetailsScreen() {
         </View>
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color={colors.error} />
-          <Text style={styles.errorText}>Contract not found</Text>
+          <Text style={styles.errorText}>
+            {errorMessage || "Contract not found"}
+          </Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              setLoading(true);
+              loadContract();
+            }}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -284,7 +304,10 @@ export default function ContractDetailsScreen() {
                 borderColor: colors.primary + "40",
               },
             ]}
-            onPress={() => setSignModalVisible(true)}
+            onPress={() => {
+              setSignature(contract?.borrower?.user?.fullName ?? "");
+              setSignModalVisible(true);
+            }}
           >
             <Ionicons name="create-outline" size={20} color={colors.primary} />
             <View style={styles.signBannerText}>
@@ -296,6 +319,31 @@ export default function ContractDetailsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        )}
+
+        {contract.contractPdfUrl && (
+          <TouchableOpacity
+            style={[
+              styles.signBanner,
+              {
+                backgroundColor: "#6366f1" + "12",
+                borderColor: "#6366f1" + "40",
+                marginTop: canSign() ? 8 : 0,
+              },
+            ]}
+            onPress={() => Linking.openURL(contract.contractPdfUrl!)}
+          >
+            <Ionicons name="document-text-outline" size={20} color="#6366f1" />
+            <View style={styles.signBannerText}>
+              <Text style={[styles.signBannerTitle, { color: "#6366f1" }]}>
+                View Contract PDF
+              </Text>
+              <Text style={[styles.signBannerSub, { color: colors.textLight }]}>
+                Open and read the full contract document
+              </Text>
+            </View>
+            <Ionicons name="open-outline" size={16} color="#6366f1" />
           </TouchableOpacity>
         )}
 
@@ -414,7 +462,10 @@ export default function ContractDetailsScreen() {
         {canSign() && (
           <Button
             title="Sign Contract"
-            onPress={() => setSignModalVisible(true)}
+            onPress={() => {
+              setSignature(contract?.borrower?.user?.fullName ?? "");
+              setSignModalVisible(true);
+            }}
             style={styles.signButton}
           />
         )}
@@ -484,23 +535,21 @@ export default function ContractDetailsScreen() {
             )}
 
             <Text style={styles.modalDescription}>
-              By entering your full legal name below, you acknowledge that you
-              have read, understood, and voluntarily agree to be bound by all
-              terms and conditions of this Loan Agreement. Your typed name
-              constitutes your electronic signature.
+              By clicking{" "}
+              <Text style={{ fontWeight: "700" }}>I Agree &amp; Sign</Text>, you
+              acknowledge that you have read, understood, and voluntarily agree
+              to be bound by all terms and conditions of this Loan Agreement.
+              Your name will constitute your electronic signature.
             </Text>
 
-            <Text style={styles.inputLabel}>
-              Full Legal Name (Electronic Signature)
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Type your full legal name exactly"
-              placeholderTextColor={colors.textLight}
-              value={signature}
-              onChangeText={setSignature}
-              editable={!submitting}
-            />
+            <View style={styles.signatureDisplay}>
+              <Text style={styles.signatureDisplayLabel}>
+                Electronic Signature
+              </Text>
+              <Text style={styles.signatureDisplayName}>
+                {signature || contract?.borrower?.user?.fullName || "—"}
+              </Text>
+            </View>
 
             <View style={styles.modalActions}>
               <Button
@@ -623,6 +672,18 @@ const createStyles = (colors: any) =>
       ...typography.h3,
       color: colors.error,
       marginTop: spacing.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: spacing.lg,
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.md,
+    },
+    retryButtonText: {
+      color: "#fff",
+      fontSize: 15,
+      fontWeight: "600" as any,
     },
     statusContainer: {
       flexDirection: "row",
@@ -775,6 +836,20 @@ const createStyles = (colors: any) =>
     modalTitle: {
       ...typography.h3,
       color: colors.text,
+      fontSize: 16,
+    },
+    modalTitleRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: spacing.sm,
+    },
+    modalIconBadge: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.primaryLight,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
     },
     modalDescription: {
       ...typography.body,
@@ -782,6 +857,75 @@ const createStyles = (colors: any) =>
       marginBottom: spacing.lg,
       lineHeight: 22,
       fontSize: 12,
+    },
+    signSummaryGrid: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.md,
+      overflow: "hidden" as const,
+      backgroundColor: colors.surface,
+    },
+    signGridRow: {
+      flexDirection: "row" as const,
+    },
+    signGridRowBorderTop: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    signGridCell: {
+      flex: 1,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    signGridCellHalf: {
+      flex: 1,
+    },
+    signGridCellBorderLeft: {
+      borderLeftWidth: 1,
+      borderLeftColor: colors.border,
+    },
+    signGridLabel: {
+      fontSize: 9,
+      fontWeight: "600" as any,
+      color: colors.textLight,
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    signGridValue: {
+      fontSize: 11,
+      fontWeight: "600" as any,
+      color: colors.text,
+    },
+    signGridTotalRow: {
+      flexDirection: "row" as const,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      alignItems: "center" as const,
+      justifyContent: "space-between" as const,
+    },
+    signGridTotalValue: {
+      fontSize: 13,
+      fontWeight: "700" as any,
+      color: colors.text,
+    },
+    signLegalNotice: {
+      flexDirection: "row" as const,
+      gap: spacing.sm - 2,
+      backgroundColor: colors.primaryLight,
+      borderWidth: 1,
+      borderColor: colors.primary + "30",
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md - 2,
+      paddingVertical: spacing.sm + 2,
+      marginBottom: spacing.md,
+    },
+    signLegalText: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.primaryDark,
+      lineHeight: 17,
     },
     signSummary: {
       backgroundColor: colors.background,
@@ -809,8 +953,45 @@ const createStyles = (colors: any) =>
       marginBottom: spacing.xs,
       fontSize: 12,
     },
+    signatureDisplay: {
+      borderWidth: 2,
+      borderColor: colors.primary + "50",
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primaryLight,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm + 2,
+      paddingBottom: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    signatureDisplayLabel: {
+      fontSize: 9,
+      fontWeight: "600" as any,
+      color: colors.textLight,
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    signatureDisplayName: {
+      ...typography.body,
+      color: colors.text,
+      fontWeight: "700" as any,
+      fontSize: 16,
+      marginBottom: spacing.xs,
+    },
+    signatureFooter: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.primary + "30",
+      paddingTop: spacing.xs,
+    },
+    signatureFooterText: {
+      fontSize: 10,
+      color: colors.primaryDark,
+    },
     signConfirmButton: {
-      backgroundColor: "#000",
+      backgroundColor: colors.primary,
     },
     input: {
       ...typography.body,

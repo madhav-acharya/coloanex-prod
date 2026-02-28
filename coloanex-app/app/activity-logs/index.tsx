@@ -34,13 +34,23 @@ const getActivityIcon = (action: ActivityAction) => {
       return "log-out";
     case "VISIT":
       return "eye";
+    case "LOAN_APPROVE":
+      return "checkmark-done-circle";
+    case "LOAN_REJECT":
+      return "close-circle";
+    case "LOAN_DISBURSE":
+      return "cash";
+    case "CONTRACT_SIGN":
+      return "document-attach";
+    case "PAYMENT_RECEIVED":
+      return "wallet";
     default:
       return "document-text";
   }
 };
 
 const getActivityColor = (action: ActivityAction, isDark: boolean) => {
-  const colors: Record<ActivityAction, string> = {
+  const colors: Record<string, string> = {
     CREATE: "#3B82F6",
     UPDATE: "#F59E0B",
     DELETE: "#EF4444",
@@ -51,6 +61,11 @@ const getActivityColor = (action: ActivityAction, isDark: boolean) => {
     VISIT: "#8B5CF6",
     PASSWORD_RESET: "#F59E0B",
     LEAVE: isDark ? "#9CA3AF" : "#6B7280",
+    LOAN_APPROVE: "#10B981",
+    LOAN_REJECT: "#EF4444",
+    LOAN_DISBURSE: "#8B5CF6",
+    CONTRACT_SIGN: "#3B82F6",
+    PAYMENT_RECEIVED: "#10B981",
   };
   return colors[action] || (isDark ? "#9CA3AF" : "#6B7280");
 };
@@ -65,13 +80,17 @@ const getActivityBackgroundColor = (
 
   switch (action) {
     case "KYC_VERIFY":
-      return "rgba(16, 185, 129, 0.1)";
+    case "LOAN_APPROVE":
+    case "PAYMENT_RECEIVED":
+      return "rgba(16, 185, 129, 0.12)";
     case "KYC_REJECT":
-      return "rgba(239, 68, 68, 0.1)";
-    case "CREATE":
-      return "rgba(59, 130, 246, 0.1)";
+    case "LOAN_REJECT":
     case "DELETE":
-      return "rgba(245, 158, 11, 0.1)";
+      return "rgba(239, 68, 68, 0.1)";
+    case "CONTRACT_SIGN":
+    case "LOAN_DISBURSE":
+    case "CREATE":
+      return "rgba(59, 130, 246, 0.12)";
     default:
       return cardColor;
   }
@@ -235,13 +254,23 @@ export default function ActivityLogsScreen() {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
     }
+    // Navigate to relevant screen based on entity type
+    if (notification.entityType === "CONTRACT" && notification.entityId) {
+      router.push(`/contracts/${notification.entityId}` as any);
+    } else if (notification.entityType === "CONTRACT") {
+      router.push("/contracts" as any);
+    } else if (notification.entityType === "LOAN" && notification.entityId) {
+      router.push(`/loans/${notification.entityId}` as any);
+    } else if (notification.entityType === "KYC" && notification.entityId) {
+      router.push(`/kyc/${notification.entityId}` as any);
+    }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader
         title="Activity Logs"
-        rightElement={
+        rightComponent={
           <View style={styles.headerRight}>
             {unreadCount > 0 && (
               <View style={[styles.badge, { backgroundColor: colors.primary }]}>
@@ -393,6 +422,23 @@ export default function ActivityLogsScreen() {
                     >
                       {notification.entityType}
                     </Text>
+                  </View>
+                )}
+
+                {(notification.entityType === "CONTRACT" ||
+                  notification.entityType === "LOAN" ||
+                  notification.entityType === "KYC") && (
+                  <View style={styles.tapToViewRow}>
+                    <Text
+                      style={[styles.tapToViewText, { color: colors.primary }]}
+                    >
+                      Tap to view
+                    </Text>
+                    <Ionicons
+                      name="chevron-forward"
+                      size={12}
+                      color={colors.primary}
+                    />
                   </View>
                 )}
               </View>
@@ -564,6 +610,16 @@ const createStyles = (colors: any) =>
     entityBadgeText: {
       fontSize: 11,
       fontWeight: "500",
+    },
+    tapToViewRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 2,
+      marginTop: 4,
+    },
+    tapToViewText: {
+      fontSize: 11,
+      fontWeight: "600" as any,
     },
     notificationRight: {
       alignItems: "center",

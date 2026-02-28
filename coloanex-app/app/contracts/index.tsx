@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -245,6 +246,33 @@ export default function ContractsScreen() {
                   >
                     Tap to review and sign this contract
                   </Text>
+                </TouchableOpacity>
+              )}
+
+              {contract.contractPdfUrl && (
+                <TouchableOpacity
+                  style={[
+                    styles.actionBanner,
+                    {
+                      backgroundColor: "#6366f112",
+                      borderColor: "#6366f140",
+                      marginTop: contract.status === "GENERATED" ? 8 : 0,
+                    },
+                  ]}
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    Linking.openURL(contract.contractPdfUrl!);
+                  }}
+                >
+                  <Ionicons
+                    name="document-text-outline"
+                    size={16}
+                    color="#6366f1"
+                  />
+                  <Text style={[styles.actionBannerText, { color: "#6366f1" }]}>
+                    View PDF
+                  </Text>
+                  <Ionicons name="open-outline" size={14} color="#6366f1" />
                 </TouchableOpacity>
               )}
             </Card>

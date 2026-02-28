@@ -7,10 +7,18 @@ import {
 import * as puppeteer from 'puppeteer';
 import { PrismaService } from '../prisma.service';
 import { CloudinaryUploadsService } from '../cloudinary-uploads/cloudinary-uploads.service';
+import { MailService } from '../mail/mail.service';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { contractGeneratedTemplate } from '../mail/templates';
+import {
+  ActivityEntityType,
+  ActivityAction,
+} from '../activity-logs/entities/activity-log.entity';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 import { SignContractDto } from './dto/sign-contract.dto';
 import { DisburseContractDto } from './dto/disburse-contract.dto';
+import { SignAndDisburseContractDto } from './dto/sign-and-disburse-contract.dto';
 import type { Contract, Signature } from './entities/contract.entity';
 import { ContractStatus } from './entities/contract.entity';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
@@ -24,6 +32,8 @@ export class ContractsService {
   constructor(
     private prisma: PrismaService,
     private cloudinaryUploadsService: CloudinaryUploadsService,
+    private mailService: MailService,
+    private activityLogsService: ActivityLogsService,
   ) {}
 
   private generateContractNumber(): string {
@@ -249,16 +259,14 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    // Check access permissions
-    const borrower = await this.prisma.borrower.findFirst({
-      where: { userId: user.sub },
-    });
-
-    if (
-      user.tenantId !== contract.tenantId &&
-      (!borrower || borrower.id !== contract.borrowerId)
-    ) {
-      throw new ForbiddenException('You do not have access to this contract');
+    const isTenantMember = user.tenantId === contract.tenantId;
+    if (!isTenantMember) {
+      const borrower = await this.prisma.borrower.findFirst({
+        where: { userId: user.sub, tenantId: contract.tenantId },
+      });
+      if (!borrower || borrower.id !== contract.borrowerId) {
+        throw new ForbiddenException('You do not have access to this contract');
+      }
     }
 
     return contract as unknown as Contract;
@@ -320,7 +328,7 @@ export class ContractsService {
     }
 
     const borrower = await this.prisma.borrower.findFirst({
-      where: { userId: user.sub },
+      where: { userId: user.sub, tenantId: contract.tenantId },
     });
 
     let signedBy: 'BORROWER' | 'TENANT';
@@ -335,6 +343,14 @@ export class ContractsService {
     }
 
     const signatures = (contract.signatures as any as Signature[]) || [];
+
+    if (signedBy === 'TENANT') {
+      if (!signatures.some((s) => s.signedBy === 'BORROWER')) {
+        throw new BadRequestException(
+          'Borrower must sign the contract before the lender can sign',
+        );
+      }
+    }
     const newSignature: Signature = {
       signedBy,
       signature: signContractDto.signature,
@@ -391,6 +407,89 @@ export class ContractsService {
         },
       });
     }
+
+    return updatedContract as unknown as Contract;
+  }
+
+  async signAndDisburse(
+    id: string,
+    dto: SignAndDisburseContractDto,
+    user: JwtPayload,
+  ): Promise<Contract> {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id },
+      include: { loan: true },
+    });
+
+    if (!contract) {
+      throw new NotFoundException('Contract not found');
+    }
+
+    if (contract.tenantId !== user.tenantId) {
+      throw new ForbiddenException(
+        'Only tenant members can sign and disburse this contract',
+      );
+    }
+
+    if (contract.status !== ContractStatus.GENERATED) {
+      throw new BadRequestException(
+        'Contract must be in GENERATED status to sign and disburse',
+      );
+    }
+
+    const existingSigs = (contract.signatures as any as Signature[]) || [];
+
+    if (!existingSigs.some((s) => s.signedBy === 'BORROWER')) {
+      throw new BadRequestException(
+        'Borrower must sign the contract before the lender can sign',
+      );
+    }
+
+    if (existingSigs.some((s) => s.signedBy === 'TENANT')) {
+      throw new BadRequestException('Tenant has already signed this contract');
+    }
+
+    const tenantSignature: Signature = {
+      signedBy: 'TENANT',
+      signature: dto.signature,
+      signedAt: new Date(),
+    };
+
+    const signatures = [...existingSigs, tenantSignature];
+
+    const disbursementInfo = {
+      method: dto.method,
+      accountNumber: dto.accountNumber,
+      accountName: dto.accountName,
+      disbursedAt: new Date(),
+      transactionId: dto.transactionId,
+      status: 'COMPLETED',
+    };
+
+    const updatedContract = await this.prisma.contract.update({
+      where: { id },
+      data: {
+        signatures: signatures as any,
+        status: ContractStatus.ACTIVE,
+        signedAt: new Date(),
+        disbursementInfo: disbursementInfo as any,
+      },
+      include: {
+        tenant: { select: { id: true, name: true, logo: true } },
+        borrower: {
+          include: {
+            user: { select: { id: true, fullName: true, email: true } },
+          },
+        },
+        loan: { select: { id: true, purpose: true } },
+        rule: { select: { id: true, name: true, ruleType: true } },
+      },
+    });
+
+    await this.prisma.loan.update({
+      where: { id: contract.loanId },
+      data: { status: 'LOAN_PROVIDED' as any },
+    });
 
     return updatedContract as unknown as Contract;
   }
@@ -699,6 +798,53 @@ export class ContractsService {
       data: { status: 'CONTRACT_GENERATED' as any },
     });
 
+    // Notify borrower that contract is ready to sign
+    try {
+      await this.activityLogsService.create({
+        actorUserId: updatedContract.borrower.user.id,
+        tenantId: updatedContract.tenantId,
+        entityType: ActivityEntityType.CONTRACT,
+        entityId: updatedContract.id,
+        action: ActivityAction.CONTRACT_SIGN,
+        description: `Your contract ${updatedContract.contractNumber} has been generated by ${updatedContract.tenant.name}. Please review and sign it to proceed.`,
+      });
+    } catch (err) {
+      console.error('Failed to create contract notification:', err);
+    }
+
+    // Send contract-generated email to borrower
+    try {
+      await this.mailService.sendMail(
+        {
+          to: updatedContract.borrower.user.email,
+          subject: `Contract Ready to Sign – ${updatedContract.tenant.name}`,
+          html: contractGeneratedTemplate({
+            tenantName: updatedContract.tenant.name,
+            tenantLogo: updatedContract.tenant.logo || undefined,
+            userName: updatedContract.borrower.user.fullName,
+            contractNumber: updatedContract.contractNumber,
+            loanAmount: `$${Number(updatedContract.loanAmount).toLocaleString()}`,
+            interestRate: `${Number(updatedContract.interestRate)}%`,
+            termMonths: updatedContract.termMonths,
+            contractPdfUrl: updatedContract.contractPdfUrl || undefined,
+            signUrl: `${process.env.APP_URL || 'https://app.example.com'}/contracts`,
+            generatedDate: new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            supportEmail: process.env.SUPPORT_EMAIL || 'support@example.com',
+            tenantPrimaryColor:
+              (updatedContract.tenant as any).primaryColor || undefined,
+            tenantWebsite: (updatedContract.tenant as any).website || undefined,
+          }),
+        },
+        updatedContract.tenantId,
+      );
+    } catch (err) {
+      console.error('Failed to send contract generated email:', err);
+    }
+
     return updatedContract as unknown as Contract;
   }
 
@@ -716,7 +862,7 @@ export class ContractsService {
     }
 
     const borrower = await this.prisma.borrower.findFirst({
-      where: { userId: user.sub },
+      where: { userId: user.sub, tenantId: contract.tenantId },
     });
 
     if (!borrower || borrower.id !== contract.borrowerId) {
