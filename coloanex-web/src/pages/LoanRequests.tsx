@@ -373,7 +373,7 @@ export default function LoanRequests() {
     if (!formData.providedLoanAmount || formData.providedLoanAmount <= 0) {
       toast({
         title: "Validation Error",
-        description: "Provided loan amount must be greater than 0",
+        description: `Provided loan amount must be greater than 0 but its ${formData.providedLoanAmount}`,
         variant: "destructive",
       });
       return;
