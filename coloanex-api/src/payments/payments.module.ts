@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { EsewaGateway } from './gateways/esewa/esewa.gateway';
+import { KhaltiGateway } from './gateways/khalti/khalti.gateway';
 import type { IPaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY_REGISTRY } from './gateways/payment-gateway.interface';
 import { PrismaService } from '../prisma.service';
 
-const gateways: (new () => IPaymentGateway)[] = [EsewaGateway];
+const gateways: (new () => IPaymentGateway)[] = [EsewaGateway, KhaltiGateway];
 
 @Module({
   controllers: [PaymentsController],
