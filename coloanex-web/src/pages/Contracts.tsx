@@ -110,6 +110,7 @@ export default function Contracts() {
   // Sign & Disburse dialog state
   const [sdDialogOpen, setSdDialogOpen] = useState(false);
   const [contractToSd, setContractToSd] = useState<Contract | null>(null);
+  const [sdGateway, setSdGateway] = useState<"ESEWA" | "KHALTI">("ESEWA");
   const [sdMethod, setSdMethod] =
     useState<SignAndDisburseContractDto["method"]>("BANK_TRANSFER");
   const [sdTransactionId, setSdTransactionId] = useState("");
@@ -348,8 +349,76 @@ export default function Contracts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Detect Khalti callback after redirect for sign-and-disburse flow
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pidx = params.get("pidx");
+    const status = params.get("status");
+    const isSdCallback = params.get("sd_khalti") === "1";
+
+    if (!pidx || !isSdCallback) return;
+
+    const pendingRaw = sessionStorage.getItem("coloanex_pending_sd_khalti");
+    if (!pendingRaw) return;
+
+    const pending = JSON.parse(pendingRaw) as {
+      contractId: string;
+      signature: string;
+      transactionId: string;
+      amount: number;
+    };
+    sessionStorage.removeItem("coloanex_pending_sd_khalti");
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (status !== "Completed") {
+      toast({
+        title: "Payment Failed",
+        description: "Khalti payment was not completed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    verifyPayment({
+      transactionId: pending.transactionId,
+      transactionUuid: pidx,
+      totalAmount: pending.amount,
+    })
+      .unwrap()
+      .then((result) => {
+        if (!result.success) throw new Error("Payment verification failed");
+        return signAndDisburseContract({
+          id: pending.contractId,
+          data: {
+            signature: pending.signature,
+            method: "KHALTI",
+            transactionId: result.transactionId,
+          },
+        }).unwrap();
+      })
+      .then(() => {
+        toast({
+          title: "Success",
+          description:
+            "Contract signed and loan disbursed successfully via Khalti.",
+        });
+      })
+      .catch((err: any) => {
+        toast({
+          title: "Error",
+          description:
+            err?.data?.message ||
+            err?.message ||
+            "Failed to complete sign & disburse",
+          variant: "destructive",
+        });
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const openSdDialog = (c: Contract) => {
     setContractToSd(c);
+    setSdGateway("ESEWA");
     setSdMethod("BANK_TRANSFER");
     setSdTransactionId("");
     setSdAccountNumber("");
@@ -435,6 +504,49 @@ export default function Contracts() {
       toast({
         title: "Error",
         description: err?.data?.message || "Failed to initiate eSewa payment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleKhaltiPay = async () => {
+    if (!contractToSd || !myWallet) {
+      toast({
+        title: "Error",
+        description: "Wallet not found. Please set up your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const successUrl = `${window.location.origin}${window.location.pathname}?sd_khalti=1`;
+      const failureUrl = `${window.location.origin}${window.location.pathname}?sd_khalti_fail=1`;
+
+      const result = await initiatePayment({
+        walletId: myWallet.id,
+        contractId: contractToSd.id,
+        amount: contractToSd.loanAmount,
+        type: "WITHDRAW",
+        gateway: "KHALTI",
+        successUrl,
+        failureUrl,
+      }).unwrap();
+
+      sessionStorage.setItem(
+        "coloanex_pending_sd_khalti",
+        JSON.stringify({
+          contractId: contractToSd.id,
+          signature: user?.fullName ?? "",
+          transactionId: result.transactionId,
+          amount: contractToSd.loanAmount,
+        }),
+      );
+
+      window.location.href = result.paymentUrl;
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.data?.message || "Failed to initiate Khalti payment",
         variant: "destructive",
       });
     }
@@ -733,46 +845,97 @@ export default function Contracts() {
             {/* Payment + signature — only if borrower signed */}
             {contractToSd && hasBorrowerSigned(contractToSd) && (
               <>
-                {/* eSewa payment card */}
-                <div className="flex items-center gap-3 rounded-xl border-2 border-[#60B246] bg-[#f6fff0] px-4 py-3">
-                  <img
-                    src="https://esewa.com.np/common/images/esewa_logo.png"
-                    alt="eSewa"
-                    className="h-8 w-auto object-contain"
-                    onError={(e) => {
-                      const t = e.currentTarget;
-                      t.style.display = "none";
-                      const fallback =
-                        t.nextElementSibling as HTMLElement | null;
-                      if (fallback) fallback.style.display = "flex";
-                    }}
-                  />
-                  {/* Fallback if image fails to load */}
-                  <span
-                    style={{ display: "none" }}
-                    className="items-center justify-center w-8 h-8 rounded-full bg-[#60B246] text-white font-black text-lg leading-none"
+                {/* Gateway selection */}
+                <div className="grid grid-cols-2 gap-2">
+                  {/* eSewa card */}
+                  <button
+                    type="button"
+                    onClick={() => setSdGateway("ESEWA")}
+                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all text-left ${
+                      sdGateway === "ESEWA"
+                        ? "border-[#60B246] bg-[#f6fff0]"
+                        : "border-border bg-muted/30 hover:border-[#60B246]/50"
+                    }`}
                   >
-                    e
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-[#3a7a1e]">
-                      Pay via eSewa
-                    </p>
-                    <p className="text-[10px] text-[#5a9a30] mt-0.5">
-                      NPR {contractToSd?.loanAmount.toLocaleString()}
-                    </p>
-                  </div>
-                  <CheckCircle2 className="w-5 h-5 text-[#60B246] shrink-0" />
+                    <img
+                      src="https://esewa.com.np/common/images/esewa_logo.png"
+                      alt="eSewa"
+                      className="h-7 w-auto object-contain"
+                      onError={(e) => {
+                        const t = e.currentTarget;
+                        t.style.display = "none";
+                        const fb = t.nextElementSibling as HTMLElement | null;
+                        if (fb) fb.style.display = "flex";
+                      }}
+                    />
+                    <span
+                      style={{ display: "none" }}
+                      className="items-center justify-center w-7 h-7 rounded-full bg-[#60B246] text-white font-black text-base leading-none"
+                    >
+                      e
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#3a7a1e] truncate">eSewa</p>
+                      <p className="text-[10px] text-[#5a9a30]">NPR {contractToSd.loanAmount.toLocaleString()}</p>
+                    </div>
+                    {sdGateway === "ESEWA" && (
+                      <CheckCircle2 className="w-4 h-4 text-[#60B246] shrink-0" />
+                    )}
+                  </button>
+
+                  {/* Khalti card */}
+                  <button
+                    type="button"
+                    onClick={() => setSdGateway("KHALTI")}
+                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all text-left ${
+                      sdGateway === "KHALTI"
+                        ? "border-[#5C2D91] bg-[#f9f5ff]"
+                        : "border-border bg-muted/30 hover:border-[#5C2D91]/50"
+                    }`}
+                  >
+                    <img
+                      src="https://khalti.com/static/img/logo.svg"
+                      alt="Khalti"
+                      className="h-7 w-auto object-contain"
+                      onError={(e) => {
+                        const t = e.currentTarget;
+                        t.style.display = "none";
+                        const fb = t.nextElementSibling as HTMLElement | null;
+                        if (fb) fb.style.display = "flex";
+                      }}
+                    />
+                    <span
+                      style={{ display: "none" }}
+                      className="items-center justify-center w-7 h-7 rounded-full bg-[#5C2D91] text-white font-black text-base leading-none"
+                    >
+                      K
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-[#5C2D91] truncate">Khalti</p>
+                      <p className="text-[10px] text-[#7b4bb5]">NPR {contractToSd.loanAmount.toLocaleString()}</p>
+                    </div>
+                    {sdGateway === "KHALTI" && (
+                      <CheckCircle2 className="w-4 h-4 text-[#5C2D91] shrink-0" />
+                    )}
+                  </button>
                 </div>
 
-                {/* eSewa redirect notice */}
-                <div className="flex gap-2.5 rounded-lg bg-green-50 border border-green-200 px-3.5 py-3 text-xs text-green-800 leading-relaxed">
-                  <Banknote className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                {/* Redirect notice */}
+                <div className={`flex gap-2.5 rounded-lg border px-3.5 py-3 text-xs leading-relaxed ${
+                  sdGateway === "ESEWA"
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : "bg-purple-50 border-purple-200 text-purple-800"
+                }`}>
+                  <Banknote className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    sdGateway === "ESEWA" ? "text-green-600" : "text-purple-600"
+                  }`} />
                   <p>
                     You will be redirected to{" "}
-                    <span className="font-semibold">eSewa</span> to complete the
-                    payment. Contract is signed &amp; loan activated
-                    automatically on success.
+                    <span className="font-semibold">
+                      {sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
+                    </span>{" "}
+                    to complete the payment. Contract is signed &amp; loan
+                    activated automatically on success.
                   </p>
                 </div>
 
@@ -814,19 +977,29 @@ export default function Contracts() {
             {contractToSd && hasBorrowerSigned(contractToSd) && (
               <Button
                 size="sm"
-                onClick={handleEsewaPay}
+                onClick={sdGateway === "ESEWA" ? handleEsewaPay : handleKhaltiPay}
                 disabled={isInitiatingPayment || !myWallet}
-                className="cursor-pointer h-8 text-xs bg-[#60B246] hover:bg-[#4e9a38] text-white gap-2"
+                className={`cursor-pointer h-8 text-xs text-white gap-2 ${
+                  sdGateway === "ESEWA"
+                    ? "bg-[#60B246] hover:bg-[#4e9a38]"
+                    : "bg-[#5C2D91] hover:bg-[#4a2278]"
+                }`}
               >
                 <img
-                  src="https://esewa.com.np/common/images/esewa_logo.png"
-                  alt="eSewa"
+                  src={
+                    sdGateway === "ESEWA"
+                      ? "https://esewa.com.np/common/images/esewa_logo.png"
+                      : "https://khalti.com/static/img/logo.svg"
+                  }
+                  alt={sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
                   className="h-4 w-auto object-contain brightness-0 invert"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                   }}
                 />
-                {isInitiatingPayment ? "Redirecting…" : "Pay with eSewa"}
+                {isInitiatingPayment
+                  ? "Redirecting…"
+                  : `Pay with ${sdGateway === "ESEWA" ? "eSewa" : "Khalti"}`}
               </Button>
             )}
           </div>
