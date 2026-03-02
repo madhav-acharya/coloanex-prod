@@ -23,7 +23,7 @@ export interface VerifyPaymentResult {
 
 export interface IPaymentGateway {
   readonly key: string;
-  initiatePayment(params: InitiatePaymentParams): InitiatePaymentResult;
+  initiatePayment(params: InitiatePaymentParams): Promise<InitiatePaymentResult>;
   verifyPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResult>;
 }
 
