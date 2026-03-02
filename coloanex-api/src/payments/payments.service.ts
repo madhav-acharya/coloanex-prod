@@ -57,7 +57,7 @@ export class PaymentsService {
       },
     });
 
-    const result = paymentGateway.initiatePayment({
+    const result = await paymentGateway.initiatePayment({
       amount,
       transactionUuid,
       successUrl,
