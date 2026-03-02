@@ -31,7 +31,7 @@ export class EsewaGateway implements IPaymentGateway {
       .digest('base64');
   }
 
-  initiatePayment(params: InitiatePaymentParams): InitiatePaymentResult {
+  async initiatePayment(params: InitiatePaymentParams): Promise<InitiatePaymentResult> {
     const { amount, transactionUuid, successUrl, failureUrl } = params;
 
     const signedFieldNames = 'total_amount,transaction_uuid,product_code';
