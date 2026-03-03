@@ -142,14 +142,23 @@ export default function Wallets() {
       label: "Status",
       sortable: true,
       render: (transaction) => {
-        const statusColors = {
-          PENDING: "secondary",
-          COMPLETED: "default",
-          FAILED: "destructive",
-          CANCELLED: "outline",
-        } as const;
+        const statusClasses: Record<string, string> = {
+          PENDING:
+            "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
+          COMPLETED:
+            "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800",
+          FAILED:
+            "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
+          CANCELLED:
+            "bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700",
+        };
         return (
-          <Badge variant={statusColors[transaction.status]}>
+          <Badge
+            className={
+              statusClasses[transaction.status] ||
+              "bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300"
+            }
+          >
             {transaction.status}
           </Badge>
         );

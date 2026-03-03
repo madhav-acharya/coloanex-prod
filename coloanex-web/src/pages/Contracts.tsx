@@ -77,14 +77,22 @@ const STATUS_BADGE: Record<
 };
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
-  DRAFT: "bg-gray-100 text-gray-700",
-  GENERATED: "bg-blue-100 text-blue-700",
-  SIGNED: "bg-purple-100 text-purple-700",
-  ACTIVE: "bg-green-100 text-green-700",
-  COMPLETED: "bg-emerald-100 text-emerald-700",
-  DEFAULTED: "bg-red-100 text-red-700",
-  CANCELLED: "bg-gray-100 text-gray-500",
-  REPORTED: "bg-orange-100 text-orange-700",
+  DRAFT:
+    "bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+  GENERATED:
+    "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  SIGNED:
+    "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+  ACTIVE:
+    "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+  COMPLETED:
+    "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+  DEFAULTED:
+    "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+  CANCELLED:
+    "bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+  REPORTED:
+    "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
 };
 
 function ContractStatusBadge({ status }: { status: ContractStatus }) {
@@ -826,16 +834,16 @@ export default function Contracts() {
 
             {/* Borrower signature status */}
             {contractToSd && hasBorrowerSigned(contractToSd) ? (
-              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 bg-green-50 px-3.5 py-2.5">
-                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="text-xs text-green-800">
+              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-3.5 py-2.5">
+                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                <span className="text-xs text-green-800 dark:text-green-300">
                   Borrower has signed — complete payment below to activate
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="text-xs text-amber-800">
+              <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3.5 py-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-xs text-amber-800 dark:text-amber-300">
                   Borrower must sign before the lender can activate this
                   contract.
                 </span>
@@ -851,35 +859,31 @@ export default function Contracts() {
                   <button
                     type="button"
                     onClick={() => setSdGateway("ESEWA")}
-                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all text-left ${
+                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer ${
                       sdGateway === "ESEWA"
-                        ? "border-[#60B246] bg-[#f6fff0]"
-                        : "border-border bg-muted/30 hover:border-[#60B246]/50"
+                        ? "border-[#2e8b1c] bg-[#4a9d2a]"
+                        : "border-[#60B246]/50 bg-[#60B246] hover:bg-[#54a022] hover:border-[#2e8b1c]"
                     }`}
                   >
                     <img
                       src="https://esewa.com.np/common/images/esewa_logo.png"
                       alt="eSewa"
-                      className="h-7 w-auto object-contain"
+                      className="max-h-full max-w-full object-contain brightness-0 invert"
                       onError={(e) => {
-                        const t = e.currentTarget;
-                        t.style.display = "none";
-                        const fb = t.nextElementSibling as HTMLElement | null;
+                        e.currentTarget.style.display = "none";
+                        const fb = e.currentTarget
+                          .nextElementSibling as HTMLElement | null;
                         if (fb) fb.style.display = "flex";
                       }}
                     />
                     <span
                       style={{ display: "none" }}
-                      className="items-center justify-center w-7 h-7 rounded-full bg-[#60B246] text-white font-black text-base leading-none"
+                      className="items-center justify-center text-white font-black text-lg"
                     >
-                      e
+                      eSewa
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#3a7a1e] truncate">eSewa</p>
-                      <p className="text-[10px] text-[#5a9a30]">NPR {contractToSd.loanAmount.toLocaleString()}</p>
-                    </div>
                     {sdGateway === "ESEWA" && (
-                      <CheckCircle2 className="w-4 h-4 text-[#60B246] shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white absolute top-1.5 right-1.5" />
                     )}
                   </button>
 
@@ -887,48 +891,50 @@ export default function Contracts() {
                   <button
                     type="button"
                     onClick={() => setSdGateway("KHALTI")}
-                    className={`flex items-center gap-2.5 rounded-xl border-2 px-3 py-2.5 transition-all text-left ${
+                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer ${
                       sdGateway === "KHALTI"
-                        ? "border-[#5C2D91] bg-[#f9f5ff]"
-                        : "border-border bg-muted/30 hover:border-[#5C2D91]/50"
+                        ? "border-[#3d1a6e] bg-[#4a2278]"
+                        : "border-[#5C2D91]/50 bg-[#5C2D91] hover:bg-[#4f2480] hover:border-[#3d1a6e]"
                     }`}
                   >
                     <img
                       src="https://khalti.com/static/img/logo.svg"
                       alt="Khalti"
-                      className="h-7 w-auto object-contain"
+                      className="max-h-full max-w-full object-contain brightness-0 invert"
                       onError={(e) => {
-                        const t = e.currentTarget;
-                        t.style.display = "none";
-                        const fb = t.nextElementSibling as HTMLElement | null;
+                        e.currentTarget.style.display = "none";
+                        const fb = e.currentTarget
+                          .nextElementSibling as HTMLElement | null;
                         if (fb) fb.style.display = "flex";
                       }}
                     />
                     <span
                       style={{ display: "none" }}
-                      className="items-center justify-center w-7 h-7 rounded-full bg-[#5C2D91] text-white font-black text-base leading-none"
+                      className="items-center justify-center text-white font-black text-lg"
                     >
-                      K
+                      Khalti
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-[#5C2D91] truncate">Khalti</p>
-                      <p className="text-[10px] text-[#7b4bb5]">NPR {contractToSd.loanAmount.toLocaleString()}</p>
-                    </div>
                     {sdGateway === "KHALTI" && (
-                      <CheckCircle2 className="w-4 h-4 text-[#5C2D91] shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-white absolute top-1.5 right-1.5" />
                     )}
                   </button>
                 </div>
 
                 {/* Redirect notice */}
-                <div className={`flex gap-2.5 rounded-lg border px-3.5 py-3 text-xs leading-relaxed ${
-                  sdGateway === "ESEWA"
-                    ? "bg-green-50 border-green-200 text-green-800"
-                    : "bg-purple-50 border-purple-200 text-purple-800"
-                }`}>
-                  <Banknote className={`w-4 h-4 shrink-0 mt-0.5 ${
-                    sdGateway === "ESEWA" ? "text-green-600" : "text-purple-600"
-                  }`} />
+                <div
+                  className={`flex gap-2.5 rounded-lg border px-3.5 py-3 text-xs leading-relaxed ${
+                    sdGateway === "ESEWA"
+                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
+                      : "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300"
+                  }`}
+                >
+                  <Banknote
+                    className={`w-4 h-4 shrink-0 mt-0.5 ${
+                      sdGateway === "ESEWA"
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-purple-600 dark:text-purple-400"
+                    }`}
+                  />
                   <p>
                     You will be redirected to{" "}
                     <span className="font-semibold">
@@ -940,16 +946,16 @@ export default function Contracts() {
                 </div>
 
                 {/* Lender signature */}
-                <div className="rounded-xl border-2 border-green-200 bg-green-50/60 px-4 pt-3 pb-2.5">
+                <div className="rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                     Lender Electronic Signature
                   </p>
                   <p className="text-sm font-semibold text-foreground">
                     {user?.fullName ?? "—"}
                   </p>
-                  <div className="mt-2 pt-1.5 border-t border-green-200 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 text-green-600" />
-                    <p className="text-[10px] text-green-700">
+                  <div className="mt-2 pt-1.5 border-t border-green-200 dark:border-green-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3 h-3 text-green-600 dark:text-green-400" />
+                    <p className="text-[10px] text-green-700 dark:text-green-400">
                       Signed digitally &middot;{" "}
                       {new Date().toLocaleDateString("en-US", {
                         year: "numeric",
@@ -977,7 +983,9 @@ export default function Contracts() {
             {contractToSd && hasBorrowerSigned(contractToSd) && (
               <Button
                 size="sm"
-                onClick={sdGateway === "ESEWA" ? handleEsewaPay : handleKhaltiPay}
+                onClick={
+                  sdGateway === "ESEWA" ? handleEsewaPay : handleKhaltiPay
+                }
                 disabled={isInitiatingPayment || !myWallet}
                 className={`cursor-pointer h-8 text-xs text-white gap-2 ${
                   sdGateway === "ESEWA"
@@ -1142,7 +1150,10 @@ function ContractDetailFallback({ contract }: { contract: Contract }) {
     <div className="space-y-6 text-sm">
       <div className="grid grid-cols-2 gap-3">
         {rows.map((r) => (
-          <div key={r.label} className="p-3 bg-muted/40 rounded-md">
+          <div
+            key={r.label}
+            className="p-3 bg-slate-100 dark:bg-muted/40 rounded-md border border-slate-200 dark:border-border"
+          >
             <p className="text-xs text-muted-foreground">{r.label}</p>
             <p className="font-semibold text-foreground">{r.value}</p>
           </div>
@@ -1155,7 +1166,7 @@ function ContractDetailFallback({ contract }: { contract: Contract }) {
           {contract.signatures.map((sig, i) => (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 bg-muted/40 rounded-md"
+              className="flex items-start gap-3 p-3 bg-slate-100 dark:bg-muted/40 rounded-md border border-slate-200 dark:border-border"
             >
               <div className="flex-1">
                 <p className="text-xs text-muted-foreground uppercase">
@@ -1174,7 +1185,7 @@ function ContractDetailFallback({ contract }: { contract: Contract }) {
       {contract.termsAndConditions && (
         <div className="space-y-2">
           <p className="font-semibold">Terms &amp; Conditions</p>
-          <pre className="whitespace-pre-wrap text-xs text-muted-foreground bg-muted/40 p-4 rounded-md leading-relaxed">
+          <pre className="whitespace-pre-wrap text-xs text-muted-foreground bg-slate-100 dark:bg-muted/40 border border-slate-200 dark:border-border p-4 rounded-md leading-relaxed">
             {contract.termsAndConditions}
           </pre>
         </div>

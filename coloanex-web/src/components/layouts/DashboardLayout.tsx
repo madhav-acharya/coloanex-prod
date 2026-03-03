@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -69,20 +69,63 @@ export default function DashboardLayout({
   onActionClick,
   actions,
 }: DashboardLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(() => window.innerWidth < 768);
+  const COLLAPSED_WIDTH = 64;
+  const DEFAULT_WIDTH = 256;
+  const MIN_WIDTH = 64;
+  const MAX_WIDTH = 360;
+
+  const [sidebarWidth, setSidebarWidth] = useState(() =>
+    window.innerWidth < 768 ? COLLAPSED_WIDTH : DEFAULT_WIDTH,
+  );
+  const isCollapsed = sidebarWidth <= 80;
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
+
   const location = useLocation();
   const { user } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
-        setIsCollapsed(true);
+        setSidebarWidth(COLLAPSED_WIDTH);
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current) return;
+    const delta = e.clientX - dragStartX.current;
+    const newWidth = Math.min(
+      Math.max(dragStartWidth.current + delta, MIN_WIDTH),
+      MAX_WIDTH,
+    );
+    setSidebarWidth(newWidth);
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    isDragging.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, [handleMouseMove]);
+
+  const handleDragHandleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDragging.current = true;
+      dragStartX.current = e.clientX;
+      dragStartWidth.current = sidebarWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [sidebarWidth, handleMouseMove, handleMouseUp],
+  );
 
   const isSuperAdmin = user?.roles?.some(
     (ur) => ur.role?.name === "Super Admin",
@@ -176,7 +219,7 @@ export default function DashboardLayout({
         <button
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "flex items-center justify-between w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer",
+            "flex items-center justify-between w-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors cursor-pointer rounded-sm hover:bg-muted/50",
             isCollapsed && "justify-center",
           )}
         >
@@ -202,10 +245,10 @@ export default function DashboardLayout({
                   <div
                     key={item.title}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-not-allowed opacity-60",
+                      "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-not-allowed opacity-50",
                       isActive
-                        ? "bg-primary/10 text-primary font-medium shadow-sm"
-                        : "text-muted-foreground hover:bg-muted/30",
+                        ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary"
+                        : "text-muted-foreground/60",
                       isCollapsed && "justify-center px-2",
                     )}
                     title={
@@ -230,11 +273,11 @@ export default function DashboardLayout({
                   key={item.title}
                   to={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-pointer",
+                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-pointer",
                     isActive
-                      ? "bg-primary/15 text-primary font-semibold shadow-md scale-[1.02] border border-primary/30"
-                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] active:bg-primary/12",
-                    isCollapsed && "justify-center px-2",
+                      ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary pl-[10px]"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary active:bg-primary/15",
+                    isCollapsed && "justify-center px-2 border-l-0 pl-2",
                   )}
                 >
                   {item.icon}
@@ -262,7 +305,9 @@ export default function DashboardLayout({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() =>
+            setSidebarWidth(isCollapsed ? DEFAULT_WIDTH : COLLAPSED_WIDTH)
+          }
           className="cursor-pointer ml-auto"
         >
           {isCollapsed ? (
@@ -281,10 +326,10 @@ export default function DashboardLayout({
             {needsTenantId ? (
               <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-not-allowed opacity-60",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-not-allowed opacity-50",
                   location.pathname === "/dashboard"
-                    ? "bg-primary/10 text-primary font-medium shadow-sm"
-                    : "text-muted-foreground hover:bg-muted/30",
+                    ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary"
+                    : "text-muted-foreground/60",
                   isCollapsed && "justify-center px-2",
                 )}
                 title="Tenant assignment required"
@@ -301,11 +346,11 @@ export default function DashboardLayout({
               <Link
                 to="/dashboard"
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-200 cursor-pointer",
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-pointer",
                   location.pathname === "/dashboard"
-                    ? "bg-primary/15 text-primary font-semibold shadow-md scale-[1.02] border border-primary/30"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary hover:shadow-sm hover:scale-[1.01] active:scale-[0.99] active:bg-primary/12",
-                  isCollapsed && "justify-center px-2",
+                    ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary pl-[10px]"
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary active:bg-primary/15",
+                  isCollapsed && "justify-center px-2 border-l-0 pl-2",
                 )}
               >
                 <LayoutDashboard className="w-4 h-4" />
@@ -353,12 +398,16 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden">
       <aside
-        className={cn(
-          "flex flex-col bg-background border-r transition-all duration-300",
-          isCollapsed ? "w-16" : "w-64",
-        )}
+        className="flex flex-col bg-background border-r relative shrink-0"
+        style={{ width: sidebarWidth }}
       >
         {sidebarContent}
+        <div
+          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize group z-20 flex items-center justify-center"
+          onMouseDown={handleDragHandleMouseDown}
+        >
+          <div className="w-0.5 h-16 rounded-full bg-border group-hover:bg-primary/60 group-active:bg-primary transition-colors duration-150" />
+        </div>
       </aside>
 
       <main className="flex-1 overflow-y-auto bg-background">
