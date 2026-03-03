@@ -1398,17 +1398,19 @@ export default function KycRequests() {
     switch (status) {
       case KycStatus.VERIFIED:
         return (
-          <Badge className="bg-primary text-primary-foreground">Verified</Badge>
+          <Badge className="bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+            Verified
+          </Badge>
         );
       case KycStatus.REJECTED:
         return (
-          <Badge className="bg-destructive text-destructive-foreground">
+          <Badge className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
             Rejected
           </Badge>
         );
       default:
         return (
-          <Badge className="bg-yellow-500 dark:bg-yellow-600 text-white">
+          <Badge className="bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
             Pending
           </Badge>
         );
