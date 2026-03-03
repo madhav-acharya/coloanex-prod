@@ -572,38 +572,52 @@ export default function LoanRequests() {
   const getStatusBadge = (status: LoanStatus) => {
     const statusConfig: Record<
       LoanStatus,
-      {
-        variant: "default" | "destructive" | "outline" | "secondary";
-        label: string;
-      }
+      { className: string; label: string }
     > = {
-      [LoanStatus.DRAFT]: { variant: "outline", label: "Draft" },
+      [LoanStatus.DRAFT]: {
+        className:
+          "bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+        label: "Draft",
+      },
       [LoanStatus.SUBMITTED]: {
-        variant: "secondary",
+        className:
+          "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
         label: "Submitted",
       },
       [LoanStatus.UNDER_REVIEW]: {
-        variant: "secondary",
+        className:
+          "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
         label: "Under Review",
       },
-      [LoanStatus.APPROVED]: { variant: "default", label: "Approved" },
-      [LoanStatus.REJECTED]: { variant: "destructive", label: "Rejected" },
+      [LoanStatus.APPROVED]: {
+        className:
+          "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+        label: "Approved",
+      },
+      [LoanStatus.REJECTED]: {
+        className:
+          "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+        label: "Rejected",
+      },
       [LoanStatus.CONTRACT_GENERATED]: {
-        variant: "default",
+        className:
+          "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
         label: "Contract Generated",
       },
       [LoanStatus.CONTRACT_SIGNED]: {
-        variant: "default",
+        className:
+          "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
         label: "Contract Signed",
       },
       [LoanStatus.LOAN_PROVIDED]: {
-        variant: "default",
+        className:
+          "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
         label: "Loan Provided",
       },
     };
 
     const config = statusConfig[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const columns: Column<Loan>[] = [
