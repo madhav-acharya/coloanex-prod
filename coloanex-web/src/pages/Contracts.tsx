@@ -78,21 +78,21 @@ const STATUS_BADGE: Record<
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
   DRAFT:
-    "bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+    "bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
   GENERATED:
-    "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+    "bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border-blue-200 dark:border-blue-800",
   SIGNED:
-    "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+    "bg-purple-100 dark:bg-purple-600 text-white dark:text-purple-300 border-purple-200 dark:border-purple-800",
   ACTIVE:
-    "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+    "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
   COMPLETED:
-    "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    "bg-emerald-100 dark:bg-emerald-600 text-white dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   DEFAULTED:
-    "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+    "bg-red-100 dark:bg-red-600 text-white dark:text-red-300 border-red-200 dark:border-red-800",
   CANCELLED:
-    "bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
+    "bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
   REPORTED:
-    "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800",
+    "bg-orange-100 dark:bg-orange-600 text-white dark:text-orange-300 border-orange-200 dark:border-orange-800",
 };
 
 function ContractStatusBadge({ status }: { status: ContractStatus }) {

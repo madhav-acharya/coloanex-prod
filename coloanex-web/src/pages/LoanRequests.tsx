@@ -22,16 +22,7 @@ import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+
 
 export default function LoanRequests() {
   const { toast } = useToast();
@@ -114,7 +105,6 @@ export default function LoanRequests() {
 
   const [collateralImages, setCollateralImages] = useState<UploadedFile[]>([]);
 
-  // Determine if user should be filtered by tenant
   const shouldFilterByTenant = useMemo(() => {
     return isLender || user?.roles?.some((ur) => ur.role.name === "Admin");
   }, [isLender, user]);
@@ -130,7 +120,6 @@ export default function LoanRequests() {
       shouldFilterByTenant && user?.tenantId ? user.tenantId : undefined,
   });
 
-  // Update filters when user changes
   useEffect(() => {
     if (shouldFilterByTenant && user?.tenantId) {
       setFilters((prev) => ({
@@ -220,7 +209,6 @@ export default function LoanRequests() {
       tenantId: loan.tenantId,
       userId: loan.borrower?.userId,
     });
-    // Set collateral images from existing loan
     const collateralImageUrl = collateral.imageUrl;
     if (collateralImageUrl) {
       setCollateralImages([
@@ -253,7 +241,6 @@ export default function LoanRequests() {
       tenantId: loan.tenantId,
       userId: loan.borrower?.userId,
     });
-    // Set collateral images from existing loan
     const collateralImageUrl = collateral.imageUrl;
     if (collateralImageUrl) {
       setCollateralImages([
@@ -356,7 +343,6 @@ export default function LoanRequests() {
   };
 
   const handleLoanSubmit = async () => {
-    // Validate tenant selection for Super Admin
     if (
       isSuperAdmin &&
       (!formData.tenantId || formData.tenantId.trim() === "")
@@ -369,7 +355,6 @@ export default function LoanRequests() {
       return;
     }
 
-    // Validate all required fields
     if (!formData.providedLoanAmount || formData.providedLoanAmount <= 0) {
       toast({
         title: "Validation Error",
@@ -506,7 +491,6 @@ export default function LoanRequests() {
   };
 
   const resetLoanForm = () => {
-    // Auto-assign tenant for Admin/Lender users
     const shouldAutoSetTenant = (isAdmin || isLender) && user?.tenantId;
 
     setFormData({
@@ -551,7 +535,6 @@ export default function LoanRequests() {
         tenantId: editingLoan.tenantId || "",
         userId: editingLoan.borrower?.userId || "",
       });
-      // Set collateral images from existing loan
       const collateralImageUrl = collateral.imageUrl;
       if (collateralImageUrl) {
         setCollateralImages([
@@ -581,37 +564,37 @@ export default function LoanRequests() {
       },
       [LoanStatus.SUBMITTED]: {
         className:
-          "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+          "bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border-blue-200 dark:border-blue-800",
         label: "Submitted",
       },
       [LoanStatus.UNDER_REVIEW]: {
         className:
-          "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+          "bg-amber-100 dark:bg-amber-600 text-white dark:text-amber-300 border-amber-200 dark:border-amber-800",
         label: "Under Review",
       },
       [LoanStatus.APPROVED]: {
         className:
-          "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+          "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
         label: "Approved",
       },
       [LoanStatus.REJECTED]: {
         className:
-          "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+          "bg-red-100 dark:bg-red-600 text-white dark:text-red-300 border-red-200 dark:border-red-800",
         label: "Rejected",
       },
       [LoanStatus.CONTRACT_GENERATED]: {
         className:
-          "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+          "bg-purple-100 dark:bg-purple-600 text-white dark:text-purple-300 border-purple-200 dark:border-purple-800",
         label: "Contract Generated",
       },
       [LoanStatus.CONTRACT_SIGNED]: {
         className:
-          "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
+          "bg-indigo-100 dark:bg-indigo-600 text-white dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
         label: "Contract Signed",
       },
       [LoanStatus.LOAN_PROVIDED]: {
         className:
-          "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+          "bg-emerald-100 dark:bg-emerald-600 text-white dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
         label: "Loan Provided",
       },
     };

@@ -110,7 +110,7 @@ export default function Rules() {
       label: "Type",
       sortable: true,
       render: (rule) => (
-        <Badge className="bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+        <Badge className="bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border border-blue-200 dark:border-blue-800">
           {rule.ruleType ? rule.ruleType.replace(/_/g, " ") : "N/A"}
         </Badge>
       ),
@@ -129,8 +129,8 @@ export default function Rules() {
         <Badge
           className={
             rule.isActive
-              ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-              : "bg-gray-100 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+              ? "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border border-green-200 dark:border-green-800"
+              : "bg-gray-100 dark:bg-gray-600 text-white dark:text-gray-400 border border-gray-200 dark:border-gray-700"
           }
         >
           {rule.isActive ? "Active" : "Inactive"}
