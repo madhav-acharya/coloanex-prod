@@ -115,7 +115,6 @@ export default function Contracts() {
   const { toast } = useToast();
 
   const [viewContract, setViewContract] = useState<Contract | null>(null);
-  // Sign & Disburse dialog state
   const [sdDialogOpen, setSdDialogOpen] = useState(false);
   const [contractToSd, setContractToSd] = useState<Contract | null>(null);
   const [sdGateway, setSdGateway] = useState<"ESEWA" | "KHALTI">("ESEWA");
@@ -834,16 +833,16 @@ export default function Contracts() {
 
             {/* Borrower signature status */}
             {contractToSd && hasBorrowerSigned(contractToSd) ? (
-              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-3.5 py-2.5">
-                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                <span className="text-xs text-green-800 dark:text-green-300">
+              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 dark:border-green-800 !bg-green-100 dark:bg-green-900/20 px-3.5 py-2.5">
+                <CheckCircle2 className="w-4 h-4 !text-green-900 dark:text-green-400 shrink-0" />
+                <span className="text-xs !text-green-900 dark:text-green-300">
                   Borrower has signed — complete payment below to activate
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3.5 py-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-xs text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-4 h-4 !text-amber-900 dark:text-amber-400 shrink-0" />
+                <span className="text-xs !text-amber-900 dark:text-amber-300">
                   Borrower must sign before the lender can activate this
                   contract.
                 </span>
@@ -868,7 +867,7 @@ export default function Contracts() {
                     <img
                       src="https://esewa.com.np/common/images/esewa_logo.png"
                       alt="eSewa"
-                      className="max-h-full max-w-full object-contain brightness-0 invert"
+                      className="max-h-full max-w-full object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                         const fb = e.currentTarget
@@ -924,18 +923,22 @@ export default function Contracts() {
                 <div
                   className={`flex gap-2.5 rounded-lg border px-3.5 py-3 text-xs leading-relaxed ${
                     sdGateway === "ESEWA"
-                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
-                      : "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300"
+                      ? "!bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
+                      : "!bg-purple-100 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300"
                   }`}
                 >
                   <Banknote
                     className={`w-4 h-4 shrink-0 mt-0.5 ${
                       sdGateway === "ESEWA"
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-purple-600 dark:text-purple-400"
+                        ? "!text-green-900 dark:text-green-400"
+                        : "!text-purple-900 dark:text-purple-400"
                     }`}
                   />
-                  <p>
+                  <p className={`${
+                      sdGateway === "ESEWA"
+                        ? "!text-green-900 dark:text-green-400"
+                        : "!text-purple-900 dark:text-purple-400"
+                    }`}>
                     You will be redirected to{" "}
                     <span className="font-semibold">
                       {sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
@@ -946,7 +949,7 @@ export default function Contracts() {
                 </div>
 
                 {/* Lender signature */}
-                <div className="rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
+                <div className="rounded-xl border-2 border-green-200 dark:border-green-800 !bg-green-100 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                     Lender Electronic Signature
                   </p>
@@ -954,8 +957,8 @@ export default function Contracts() {
                     {user?.fullName ?? "—"}
                   </p>
                   <div className="mt-2 pt-1.5 border-t border-green-200 dark:border-green-800 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 text-green-600 dark:text-green-400" />
-                    <p className="text-[10px] text-green-700 dark:text-green-400">
+                    <ShieldCheck className="w-3 h-3 !text-green-900 dark:text-green-400" />
+                    <p className="text-[10px] !text-green-900 dark:text-green-400">
                       Signed digitally &middot;{" "}
                       {new Date().toLocaleDateString("en-US", {
                         year: "numeric",
