@@ -149,7 +149,7 @@ export default function Contracts() {
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: myWallet } = useGetMyWalletQuery();
 
-  const { data: contracts = [], isLoading } = useGetContractsQuery(undefined, {
+  const { data: contracts = [], isLoading, refetch: refetchContracts } = useGetContractsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
   const [signAndDisburseContract, { isLoading: isSd }] =
@@ -288,14 +288,12 @@ export default function Contracts() {
     }
   };
 
-  // Detect eSewa callback after redirect for sign-and-disburse flow
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const transactionUuid = params.get("transaction_uuid");
-    const status = params.get("status");
-    const isSdCallback = params.get("sd_esewa") === "1";
+    const raw = window.location.search;
 
-    if (!transactionUuid || !isSdCallback) return;
+    const hasEsewaFlag =
+      raw.includes("sd_esewa=1") && !raw.includes("sd_esewa_fail");
+    if (!hasEsewaFlag) return;
 
     const pendingRaw = sessionStorage.getItem("coloanex_pending_sd");
     if (!pendingRaw) return;
@@ -303,14 +301,31 @@ export default function Contracts() {
     const pending = JSON.parse(pendingRaw) as {
       contractId: string;
       signature: string;
-      transactionId: string;
-      transactionUuid: string;
+      walletId: string;
       amount: number;
     };
     sessionStorage.removeItem("coloanex_pending_sd");
     window.history.replaceState({}, "", window.location.pathname);
 
-    if (status !== "COMPLETE") {
+    let esewaData: Record<string, string> = {};
+    try {
+      const dataMatch = raw.match(/[?&]data=([^&?]+)/);
+      if (dataMatch?.[1]) {
+        esewaData = JSON.parse(atob(dataMatch[1]));
+      }
+    } catch {
+      toast({
+        title: "Payment Failed",
+        description: "Could not parse eSewa response.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const transactionUuid = esewaData["transaction_uuid"];
+    const status = esewaData["status"];
+
+    if (!transactionUuid || status !== "COMPLETE") {
       toast({
         title: "Payment Failed",
         description: "eSewa payment was not completed.",
@@ -320,9 +335,12 @@ export default function Contracts() {
     }
 
     verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid,
       totalAmount: pending.amount,
+      gateway: "ESEWA",
+      walletId: pending.walletId,
+      type: "DISBURSEMENT",
+      contractId: pending.contractId,
     })
       .unwrap()
       .then((result) => {
@@ -332,7 +350,7 @@ export default function Contracts() {
           data: {
             signature: pending.signature,
             method: "ESEWA",
-            transactionId: result.transactionId,
+            transactionId: result.transactionId ?? undefined,
           },
         }).unwrap();
       })
@@ -342,6 +360,7 @@ export default function Contracts() {
           description:
             "Contract signed and loan disbursed successfully via eSewa.",
         });
+        refetchContracts();
       })
       .catch((err: any) => {
         toast({
@@ -356,7 +375,6 @@ export default function Contracts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Detect Khalti callback after redirect for sign-and-disburse flow
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pidx = params.get("pidx");
@@ -371,7 +389,7 @@ export default function Contracts() {
     const pending = JSON.parse(pendingRaw) as {
       contractId: string;
       signature: string;
-      transactionId: string;
+      walletId: string;
       amount: number;
     };
     sessionStorage.removeItem("coloanex_pending_sd_khalti");
@@ -387,9 +405,12 @@ export default function Contracts() {
     }
 
     verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid: pidx,
       totalAmount: pending.amount,
+      gateway: "KHALTI",
+      walletId: pending.walletId,
+      type: "DISBURSEMENT",
+      contractId: pending.contractId,
     })
       .unwrap()
       .then((result) => {
@@ -399,7 +420,7 @@ export default function Contracts() {
           data: {
             signature: pending.signature,
             method: "KHALTI",
-            transactionId: result.transactionId,
+            transactionId: result.transactionId ?? undefined,
           },
         }).unwrap();
       })
@@ -409,6 +430,7 @@ export default function Contracts() {
           description:
             "Contract signed and loan disbursed successfully via Khalti.",
         });
+        refetchContracts();
       })
       .catch((err: any) => {
         toast({
@@ -478,7 +500,7 @@ export default function Contracts() {
         walletId: myWallet.id,
         contractId: contractToSd.id,
         amount: contractToSd.loanAmount,
-        type: "WITHDRAW",
+        type: "DISBURSEMENT",
         gateway: "ESEWA",
         successUrl,
         failureUrl,
@@ -489,8 +511,7 @@ export default function Contracts() {
         JSON.stringify({
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
-          transactionId: result.transactionId,
-          transactionUuid: result.transactionUuid,
+          walletId: myWallet.id,
           amount: contractToSd.loanAmount,
         }),
       );
@@ -533,7 +554,7 @@ export default function Contracts() {
         walletId: myWallet.id,
         contractId: contractToSd.id,
         amount: contractToSd.loanAmount,
-        type: "WITHDRAW",
+        type: "DISBURSEMENT",
         gateway: "KHALTI",
         successUrl,
         failureUrl,
@@ -544,7 +565,7 @@ export default function Contracts() {
         JSON.stringify({
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
-          transactionId: result.transactionId,
+          walletId: myWallet.id,
           amount: contractToSd.loanAmount,
         }),
       );
@@ -950,10 +971,10 @@ export default function Contracts() {
 
                 {/* Lender signature */}
                 <div className="rounded-xl border-2 border-green-200 dark:border-green-800 !bg-green-100 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  <p className="text-[10px] font-semibold text-green-900 dark:text-green-400 uppercase tracking-wider mb-1.5">
                     Lender Electronic Signature
                   </p>
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm text-green-900 dark:text-green-400 font-semibold">
                     {user?.fullName ?? "—"}
                   </p>
                   <div className="mt-2 pt-1.5 border-t border-green-200 dark:border-green-800 flex items-center gap-1.5">
