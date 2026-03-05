@@ -4,6 +4,7 @@ export type PaymentGateway = "ESEWA" | "FONEPAY" | "KHALTI";
 export type TransactionType =
   | "DEPOSIT"
   | "WITHDRAW"
+  | "DISBURSEMENT"
   | "INSTALLMENT_PAYMENT"
   | "PENALTY_PAYMENT"
   | "FEE";
@@ -20,21 +21,24 @@ export interface InitiatePaymentPayload {
 }
 
 export interface InitiatePaymentResult {
-  transactionId: string;
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
 }
 
 export interface VerifyPaymentPayload {
-  transactionId: string;
   transactionUuid: string;
-  totalAmount?: number;
+  totalAmount: number;
+  gateway: PaymentGateway;
+  walletId: string;
+  type: TransactionType;
+  contractId?: string;
+  paymentScheduleId?: string;
 }
 
 export interface VerifyPaymentResult {
   success: boolean;
-  transactionId: string;
+  transactionId: string | null;
   status: "COMPLETED" | "FAILED";
 }
 
@@ -49,7 +53,6 @@ export const paymentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Transactions"],
     }),
     verifyPayment: builder.mutation<VerifyPaymentResult, VerifyPaymentPayload>({
       query: (data) => ({

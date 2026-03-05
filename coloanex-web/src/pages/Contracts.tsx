@@ -115,7 +115,6 @@ export default function Contracts() {
   const { toast } = useToast();
 
   const [viewContract, setViewContract] = useState<Contract | null>(null);
-  // Sign & Disburse dialog state
   const [sdDialogOpen, setSdDialogOpen] = useState(false);
   const [contractToSd, setContractToSd] = useState<Contract | null>(null);
   const [sdGateway, setSdGateway] = useState<"ESEWA" | "KHALTI">("ESEWA");
@@ -150,7 +149,7 @@ export default function Contracts() {
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: myWallet } = useGetMyWalletQuery();
 
-  const { data: contracts = [], isLoading } = useGetContractsQuery(undefined, {
+  const { data: contracts = [], isLoading, refetch: refetchContracts } = useGetContractsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
   const [signAndDisburseContract, { isLoading: isSd }] =
@@ -289,14 +288,12 @@ export default function Contracts() {
     }
   };
 
-  // Detect eSewa callback after redirect for sign-and-disburse flow
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const transactionUuid = params.get("transaction_uuid");
-    const status = params.get("status");
-    const isSdCallback = params.get("sd_esewa") === "1";
+    const raw = window.location.search;
 
-    if (!transactionUuid || !isSdCallback) return;
+    const hasEsewaFlag =
+      raw.includes("sd_esewa=1") && !raw.includes("sd_esewa_fail");
+    if (!hasEsewaFlag) return;
 
     const pendingRaw = sessionStorage.getItem("coloanex_pending_sd");
     if (!pendingRaw) return;
@@ -304,14 +301,31 @@ export default function Contracts() {
     const pending = JSON.parse(pendingRaw) as {
       contractId: string;
       signature: string;
-      transactionId: string;
-      transactionUuid: string;
+      walletId: string;
       amount: number;
     };
     sessionStorage.removeItem("coloanex_pending_sd");
     window.history.replaceState({}, "", window.location.pathname);
 
-    if (status !== "COMPLETE") {
+    let esewaData: Record<string, string> = {};
+    try {
+      const dataMatch = raw.match(/[?&]data=([^&?]+)/);
+      if (dataMatch?.[1]) {
+        esewaData = JSON.parse(atob(dataMatch[1]));
+      }
+    } catch {
+      toast({
+        title: "Payment Failed",
+        description: "Could not parse eSewa response.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const transactionUuid = esewaData["transaction_uuid"];
+    const status = esewaData["status"];
+
+    if (!transactionUuid || status !== "COMPLETE") {
       toast({
         title: "Payment Failed",
         description: "eSewa payment was not completed.",
@@ -321,9 +335,12 @@ export default function Contracts() {
     }
 
     verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid,
       totalAmount: pending.amount,
+      gateway: "ESEWA",
+      walletId: pending.walletId,
+      type: "DISBURSEMENT",
+      contractId: pending.contractId,
     })
       .unwrap()
       .then((result) => {
@@ -333,7 +350,7 @@ export default function Contracts() {
           data: {
             signature: pending.signature,
             method: "ESEWA",
-            transactionId: result.transactionId,
+            transactionId: result.transactionId ?? undefined,
           },
         }).unwrap();
       })
@@ -343,6 +360,7 @@ export default function Contracts() {
           description:
             "Contract signed and loan disbursed successfully via eSewa.",
         });
+        refetchContracts();
       })
       .catch((err: any) => {
         toast({
@@ -357,7 +375,6 @@ export default function Contracts() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Detect Khalti callback after redirect for sign-and-disburse flow
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const pidx = params.get("pidx");
@@ -372,7 +389,7 @@ export default function Contracts() {
     const pending = JSON.parse(pendingRaw) as {
       contractId: string;
       signature: string;
-      transactionId: string;
+      walletId: string;
       amount: number;
     };
     sessionStorage.removeItem("coloanex_pending_sd_khalti");
@@ -388,9 +405,12 @@ export default function Contracts() {
     }
 
     verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid: pidx,
       totalAmount: pending.amount,
+      gateway: "KHALTI",
+      walletId: pending.walletId,
+      type: "DISBURSEMENT",
+      contractId: pending.contractId,
     })
       .unwrap()
       .then((result) => {
@@ -400,7 +420,7 @@ export default function Contracts() {
           data: {
             signature: pending.signature,
             method: "KHALTI",
-            transactionId: result.transactionId,
+            transactionId: result.transactionId ?? undefined,
           },
         }).unwrap();
       })
@@ -410,6 +430,7 @@ export default function Contracts() {
           description:
             "Contract signed and loan disbursed successfully via Khalti.",
         });
+        refetchContracts();
       })
       .catch((err: any) => {
         toast({
@@ -479,7 +500,7 @@ export default function Contracts() {
         walletId: myWallet.id,
         contractId: contractToSd.id,
         amount: contractToSd.loanAmount,
-        type: "WITHDRAW",
+        type: "DISBURSEMENT",
         gateway: "ESEWA",
         successUrl,
         failureUrl,
@@ -490,8 +511,7 @@ export default function Contracts() {
         JSON.stringify({
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
-          transactionId: result.transactionId,
-          transactionUuid: result.transactionUuid,
+          walletId: myWallet.id,
           amount: contractToSd.loanAmount,
         }),
       );
@@ -534,7 +554,7 @@ export default function Contracts() {
         walletId: myWallet.id,
         contractId: contractToSd.id,
         amount: contractToSd.loanAmount,
-        type: "WITHDRAW",
+        type: "DISBURSEMENT",
         gateway: "KHALTI",
         successUrl,
         failureUrl,
@@ -545,7 +565,7 @@ export default function Contracts() {
         JSON.stringify({
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
-          transactionId: result.transactionId,
+          walletId: myWallet.id,
           amount: contractToSd.loanAmount,
         }),
       );
@@ -834,16 +854,16 @@ export default function Contracts() {
 
             {/* Borrower signature status */}
             {contractToSd && hasBorrowerSigned(contractToSd) ? (
-              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-3.5 py-2.5">
-                <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                <span className="text-xs text-green-800 dark:text-green-300">
+              <div className="flex items-center gap-2.5 rounded-lg border border-green-200 dark:border-green-800 !bg-green-100 dark:bg-green-900/20 px-3.5 py-2.5">
+                <CheckCircle2 className="w-4 h-4 !text-green-900 dark:text-green-400 shrink-0" />
+                <span className="text-xs !text-green-900 dark:text-green-300">
                   Borrower has signed — complete payment below to activate
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3.5 py-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-xs text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-4 h-4 !text-amber-900 dark:text-amber-400 shrink-0" />
+                <span className="text-xs !text-amber-900 dark:text-amber-300">
                   Borrower must sign before the lender can activate this
                   contract.
                 </span>
@@ -868,7 +888,7 @@ export default function Contracts() {
                     <img
                       src="https://esewa.com.np/common/images/esewa_logo.png"
                       alt="eSewa"
-                      className="max-h-full max-w-full object-contain brightness-0 invert"
+                      className="max-h-full max-w-full object-contain"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                         const fb = e.currentTarget
@@ -924,18 +944,22 @@ export default function Contracts() {
                 <div
                   className={`flex gap-2.5 rounded-lg border px-3.5 py-3 text-xs leading-relaxed ${
                     sdGateway === "ESEWA"
-                      ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
-                      : "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300"
+                      ? "!bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
+                      : "!bg-purple-100 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-300"
                   }`}
                 >
                   <Banknote
                     className={`w-4 h-4 shrink-0 mt-0.5 ${
                       sdGateway === "ESEWA"
-                        ? "text-green-600 dark:text-green-400"
-                        : "text-purple-600 dark:text-purple-400"
+                        ? "!text-green-900 dark:text-green-400"
+                        : "!text-purple-900 dark:text-purple-400"
                     }`}
                   />
-                  <p>
+                  <p className={`${
+                      sdGateway === "ESEWA"
+                        ? "!text-green-900 dark:text-green-400"
+                        : "!text-purple-900 dark:text-purple-400"
+                    }`}>
                     You will be redirected to{" "}
                     <span className="font-semibold">
                       {sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
@@ -946,16 +970,16 @@ export default function Contracts() {
                 </div>
 
                 {/* Lender signature */}
-                <div className="rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                <div className="rounded-xl border-2 border-green-200 dark:border-green-800 !bg-green-100 dark:bg-green-900/20 px-4 pt-3 pb-2.5">
+                  <p className="text-[10px] font-semibold text-green-900 dark:text-green-400 uppercase tracking-wider mb-1.5">
                     Lender Electronic Signature
                   </p>
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm text-green-900 dark:text-green-400 font-semibold">
                     {user?.fullName ?? "—"}
                   </p>
                   <div className="mt-2 pt-1.5 border-t border-green-200 dark:border-green-800 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3 h-3 text-green-600 dark:text-green-400" />
-                    <p className="text-[10px] text-green-700 dark:text-green-400">
+                    <ShieldCheck className="w-3 h-3 !text-green-900 dark:text-green-400" />
+                    <p className="text-[10px] !text-green-900 dark:text-green-400">
                       Signed digitally &middot;{" "}
                       {new Date().toLocaleDateString("en-US", {
                         year: "numeric",

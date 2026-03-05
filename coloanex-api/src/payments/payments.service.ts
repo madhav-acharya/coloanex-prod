@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Inject,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
@@ -30,32 +29,10 @@ export class PaymentsService {
   }
 
   async initiatePayment(dto: InitiatePaymentDto) {
-    const {
-      walletId,
-      contractId,
-      paymentScheduleId,
-      amount,
-      type,
-      gateway,
-      successUrl,
-      failureUrl,
-    } = dto;
+    const { amount, gateway, successUrl, failureUrl } = dto;
 
     const paymentGateway = this.resolveGateway(gateway);
     const transactionUuid = randomUUID();
-
-    const transaction = await this.prisma.transaction.create({
-      data: {
-        walletId,
-        contractId: contractId ?? null,
-        paymentScheduleId: paymentScheduleId ?? null,
-        type: type as never,
-        amount,
-        status: 'PENDING' as never,
-        description: `${gateway} payment initiated`,
-        gatewayDetails: { gateway, transactionUuid } as never,
-      },
-    });
 
     const result = await paymentGateway.initiatePayment({
       amount,
@@ -64,19 +41,7 @@ export class PaymentsService {
       failureUrl,
     });
 
-    await this.prisma.transaction.update({
-      where: { id: transaction.id },
-      data: {
-        gatewayDetails: {
-          gateway,
-          transactionUuid,
-          ...result.formData,
-        } as never,
-      },
-    });
-
     return {
-      transactionId: transaction.id,
       transactionUuid,
       paymentUrl: result.paymentUrl,
       formData: result.formData,
@@ -84,73 +49,89 @@ export class PaymentsService {
   }
 
   async verifyPayment(dto: VerifyPaymentDto) {
-    const { transactionId, transactionUuid, totalAmount } = dto;
-
-    const transaction = await this.prisma.transaction.findUnique({
-      where: { id: transactionId },
-    });
-
-    if (!transaction) {
-      throw new NotFoundException('Transaction not found');
-    }
-
-    const gatewayDetails = transaction.gatewayDetails as Record<
-      string,
-      unknown
-    >;
-    const gateway = (gatewayDetails?.gateway as string) ?? 'ESEWA';
+    const {
+      transactionUuid,
+      totalAmount,
+      gateway,
+      walletId,
+      type,
+      contractId,
+      paymentScheduleId,
+    } = dto;
 
     const paymentGateway = this.resolveGateway(gateway);
 
     const verifyResult = await paymentGateway.verifyPayment({
       transactionUuid,
-      totalAmount: totalAmount ?? Number(transaction.amount),
+      totalAmount,
     });
 
-    const newStatus = verifyResult.success ? 'COMPLETED' : 'FAILED';
+    if (!verifyResult.success) {
+      return { success: false, transactionId: null, status: 'FAILED' };
+    }
 
-    await this.prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        status: newStatus as never,
-        completedAt: verifyResult.success ? new Date() : null,
+    // Prevent duplicate transactions if this UUID was already verified
+    const existingTransaction = await this.prisma.transaction.findFirst({
+      where: {
         gatewayDetails: {
-          ...gatewayDetails,
+          path: ['transactionUuid'],
+          equals: transactionUuid,
+        },
+      },
+    });
+
+    if (existingTransaction) {
+      return {
+        success: true,
+        transactionId: existingTransaction.id,
+        status: 'COMPLETED',
+      };
+    }
+
+    const transaction = await this.prisma.transaction.create({
+      data: {
+        walletId,
+        contractId: contractId ?? null,
+        paymentScheduleId: paymentScheduleId ?? null,
+        type: type as never,
+        amount: totalAmount,
+        status: 'COMPLETED' as never,
+        completedAt: new Date(),
+        description: `${gateway} payment verified`,
+        gatewayDetails: {
+          gateway,
+          transactionUuid,
           gatewayTransactionId: verifyResult.gatewayTransactionId,
           gatewayResponse: verifyResult.gatewayResponse,
         } as never,
       },
     });
 
-    if (verifyResult.success && transaction.walletId) {
-      const amount = Number(transaction.amount);
-      const isDebit = [
-        'WITHDRAW',
-        'INSTALLMENT_PAYMENT',
-        'PENALTY_PAYMENT',
-        'FEE',
-      ].includes(transaction.type as string);
-      const isCredit = ['DEPOSIT', 'DISBURSEMENT'].includes(
-        transaction.type as string,
-      );
+    const amount = Number(totalAmount);
+    const isDebit = [
+      'WITHDRAW',
+      'INSTALLMENT_PAYMENT',
+      'PENALTY_PAYMENT',
+      'FEE',
+    ].includes(type as string);
+    const isCredit = ['DEPOSIT', 'DISBURSEMENT'].includes(type as string);
 
-      if (isDebit) {
-        await this.prisma.wallet.update({
-          where: { id: transaction.walletId },
-          data: { balance: { decrement: amount } },
-        });
-      } else if (isCredit) {
-        await this.prisma.wallet.update({
-          where: { id: transaction.walletId },
-          data: { balance: { increment: amount } },
-        });
-      }
+    if (isDebit) {
+      await this.prisma.wallet.update({
+        where: { id: walletId },
+        data: { balance: { decrement: amount } },
+      });
+    } else if (isCredit) {
+      await this.prisma.wallet.update({
+        where: { id: walletId },
+        data: { balance: { increment: amount } },
+      });
     }
 
     return {
-      success: verifyResult.success,
-      transactionId,
-      status: newStatus,
+      success: true,
+      transactionId: transaction.id,
+      status: 'COMPLETED',
     };
   }
 }

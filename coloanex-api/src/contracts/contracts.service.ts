@@ -260,7 +260,8 @@ export class ContractsService {
     }
 
     const isTenantMember = user.tenantId === contract.tenantId;
-    if (!isTenantMember) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (!isTenantMember && !isSuperAdmin) {
       const borrower = await this.prisma.borrower.findFirst({
         where: { userId: user.sub, tenantId: contract.tenantId },
       });
@@ -283,7 +284,8 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    if (contract.tenantId !== user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (contract.tenantId !== user.tenantId && !isSuperAdmin) {
       throw new ForbiddenException('You can only update your own contracts');
     }
 
@@ -332,7 +334,8 @@ export class ContractsService {
     });
 
     let signedBy: 'BORROWER' | 'TENANT';
-    if (user.tenantId === contract.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (user.tenantId === contract.tenantId || isSuperAdmin) {
       signedBy = 'TENANT';
     } else if (borrower && borrower.id === contract.borrowerId) {
       signedBy = 'BORROWER';
@@ -425,7 +428,8 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    if (contract.tenantId !== user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (contract.tenantId !== user.tenantId && !isSuperAdmin) {
       throw new ForbiddenException(
         'Only tenant members can sign and disburse this contract',
       );
@@ -510,7 +514,8 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    if (contract.tenantId !== user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (contract.tenantId !== user.tenantId && !isSuperAdmin) {
       throw new ForbiddenException('Only tenant can disburse the loan');
     }
 
@@ -570,7 +575,8 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    if (contract.tenantId !== user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (contract.tenantId !== user.tenantId && !isSuperAdmin) {
       throw new ForbiddenException('You can only delete your own contracts');
     }
 
@@ -714,7 +720,8 @@ export class ContractsService {
       throw new NotFoundException('Contract not found');
     }
 
-    if (user.tenantId && contract.tenantId !== user.tenantId) {
+    const isSuperAdmin = user.roles?.includes('Super Admin');
+    if (user.tenantId && contract.tenantId !== user.tenantId && !isSuperAdmin) {
       throw new ForbiddenException(
         'You can only generate PDFs for your own contracts',
       );
