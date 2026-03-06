@@ -146,6 +146,10 @@ export function LoanReviewModal({
         return "bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400";
       case LoanStatus.LOAN_PROVIDED:
         return "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400";
+      case LoanStatus.PARTIALLY_PAID:
+        return "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400";
+      case LoanStatus.PAID:
+        return "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400";
       default:
         return "bg-muted text-muted-foreground";
     }
@@ -202,6 +206,10 @@ export function LoanReviewModal({
                     <SelectItem value={LoanStatus.LOAN_PROVIDED}>
                       Loan Provided
                     </SelectItem>
+                    <SelectItem value={LoanStatus.PARTIALLY_PAID}>
+                      Partially Paid
+                    </SelectItem>
+                    <SelectItem value={LoanStatus.PAID}>Paid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
