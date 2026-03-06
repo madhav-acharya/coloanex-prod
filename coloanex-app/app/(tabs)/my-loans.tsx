@@ -1,391 +1,599 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, Button } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { loansApi } from "@/api";
 import type { Loan } from "@/types";
+import { LoanStatus } from "@/types/loan";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
 
-export default function LoansScreen() {
+type StatusConfig = {
+  label: string;
+  bgColor: string;
+  textColor: string;
+  icon: keyof typeof Ionicons.glyphMap;
+};
+
+function getStatusConfig(
+  status: string,
+  colors: Record<string, string>,
+): StatusConfig {
+  switch (status) {
+    case LoanStatus.DRAFT:
+      return {
+        label: "Draft",
+        bgColor: colors.surface,
+        textColor: colors.textSecondary,
+        icon: "document-outline",
+      };
+    case LoanStatus.SUBMITTED:
+      return {
+        label: "Submitted",
+        bgColor: colors.secondaryLight,
+        textColor: colors.secondary,
+        icon: "paper-plane-outline",
+      };
+    case LoanStatus.UNDER_REVIEW:
+      return {
+        label: "Under Review",
+        bgColor: colors.warningLight,
+        textColor: colors.warning,
+        icon: "time-outline",
+      };
+    case LoanStatus.APPROVED:
+      return {
+        label: "Approved",
+        bgColor: colors.successLight,
+        textColor: colors.success,
+        icon: "checkmark-circle-outline",
+      };
+    case LoanStatus.REJECTED:
+      return {
+        label: "Rejected",
+        bgColor: colors.errorLight,
+        textColor: colors.error,
+        icon: "close-circle-outline",
+      };
+    case LoanStatus.CONTRACT_GENERATED:
+      return {
+        label: "Contract Ready",
+        bgColor: colors.secondaryLight,
+        textColor: colors.secondary,
+        icon: "document-text-outline",
+      };
+    case LoanStatus.CONTRACT_SIGNED:
+      return {
+        label: "Contract Signed",
+        bgColor: colors.primaryLight,
+        textColor: colors.primary,
+        icon: "shield-checkmark-outline",
+      };
+    case LoanStatus.LOAN_PROVIDED:
+      return {
+        label: "Loan Provided",
+        bgColor: colors.primaryLight,
+        textColor: colors.primary,
+        icon: "trending-up-outline",
+      };
+    case LoanStatus.PARTIALLY_PAID:
+      return {
+        label: "Partially Paid",
+        bgColor: colors.warningLight,
+        textColor: colors.warning,
+        icon: "time-outline",
+      };
+    case LoanStatus.PAID:
+      return {
+        label: "Paid",
+        bgColor: colors.successLight,
+        textColor: colors.success,
+        icon: "checkmark-circle-outline",
+      };
+    default:
+      return {
+        label: status,
+        bgColor: colors.surface,
+        textColor: colors.textSecondary,
+        icon: "ellipse-outline",
+      };
+  }
+}
+
+function StatusBadge({
+  status,
+  colors,
+}: {
+  status: string;
+  colors: Record<string, string>;
+}) {
+  const config = getStatusConfig(status, colors);
+  return (
+    <View
+      style={[statusBadgeStyles.badge, { backgroundColor: config.bgColor }]}
+    >
+      <Ionicons name={config.icon} size={12} color={config.textColor} />
+      <Text style={[statusBadgeStyles.label, { color: config.textColor }]}>
+        {config.label}
+      </Text>
+    </View>
+  );
+}
+
+const statusBadgeStyles = StyleSheet.create({
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+});
+
+export default function MyLoansScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadLoans = async () => {
+  const loadLoans = useCallback(async () => {
     try {
       const data = await loansApi.getMyLoans();
       setLoans(data);
-    } catch (error) {
-      console.error("Failed to load loans:", error);
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadLoans();
-  }, []);
+  }, [loadLoans]);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadLoans();
   };
 
-  const totalDebt = loans.reduce(
-    (sum, loan) => sum + (loan.remainingBalance ?? 0),
+  const activeCount = loans.filter(
+    (l) =>
+      l.status === LoanStatus.LOAN_PROVIDED ||
+      l.status === LoanStatus.PARTIALLY_PAID,
+  ).length;
+  const pendingCount = loans.filter((l) =>
+    (
+      [
+        LoanStatus.SUBMITTED,
+        LoanStatus.UNDER_REVIEW,
+        LoanStatus.APPROVED,
+        LoanStatus.CONTRACT_GENERATED,
+        LoanStatus.CONTRACT_SIGNED,
+      ] as string[]
+    ).includes(l.status),
+  ).length;
+  const totalAmount = loans.reduce(
+    (sum, l) => sum + (l.approvedAmount ?? l.requestedAmount),
     0,
   );
-  const activeLoans = loans.filter((loan) => loan.status === "active").length;
-  const nextPaymentDate =
-    loans.length > 0
-      ? loans.reduce(
-          (earliest, loan) =>
-            loan.nextPaymentDate &&
-            (!earliest || new Date(loan.nextPaymentDate) < new Date(earliest))
-              ? loan.nextPaymentDate
-              : earliest,
-          loans[0]?.nextPaymentDate,
-        )
-      : null;
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Active Loans</Text>
-      </View>
+  const renderLoanCard = ({ item: loan }: { item: Loan }) => {
+    const amount = loan.approvedAmount ?? loan.requestedAmount;
+    const lenderName = loan.borrower?.tenant?.name ?? "Unknown Lender";
+    const isActive =
+      loan.status === LoanStatus.LOAN_PROVIDED ||
+      loan.status === LoanStatus.PARTIALLY_PAID;
 
-      <ScrollView
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    return (
+      <TouchableOpacity
+        style={styles.cardWrapper}
+        activeOpacity={0.7}
+        onPress={() =>
+          router.push({
+            pathname: "/loans/loan-details",
+            params: { id: loan.id },
+          })
         }
       >
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>Total Active Debt</Text>
-          <Text style={styles.summaryAmount}>{formatCurrency(totalDebt)}</Text>
-          <View style={styles.summaryDetails}>
-            <View style={styles.summaryDetail}>
-              <Text style={styles.summaryDetailValue}>
-                {activeLoans} Active Loans
-              </Text>
-            </View>
-            {nextPaymentDate && (
-              <View style={styles.summaryDetail}>
-                <Text style={styles.summaryDetailLabel}>Next Payment: </Text>
-                <Text style={styles.summaryDetailValue}>
-                  {new Date(nextPaymentDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.lenderInfo}>
+              <View
+                style={[
+                  styles.lenderAvatar,
+                  { backgroundColor: colors.primaryLight },
+                ]}
+              >
+                <Text style={[styles.lenderInitial, { color: colors.primary }]}>
+                  {lenderName.charAt(0).toUpperCase()}
                 </Text>
               </View>
-            )}
+              <View style={styles.lenderText}>
+                <Text
+                  style={[styles.lenderName, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {lenderName}
+                </Text>
+                <Text
+                  style={[styles.purpose, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  {loan.purpose}
+                </Text>
+              </View>
+            </View>
+            <StatusBadge status={loan.status} colors={colors} />
           </View>
-        </Card>
 
-        <View style={styles.loansSection}>
-          {loans.map((loan) => {
-            const loanAmount = loan.approvedAmount ?? loan.requestedAmount;
-            const totalPayments = loan.totalPayments ?? 1;
-            const paymentsMade = loan.paymentsMade ?? 0;
-            const percentPaid =
-              ((totalPayments - paymentsMade) / totalPayments) * 100;
-            const lenderName = loan.borrower?.tenant?.name ?? "Unknown Lender";
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-            return (
-              <TouchableOpacity
-                key={loan.id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/loans/loan-details",
-                    params: { id: loan.id },
-                  })
-                }
+          <View style={styles.cardBody}>
+            <View style={styles.amountBlock}>
+              <Text
+                style={[styles.amountLabel, { color: colors.textSecondary }]}
               >
-                <Card style={styles.loanCard}>
-                  <View style={styles.loanHeader}>
-                    <View style={styles.loanInfo}>
-                      <Text style={styles.lenderName}>{lenderName}</Text>
-                      <Text style={styles.loanType}>{loan.purpose}</Text>
-                    </View>
-                  </View>
+                {loan.approvedAmount ? "Approved Amount" : "Requested Amount"}
+              </Text>
+              <Text
+                style={[
+                  styles.amountValue,
+                  { color: isActive ? colors.primary : colors.text },
+                ]}
+              >
+                {formatCurrency(amount)}
+              </Text>
+            </View>
+            <View style={styles.termBlock}>
+              <Text style={[styles.termLabel, { color: colors.textSecondary }]}>
+                Term
+              </Text>
+              <Text style={[styles.termValue, { color: colors.text }]}>
+                {(loan as any).approvedTermMonths ?? loan.requestedTermMonths}{" "}
+                mo
+              </Text>
+            </View>
+          </View>
 
-                  <View style={styles.loanDetails}>
-                    <View style={styles.loanDetail}>
-                      <Text style={styles.loanDetailLabel}>Loan Amount</Text>
-                      <Text style={styles.loanDetailValue}>
-                        {formatCurrency(loanAmount)}
-                      </Text>
-                    </View>
-                    <View style={styles.loanDetail}>
-                      <Text style={styles.loanDetailLabel}>Term</Text>
-                      <Text style={styles.loanDetailValue}>
-                        {loan.requestedTermMonths} months
-                      </Text>
-                    </View>
-                  </View>
+          <View style={styles.cardFooter}>
+            <View style={styles.dateRow}>
+              <Ionicons
+                name="calendar-outline"
+                size={13}
+                color={colors.textLight}
+              />
+              <Text style={[styles.dateText, { color: colors.textLight }]}>
+                {new Date(loan.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={colors.textLight}
+            />
+          </View>
 
-                  <View style={styles.loanDetails}>
-                    <View style={styles.loanDetail}>
-                      <Text style={styles.loanDetailLabel}>
-                        Remaining Balance
-                      </Text>
-                      <Text
-                        style={[styles.loanDetailValue, styles.balanceValue]}
-                      >
-                        {formatCurrency(loan.remainingBalance ?? loanAmount)}
-                      </Text>
-                    </View>
-                    <View style={styles.loanDetail}>
-                      <Text style={styles.loanDetailLabel}>
-                        Monthly Payment
-                      </Text>
-                      <Text style={styles.loanDetailValue}>
-                        {formatCurrency(loan.monthlyPayment ?? 0)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {loan.totalPayments && loan.paymentsMade !== undefined && (
-                    <View style={styles.progressContainer}>
-                      <View style={styles.progressBar}>
-                        <View
-                          style={[
-                            styles.progressFill,
-                            { width: `${percentPaid}%` },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.progressText}>
-                        {paymentsMade} of {totalPayments} payments completed (
-                        {percentPaid.toFixed(0)}% paid)
-                      </Text>
-                    </View>
-                  )}
-
-                  <View style={styles.loanFooter}>
-                    {loan.nextPaymentDate && (
-                      <Text style={styles.dueDate}>
-                        Due Date:{" "}
-                        {new Date(loan.nextPaymentDate).toLocaleDateString(
-                          "en-US",
-                          { month: "short", day: "numeric", year: "numeric" },
-                        )}
-                      </Text>
-                    )}
-                    <TouchableOpacity
-                      style={styles.payButton}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/repayment/make-repayment",
-                          params: { id: loan.id },
-                        })
-                      }
-                    >
-                      <Text style={styles.payButtonText}>Make Payment</Text>
-                    </TouchableOpacity>
-                  </View>
-                </Card>
-              </TouchableOpacity>
-            );
-          })}
+          {loan.rejectionReason && (
+            <View
+              style={[
+                styles.rejectionBanner,
+                { backgroundColor: colors.errorLight },
+              ]}
+            >
+              <Ionicons
+                name="information-circle-outline"
+                size={14}
+                color={colors.error}
+              />
+              <Text
+                style={[styles.rejectionText, { color: colors.error }]}
+                numberOfLines={2}
+              >
+                {loan.rejectionReason}
+              </Text>
+            </View>
+          )}
         </View>
+      </TouchableOpacity>
+    );
+  };
 
-        <Button
-          title="Apply for New Loan"
-          onPress={() => router.push("/browse-lenders")}
-          variant="outline"
-          style={styles.applyButton}
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>My Loans</Text>
+        <TouchableOpacity
+          style={[styles.applyBtn, { backgroundColor: colors.primaryLight }]}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(tabs)/browse-lenders")}
+        >
+          <Ionicons name="add" size={18} color={colors.primary} />
+          <Text style={[styles.applyBtnText, { color: colors.primary }]}>
+            Apply
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : loans.length === 0 ? (
+        <View style={styles.emptyState}>
+          <View
+            style={[styles.emptyIcon, { backgroundColor: colors.primaryLight }]}
+          >
+            <Ionicons name="wallet-outline" size={40} color={colors.primary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            No Loans Yet
+          </Text>
+          <Text style={[styles.emptyBody, { color: colors.textSecondary }]}>
+            Browse lenders and apply for your first loan
+          </Text>
+          <TouchableOpacity
+            style={[styles.emptyButton, { backgroundColor: colors.primary }]}
+            onPress={() => router.push("/(tabs)/browse-lenders")}
+          >
+            <Text
+              style={[styles.emptyButtonText, { color: colors.buttonText }]}
+            >
+              Browse Lenders
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={loans}
+          keyExtractor={(item) => item.id}
+          renderItem={renderLoanCard}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+          ListHeaderComponent={
+            <View style={[styles.summaryRow, { backgroundColor: colors.card }]}>
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: colors.text }]}>
+                  {loans.length}
+                </Text>
+                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
+                  Total
+                </Text>
+              </View>
+              <View
+                style={[styles.statDivider, { backgroundColor: colors.border }]}
+              />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: colors.primary }]}>
+                  {activeCount}
+                </Text>
+                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
+                  Active
+                </Text>
+              </View>
+              <View
+                style={[styles.statDivider, { backgroundColor: colors.border }]}
+              />
+              <View style={styles.statItem}>
+                <Text style={[styles.statNum, { color: colors.warning }]}>
+                  {pendingCount}
+                </Text>
+                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
+                  Pending
+                </Text>
+              </View>
+              <View
+                style={[styles.statDivider, { backgroundColor: colors.border }]}
+              />
+              <View style={styles.statItem}>
+                <Text
+                  style={[styles.statNum, { color: colors.text }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatCurrency(totalAmount)}
+                </Text>
+                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
+                  Total Value
+                </Text>
+              </View>
+            </View>
+          }
         />
-      </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: Record<string, string>) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.surface,
-    },
+    container: { flex: 1 },
     header: {
-      backgroundColor: colors.background,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    title: {
-      ...typography.h2,
-      color: colors.text,
-      fontWeight: "800",
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
-    },
-    summaryCard: {
-      backgroundColor: colors.primary,
-      marginBottom: spacing.lg,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.3,
-      shadowRadius: 16,
-      elevation: 8,
-    },
-    summaryLabel: {
-      ...typography.bodySmall,
-      color: colors.background,
-      marginBottom: spacing.xs,
-      textTransform: "uppercase",
-      letterSpacing: 1,
-      fontWeight: "600",
-    },
-    summaryAmount: {
-      ...typography.h1,
-      fontSize: 36,
-      color: colors.background,
-      marginBottom: spacing.md,
-      fontWeight: "800",
-    },
-    summaryDetails: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-    },
-    summaryDetail: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
     },
-    summaryDetailLabel: {
-      ...typography.bodySmall,
-      color: colors.background,
-      opacity: 0.9,
-    },
-    summaryDetailValue: {
-      ...typography.bodySmall,
-      fontWeight: "700",
-      color: colors.background,
-    },
-    loansSection: {
-      marginBottom: spacing.lg,
-    },
-    loanCard: {
-      marginBottom: spacing.md,
-    },
-    loanHeader: {
+    title: { ...typography.h2, fontWeight: "800" },
+    applyBtn: {
       flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: borderRadius.full,
+    },
+    applyBtnText: { fontSize: 14, fontWeight: "600" },
+    centered: { flex: 1, alignItems: "center", justifyContent: "center" },
+    listContent: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xxl,
+      gap: spacing.md,
+      paddingTop: spacing.md,
+    },
+    summaryRow: {
+      flexDirection: "row",
+      borderRadius: borderRadius.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: spacing.sm,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    statItem: { flex: 1, alignItems: "center" },
+    statNum: { ...typography.h3, fontWeight: "700", fontSize: 16 },
+    statLbl: { fontSize: 11, marginTop: 2, fontWeight: "500" },
+    statDivider: { width: 1, marginVertical: 4 },
+    cardWrapper: {
+      borderRadius: borderRadius.lg,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    card: {
+      borderRadius: borderRadius.lg,
+      overflow: "hidden",
+      padding: spacing.md,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: spacing.md,
     },
-    loanInfo: {
+    lenderInfo: {
+      flexDirection: "row",
+      alignItems: "center",
       flex: 1,
-      marginLeft: spacing.md,
+      gap: spacing.sm,
+      marginRight: spacing.sm,
+    },
+    lenderAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
       justifyContent: "center",
     },
-    lenderName: {
-      ...typography.h3,
-      fontSize: 18,
-      color: colors.text,
-      marginBottom: 4,
-      fontWeight: "700",
-    },
-    loanType: {
-      ...typography.bodySmall,
-      color: colors.textSecondary,
-      fontWeight: "500",
-    },
-    loanDetails: {
+    lenderInitial: { fontSize: 18, fontWeight: "700" },
+    lenderText: { flex: 1 },
+    lenderName: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
+    purpose: { fontSize: 12, fontWeight: "500" },
+    divider: { height: 1, marginBottom: spacing.md },
+    cardBody: {
       flexDirection: "row",
       justifyContent: "space-between",
       marginBottom: spacing.md,
-      backgroundColor: colors.surface,
-      padding: spacing.md,
-      borderRadius: borderRadius.md,
     },
-    loanDetail: {},
-    loanDetailLabel: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      marginBottom: 6,
+    amountBlock: { flex: 1 },
+    amountLabel: {
+      fontSize: 11,
       fontWeight: "600",
       textTransform: "uppercase",
-      letterSpacing: 0.5,
+      letterSpacing: 0.4,
+      marginBottom: 4,
     },
-    loanDetailValue: {
-      ...typography.body,
-      fontWeight: "700",
-      color: colors.text,
-      fontSize: 16,
-    },
-    balanceValue: {
-      color: colors.primary,
-    },
-    progressContainer: {
-      marginBottom: spacing.md,
-    },
-    progressBar: {
-      height: 10,
-      backgroundColor: colors.border,
-      borderRadius: borderRadius.full,
-      overflow: "hidden",
-      marginBottom: spacing.xs,
-    },
-    progressFill: {
-      height: "100%",
-      backgroundColor: colors.primary,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.5,
-      shadowRadius: 4,
-    },
-    progressText: {
-      ...typography.caption,
-      color: colors.textSecondary,
+    amountValue: { fontSize: 20, fontWeight: "800" },
+    termBlock: { alignItems: "flex-end" },
+    termLabel: {
+      fontSize: 11,
       fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.4,
+      marginBottom: 4,
     },
-    loanFooter: {
+    termValue: { fontSize: 18, fontWeight: "700" },
+    cardFooter: {
       flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
-      paddingTop: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
+      justifyContent: "space-between",
     },
-    dueDate: {
-      ...typography.bodySmall,
-      color: colors.textSecondary,
+    dateRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    dateText: { fontSize: 12, fontWeight: "500" },
+    rejectionBanner: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+      marginTop: spacing.sm,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
     },
-    payButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: borderRadius.md,
+    rejectionText: { flex: 1, fontSize: 12, fontWeight: "500", lineHeight: 16 },
+    emptyState: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: spacing.xl,
     },
-    payButtonText: {
-      ...typography.bodySmall,
-      fontWeight: "600",
-      color: colors.background,
-    },
-    applyButton: {
+    emptyIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: "center",
+      justifyContent: "center",
       marginBottom: spacing.lg,
     },
+    emptyTitle: {
+      ...typography.h2,
+      fontWeight: "700",
+      marginBottom: spacing.sm,
+      textAlign: "center",
+    },
+    emptyBody: {
+      ...typography.body,
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: spacing.xl,
+    },
+    emptyButton: {
+      paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.md,
+      borderRadius: borderRadius.full,
+    },
+    emptyButtonText: { fontSize: 15, fontWeight: "700" },
   });
