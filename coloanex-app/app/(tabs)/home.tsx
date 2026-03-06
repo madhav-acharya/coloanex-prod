@@ -7,14 +7,50 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card } from "@/components/ui";
-import { spacing, typography } from "@/constants/theme";
+import { spacing, borderRadius } from "@/constants/theme";
 import { lendersApi, notificationsApi } from "@/api";
 import type { Lender } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
+import { useAppSelector } from "@/store/hooks";
+
+type QuickAction = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  route: string;
+  color: string;
+};
+
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    icon: "business-outline",
+    label: "Lenders",
+    route: "/(tabs)/browse-lenders",
+    color: "#6366F1",
+  },
+  {
+    icon: "document-text-outline",
+    label: "My Loans",
+    route: "/(tabs)/my-loans",
+    color: "#16A34A",
+  },
+  {
+    icon: "wallet-outline",
+    label: "Wallet",
+    route: "/wallet",
+    color: "#F59E0B",
+  },
+  {
+    icon: "shield-checkmark-outline",
+    label: "KYC",
+    route: "/kyc",
+    color: "#3B82F6",
+  },
+];
 
 export default function HomeScreen() {
   const [lenders, setLenders] = useState<Lender[]>([]);
@@ -23,350 +59,405 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const { colors } = useTheme();
   const styles = createStyles(colors);
+  const user = useAppSelector((state) => state.auth.user);
 
-  const loadLenders = async () => {
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  })();
+
+  const loadData = async () => {
     try {
-      const result = await lendersApi.getAll({ limit: 10, offset: 0 });
-      setLenders(result.data);
-    } catch (error) {
-      console.error("Failed to load lenders:", error);
+      const [lenderResult, notifData] = await Promise.all([
+        lendersApi.getAll({ limit: 6, offset: 0 }),
+        notificationsApi.getUnreadCount().catch(() => ({ count: 0 })),
+      ]);
+      setLenders(lenderResult.data);
+      setUnreadCount(notifData.count);
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const loadUnreadCount = async () => {
-    try {
-      const data = await notificationsApi.getUnreadCount();
-      setUnreadCount(data.count);
-    } catch (error) {
-      console.error("Failed to load unread count:", error);
-    }
-  };
-
   useEffect(() => {
-    loadLenders();
-    loadUnreadCount();
+    loadData();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadLenders();
-    loadUnreadCount();
+    loadData();
   };
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
-        <View style={styles.headerContent}>
-          <View>
-            <Text style={[styles.welcomeText, { color: colors.textSecondary }]}>
-              Welcome to
-            </Text>
-            <Text style={[styles.title, { color: colors.text }]}>CoLoanex</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push("/activity-logs")}
-          >
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={colors.text}
-            />
-            {unreadCount > 0 && (
-              <View
-                style={[
-                  styles.notificationBadge,
-                  { backgroundColor: colors.error },
-                ]}
-              >
-                <Text style={styles.notificationBadgeText}>
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Find the best loan options for you
-        </Text>
-      </View>
-
       <ScrollView
-        style={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
         }
       >
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Featured Lenders</Text>
-
-          {lenders.map((lender) => (
+        <View style={[styles.heroSection, { backgroundColor: colors.card }]}>
+          <View style={styles.heroTop}>
+            <View style={styles.greetingCol}>
+              <Text
+                style={[styles.greetingText, { color: colors.textSecondary }]}
+              >
+                {greeting},
+              </Text>
+              <Text style={[styles.userName, { color: colors.text }]}>
+                {user?.fullName?.split(" ")[0] ?? "Welcome"}
+              </Text>
+              <Text style={[styles.heroSub, { color: colors.textSecondary }]}>
+                Find the best loan for you
+              </Text>
+            </View>
             <TouchableOpacity
-              key={lender.id}
-              onPress={() =>
-                router.push({
-                  pathname: "/lenders/lender-details",
-                  params: { id: lender.id },
-                })
-              }
+              style={[styles.notifBtn, { backgroundColor: colors.surface }]}
+              onPress={() => router.push("/activity-logs")}
             >
-              <Card style={styles.lenderCard}>
-                <View style={styles.lenderHeader}>
-                  <View style={styles.lenderIcon}>
-                    <Ionicons
-                      name="business"
-                      size={32}
-                      color={colors.primary}
-                    />
-                  </View>
-                  <View style={styles.lenderInfo}>
-                    <Text style={styles.lenderName}>{lender.name}</Text>
-                    <View style={styles.statusRow}>
-                      <View
+              <Ionicons
+                name="notifications-outline"
+                size={22}
+                color={colors.text}
+              />
+              {unreadCount > 0 && (
+                <View
+                  style={[styles.notifBadge, { backgroundColor: colors.error }]}
+                >
+                  <Text style={styles.notifBadgeText}>
+                    {unreadCount > 99 ? "99+" : String(unreadCount)}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.appBrand, { borderTopColor: colors.border }]}>
+            <View
+              style={[styles.brandDot, { backgroundColor: colors.primary }]}
+            />
+            <Text style={[styles.brandName, { color: colors.primary }]}>
+              CoLoanex
+            </Text>
+            <Text
+              style={[styles.brandTagline, { color: colors.textSecondary }]}
+            >
+              — Peer lending simplified
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.section, { marginTop: spacing.md }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Featured Lenders
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/browse-lenders")}
+            >
+              <Text style={[styles.seeAll, { color: colors.primary }]}>
+                See all
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : lenders.length === 0 ? (
+            <View style={[styles.emptyBox, { backgroundColor: colors.card }]}>
+              <Ionicons
+                name="business-outline"
+                size={32}
+                color={colors.textLight}
+              />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                No lenders available
+              </Text>
+            </View>
+          ) : (
+            lenders.map((lender) => (
+              <TouchableOpacity
+                key={lender.id}
+                style={[styles.lenderCard, { backgroundColor: colors.card }]}
+                activeOpacity={0.85}
+                onPress={() =>
+                  router.push({
+                    pathname: "/lenders/lender-details",
+                    params: { id: lender.id },
+                  })
+                }
+              >
+                <View style={styles.lenderCardLeft}>
+                  <View
+                    style={[
+                      styles.lenderAvatar,
+                      { backgroundColor: colors.primaryLight },
+                    ]}
+                  >
+                    {lender.logo ? (
+                      <Image
+                        source={{ uri: lender.logo }}
+                        style={styles.lenderAvatarImg}
+                      />
+                    ) : (
+                      <Text
                         style={[
-                          styles.statusBadge,
-                          lender.isActive && styles.statusBadgeActive,
+                          styles.lenderAvatarInitial,
+                          { color: colors.primary },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.statusText,
-                            lender.isActive && styles.statusTextActive,
-                          ]}
-                        >
-                          {lender.isActive ? "Active" : "Inactive"}
-                        </Text>
-                      </View>
-                    </View>
+                        {lender.name.charAt(0).toUpperCase()}
+                      </Text>
+                    )}
                   </View>
-                </View>
-
-                {(lender.contactEmail ||
-                  lender.contactPhone ||
-                  lender.address) && (
-                  <View style={styles.contactInfo}>
-                    {lender.contactEmail && (
-                      <View style={styles.contactRow}>
+                  <View style={styles.lenderInfo}>
+                    <Text
+                      style={[styles.lenderName, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      {lender.name}
+                    </Text>
+                    {lender.address && (
+                      <View style={styles.lenderMetaRow}>
                         <Ionicons
-                          name="mail-outline"
-                          size={16}
+                          name="location-outline"
+                          size={11}
                           color={colors.textSecondary}
                         />
-                        <Text style={styles.contactText}>
-                          {lender.contactEmail}
+                        <Text
+                          style={[
+                            styles.lenderMetaText,
+                            { color: colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {lender.address}
                         </Text>
                       </View>
                     )}
                     {lender.contactPhone && (
-                      <View style={styles.contactRow}>
+                      <View style={styles.lenderMetaRow}>
                         <Ionicons
                           name="call-outline"
-                          size={16}
+                          size={11}
                           color={colors.textSecondary}
                         />
-                        <Text style={styles.contactText}>
+                        <Text
+                          style={[
+                            styles.lenderMetaText,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
                           {lender.contactPhone}
                         </Text>
                       </View>
                     )}
-                    {lender.address && (
-                      <View style={styles.contactRow}>
-                        <Ionicons
-                          name="location-outline"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.contactText}>{lender.address}</Text>
-                      </View>
-                    )}
                   </View>
-                )}
-
-                <TouchableOpacity
-                  style={styles.viewButton}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/lenders/lender-details",
-                      params: { id: lender.id },
-                    })
-                  }
-                >
-                  <Text style={styles.viewButtonText}>View Details</Text>
+                </View>
+                <View style={styles.lenderCardRight}>
+                  <View
+                    style={[
+                      styles.lenderStatus,
+                      {
+                        backgroundColor: lender.isActive
+                          ? "#D1FAE5"
+                          : colors.surface,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.statusDot,
+                        {
+                          backgroundColor: lender.isActive
+                            ? "#16A34A"
+                            : colors.textLight,
+                        },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.lenderStatusText,
+                        {
+                          color: lender.isActive
+                            ? "#16A34A"
+                            : colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      {lender.isActive ? "Active" : "Inactive"}
+                    </Text>
+                  </View>
                   <Ionicons
-                    name="arrow-forward"
+                    name="chevron-forward"
                     size={16}
-                    color={colors.primary}
+                    color={colors.textLight}
+                    style={{ marginTop: 8 }}
                   />
-                </TouchableOpacity>
-              </Card>
-            </TouchableOpacity>
-          ))}
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
+
+        <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: Record<string, string>) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.surface,
-    },
-    header: {
-      backgroundColor: colors.background,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.xl,
-      paddingBottom: spacing.lg,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
-    },
-    headerContent: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
+    container: { flex: 1 },
+    heroSection: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.md,
       marginBottom: spacing.sm,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 6,
+      elevation: 3,
     },
-    welcomeText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-      fontWeight: "500",
+    heroTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
     },
-    title: {
-      ...typography.h1,
-      color: colors.primary,
-      fontWeight: "800",
-      marginTop: 4,
-    },
-    notificationButton: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.primaryLight,
+    greetingCol: { flex: 1 },
+    greetingText: { fontSize: 13, fontWeight: "500" },
+    userName: { fontSize: 24, fontWeight: "800", marginVertical: 2 },
+    heroSub: { fontSize: 12, fontWeight: "500" },
+    notifBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
       position: "relative",
     },
-    notificationBadge: {
+    notifBadge: {
       position: "absolute",
       top: -2,
       right: -2,
-      backgroundColor: "#EF4444",
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
-      paddingHorizontal: 4,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
       alignItems: "center",
       justifyContent: "center",
+      paddingHorizontal: 3,
     },
-    notificationBadgeText: {
-      color: "#fff",
-      fontSize: 11,
-      fontWeight: "700",
-    },
-    subtitle: {
-      ...typography.body,
-      color: colors.textSecondary,
-      marginTop: spacing.xs,
-    },
-    content: {
-      flex: 1,
-    },
-    section: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
-    },
-    sectionTitle: {
-      ...typography.h3,
-      color: colors.text,
-      marginBottom: spacing.md,
-    },
-    lenderCard: {
-      marginBottom: spacing.md,
-    },
-    lenderHeader: {
-      flexDirection: "row",
-      marginBottom: spacing.md,
-    },
-    lenderIcon: {
-      width: 64,
-      height: 64,
-      borderRadius: 16,
-      backgroundColor: colors.primaryLight,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    lenderInfo: {
-      flex: 1,
-      marginLeft: spacing.md,
-      justifyContent: "center",
-    },
-    lenderName: {
-      ...typography.h3,
-      color: colors.text,
-      marginBottom: spacing.xs,
-    },
-    statusRow: {
+    notifBadgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+    appBrand: {
       flexDirection: "row",
       alignItems: "center",
-    },
-    statusBadge: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-      borderRadius: 12,
-      backgroundColor: colors.surface,
-    },
-    statusBadgeActive: {
-      backgroundColor: colors.primaryLight,
-    },
-    statusText: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      fontWeight: "600",
-    },
-    statusTextActive: {
-      color: colors.primary,
-    },
-    viewButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      alignSelf: "flex-start",
-      marginTop: spacing.sm,
-    },
-    viewButtonText: {
-      ...typography.bodySmall,
-      color: colors.primary,
-      fontWeight: "600",
-      marginRight: spacing.xs,
-    },
-    contactInfo: {
+      gap: 6,
+      marginTop: spacing.md,
       paddingTop: spacing.sm,
       borderTopWidth: 1,
-      borderColor: colors.border,
     },
-    contactRow: {
+    brandDot: { width: 8, height: 8, borderRadius: 4 },
+    brandName: { fontSize: 14, fontWeight: "800" },
+    brandTagline: { fontSize: 12, fontWeight: "500" },
+    quickActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    quickBtn: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 12,
+      borderRadius: borderRadius.lg,
+      gap: 6,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    quickIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    quickLabel: { fontSize: 11, fontWeight: "600" },
+    section: { paddingHorizontal: spacing.md },
+    sectionHeader: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: spacing.xs,
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
     },
-    contactText: {
-      ...typography.bodySmall,
-      color: colors.textSecondary,
-      marginLeft: spacing.xs,
+    sectionTitle: { fontSize: 17, fontWeight: "700" },
+    seeAll: { fontSize: 13, fontWeight: "600" },
+    loadingBox: { paddingVertical: 48, alignItems: "center" },
+    emptyBox: {
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+      borderRadius: borderRadius.lg,
+      gap: spacing.sm,
     },
+    emptyText: { fontSize: 13, fontWeight: "500" },
+    lenderCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    lenderCardLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      gap: spacing.sm,
+    },
+    lenderAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    lenderAvatarImg: { width: "100%", height: "100%" },
+    lenderAvatarInitial: { fontSize: 20, fontWeight: "800" },
+    lenderInfo: { flex: 1 },
+    lenderName: { fontSize: 14, fontWeight: "700", marginBottom: 3 },
+    lenderMetaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    lenderMetaText: { fontSize: 11, fontWeight: "500", flex: 1 },
+    lenderCardRight: { alignItems: "flex-end" },
+    lenderStatus: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 10,
+    },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
+    lenderStatusText: { fontSize: 11, fontWeight: "600" },
   });
