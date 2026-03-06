@@ -23,7 +23,6 @@ import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
 
-
 export default function LoanRequests() {
   const { toast } = useToast();
   const { isAuthenticated, user } = useAuth();
@@ -596,6 +595,16 @@ export default function LoanRequests() {
         className:
           "bg-emerald-100 dark:bg-emerald-600 text-white dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
         label: "Loan Provided",
+      },
+      [LoanStatus.PARTIALLY_PAID]: {
+        className:
+          "bg-amber-100 dark:bg-amber-600 text-white dark:text-amber-300 border-amber-200 dark:border-amber-800",
+        label: "Partially Paid",
+      },
+      [LoanStatus.PAID]: {
+        className:
+          "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
+        label: "Paid",
       },
     };
 
