@@ -80,7 +80,7 @@ export interface PaymentSchedule {
   totalAmount: number;
   amountPaid: number;
   penaltyAmount: number;
-  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
+  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIALLY_PAID";
   paidAt?: string;
   createdAt: string;
   updatedAt: string;
