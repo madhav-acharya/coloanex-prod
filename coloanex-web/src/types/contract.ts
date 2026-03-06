@@ -121,7 +121,7 @@ export interface PaymentSchedule {
   dueAmount: number;
   paidAmount: number;
   remainingAmount: number;
-  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
+  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIALLY_PAID";
   paidAt?: string;
   paymentTransactionId?: string;
   createdAt: string;
