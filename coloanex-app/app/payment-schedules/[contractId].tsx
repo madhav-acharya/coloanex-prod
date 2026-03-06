@@ -52,7 +52,7 @@ export default function PaymentSchedulesScreen() {
       PENDING: colors.textLight,
       PAID: colors.success,
       OVERDUE: colors.error,
-      PARTIAL: colors.warning,
+      PARTIALLY_PAID: colors.warning,
     };
     return colors_map[status] || colors.textLight;
   };

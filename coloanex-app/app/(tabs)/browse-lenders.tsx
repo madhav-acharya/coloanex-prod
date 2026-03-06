@@ -1,23 +1,29 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   SafeAreaView,
   Image,
-  Modal,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, SearchBar } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, borderRadius } from "@/constants/theme";
 import { lendersApi } from "@/api";
 import type { Lender } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 
-const FILTERS = ["All", "Active", "Inactive"];
+const FILTERS = [
+  { key: "All", label: "All" },
+  { key: "Active", label: "Active" },
+  { key: "Inactive", label: "Inactive" },
+];
+
+const LIMIT = 12;
 
 export default function BrowseScreen() {
   const { colors } = useTheme();
@@ -25,566 +31,462 @@ export default function BrowseScreen() {
   const [lenders, setLenders] = useState<Lender[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
-  const LIMIT = 10;
+  const [totalCount, setTotalCount] = useState(0);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadLenders = async (reset = false) => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const currentOffset = reset ? 0 : offset;
-      const params: any = {
-        limit: LIMIT,
-        offset: currentOffset,
-      };
-
-      if (searchQuery.trim()) {
-        params.search = searchQuery;
+  const fetchLenders = useCallback(
+    async (reset: boolean, query: string, filter: string) => {
+      if (loading && !reset) return;
+      setLoading(true);
+      try {
+        const currentOffset = reset ? 0 : offset;
+        const params: {
+          limit: number;
+          offset: number;
+          search?: string;
+          isActive?: boolean;
+        } = { limit: LIMIT, offset: currentOffset };
+        if (query.trim()) params.search = query.trim();
+        if (filter === "Active") params.isActive = true;
+        if (filter === "Inactive") params.isActive = false;
+        const result = await lendersApi.getAll(params);
+        setLenders((prev) => (reset ? result.data : [...prev, ...result.data]));
+        setOffset(reset ? LIMIT : currentOffset + LIMIT);
+        setHasMore(result.hasMore);
+        if (result.total !== undefined) setTotalCount(result.total);
+      } catch {
+      } finally {
+        setLoading(false);
       }
-
-      if (selectedFilter === "Active") {
-        params.isActive = true;
-      } else if (selectedFilter === "Inactive") {
-        params.isActive = false;
-      }
-
-      const result = await lendersApi.getAll(params);
-
-      if (reset) {
-        setLenders(result.data);
-        setOffset(LIMIT);
-      } else {
-        setLenders([...lenders, ...result.data]);
-        setOffset(currentOffset + LIMIT);
-      }
-
-      setHasMore(result.hasMore);
-    } catch (error) {
-      console.error("Failed to load lenders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [loading, offset],
+  );
 
   useEffect(() => {
     setOffset(0);
     setLenders([]);
-    loadLenders(true);
-  }, [selectedFilter, searchQuery]);
+    fetchLenders(true, searchQuery, selectedFilter);
+  }, [selectedFilter]);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      setOffset(0);
+      setLenders([]);
+      fetchLenders(true, text, selectedFilter);
+    }, 400);
   };
 
   const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      loadLenders(false);
+    if (!loading && hasMore) fetchLenders(false, searchQuery, selectedFilter);
+  };
+
+  const renderLenderCard = ({ item }: { item: Lender }) => (
+    <TouchableOpacity
+      style={[styles.card, { backgroundColor: colors.card }]}
+      activeOpacity={0.85}
+      onPress={() =>
+        router.push({
+          pathname: "/lenders/lender-details",
+          params: { id: item.id },
+        })
+      }
+    >
+      <View style={styles.cardTop}>
+        <View style={[styles.avatar, { backgroundColor: colors.primaryLight }]}>
+          {item.logo ? (
+            <Image source={{ uri: item.logo }} style={styles.avatarImg} />
+          ) : (
+            <Text style={[styles.avatarInitial, { color: colors.primary }]}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
+          )}
+        </View>
+        <View style={styles.cardInfo}>
+          <Text
+            style={[styles.cardName, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: item.isActive ? "#D1FAE5" : colors.surface },
+            ]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor: item.isActive ? "#16A34A" : colors.textLight,
+                },
+              ]}
+            />
+            <Text
+              style={[
+                styles.statusText,
+                { color: item.isActive ? "#16A34A" : colors.textSecondary },
+              ]}
+            >
+              {item.isActive ? "Active" : "Inactive"}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+      </View>
+
+      {(item.contactEmail || item.contactPhone || item.address) && (
+        <View style={[styles.cardMeta, { borderTopColor: colors.border }]}>
+          {item.contactEmail && (
+            <View style={styles.metaRow}>
+              <Ionicons
+                name="mail-outline"
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text
+                style={[styles.metaText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {item.contactEmail}
+              </Text>
+            </View>
+          )}
+          {item.contactPhone && (
+            <View style={styles.metaRow}>
+              <Ionicons
+                name="call-outline"
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                {item.contactPhone}
+              </Text>
+            </View>
+          )}
+          {item.address && (
+            <View style={styles.metaRow}>
+              <Ionicons
+                name="location-outline"
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text
+                style={[styles.metaText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                {item.address}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      <View
+        style={[styles.cardFooter, { backgroundColor: colors.primaryLight }]}
+      >
+        <Text style={[styles.cardFooterText, { color: colors.primary }]}>
+          View Details & Apply
+        </Text>
+        <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderFooter = () => {
+    if (!hasMore && lenders.length > 0) {
+      return (
+        <View style={styles.endRow}>
+          <Text style={[styles.endText, { color: colors.textLight }]}>
+            All {lenders.length} lenders loaded
+          </Text>
+        </View>
+      );
     }
+    if (hasMore && lenders.length > 0) {
+      return (
+        <TouchableOpacity
+          style={[
+            styles.loadMoreBtn,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+          onPress={handleLoadMore}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <Text style={[styles.loadMoreText, { color: colors.primary }]}>
+                Load More
+              </Text>
+              <Ionicons name="chevron-down" size={16} color={colors.primary} />
+            </>
+          )}
+        </TouchableOpacity>
+      );
+    }
+    return null;
+  };
+
+  const renderEmpty = () => {
+    if (loading) return null;
+    return (
+      <View style={styles.emptyState}>
+        <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
+          <Ionicons
+            name="business-outline"
+            size={40}
+            color={colors.textLight}
+          />
+        </View>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>
+          No Lenders Found
+        </Text>
+        <Text style={[styles.emptyMsg, { color: colors.textSecondary }]}>
+          {searchQuery
+            ? `No results for "${searchQuery}"`
+            : "Try adjusting your filters"}
+        </Text>
+      </View>
+    );
   };
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.surface }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
         <View style={styles.headerTop}>
-          <Text style={styles.title}>Browse Lenders</Text>
-          <TouchableOpacity
-            style={styles.searchIconButton}
-            onPress={() => setShowSearch(true)}
-          >
-            <Ionicons name="search" size={24} color={colors.text} />
-          </TouchableOpacity>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Browse Lenders
+            </Text>
+            <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+              {totalCount > 0
+                ? `${totalCount} lenders available`
+                : "Find the right lender for you"}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={[
+            styles.searchBox,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search by name..."
+            placeholderTextColor={colors.textLight}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearchChange("")}>
+              <Ionicons
+                name="close-circle"
+                size={16}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.filtersRow}>
-          {FILTERS.map((filter) => (
+          {FILTERS.map((f) => (
             <TouchableOpacity
-              key={filter}
+              key={f.key}
               style={[
                 styles.filterChip,
-                { backgroundColor: colors.surface },
-                selectedFilter === filter && {
+                { backgroundColor: colors.surface, borderColor: colors.border },
+                selectedFilter === f.key && {
                   backgroundColor: colors.primary,
+                  borderColor: colors.primary,
                 },
               ]}
-              onPress={() => setSelectedFilter(filter)}
+              onPress={() => setSelectedFilter(f.key)}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: colors.text },
-                  selectedFilter === filter && {
-                    color: colors.background,
-                  },
+                  { color: colors.textSecondary },
+                  selectedFilter === f.key && { color: colors.buttonText },
                 ]}
               >
-                {filter}
+                {f.label}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      <Modal
-        visible={showSearch}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowSearch(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: colors.background },
-            ]}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Search Lenders
-              </Text>
-              <TouchableOpacity onPress={() => setShowSearch(false)}>
-                <Ionicons name="close" size={28} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-            <SearchBar
-              placeholder="Search by name..."
-              onSearch={(query) => {
-                handleSearch(query);
-                setShowSearch(false);
-              }}
-              debounceMs={500}
-            />
-          </View>
+      {loading && lenders.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </Modal>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {lenders.length === 0 && !loading ? (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="search-outline"
-              size={64}
-              color={colors.textLight}
-            />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No Lenders Found
-            </Text>
-            <Text
-              style={[styles.emptyMessage, { color: colors.textSecondary }]}
-            >
-              {searchQuery
-                ? `No lenders match "${searchQuery}"`
-                : selectedFilter === "Active"
-                  ? "No active lenders available"
-                  : selectedFilter === "Inactive"
-                    ? "No inactive lenders available"
-                    : "No lenders available at the moment"}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {lenders.map((lender) => (
-              <TouchableOpacity
-                key={lender.id}
-                onPress={() =>
-                  router.push({
-                    pathname: "/lenders/lender-details",
-                    params: { id: lender.id },
-                  })
-                }
-              >
-                <Card style={styles.lenderCard}>
-                  <View style={styles.lenderHeader}>
-                    <View
-                      style={[
-                        styles.lenderIcon,
-                        {
-                          backgroundColor: colors.primaryLight,
-                          shadowColor: colors.primary,
-                        },
-                      ]}
-                    >
-                      {lender.logo ? (
-                        <Image
-                          source={{ uri: lender.logo }}
-                          style={styles.lenderLogoImage}
-                        />
-                      ) : (
-                        <Ionicons
-                          name="business"
-                          size={32}
-                          color={colors.primary}
-                        />
-                      )}
-                    </View>
-                    <View style={styles.lenderInfo}>
-                      <Text style={[styles.lenderName, { color: colors.text }]}>
-                        {lender.name}
-                      </Text>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          { backgroundColor: colors.surface },
-                          lender.isActive && [
-                            styles.statusBadgeActive,
-                            { backgroundColor: colors.primaryLight },
-                          ],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.statusText,
-                            { color: colors.textSecondary },
-                            lender.isActive && [
-                              styles.statusTextActive,
-                              { color: colors.primary },
-                            ],
-                          ]}
-                        >
-                          {lender.isActive ? "Active" : "Inactive"}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {(lender.contactEmail ||
-                    lender.contactPhone ||
-                    lender.address) && (
-                    <View
-                      style={[
-                        styles.contactInfo,
-                        { borderColor: colors.border },
-                      ]}
-                    >
-                      {lender.contactEmail && (
-                        <View style={styles.contactRow}>
-                          <Ionicons
-                            name="mail-outline"
-                            size={14}
-                            color={colors.textSecondary}
-                          />
-                          <Text
-                            style={[
-                              styles.contactText,
-                              { color: colors.textSecondary },
-                            ]}
-                          >
-                            {lender.contactEmail}
-                          </Text>
-                        </View>
-                      )}
-                      {lender.contactPhone && (
-                        <View style={styles.contactRow}>
-                          <Ionicons
-                            name="call-outline"
-                            size={14}
-                            color={colors.textSecondary}
-                          />
-                          <Text
-                            style={[
-                              styles.contactText,
-                              { color: colors.textSecondary },
-                            ]}
-                          >
-                            {lender.contactPhone}
-                          </Text>
-                        </View>
-                      )}
-                      {lender.address && (
-                        <View style={styles.contactRow}>
-                          <Ionicons
-                            name="location-outline"
-                            size={14}
-                            color={colors.textSecondary}
-                          />
-                          <Text
-                            style={[
-                              styles.contactText,
-                              { color: colors.textSecondary },
-                            ]}
-                            numberOfLines={1}
-                          >
-                            {lender.address}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  <TouchableOpacity
-                    style={[
-                      styles.viewButton,
-                      {
-                        backgroundColor: colors.primary,
-                        shadowColor: colors.primary,
-                      },
-                    ]}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/lenders/lender-details",
-                        params: { id: lender.id },
-                      })
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.viewButtonText,
-                        { color: colors.background },
-                      ]}
-                    >
-                      View Details
-                    </Text>
-                    <Ionicons
-                      name="arrow-forward"
-                      size={16}
-                      color={colors.background}
-                    />
-                  </TouchableOpacity>
-                </Card>
-              </TouchableOpacity>
-            ))}
-
-            {hasMore && (
-              <TouchableOpacity
-                style={[
-                  styles.loadMoreButton,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={handleLoadMore}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Text
-                    style={[
-                      styles.loadMoreText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Loading...
-                  </Text>
-                ) : (
-                  <>
-                    <Text
-                      style={[styles.loadMoreText, { color: colors.primary }]}
-                    >
-                      Show More
-                    </Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={20}
-                      color={colors.primary}
-                    />
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </ScrollView>
+      ) : (
+        <FlatList
+          data={lenders}
+          keyExtractor={(item) => item.id}
+          renderItem={renderLenderCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={renderFooter}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.3}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: Record<string, string>) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-    },
+    container: { flex: 1 },
     header: {
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.md,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: 1,
     },
-    headerTop: {
+    headerTop: { marginBottom: spacing.sm },
+    headerTitle: { fontSize: 24, fontWeight: "800" },
+    headerSub: { fontSize: 12, fontWeight: "500", marginTop: 2 },
+    searchBox: {
       flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: spacing.md,
-    },
-    title: {
-      ...typography.h2,
-      color: colors.text,
-      fontWeight: "800",
-    },
-    searchIconButton: {
-      width: 40,
-      height: 40,
-      alignItems: "center",
-      justifyContent: "center",
-      borderRadius: 20,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      justifyContent: "flex-start",
-      paddingTop: 100,
-    },
-    modalContent: {
-      margin: spacing.lg,
+      gap: spacing.sm,
       borderRadius: borderRadius.lg,
-      padding: spacing.lg,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 10,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+      borderWidth: 1,
+      marginBottom: spacing.sm,
     },
-    modalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: spacing.lg,
-    },
-    modalTitle: {
-      ...typography.h2,
-      fontWeight: "700",
-    },
-    searchWrapper: {
-      marginBottom: spacing.md,
-    },
-    filtersRow: {
-      flexDirection: "row",
-      gap: spacing.xs,
-    },
+    searchInput: { flex: 1, fontSize: 14, fontWeight: "500", padding: 0 },
+    filtersRow: { flexDirection: "row", gap: spacing.xs, paddingBottom: 4 },
     filterChip: {
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs,
+      paddingVertical: 6,
       borderRadius: borderRadius.full,
-    },
-    filterChipText: {
-      ...typography.bodySmall,
-      fontWeight: "600",
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.md,
-    },
-    lenderCard: {
-      marginBottom: spacing.md,
-    },
-    lenderHeader: {
-      flexDirection: "row",
-      marginBottom: spacing.md,
-    },
-    lenderIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: 8,
-      elevation: 4,
-      overflow: "hidden",
-    },
-    lenderLogoImage: {
-      width: "100%",
-      height: "100%",
-    },
-    lenderInfo: {
-      flex: 1,
-      marginLeft: spacing.md,
-      justifyContent: "center",
-    },
-    lenderName: {
-      ...typography.h3,
-      color: colors.text,
-      fontSize: 18,
-      marginBottom: 4,
-    },
-    statusBadge: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-      borderRadius: 12,
-      alignSelf: "flex-start",
-    },
-    statusBadgeActive: {},
-    statusText: {
-      ...typography.caption,
-      color: colors.text,
-      fontWeight: "600",
-    },
-    statusTextActive: {},
-    viewButton: {
-      paddingVertical: 12,
-      paddingHorizontal: spacing.md,
-      borderRadius: borderRadius.md,
-      alignItems: "center",
-      flexDirection: "row",
-      justifyContent: "center",
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    viewButtonText: {
-      ...typography.bodySmall,
-      fontWeight: "700",
-      marginRight: spacing.xs,
-    },
-    contactInfo: {
-      paddingTop: spacing.sm,
-      borderTopWidth: 1,
-      marginBottom: spacing.sm,
-    },
-    contactRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 4,
-    },
-    contactText: {
-      ...typography.caption,
-      marginLeft: spacing.xs,
-      flex: 1,
-    },
-    emptyState: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: spacing.xxl * 2,
-      paddingHorizontal: spacing.xl,
-    },
-    emptyTitle: {
-      ...typography.h2,
-      fontWeight: "700",
-      marginTop: spacing.lg,
-      marginBottom: spacing.sm,
-      textAlign: "center",
-    },
-    emptyMessage: {
-      ...typography.body,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-    loadMoreButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      borderRadius: borderRadius.md,
-      marginHorizontal: spacing.lg,
-      marginVertical: spacing.md,
       borderWidth: 1,
     },
-    loadMoreText: {
-      ...typography.bodySmall,
-      fontWeight: "600",
-      marginRight: spacing.xs,
+    filterChipText: { fontSize: 12, fontWeight: "600" },
+    listContent: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.xl,
+    },
+    card: {
+      borderRadius: borderRadius.lg,
+      marginBottom: spacing.sm,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      padding: spacing.md,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    avatarImg: { width: "100%", height: "100%" },
+    avatarInitial: { fontSize: 20, fontWeight: "800" },
+    cardInfo: { flex: 1 },
+    cardName: { fontSize: 15, fontWeight: "700", marginBottom: 4 },
+    statusBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 10,
+      alignSelf: "flex-start",
+    },
+    statusDot: { width: 6, height: 6, borderRadius: 3 },
+    statusText: { fontSize: 11, fontWeight: "600" },
+    cardMeta: {
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm,
+      borderTopWidth: 1,
+      paddingTop: spacing.sm,
+      gap: 4,
+    },
+    metaRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    metaText: { fontSize: 12, fontWeight: "500", flex: 1 },
+    cardFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+    },
+    cardFooterText: { fontSize: 13, fontWeight: "700" },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loadMoreBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    loadMoreText: { fontSize: 14, fontWeight: "600" },
+    endRow: { alignItems: "center", paddingVertical: spacing.md },
+    endText: { fontSize: 12, fontWeight: "500" },
+    emptyState: {
+      alignItems: "center",
+      paddingTop: 80,
+      paddingHorizontal: spacing.xl,
+    },
+    emptyIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
+    emptyMsg: {
+      fontSize: 13,
+      fontWeight: "500",
+      textAlign: "center",
+      lineHeight: 20,
     },
   });

@@ -70,6 +70,8 @@ enum LoanStatus {
   CONTRACT_GENERATED
   CONTRACT_SIGNED
   LOAN_PROVIDED
+  PARTIALLY_PAID
+  PAID
 
   @@schema("finance")
 }
@@ -78,7 +80,7 @@ enum InstallmentStatus {
   PENDING
   PAID
   OVERDUE
-  PARTIAL
+  PARTIALLY_PAID
 
   @@schema("finance")
 }

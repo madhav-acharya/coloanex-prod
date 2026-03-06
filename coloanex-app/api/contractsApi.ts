@@ -100,6 +100,19 @@ export const contractsApi = {
     return response.data;
   },
 
+  getByLoanId: async (loanId: string): Promise<Contract | null> => {
+    try {
+      const response = await client.get(`/contracts?loanId=${loanId}`);
+      const data = response.data;
+      const list: Contract[] = Array.isArray(data) ? data : (data?.data ?? []);
+      return (
+        list.find((c) => c.loanId === loanId || c.loan?.id === loanId) ?? null
+      );
+    } catch {
+      return null;
+    }
+  },
+
   getById: async (id: string): Promise<Contract> => {
     const response = await client.get(`/contracts/${id}`);
     return response.data;

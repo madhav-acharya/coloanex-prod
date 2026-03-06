@@ -8,7 +8,7 @@ export interface PaymentSchedule {
   principalAmount: number;
   interestAmount: number;
   totalAmount: number;
-  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIAL";
+  status: "PENDING" | "PAID" | "OVERDUE" | "PARTIALLY_PAID";
   amountPaid: number;
   penaltyAmount: number;
   paidAt?: string;

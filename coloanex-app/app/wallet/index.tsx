@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Card } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { walletsApi, transactionsApi } from "@/api";
@@ -26,7 +26,7 @@ export default function WalletScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadWallet = async () => {
+  const loadWallet = useCallback(async () => {
     try {
       const walletData = await walletsApi.getMyWallet();
       setWallet(walletData);
@@ -43,11 +43,14 @@ export default function WalletScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadWallet();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadWallet();
+    }, [loadWallet]),
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -1,109 +1,186 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import Slider from "@react-native-community/slider";
-import { Card, LenderLogo, Button, useToast } from "@/components/ui";
+import * as WebBrowser from "expo-web-browser";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
-import { loansApi } from "@/api";
+import { loansApi, walletsApi, paymentsApi } from "@/api";
+import { useToast } from "@/components/ui";
 import type { Loan } from "@/types";
+import type { Wallet } from "@/api/walletsApi";
+import type { PaymentGateway } from "@/api/paymentsApi";
 import { formatCurrency } from "@/utils/currency";
 
-export default function RepaymentScreen() {
+const APP_SCHEME = "coloanexapp";
+const SUCCESS_URL = `${APP_SCHEME}://payment/success`;
+const FAILURE_URL = `${APP_SCHEME}://payment/failure`;
+
+type GatewayOption = {
+  id: PaymentGateway;
+  name: string;
+  tagline: string;
+  bg: string;
+  accent: string;
+  icon: string;
+};
+
+const GATEWAYS: GatewayOption[] = [
+  {
+    id: "ESEWA",
+    name: "eSewa",
+    tagline: "Nepal's #1 digital wallet",
+    bg: "#60BB46",
+    accent: "#FFFFFF",
+    icon: "e",
+  },
+  {
+    id: "KHALTI",
+    name: "Khalti",
+    tagline: "Fast & secure payments",
+    bg: "#5C2D91",
+    accent: "#FFFFFF",
+    icon: "k",
+  },
+];
+
+export default function MakeRepaymentScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    loanId: string;
+    contractId: string;
+    scheduleId: string;
+    amount: string;
+    gateway?: string;
+  }>();
   const { showToast } = useToast();
+
   const [loan, setLoan] = useState<Loan | null>(null);
-  const [amount, setAmount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
+    (params.gateway as PaymentGateway) ?? null,
+  );
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
 
-  const isFormValid = useMemo(() => amount >= 100, [amount]);
+  const amount = parseFloat(params.amount ?? "0");
 
-  useEffect(() => {
-    if (id) {
-      loadLoan();
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (loan) {
-      const monthlyPayment = loan.monthlyPayment || 0;
-      setAmount(monthlyPayment > 0 ? monthlyPayment : 1000);
-    }
-  }, [loan]);
-
-  const loadLoan = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const data = await loansApi.getById(id!);
-      setLoan(data);
-    } catch (error) {
-      console.error("Failed to load loan:", error);
-      showToast("Failed to load loan details", "error");
+      const [loanData, walletData] = await Promise.all([
+        loansApi.getById(params.loanId),
+        walletsApi.getMyWallet(),
+      ]);
+      setLoan(loanData);
+      setWallet(walletData);
+    } catch {
+      showToast("Failed to load payment details. Please try again.", "error");
       router.back();
-    }
-  };
-
-  const calculateBreakdown = () => {
-    if (!loan) return { principal: 0, interest: 0 };
-
-    const remainingBalance =
-      loan.remainingBalance ?? loan.approvedAmount ?? loan.requestedAmount;
-    const interest = 0;
-    const principal = amount - interest;
-
-    return {
-      principal: Math.max(0, principal),
-      interest: Math.min(amount, interest),
-    };
-  };
-
-  const handlePayment = async () => {
-    if (amount < 100) {
-      showToast("Minimum payment amount is Rs 100", "error");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await loansApi.makePayment(id!, amount);
-      showToast("Payment processed successfully!", "success");
-      router.back();
-    } catch (error: any) {
-      showToast(
-        error.response?.data?.message || "Failed to process payment",
-        "error",
-      );
     } finally {
       setLoading(false);
     }
+  }, [params.loanId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handlePay = async () => {
+    if (!selectedGateway) {
+      showToast("Please select a payment method to continue.", "warning");
+      return;
+    }
+    if (!wallet) {
+      showToast("Could not find your wallet. Please try again.", "error");
+      return;
+    }
+    if (amount <= 0) {
+      showToast("Payment amount is invalid.", "error");
+      return;
+    }
+
+    setPaying(true);
+    try {
+      const result = await paymentsApi.initiatePayment({
+        walletId: wallet.id,
+        contractId: params.contractId || undefined,
+        paymentScheduleId: params.scheduleId || undefined,
+        amount,
+        type: "INSTALLMENT_PAYMENT",
+        gateway: selectedGateway,
+        successUrl: SUCCESS_URL,
+        failureUrl: FAILURE_URL,
+      });
+
+      let paymentUrl = result.paymentUrl;
+
+      if (
+        selectedGateway === "ESEWA" &&
+        result.formData &&
+        Object.keys(result.formData).length > 0
+      ) {
+        const queryString = Object.entries(result.formData)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join("&");
+        paymentUrl = `${result.paymentUrl}?${queryString}`;
+      }
+
+      const browserResult = await WebBrowser.openAuthSessionAsync(
+        paymentUrl,
+        APP_SCHEME,
+      );
+
+      if (browserResult.type === "success") {
+        const url = browserResult.url ?? "";
+        if (url.includes("success")) {
+          showToast("Payment processed successfully!", "success");
+          router.back();
+        } else {
+          showToast("Payment was not completed. Please try again.", "error");
+        }
+      } else if (browserResult.type === "cancel") {
+        showToast("Payment was cancelled.", "warning");
+      }
+    } catch {
+      showToast(
+        "An error occurred while processing your payment. Please try again.",
+        "error",
+      );
+    } finally {
+      setPaying(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!loan) return null;
 
-  const breakdown = calculateBreakdown();
-  const remainingBalance =
-    loan.remainingBalance ?? loan.approvedAmount ?? loan.requestedAmount;
-  const nextPaymentDate = loan.nextPaymentDate;
-  const daysRemaining = nextPaymentDate
-    ? Math.ceil(
-        (new Date(nextPaymentDate).getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24),
-      )
-    : 30;
+  const lenderName = loan.borrower?.tenant?.name ?? "Lender";
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
         style={[
-          styles.header,
+          styles.topBar,
           {
             backgroundColor: colors.background,
             borderBottomColor: colors.border,
@@ -111,222 +188,255 @@ export default function RepaymentScreen() {
         ]}
       >
         <TouchableOpacity
-          style={styles.backButton}
+          style={styles.backBtn}
           onPress={() => router.back()}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Make Repayment
+        <Text style={[styles.topBarTitle, { color: colors.text }]}>
+          Make Payment
         </Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 38 }} />
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Card style={styles.headerCard}>
-          <View style={styles.lenderHeader}>
-            <LenderLogo
-              name={loan.borrower?.tenant?.name || "Lender"}
-              size={48}
-              verified
-            />
-            <View style={styles.lenderInfo}>
-              <Text style={[styles.lenderName, { color: colors.text }]}>
-                {loan.borrower?.tenant?.name || "Lender"}
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={styles.summaryTop}>
+            <View
+              style={[
+                styles.lenderAvatar,
+                { backgroundColor: colors.primaryLight },
+              ]}
+            >
+              <Text style={[styles.lenderInitial, { color: colors.primary }]}>
+                {lenderName.charAt(0).toUpperCase()}
               </Text>
-              <Text style={[styles.loanType, { color: colors.textSecondary }]}>
-                Personal Loan
+            </View>
+            <View style={styles.summaryInfo}>
+              <Text style={[styles.summaryLender, { color: colors.text }]}>
+                {lenderName}
+              </Text>
+              <Text
+                style={[styles.summaryPurpose, { color: colors.textSecondary }]}
+              >
+                {loan.purpose}
               </Text>
             </View>
           </View>
+
           <View
-            style={[styles.dueBox, { backgroundColor: colors.primaryLight }]}
-          >
-            <Text style={[styles.dueText, { color: colors.primary }]}>
-              {nextPaymentDate
-                ? `Next payment due in ${daysRemaining} days`
-                : "Payment schedule pending"}
-            </Text>
-          </View>
-        </Card>
-
-        <Card>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Payment Amount
-          </Text>
-          <Text style={[styles.amount, { color: colors.text }]}>
-            {formatCurrency(amount)}
-          </Text>
-          <Slider
-            style={styles.slider}
-            minimumValue={100}
-            maximumValue={Math.max(remainingBalance, 1000)}
-            step={50}
-            value={Math.max(amount, 100)}
-            onValueChange={setAmount}
-            minimumTrackTintColor={colors.primary}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.primary}
+            style={[styles.summaryDivider, { backgroundColor: colors.border }]}
           />
-          <View style={styles.range}>
-            <Text style={[styles.rangeText, { color: colors.textLight }]}>
-              Rs 100
-            </Text>
-            <Text style={[styles.rangeText, { color: colors.textLight }]}>
-              Full Balance: {formatCurrency(remainingBalance)}
-            </Text>
-          </View>
-        </Card>
 
-        <Card style={styles.paymentCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Payment Method
-          </Text>
-          <TouchableOpacity style={styles.paymentMethod}>
-            <View style={styles.paymentMethodLeft}>
-              <View style={styles.esewaIcon}>
-                <Text style={styles.esewaText}>e</Text>
-              </View>
-              <View style={styles.paymentMethodInfo}>
+          <View style={styles.amountSection}>
+            <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
+              Payment Amount
+            </Text>
+            <Text style={[styles.amountValue, { color: colors.primary }]}>
+              {formatCurrency(amount)}
+            </Text>
+            {params.scheduleId ? (
+              <View
+                style={[
+                  styles.installmentTag,
+                  { backgroundColor: colors.primaryLight },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={13}
+                  color={colors.primary}
+                />
                 <Text
-                  style={[styles.paymentMethodText, { color: colors.text }]}
+                  style={[styles.installmentTagText, { color: colors.primary }]}
                 >
-                  eSewa
+                  Scheduled Installment
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {wallet && (
+            <View
+              style={[
+                styles.walletRow,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <View style={styles.walletLeft}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+                <Text
+                  style={[styles.walletLabel, { color: colors.textSecondary }]}
+                >
+                  Wallet Balance
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.walletBalance,
+                  {
+                    color:
+                      wallet.balance >= amount ? colors.success : colors.error,
+                  },
+                ]}
+              >
+                {formatCurrency(wallet.balance)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+          Select Payment Method
+        </Text>
+
+        <View style={styles.gatewayGrid}>
+          {GATEWAYS.map((gateway) => {
+            const isSelected = selectedGateway === gateway.id;
+            return (
+              <TouchableOpacity
+                key={gateway.id}
+                style={[
+                  styles.gatewayCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                    borderWidth: isSelected ? 2 : 1,
+                  },
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setSelectedGateway(gateway.id)}
+              >
+                <View
+                  style={[
+                    styles.gatewayIconWrap,
+                    { backgroundColor: gateway.bg },
+                  ]}
+                >
+                  <Text
+                    style={[styles.gatewayIconText, { color: gateway.accent }]}
+                  >
+                    {gateway.icon.toUpperCase()}
+                  </Text>
+                </View>
+                <Text style={[styles.gatewayName, { color: colors.text }]}>
+                  {gateway.name}
                 </Text>
                 <Text
                   style={[
-                    styles.paymentMethodSubtext,
+                    styles.gatewayTagline,
                     { color: colors.textSecondary },
                   ]}
                 >
-                  Digital wallet payment
+                  {gateway.tagline}
                 </Text>
-              </View>
-            </View>
-            <TouchableOpacity>
-              <Text style={[styles.changeText, { color: colors.primary }]}>
-                Change
-              </Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Card>
-
-        <Card
-          style={[styles.breakdownCard, { backgroundColor: colors.surface }]}
-        >
-          <View style={styles.breakdownRow}>
-            <Text
-              style={[styles.breakdownLabel, { color: colors.textSecondary }]}
-            >
-              Principal Amount
-            </Text>
-            <Text style={[styles.breakdownValue, { color: colors.text }]}>
-              {formatCurrency(breakdown.principal)}
-            </Text>
-          </View>
-          <View style={styles.breakdownRow}>
-            <Text
-              style={[styles.breakdownLabel, { color: colors.textSecondary }]}
-            >
-              Interest Amount
-            </Text>
-            <Text style={[styles.breakdownValue, { color: colors.text }]}>
-              {formatCurrency(breakdown.interest)}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.breakdownRow,
-              styles.totalRow,
-              { borderTopColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.totalLabel, { color: colors.text }]}>
-              Total Payment
-            </Text>
-            <Text style={[styles.totalValue, { color: colors.text }]}>
-              {formatCurrency(amount)}
-            </Text>
-          </View>
-        </Card>
-
-        <Card>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Upcoming Payments
-          </Text>
-          {loan.nextPaymentDate ? (
-            <View style={styles.upcomingPayment}>
-              <View style={styles.upcomingInfo}>
-                <Text style={[styles.upcomingDate, { color: colors.text }]}>
-                  {new Date(loan.nextPaymentDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
-                <Text
-                  style={[styles.upcomingType, { color: colors.textSecondary }]}
-                >
-                  Monthly Payment
-                </Text>
-              </View>
-              <View style={styles.upcomingRight}>
-                <Text style={[styles.upcomingAmount, { color: colors.text }]}>
-                  {formatCurrency(loan.monthlyPayment || amount)}
-                </Text>
-                <View
-                  style={[styles.dueBadge, { backgroundColor: colors.warning }]}
-                >
-                  <Text style={[styles.dueText, { color: colors.primary }]}>
-                    Due Soon
-                  </Text>
-                </View>
-              </View>
-            </View>
-          ) : (
-            <Text
-              style={[styles.noPaymentsText, { color: colors.textSecondary }]}
-            >
-              No upcoming payments scheduled
-            </Text>
-          )}
-        </Card>
-
-        <TouchableOpacity
-          style={[styles.consentBox, { backgroundColor: colors.primaryLight }]}
-        >
-          <Ionicons name="checkbox" size={24} color={colors.primary} />
-          <Text style={[styles.consentText, { color: colors.text }]}>
-            I confirm this payment and authorize deduction from my account
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.actions}>
-          <Button
-            title="Schedule Payment"
-            onPress={() => {}}
-            variant="outline"
-            style={styles.scheduleButton}
-          />
-          <Button
-            title="Pay Now"
-            onPress={handlePayment}
-            loading={loading}
-            disabled={!isFormValid || loading}
-            style={styles.payButton}
-          />
+                {isSelected && (
+                  <View
+                    style={[
+                      styles.gatewayCheckmark,
+                      { backgroundColor: colors.primary },
+                    ]}
+                  >
+                    <Ionicons
+                      name="checkmark"
+                      size={12}
+                      color={colors.buttonText}
+                    />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={18}
+            color={colors.primary}
+          />
+          <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+            Your payment is secured with 256-bit SSL encryption.
+          </Text>
+        </View>
+
+        <View style={{ height: spacing.sm }} />
       </ScrollView>
+
+      <View
+        style={[
+          styles.stickyFooter,
+          { backgroundColor: colors.background, borderTopColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity
+          style={[
+            styles.payBtn,
+            {
+              backgroundColor: selectedGateway ? colors.primary : colors.border,
+              opacity: paying ? 0.7 : 1,
+            },
+          ]}
+          activeOpacity={0.85}
+          onPress={handlePay}
+          disabled={!selectedGateway || paying}
+        >
+          {paying ? (
+            <ActivityIndicator size="small" color={colors.buttonText} />
+          ) : (
+            <>
+              <Ionicons
+                name="card-outline"
+                size={20}
+                color={
+                  selectedGateway ? colors.buttonText : colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.payBtnText,
+                  {
+                    color: selectedGateway
+                      ? colors.buttonText
+                      : colors.textSecondary,
+                  },
+                ]}
+              >
+                {selectedGateway
+                  ? `Pay with ${GATEWAYS.find((g) => g.id === selectedGateway)?.name}`
+                  : "Select a Payment Method"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
-const createStyles = (colors: any) =>
+const createStyles = (colors: Record<string, string>) =>
   StyleSheet.create({
-    container: {
+    container: { flex: 1 },
+    loadingContainer: {
       flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    header: {
+    topBar: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -334,184 +444,141 @@ const createStyles = (colors: any) =>
       paddingVertical: spacing.md,
       borderBottomWidth: 1,
     },
-    backButton: {
-      padding: spacing.xs,
+    backBtn: { padding: 6, borderRadius: borderRadius.sm },
+    topBarTitle: { ...typography.h3, fontWeight: "700" },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
+    summaryCard: {
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.07,
+      shadowRadius: 6,
+      elevation: 3,
     },
-    headerTitle: {
-      ...typography.h3,
-    },
-    content: {
-      flex: 1,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.md,
-    },
-    headerCard: {
-      marginBottom: spacing.md,
-    },
-    lenderHeader: {
+    summaryTop: {
       flexDirection: "row",
       alignItems: "center",
+      gap: spacing.sm,
       marginBottom: spacing.md,
     },
-    lenderInfo: {
-      flex: 1,
-      marginLeft: spacing.md,
-    },
-    lenderName: {
-      ...typography.h3,
-      marginBottom: 4,
-    },
-    loanType: {
-      ...typography.bodySmall,
-    },
-    dueBox: {
-      padding: spacing.sm,
-      borderRadius: borderRadius.md,
-    },
-    dueText: {
-      ...typography.bodySmall,
-    },
-    sectionTitle: {
-      ...typography.body,
-      fontWeight: "600",
-      marginBottom: spacing.md,
-    },
-    amount: {
-      ...typography.h1,
-      fontSize: 40,
-      marginBottom: spacing.md,
-    },
-    slider: {
-      width: "100%",
-      height: 40,
-    },
-    range: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-    },
-    rangeText: {
-      ...typography.caption,
-    },
-    paymentCard: {},
-    paymentMethod: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    paymentMethodLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      flex: 1,
-    },
-    esewaIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "#60BB46",
+    lenderAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
     },
-    esewaText: {
-      fontSize: 20,
-      fontWeight: "bold",
-      color: "#FFFFFF",
-    },
-    paymentMethodInfo: {
-      marginLeft: spacing.md,
-    },
-    paymentMethodText: {
-      ...typography.body,
+    lenderInitial: { fontSize: 20, fontWeight: "700" },
+    summaryInfo: { flex: 1 },
+    summaryLender: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
+    summaryPurpose: { fontSize: 12, fontWeight: "500" },
+    summaryDivider: { height: 1, marginBottom: spacing.md },
+    amountSection: { alignItems: "center", paddingVertical: spacing.md },
+    amountLabel: {
+      fontSize: 12,
       fontWeight: "600",
-      marginBottom: 4,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 6,
     },
-    paymentMethodSubtext: {
-      ...typography.caption,
-    },
-    changeText: {
-      ...typography.bodySmall,
-      fontWeight: "600",
-    },
-    breakdownCard: {
-      marginBottom: spacing.md,
-    },
-    breakdownRow: {
+    amountValue: { fontSize: 38, fontWeight: "800", marginBottom: spacing.sm },
+    installmentTag: {
       flexDirection: "row",
-      justifyContent: "space-between",
-      paddingVertical: spacing.sm,
-    },
-    breakdownLabel: {
-      ...typography.body,
-    },
-    breakdownValue: {
-      ...typography.body,
-      fontWeight: "600",
-    },
-    totalRow: {
-      borderTopWidth: 1,
-      paddingTop: spacing.md,
-      marginTop: spacing.sm,
-    },
-    totalLabel: {
-      ...typography.body,
-      fontWeight: "600",
-    },
-    totalValue: {
-      ...typography.h3,
-    },
-    upcomingPayment: {
-      flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderRadius: 20,
     },
-    upcomingInfo: {},
-    upcomingDate: {
-      ...typography.body,
-      fontWeight: "600",
-      marginBottom: 4,
-    },
-    upcomingType: {
-      ...typography.caption,
-    },
-    upcomingRight: {
-      alignItems: "flex-end",
-    },
-    upcomingAmount: {
-      ...typography.body,
-      fontWeight: "600",
-      marginBottom: 4,
-    },
-    noPaymentsText: {
-      ...typography.body,
-      textAlign: "center",
-      paddingVertical: spacing.md,
-    },
-    dueBadge: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-      borderRadius: borderRadius.sm,
-    },
-    consentBox: {
+    installmentTagText: { fontSize: 11, fontWeight: "600" },
+    walletRow: {
       flexDirection: "row",
-      padding: spacing.md,
-      borderRadius: borderRadius.md,
-      marginBottom: spacing.md,
+      alignItems: "center",
+      justifyContent: "space-between",
       marginTop: spacing.md,
+      padding: spacing.sm,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
     },
-    consentText: {
-      ...typography.caption,
-      marginLeft: spacing.sm,
-      flex: 1,
-      lineHeight: 18,
+    walletLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
+    walletLabel: { fontSize: 13, fontWeight: "500" },
+    walletBalance: { fontSize: 14, fontWeight: "700" },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      marginBottom: spacing.sm,
     },
-    actions: {
+    gatewayGrid: {
       flexDirection: "row",
       gap: spacing.sm,
       marginBottom: spacing.lg,
     },
-    scheduleButton: {
+    gatewayCard: {
       flex: 1,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      alignItems: "center",
+      gap: 8,
+      position: "relative",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
     },
-    payButton: {
-      flex: 1,
+    gatewayIconWrap: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gatewayIconText: { fontSize: 22, fontWeight: "900" },
+    gatewayName: { fontSize: 15, fontWeight: "700" },
+    gatewayTagline: { fontSize: 11, fontWeight: "500", textAlign: "center" },
+    gatewayCheckmark: {
+      position: "absolute",
+      top: -6,
+      right: -6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    infoCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      borderWidth: 1,
+      marginBottom: spacing.lg,
+    },
+    infoText: { flex: 1, fontSize: 12, fontWeight: "500", lineHeight: 18 },
+    payBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
+      paddingVertical: 16,
+      borderRadius: borderRadius.lg,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    payBtnText: { fontSize: 16, fontWeight: "700" },
+    stickyFooter: {
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      paddingBottom: spacing.lg,
+      borderTopWidth: 1,
     },
   });

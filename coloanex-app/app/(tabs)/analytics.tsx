@@ -506,7 +506,8 @@ const createStyles = (colors: any) =>
     },
     content: {
       flex: 1,
-      padding: spacing.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
     },
     loadingContainer: {
       flex: 1,
