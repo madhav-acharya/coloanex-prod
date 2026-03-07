@@ -27,6 +27,8 @@ import Settings from "./pages/Settings";
 import Rules from "./pages/Rules";
 import Contracts from "./pages/Contracts";
 import Wallets from "./pages/Wallets";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
 import { hasPermission } from "./lib/permissions";
 import { Lock } from "lucide-react";
 
@@ -308,6 +310,23 @@ function App() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payment/success"
+        element={
+          <ProtectedRoute>
+            <PaymentSuccess />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment/failure"
+        element={
+          <ProtectedRoute>
+            <PaymentFailure />
           </ProtectedRoute>
         }
       />
