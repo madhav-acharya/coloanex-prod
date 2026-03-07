@@ -6,11 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
-import { Card } from "@/components/ui";
+import { Card, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { walletsApi, transactionsApi } from "@/api";
 import type { Wallet } from "@/api/walletsApi";
@@ -94,37 +93,19 @@ export default function WalletScreen() {
 
   if (!wallet && !loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Wallet</Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={styles.container}>
+        <AppHeader title="Wallet" showThemeToggle={false} />
         <View style={styles.emptyState}>
           <Ionicons name="wallet-outline" size={64} color={colors.textLight} />
           <Text style={styles.emptyText}>Wallet not available</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>My Wallet</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={styles.container}>
+      <AppHeader title="My Wallet" showThemeToggle={false} />
 
       <ScrollView
         style={styles.content}
@@ -320,7 +301,7 @@ export default function WalletScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
