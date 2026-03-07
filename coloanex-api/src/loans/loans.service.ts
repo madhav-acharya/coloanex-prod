@@ -51,33 +51,23 @@ export class LoansService {
       );
     }
 
-    const borrower = await this.prisma.borrower.findUnique({
-      where: {
-        tenantId_userId: {
-          tenantId,
-          userId: user.sub,
-        },
-      },
-      include: {
-        loans: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: 1,
-        },
-      },
+    const borrowers = await this.prisma.borrower.findMany({
+      where: { userId: user.sub, tenantId },
+      select: { id: true },
     });
 
-    if (!borrower || borrower.loans.length === 0) {
-      return { hasLoan: false };
-    }
+    if (borrowers.length === 0) return { hasLoan: false };
 
-    const loan = borrower.loans[0];
-    return {
-      hasLoan: true,
-      loanId: loan.id,
-      status: loan.status,
-    };
+    const borrowerIds = borrowers.map((b) => b.id);
+
+    const loan = await this.prisma.loan.findFirst({
+      where: { borrowerId: { in: borrowerIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!loan) return { hasLoan: false };
+
+    return { hasLoan: true, loanId: loan.id, status: loan.status };
   }
 
   async getMyLoans(user: JwtPayload): Promise<Loan[]> {
@@ -85,37 +75,59 @@ export class LoansService {
       throw new BadRequestException('Only borrowers can view their loans');
     }
 
+    const borrowers = await this.prisma.borrower.findMany({
+      where: { userId: user.sub },
+      select: { id: true },
+    });
+
+    if (borrowers.length === 0) return [];
+
+    const borrowerIds = borrowers.map((b) => b.id);
+
     const loans = await this.prisma.loan.findMany({
-      where: {
-        borrower: {
-          userId: user.sub,
-        },
-      },
+      where: { borrowerId: { in: borrowerIds } },
       include: {
         borrower: {
           include: {
-            tenant: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
+            tenant: { select: { id: true, name: true } },
+            user: { select: { id: true, fullName: true, email: true } },
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
     return loans as unknown as Loan[];
+  }
+
+  async getMyLatest(user: JwtPayload): Promise<Loan | null> {
+    if (!this.isBorrower(user)) {
+      throw new BadRequestException('Only borrowers can view their loans');
+    }
+
+    const borrowers = await this.prisma.borrower.findMany({
+      where: { userId: user.sub },
+      select: { id: true },
+    });
+
+    if (borrowers.length === 0) return null;
+
+    const borrowerIds = borrowers.map((b) => b.id);
+
+    const loan = await this.prisma.loan.findFirst({
+      where: { borrowerId: { in: borrowerIds } },
+      include: {
+        borrower: {
+          include: {
+            tenant: { select: { id: true, name: true } },
+            user: { select: { id: true, fullName: true, email: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return (loan as unknown as Loan) ?? null;
   }
 
   async create(
