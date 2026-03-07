@@ -7,13 +7,19 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import Slider from "@react-native-community/slider";
-import { Input, Button, PickerInput, useToast } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import {
+  Input,
+  Button,
+  PickerInput,
+  useToast,
+  AppHeader,
+} from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
 import { formatCurrency } from "@/utils/currency";
@@ -55,8 +61,9 @@ export default function LoanApplicationScreen() {
   const [collateralValue, setCollateralValue] = useState("");
   const [collateralImage, setCollateralImage] = useState<string>("");
   const [termMonths, setTermMonths] = useState(12);
+  const [previousLoan, setPreviousLoan] = useState<any>(null);
+  const [prefillModal, setPrefillModal] = useState(false);
 
-  // Form validation for each step
   const isStepValid = useMemo(() => {
     switch (currentStep) {
       case 1:
@@ -91,13 +98,29 @@ export default function LoanApplicationScreen() {
 
   const loadLender = async () => {
     try {
-      const data = await lendersApi.getById(lenderId as string);
-      setLender(data);
-      setLoanAmount(data.minAmount || 50000);
+      const lenderData = await lendersApi.getById(lenderId as string);
+      setLender(lenderData);
+      setLoanAmount(lenderData.minAmount || 50000);
+      const latest = await loansApi.getMyLatest().catch(() => null);
+      if (latest) {
+        setPreviousLoan(latest);
+        setPrefillModal(true);
+      }
     } catch (error) {
       showToast("Failed to load lender information", "error");
       router.back();
     }
+  };
+
+  const prefillFromLoan = (loan: any) => {
+    if (!loan) return;
+    if (loan.purpose) setLoanPurpose(loan.purpose);
+    const collateral = loan.collateralDetails || {};
+    if (collateral.type) setCollateralType(collateral.type);
+    if (collateral.description)
+      setCollateralDescription(collateral.description);
+    if (collateral.value) setCollateralValue(String(collateral.value));
+    if (collateral.imageUrl) setCollateralImage(collateral.imageUrl);
   };
 
   const pickImage = async () => {
@@ -216,15 +239,11 @@ export default function LoanApplicationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Apply for Loan
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader
+        title="Apply for Loan"
+        onBackPress={handleBack}
+        showThemeToggle={false}
+      />
 
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
@@ -366,7 +385,6 @@ export default function LoanApplicationScreen() {
           </View>
         )}
 
-        {/* Step 3: Collateral Information */}
         {currentStep === 3 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -623,6 +641,58 @@ export default function LoanApplicationScreen() {
           />
         )}
       </View>
+
+      <Modal
+        visible={prefillModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrefillModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <Ionicons
+              name="document-outline"
+              size={40}
+              color={colors.primary}
+              style={{ marginBottom: 12 }}
+            />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Pre-fill from Previous Application?
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textSecondary }]}>
+              We found a previous loan application. Would you like to pre-fill
+              this form with your previous details?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { borderColor: colors.border }]}
+                onPress={() => setPrefillModal(false)}
+              >
+                <Text
+                  style={[styles.modalBtnText, { color: colors.textSecondary }]}
+                >
+                  Start Fresh
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => {
+                  setPrefillModal(false);
+                  prefillFromLoan(previousLoan);
+                }}
+              >
+                <Text style={[styles.modalBtnText, { color: "#fff" }]}>
+                  Yes, Pre-fill
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -635,6 +705,50 @@ const createStyles = (colors: any) =>
     loadingContainer: {
       alignItems: "center",
       justifyContent: "center",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    modalCard: {
+      borderRadius: 16,
+      padding: 24,
+      alignItems: "center",
+      width: "100%",
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    modalBody: {
+      fontSize: 14,
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    modalBtn: {
+      flex: 1,
+      padding: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      borderWidth: 1,
+    },
+    modalBtnPrimary: {
+      borderWidth: 0,
+    },
+    modalBtnText: {
+      fontSize: 15,
+      fontWeight: "600",
     },
     header: {
       flexDirection: "row",
