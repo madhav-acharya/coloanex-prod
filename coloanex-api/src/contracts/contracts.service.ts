@@ -199,12 +199,12 @@ export class ContractsService {
     if (user.tenantId) {
       where.tenantId = user.tenantId;
     } else {
-      // Borrower - find their contracts
-      const borrower = await this.prisma.borrower.findFirst({
+      const borrowers = await this.prisma.borrower.findMany({
         where: { userId: user.sub },
+        select: { id: true },
       });
-      if (borrower) {
-        where.borrowerId = borrower.id;
+      if (borrowers.length > 0) {
+        where.borrowerId = { in: borrowers.map((b) => b.id) };
       }
     }
 
