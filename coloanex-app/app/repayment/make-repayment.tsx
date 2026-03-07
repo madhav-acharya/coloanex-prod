@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
@@ -9,45 +10,34 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
+import AppHeader from "@/components/ui/AppHeader";
 import * as WebBrowser from "expo-web-browser";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
-import { loansApi, walletsApi, paymentsApi } from "@/api";
+import { loansApi, walletsApi, paymentsApi, contractsApi } from "@/api";
 import { useToast } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Wallet } from "@/api/walletsApi";
+import type { Contract } from "@/api/contractsApi";
 import type { PaymentGateway } from "@/api/paymentsApi";
 import { formatCurrency } from "@/utils/currency";
 
-const APP_SCHEME = "coloanexapp";
-const SUCCESS_URL = `${APP_SCHEME}://payment/success`;
-const FAILURE_URL = `${APP_SCHEME}://payment/failure`;
+const SUCCESS_URL = "http://localhost:8081/payment/success";
+const FAILURE_URL = "http://localhost:8081/payment/failure";
 
 type GatewayOption = {
   id: PaymentGateway;
   name: string;
-  tagline: string;
-  bg: string;
-  accent: string;
-  icon: string;
 };
 
 const GATEWAYS: GatewayOption[] = [
   {
     id: "ESEWA",
     name: "eSewa",
-    tagline: "Nepal's #1 digital wallet",
-    bg: "#60BB46",
-    accent: "#FFFFFF",
-    icon: "e",
   },
   {
     id: "KHALTI",
     name: "Khalti",
-    tagline: "Fast & secure payments",
-    bg: "#5C2D91",
-    accent: "#FFFFFF",
-    icon: "k",
   },
 ];
 
@@ -59,35 +49,52 @@ export default function MakeRepaymentScreen() {
     contractId: string;
     scheduleId: string;
     amount: string;
+    outstandingBalance?: string;
     gateway?: string;
   }>();
   const { showToast } = useToast();
 
   const [loan, setLoan] = useState<Loan | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
     (params.gateway as PaymentGateway) ?? null,
+  );
+  const [paymentMode, setPaymentMode] = useState<"installment" | "full">(
+    "installment",
   );
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
 
-  const amount = parseFloat(params.amount ?? "0");
+  const installmentAmount = parseFloat(params.amount ?? "0");
+  const outstandingBalance = contract
+    ? Number(contract.outstandingBalance) ||
+      Number(contract.totalAmountDue) - Number(contract.totalAmountPaid)
+    : parseFloat(params.outstandingBalance ?? "0");
+  const amount =
+    paymentMode === "full" && outstandingBalance > 0
+      ? outstandingBalance
+      : installmentAmount;
 
   const loadData = useCallback(async () => {
     try {
-      const [loanData, walletData] = await Promise.all([
+      const [loanData, walletData, contractData] = await Promise.all([
         loansApi.getById(params.loanId),
         walletsApi.getMyWallet(),
+        params.contractId
+          ? contractsApi.getById(params.contractId)
+          : Promise.resolve(null),
       ]);
       setLoan(loanData);
       setWallet(walletData);
+      setContract(contractData);
     } catch {
       showToast("Failed to load payment details. Please try again.", "error");
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [params.loanId]);
+  }, [params.loanId, params.contractId]);
 
   useEffect(() => {
     loadData();
@@ -98,10 +105,6 @@ export default function MakeRepaymentScreen() {
       showToast("Please select a payment method to continue.", "warning");
       return;
     }
-    if (!wallet) {
-      showToast("Could not find your wallet. Please try again.", "error");
-      return;
-    }
     if (amount <= 0) {
       showToast("Payment amount is invalid.", "error");
       return;
@@ -109,15 +112,28 @@ export default function MakeRepaymentScreen() {
 
     setPaying(true);
     try {
+      const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
+      const resolvedSuccessUrl =
+        selectedGateway === "KHALTI"
+          ? `${apiBase}/payments/khalti/success?target=${encodeURIComponent(SUCCESS_URL)}`
+          : `${apiBase}/payments/esewa/success?target=${encodeURIComponent(SUCCESS_URL)}`;
+      const resolvedFailureUrl =
+        selectedGateway === "KHALTI"
+          ? `${apiBase}/payments/khalti/failure?target=${encodeURIComponent(FAILURE_URL)}`
+          : `${apiBase}/payments/esewa/failure?target=${encodeURIComponent(FAILURE_URL)}`;
+
       const result = await paymentsApi.initiatePayment({
-        walletId: wallet.id,
+        walletId: wallet?.id,
         contractId: params.contractId || undefined,
-        paymentScheduleId: params.scheduleId || undefined,
+        paymentScheduleId:
+          paymentMode === "installment"
+            ? params.scheduleId || undefined
+            : undefined,
         amount,
         type: "INSTALLMENT_PAYMENT",
         gateway: selectedGateway,
-        successUrl: SUCCESS_URL,
-        failureUrl: FAILURE_URL,
+        successUrl: resolvedSuccessUrl,
+        failureUrl: resolvedFailureUrl,
       });
 
       let paymentUrl = result.paymentUrl;
@@ -127,24 +143,68 @@ export default function MakeRepaymentScreen() {
         result.formData &&
         Object.keys(result.formData).length > 0
       ) {
-        const queryString = Object.entries(result.formData)
-          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
-          .join("&");
-        paymentUrl = `${result.paymentUrl}?${queryString}`;
+        const encoded = btoa(
+          unescape(
+            encodeURIComponent(
+              JSON.stringify({
+                paymentUrl: result.paymentUrl,
+                formData: result.formData,
+              }),
+            ),
+          ),
+        );
+        paymentUrl = `${process.env.EXPO_PUBLIC_API_BASE_URL}/payments/esewa-form?data=${encoded}`;
       }
 
       const browserResult = await WebBrowser.openAuthSessionAsync(
         paymentUrl,
-        APP_SCHEME,
+        "http://localhost:8081",
       );
 
       if (browserResult.type === "success") {
         const url = browserResult.url ?? "";
         if (url.includes("success")) {
-          showToast("Payment processed successfully!", "success");
-          router.back();
+          const verifyUuid =
+            selectedGateway === "KHALTI"
+              ? (result.formData?.pidx ?? result.transactionUuid)
+              : result.transactionUuid;
+          const verifyResult = await paymentsApi.verifyPayment({
+            transactionUuid: verifyUuid,
+            totalAmount: amount,
+            gateway: selectedGateway,
+            walletId: result.walletId ?? wallet?.id ?? "",
+            type: "INSTALLMENT_PAYMENT",
+            contractId: params.contractId || undefined,
+            paymentScheduleId:
+              paymentMode === "installment"
+                ? params.scheduleId || undefined
+                : undefined,
+          });
+          if (verifyResult.success) {
+            router.replace({
+              pathname: "/payment/success",
+              params: {
+                amount: String(amount),
+                gateway: selectedGateway,
+              },
+            });
+          } else {
+            router.replace({
+              pathname: "/payment/failure",
+              params: {
+                amount: String(amount),
+                gateway: selectedGateway,
+              },
+            });
+          }
         } else {
-          showToast("Payment was not completed. Please try again.", "error");
+          router.replace({
+            pathname: "/payment/failure",
+            params: {
+              amount: String(amount),
+              gateway: selectedGateway,
+            },
+          });
         }
       } else if (browserResult.type === "cancel") {
         showToast("Payment was cancelled.", "warning");
@@ -178,27 +238,7 @@ export default function MakeRepaymentScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.topBar,
-          {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.topBarTitle, { color: colors.text }]}>
-          Make Payment
-        </Text>
-        <View style={{ width: 38 }} />
-      </View>
+      <AppHeader title="Make Payment" showThemeToggle={false} />
 
       <ScrollView
         style={styles.scroll}
@@ -233,6 +273,114 @@ export default function MakeRepaymentScreen() {
             style={[styles.summaryDivider, { backgroundColor: colors.border }]}
           />
 
+          <Text
+            style={[
+              styles.sectionLabel,
+              { color: colors.textSecondary, marginBottom: spacing.sm },
+            ]}
+          >
+            Payment Type
+          </Text>
+
+          <View style={styles.paymentModeRow}>
+            <TouchableOpacity
+              style={[
+                styles.modeCard,
+                {
+                  backgroundColor:
+                    paymentMode === "installment"
+                      ? colors.primaryLight
+                      : colors.surface,
+                  borderColor:
+                    paymentMode === "installment"
+                      ? colors.primary
+                      : colors.border,
+                  borderWidth: paymentMode === "installment" ? 2 : 1,
+                },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setPaymentMode("installment")}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={22}
+                color={
+                  paymentMode === "installment"
+                    ? colors.primary
+                    : colors.textSecondary
+                }
+              />
+              <Text
+                style={[
+                  styles.modePrimary,
+                  {
+                    color:
+                      paymentMode === "installment"
+                        ? colors.primary
+                        : colors.text,
+                  },
+                ]}
+              >
+                Current Installment
+              </Text>
+              <Text
+                style={[styles.modeAmount, { color: colors.textSecondary }]}
+              >
+                {formatCurrency(installmentAmount)}
+              </Text>
+            </TouchableOpacity>
+
+            {outstandingBalance > 0 &&
+              outstandingBalance !== installmentAmount && (
+                <TouchableOpacity
+                  style={[
+                    styles.modeCard,
+                    {
+                      backgroundColor:
+                        paymentMode === "full"
+                          ? colors.primaryLight
+                          : colors.surface,
+                      borderColor:
+                        paymentMode === "full" ? colors.primary : colors.border,
+                      borderWidth: paymentMode === "full" ? 2 : 1,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setPaymentMode("full")}
+                >
+                  <Ionicons
+                    name="checkmark-done-circle-outline"
+                    size={22}
+                    color={
+                      paymentMode === "full"
+                        ? colors.primary
+                        : colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.modePrimary,
+                      {
+                        color:
+                          paymentMode === "full" ? colors.primary : colors.text,
+                      },
+                    ]}
+                  >
+                    Repay Full Loan
+                  </Text>
+                  <Text
+                    style={[styles.modeAmount, { color: colors.textSecondary }]}
+                  >
+                    {formatCurrency(outstandingBalance)}
+                  </Text>
+                </TouchableOpacity>
+              )}
+          </View>
+
+          <View
+            style={[styles.summaryDivider, { backgroundColor: colors.border }]}
+          />
+
           <View style={styles.amountSection}>
             <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
               Payment Amount
@@ -240,25 +388,6 @@ export default function MakeRepaymentScreen() {
             <Text style={[styles.amountValue, { color: colors.primary }]}>
               {formatCurrency(amount)}
             </Text>
-            {params.scheduleId ? (
-              <View
-                style={[
-                  styles.installmentTag,
-                  { backgroundColor: colors.primaryLight },
-                ]}
-              >
-                <Ionicons
-                  name="checkmark-circle"
-                  size={13}
-                  color={colors.primary}
-                />
-                <Text
-                  style={[styles.installmentTagText, { color: colors.primary }]}
-                >
-                  Scheduled Installment
-                </Text>
-              </View>
-            ) : null}
           </View>
 
           {wallet && (
@@ -316,28 +445,23 @@ export default function MakeRepaymentScreen() {
                 activeOpacity={0.8}
                 onPress={() => setSelectedGateway(gateway.id)}
               >
-                <View
-                  style={[
-                    styles.gatewayIconWrap,
-                    { backgroundColor: gateway.bg },
-                  ]}
-                >
-                  <Text
-                    style={[styles.gatewayIconText, { color: gateway.accent }]}
-                  >
-                    {gateway.icon.toUpperCase()}
-                  </Text>
-                </View>
+                {gateway.id === "ESEWA" ? (
+                  <View style={styles.gatewayLogoWrap}>
+                    <Image
+                      source={require("../../assets/images/esewa-logo.png")}
+                      style={{ width: 48, height: 48, resizeMode: "contain" }}
+                    />
+                  </View>
+                ) : (
+                  <View style={styles.gatewayLogoWrap}>
+                    <Image
+                      source={require("../../assets/images/khalti-logo.png")}
+                      style={{ width: 48, height: 48, resizeMode: "contain" }}
+                    />
+                  </View>
+                )}
                 <Text style={[styles.gatewayName, { color: colors.text }]}>
                   {gateway.name}
-                </Text>
-                <Text
-                  style={[
-                    styles.gatewayTagline,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  {gateway.tagline}
                 </Text>
                 {isSelected && (
                   <View
@@ -387,7 +511,12 @@ export default function MakeRepaymentScreen() {
           style={[
             styles.payBtn,
             {
-              backgroundColor: selectedGateway ? colors.primary : colors.border,
+              backgroundColor:
+                selectedGateway === "ESEWA"
+                  ? "#60BB46"
+                  : selectedGateway === "KHALTI"
+                    ? "#5C2D91"
+                    : colors.border,
               opacity: paying ? 0.7 : 1,
             },
           ]}
@@ -399,13 +528,22 @@ export default function MakeRepaymentScreen() {
             <ActivityIndicator size="small" color={colors.buttonText} />
           ) : (
             <>
-              <Ionicons
-                name="card-outline"
-                size={20}
-                color={
-                  selectedGateway ? colors.buttonText : colors.textSecondary
-                }
-              />
+              {selectedGateway ? (
+                <Image
+                  source={
+                    selectedGateway === "ESEWA"
+                      ? require("../../assets/images/esewa-logo.png")
+                      : require("../../assets/images/khalti-logo.png")
+                  }
+                  style={{ width: 22, height: 22, resizeMode: "contain" }}
+                />
+              ) : (
+                <Ionicons
+                  name="card-outline"
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              )}
               <Text
                 style={[
                   styles.payBtnText,
@@ -436,16 +574,6 @@ const createStyles = (colors: Record<string, string>) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    topBar: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-      borderBottomWidth: 1,
-    },
-    backBtn: { padding: 6, borderRadius: borderRadius.sm },
-    topBarTitle: { ...typography.h3, fontWeight: "700" },
     scroll: { flex: 1 },
     scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
     summaryCard: {
@@ -475,8 +603,22 @@ const createStyles = (colors: Record<string, string>) =>
     summaryInfo: { flex: 1 },
     summaryLender: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
     summaryPurpose: { fontSize: 12, fontWeight: "500" },
-    summaryDivider: { height: 1, marginBottom: spacing.md },
-    amountSection: { alignItems: "center", paddingVertical: spacing.md },
+    summaryDivider: { height: 1, marginVertical: spacing.md },
+    paymentModeRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    modeCard: {
+      flex: 1,
+      borderRadius: borderRadius.md,
+      padding: spacing.sm,
+      alignItems: "center",
+      gap: 6,
+    },
+    modePrimary: { fontSize: 12, fontWeight: "700", textAlign: "center" },
+    modeAmount: { fontSize: 13, fontWeight: "600" },
+    amountSection: { alignItems: "center", paddingVertical: spacing.sm },
     amountLabel: {
       fontSize: 12,
       fontWeight: "600",
@@ -484,21 +626,12 @@ const createStyles = (colors: Record<string, string>) =>
       letterSpacing: 0.5,
       marginBottom: 6,
     },
-    amountValue: { fontSize: 38, fontWeight: "800", marginBottom: spacing.sm },
-    installmentTag: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: 20,
-    },
-    installmentTagText: { fontSize: 11, fontWeight: "600" },
+    amountValue: { fontSize: 38, fontWeight: "800" },
     walletRow: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginTop: spacing.md,
+      marginTop: spacing.sm,
       padding: spacing.sm,
       borderRadius: borderRadius.md,
       borderWidth: 1,
@@ -531,14 +664,15 @@ const createStyles = (colors: Record<string, string>) =>
       shadowRadius: 4,
       elevation: 2,
     },
-    gatewayIconWrap: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+    gatewayLogoWrap: {
+      width: 56,
+      height: 56,
+      borderRadius: 14,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
+      backgroundColor: "transparent",
     },
-    gatewayIconText: { fontSize: 22, fontWeight: "900" },
     gatewayName: { fontSize: 15, fontWeight: "700" },
     gatewayTagline: { fontSize: 11, fontWeight: "500", textAlign: "center" },
     gatewayCheckmark: {
