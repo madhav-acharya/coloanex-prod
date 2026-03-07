@@ -1,0 +1,34 @@
+{
+  "name": "coloanex-blockchain",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric blockchain layer for Coloanex lending platform",
+  "private": true,
+  "workspaces": [
+    "chaincode/loans",
+    "chaincode/contracts",
+    "chaincode/payments",
+    "fabric-client"
+  ],
+  "scripts": {
+    "build:chaincode:loans": "npm run build --workspace=chaincode/loans",
+    "build:chaincode:contracts": "npm run build --workspace=chaincode/contracts",
+    "build:chaincode:payments": "npm run build --workspace=chaincode/payments",
+    "build:client": "npm run build --workspace=fabric-client",
+    "build:all": "npm run build:chaincode:loans && npm run build:chaincode:contracts && npm run build:chaincode:payments && npm run build:client",
+    "network:up": "bash scripts/network.sh up",
+    "network:down": "bash scripts/network.sh down",
+    "network:restart": "bash scripts/network.sh restart",
+    "network:generate": "bash scripts/network.sh generate",
+    "deploy:loans": "bash scripts/deploy-chaincode.sh loans 1.0 1",
+    "deploy:contracts": "bash scripts/deploy-chaincode.sh contracts 1.0 1",
+    "deploy:payments": "bash scripts/deploy-chaincode.sh payments 1.0 1",
+    "deploy:all": "bash scripts/deploy-chaincode.sh all",
+    "test:loans": "npm test --workspace=chaincode/loans",
+    "test:contracts": "npm test --workspace=chaincode/contracts",
+    "test:payments": "npm test --workspace=chaincode/payments",
+    "test:all": "npm run test:loans && npm run test:contracts && npm run test:payments"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
