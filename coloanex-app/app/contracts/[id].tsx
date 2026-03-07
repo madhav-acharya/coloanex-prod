@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Alert,
   ActivityIndicator,
   Modal,
@@ -15,7 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Button } from "@/components/ui";
+import { Button, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/api/contractsApi";
@@ -153,38 +152,20 @@ export default function ContractDetailsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Contract Details</Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={styles.container}>
+        <AppHeader title="Contract Details" showThemeToggle={false} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading contract...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!contract) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.title}>Contract Details</Text>
-          <View style={{ width: 24 }} />
-        </View>
+      <View style={styles.container}>
+        <AppHeader title="Contract Details" showThemeToggle={false} />
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle" size={64} color={colors.error} />
           <Text style={styles.errorText}>
@@ -200,22 +181,13 @@ export default function ContractDetailsScreen() {
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Contract</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={styles.container}>
+      <AppHeader title="Contract" showThemeToggle={false} />
 
       <View style={styles.statusContainer}>
         <View
@@ -626,7 +598,7 @@ export default function ContractDetailsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 

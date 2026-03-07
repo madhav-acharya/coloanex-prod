@@ -6,11 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Card } from "@/components/ui";
+import { Card, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { paymentSchedulesApi } from "@/api";
@@ -63,26 +62,8 @@ export default function PaymentSchedulesScreen() {
   const overdueCount = schedules.filter((s) => s.status === "OVERDUE").length;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomColor: colors.border },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Payment Schedule
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppHeader title="Payment Schedule" showThemeToggle={false} />
 
       <ScrollView
         style={styles.content}
@@ -300,7 +281,7 @@ export default function PaymentSchedulesScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
