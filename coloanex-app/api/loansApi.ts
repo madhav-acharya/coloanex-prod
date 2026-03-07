@@ -7,6 +7,11 @@ export const loansApi = {
     return data;
   },
 
+  getMyLatest: async (): Promise<Loan | null> => {
+    const { data } = await apiClient.get("/loans/my-latest");
+    return data;
+  },
+
   checkExisting: async (
     tenantId: string,
   ): Promise<{ hasLoan: boolean; loanId?: string; status?: string }> => {
