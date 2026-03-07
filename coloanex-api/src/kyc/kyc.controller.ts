@@ -62,6 +62,15 @@ export class KycController {
     return this.kycService.getStatus(user, tenantId);
   }
 
+  @Get('my-latest')
+  @RequirePermissions(READ_KYC_DOCUMENTS)
+  getMyLatest(
+    @Query('tenantId') tenantId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.kycService.getMyLatest(user, tenantId);
+  }
+
   @Get(':id')
   @RequirePermissions(READ_KYC_DOCUMENTS)
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,10 +18,12 @@ import {
   DatePickerInput,
   PickerInput,
   useToast,
+  AppHeader,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
 import { uploadToCloudinary } from "@/utils/upload";
+import { borderRadius, spacing } from "@/constants/theme";
 
 const GENDER_OPTIONS = [
   { label: "Male", value: "Male" },
@@ -70,6 +73,8 @@ export default function KYCVerificationScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [prefillModal, setPrefillModal] = useState(false);
+  const [checkingKyc, setCheckingKyc] = useState(true);
 
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
@@ -114,8 +119,99 @@ export default function KYCVerificationScreen() {
     if (!tenantId) {
       showToast("Invalid request. Please select a lender first.", "error");
       router.back();
+      return;
     }
+    kycApi
+      .getStatus(tenantId)
+      .then(async (status: any) => {
+        if (status?.hasKyc) {
+          setPrefillModal(true);
+        } else {
+          try {
+            const globalStatus = await kycApi.getStatus();
+            if (globalStatus?.hasKyc) {
+              setPrefillModal(true);
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingKyc(false));
   }, [tenantId]);
+
+  const prefillFromKyc = async () => {
+    try {
+      const kyc = await kycApi.getMyLatest();
+      if (!kyc) return;
+      const pd = kyc.personalDetails || {};
+      setPersonalInfo({
+        firstName: pd.firstName || "",
+        middleName: pd.middleName || "",
+        lastName: pd.lastName || "",
+        dateOfBirth: kyc.dateOfBirth ? new Date(kyc.dateOfBirth) : null,
+        gender: pd.gender || "",
+        maritalStatus: pd.maritalStatus || "",
+        fatherName: pd.fatherName || "",
+        motherName: pd.motherName || "",
+        grandfatherName: pd.grandfatherName || "",
+      });
+      const pa = kyc.permanentAddress || {};
+      setAddress({
+        province: pa.province || "",
+        district: pa.district || "",
+        municipality: pa.municipality || "",
+        ward: pa.ward || "",
+        tole: pa.tole || "",
+      });
+      const bd = kyc.bankDetails || {};
+      setFinancialInfo({
+        occupation: kyc.occupation || "",
+        monthlyIncome: kyc.monthlyIncome ? String(kyc.monthlyIncome) : "",
+        bankName: bd.bankName || "",
+        bankAccountNumber: bd.bankAccountNumber || "",
+        bankBranch: bd.bankBranch || "",
+      });
+      if (kyc.photoUrl) setPassportPhoto(kyc.photoUrl);
+      if (kyc.files && Array.isArray(kyc.files)) {
+        const selfieFile = kyc.files.find((f: any) => f.fileType === "SELFIE");
+        if (selfieFile) setSelfie(selfieFile.fileUrl);
+        const docTypes: string[] = [];
+        const details: Record<string, DocumentInfo> = {};
+        kyc.files.forEach((f: any) => {
+          const meta = f.documentMetadata || {};
+          if (!meta.documentType) return;
+          const dt: string = meta.documentType;
+          if (!docTypes.includes(dt)) docTypes.push(dt);
+          if (!details[dt]) {
+            details[dt] = {
+              documentNumber: meta.documentNumber || "",
+              issueDate: meta.issueDate ? new Date(meta.issueDate) : null,
+              expiryDate: meta.expiryDate ? new Date(meta.expiryDate) : null,
+              issueDistrict: meta.issueDistrict || "",
+              frontImage: "",
+              backImage: "",
+            };
+          }
+          if (
+            f.fileType.endsWith("_FRONT") ||
+            f.fileType === "PASSPORT" ||
+            f.fileType === "PAN" ||
+            f.fileType === "LICENSE_FRONT" ||
+            f.fileType === "CITIZENSHIP_FRONT" ||
+            f.fileType === "SUPPORTING_DOCUMENT"
+          ) {
+            if (!details[dt].frontImage) details[dt].frontImage = f.fileUrl;
+          } else if (f.fileType.endsWith("_BACK")) {
+            details[dt].backImage = f.fileUrl;
+          }
+        });
+        setSelectedDocumentTypes(docTypes);
+        setDocumentDetails(details);
+      }
+    } catch {
+      showToast("Could not load previous KYC data.", "error");
+    }
+  };
 
   const getDocumentDetail = (docType: string): DocumentInfo => {
     return (
@@ -479,23 +575,11 @@ export default function KYCVerificationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
-      <View
-        style={[
-          styles.header,
-          {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          KYC Verification
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <AppHeader
+        title="KYC Verification"
+        onBackPress={handleBack}
+        showThemeToggle={false}
+      />
 
       <View
         style={[styles.progressContainer, { backgroundColor: colors.card }]}
@@ -1121,6 +1205,58 @@ export default function KYCVerificationScreen() {
           />
         )}
       </View>
+
+      <Modal
+        visible={prefillModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPrefillModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <Ionicons
+              name="document-text-outline"
+              size={40}
+              color={colors.primary}
+              style={{ marginBottom: 12 }}
+            />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Pre-fill from Previous KYC?
+            </Text>
+            <Text style={[styles.modalBody, { color: colors.textSecondary }]}>
+              We found a previous KYC submission. Would you like to pre-fill the
+              form with your existing data?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { borderColor: colors.border }]}
+                onPress={() => setPrefillModal(false)}
+              >
+                <Text
+                  style={[styles.modalBtnText, { color: colors.textSecondary }]}
+                >
+                  Start Fresh
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => {
+                  setPrefillModal(false);
+                  prefillFromKyc();
+                }}
+              >
+                <Text style={[styles.modalBtnText, { color: "#fff" }]}>
+                  Yes, Pre-fill
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1129,6 +1265,50 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+    },
+    modalCard: {
+      borderRadius: 16,
+      padding: 24,
+      alignItems: "center",
+      width: "100%",
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    modalBody: {
+      fontSize: 14,
+      textAlign: "center",
+      marginBottom: 24,
+      lineHeight: 20,
+    },
+    modalButtons: {
+      flexDirection: "row",
+      gap: 12,
+      width: "100%",
+    },
+    modalBtn: {
+      flex: 1,
+      padding: 14,
+      borderRadius: 10,
+      alignItems: "center",
+      borderWidth: 1,
+    },
+    modalBtnPrimary: {
+      borderWidth: 0,
+    },
+    modalBtnText: {
+      fontSize: 15,
+      fontWeight: "600",
     },
     header: {
       flexDirection: "row",

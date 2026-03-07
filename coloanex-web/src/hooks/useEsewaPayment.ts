@@ -7,9 +7,12 @@ import type { TransactionType } from "@/apis/paymentsApi";
 const STORAGE_KEY = "esewa_pending_payment";
 
 interface PendingPayment {
-  transactionId: string;
   transactionUuid: string;
   amount: number;
+  walletId: string;
+  type: string;
+  contractId?: string;
+  paymentScheduleId?: string;
 }
 
 interface PayOptions {
@@ -83,8 +86,8 @@ export function useEsewaPayment() {
       paymentScheduleId,
       amount,
       type,
-      successPath = "/wallets?payment=success",
-      failurePath = "/wallets?payment=failed",
+      successPath = "/payment/success",
+      failurePath = "/payment/failure",
     } = options;
 
     const successUrl = `${window.location.origin}${successPath}`;
@@ -102,9 +105,12 @@ export function useEsewaPayment() {
     }).unwrap();
 
     storePendingPayment({
-      transactionId: result.transactionId,
       transactionUuid: result.transactionUuid,
       amount,
+      walletId: result.walletId ?? walletId,
+      type,
+      contractId,
+      paymentScheduleId,
     });
 
     submitToEsewa(result.paymentUrl, result.formData);
@@ -120,21 +126,25 @@ export function useEsewaPayment() {
 
     if (callbackParams.status !== "COMPLETE") {
       await verifyPayment({
-        transactionId: pending.transactionId,
         transactionUuid: pending.transactionUuid,
         totalAmount: pending.amount,
+        gateway: "ESEWA",
+        walletId: pending.walletId,
+        type: pending.type as any,
+        contractId: pending.contractId,
+        paymentScheduleId: pending.paymentScheduleId,
       }).unwrap();
-      return {
-        success: false,
-        transactionId: pending.transactionId,
-        status: "FAILED",
-      };
+      return { success: false, transactionId: null, status: "FAILED" };
     }
 
     return verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid: callbackParams.transactionUuid,
       totalAmount: pending.amount,
+      gateway: "ESEWA",
+      walletId: pending.walletId,
+      type: pending.type as any,
+      contractId: pending.contractId,
+      paymentScheduleId: pending.paymentScheduleId,
     }).unwrap();
   };
 

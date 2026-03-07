@@ -251,38 +251,52 @@ export class KycService {
   }
 
   async getStatus(user: JwtPayload, tenantId?: string) {
-    const whereClause: any = {
-      userId: user.sub,
-    };
+    const borrowerWhere: any = { userId: user.sub };
+    if (tenantId) borrowerWhere.tenantId = tenantId;
 
-    if (tenantId) {
-      whereClause.tenantId = tenantId;
-    }
-
-    const borrower = await this.prisma.borrower.findFirst({
-      where: whereClause,
-      include: {
-        kycs: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-          take: 1,
-        },
-      },
+    const borrowers = await this.prisma.borrower.findMany({
+      where: borrowerWhere,
+      select: { id: true },
     });
 
-    if (!borrower || borrower.kycs.length === 0) {
-      return {
-        status: null,
-        hasKyc: false,
-      };
+    if (borrowers.length === 0) {
+      return { status: null, hasKyc: false };
     }
 
-    return {
-      status: borrower.kycs[0].status,
-      hasKyc: true,
-      kycId: borrower.kycs[0].id,
-    };
+    const borrowerIds = borrowers.map((b) => b.id);
+
+    const kyc = await this.prisma.kyc.findFirst({
+      where: { borrowerId: { in: borrowerIds } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!kyc) {
+      return { status: null, hasKyc: false };
+    }
+
+    return { status: kyc.status, hasKyc: true, kycId: kyc.id };
+  }
+
+  async getMyLatest(user: JwtPayload, tenantId?: string) {
+    const borrowerWhere: any = { userId: user.sub };
+    if (tenantId) borrowerWhere.tenantId = tenantId;
+
+    const borrowers = await this.prisma.borrower.findMany({
+      where: borrowerWhere,
+      select: { id: true },
+    });
+
+    if (borrowers.length === 0) return null;
+
+    const borrowerIds = borrowers.map((b) => b.id);
+
+    const kyc = await this.prisma.kyc.findFirst({
+      where: { borrowerId: { in: borrowerIds } },
+      orderBy: { createdAt: 'desc' },
+      include: { files: true },
+    });
+
+    return kyc ?? null;
   }
 
   async findOne(id: string, user?: JwtPayload): Promise<Kyc> {

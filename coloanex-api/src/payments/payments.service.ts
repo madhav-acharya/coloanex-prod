@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Inject,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import type { IPaymentGateway } from './gateways/payment-gateway.interface';
@@ -28,8 +24,27 @@ export class PaymentsService {
     return instance;
   }
 
-  async initiatePayment(dto: InitiatePaymentDto) {
-    const { amount, gateway, successUrl, failureUrl } = dto;
+  async initiatePayment(dto: InitiatePaymentDto, userId: string) {
+    const { amount, gateway, successUrl, failureUrl, walletId } = dto;
+
+    let resolvedWalletId = walletId;
+    const wallet = walletId
+      ? await this.prisma.wallet.findUnique({ where: { id: walletId } })
+      : null;
+
+    if (!wallet) {
+      const existing = await this.prisma.wallet.findFirst({
+        where: { userId },
+      });
+      if (existing) {
+        resolvedWalletId = existing.id;
+      } else {
+        const created = await this.prisma.wallet.create({
+          data: { userId, balance: 0, paymentGatewayLinks: {} },
+        });
+        resolvedWalletId = created.id;
+      }
+    }
 
     const paymentGateway = this.resolveGateway(gateway);
     const transactionUuid = randomUUID();
@@ -45,10 +60,11 @@ export class PaymentsService {
       transactionUuid,
       paymentUrl: result.paymentUrl,
       formData: result.formData,
+      walletId: resolvedWalletId,
     };
   }
 
-  async verifyPayment(dto: VerifyPaymentDto) {
+  async verifyPayment(dto: VerifyPaymentDto, userId: string) {
     const {
       transactionUuid,
       totalAmount,
@@ -58,6 +74,25 @@ export class PaymentsService {
       contractId,
       paymentScheduleId,
     } = dto;
+
+    let resolvedWalletId = walletId;
+    const wallet = walletId
+      ? await this.prisma.wallet.findUnique({ where: { id: walletId } })
+      : null;
+
+    if (!wallet) {
+      const existing = await this.prisma.wallet.findFirst({
+        where: { userId },
+      });
+      if (existing) {
+        resolvedWalletId = existing.id;
+      } else {
+        const created = await this.prisma.wallet.create({
+          data: { userId, balance: 0, paymentGatewayLinks: {} },
+        });
+        resolvedWalletId = created.id;
+      }
+    }
 
     const paymentGateway = this.resolveGateway(gateway);
 
@@ -70,7 +105,6 @@ export class PaymentsService {
       return { success: false, transactionId: null, status: 'FAILED' };
     }
 
-    // Prevent duplicate transactions if this UUID was already verified
     const existingTransaction = await this.prisma.transaction.findFirst({
       where: {
         gatewayDetails: {
@@ -90,7 +124,7 @@ export class PaymentsService {
 
     const transaction = await this.prisma.transaction.create({
       data: {
-        walletId,
+        walletId: resolvedWalletId as string,
         contractId: contractId ?? null,
         paymentScheduleId: paymentScheduleId ?? null,
         type: type as never,
@@ -118,12 +152,87 @@ export class PaymentsService {
 
     if (isDebit) {
       await this.prisma.wallet.update({
-        where: { id: walletId },
+        where: { id: resolvedWalletId },
         data: { balance: { decrement: amount } },
       });
+
+      if (
+        (type === 'INSTALLMENT_PAYMENT' || type === 'PENALTY_PAYMENT') &&
+        contractId
+      ) {
+        const contract = await this.prisma.contract.findUnique({
+          where: { id: contractId },
+          include: { tenant: { select: { ownerUserId: true } } },
+        });
+
+        if (contract?.tenant?.ownerUserId) {
+          const lenderWallet = await this.prisma.wallet.findFirst({
+            where: { userId: contract.tenant.ownerUserId },
+          });
+
+          if (lenderWallet) {
+            await this.prisma.wallet.update({
+              where: { id: lenderWallet.id },
+              data: { balance: { increment: amount } },
+            });
+
+            await this.prisma.transaction.create({
+              data: {
+                walletId: lenderWallet.id,
+                contractId: contractId ?? null,
+                paymentScheduleId: paymentScheduleId ?? null,
+                type: 'DISBURSEMENT' as never,
+                amount: totalAmount,
+                status: 'COMPLETED' as never,
+                completedAt: new Date(),
+                description: `Repayment received from borrower via ${gateway}`,
+                gatewayDetails: {
+                  gateway,
+                  transactionUuid,
+                  gatewayTransactionId: verifyResult.gatewayTransactionId,
+                } as never,
+              },
+            });
+          }
+        }
+
+        await this.prisma.contract.update({
+          where: { id: contractId },
+          data: {
+            totalAmountPaid: { increment: amount },
+            outstandingBalance: { decrement: amount },
+          },
+        });
+
+        if (paymentScheduleId) {
+          const schedule = await this.prisma.paymentSchedule.findUnique({
+            where: { id: paymentScheduleId },
+          });
+          if (schedule) {
+            const newAmountPaid = Number(schedule.amountPaid) + amount;
+            const scheduleTotal = Number(schedule.totalAmount);
+            const newStatus =
+              newAmountPaid >= scheduleTotal
+                ? 'PAID'
+                : newAmountPaid > 0
+                  ? 'PARTIALLY_PAID'
+                  : schedule.status;
+            await this.prisma.paymentSchedule.update({
+              where: { id: paymentScheduleId },
+              data: {
+                amountPaid: newAmountPaid,
+                status: newStatus as never,
+                ...(newAmountPaid >= scheduleTotal
+                  ? { paidAt: new Date() }
+                  : {}),
+              },
+            });
+          }
+        }
+      }
     } else if (isCredit) {
       await this.prisma.wallet.update({
-        where: { id: walletId },
+        where: { id: resolvedWalletId },
         data: { balance: { increment: amount } },
       });
     }

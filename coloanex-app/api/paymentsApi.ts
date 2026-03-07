@@ -11,7 +11,7 @@ export type TransactionType =
   | "FEE";
 
 export interface InitiatePaymentPayload {
-  walletId: string;
+  walletId?: string;
   contractId?: string;
   paymentScheduleId?: string;
   amount: number;
@@ -25,6 +25,7 @@ export interface InitiatePaymentResult {
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
+  walletId: string;
 }
 
 export interface VerifyPaymentPayload {

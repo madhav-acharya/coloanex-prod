@@ -53,6 +53,12 @@ export class LoansController {
     return this.loansService.getMyLoans(user);
   }
 
+  @Get('my-latest')
+  @RequirePermissions(READ_LOANS)
+  getMyLatest(@CurrentUser() user: JwtPayload) {
+    return this.loansService.getMyLatest(user);
+  }
+
   @Get('check-existing/:tenantId')
   @RequirePermissions(READ_LOANS)
   checkExisting(

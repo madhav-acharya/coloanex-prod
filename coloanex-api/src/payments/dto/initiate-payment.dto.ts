@@ -4,7 +4,6 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  IsUrl,
 } from 'class-validator';
 
 export enum TransactionType {
@@ -17,8 +16,9 @@ export enum TransactionType {
 }
 
 export class InitiatePaymentDto {
+  @IsOptional()
   @IsString()
-  walletId: string;
+  walletId?: string;
 
   @IsOptional()
   @IsString()
@@ -38,9 +38,9 @@ export class InitiatePaymentDto {
   @IsString()
   gateway: string;
 
-  @IsUrl({ require_tld: false })
+  @IsString()
   successUrl: string;
 
-  @IsUrl({ require_tld: false })
+  @IsString()
   failureUrl: string;
 }

@@ -334,6 +334,10 @@ export class UsersService {
       });
     }
 
+    await this.prisma.wallet.create({
+      data: { userId: user.id, balance: 0, paymentGatewayLinks: {} },
+    });
+
     return user;
   }
 
@@ -427,6 +431,10 @@ export class UsersService {
         tenantId,
       });
     }
+
+    await this.prisma.wallet.create({
+      data: { userId: user.id, balance: 0, paymentGatewayLinks: {} },
+    });
 
     return user;
   }

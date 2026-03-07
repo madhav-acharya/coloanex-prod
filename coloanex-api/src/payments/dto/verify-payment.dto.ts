@@ -26,8 +26,9 @@ export class VerifyPaymentDto {
   @IsString()
   gateway: string;
 
+  @IsOptional()
   @IsString()
-  walletId: string;
+  walletId?: string;
 
   @IsEnum(VerifyTransactionType)
   type: VerifyTransactionType;
