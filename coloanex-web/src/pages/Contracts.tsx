@@ -149,7 +149,11 @@ export default function Contracts() {
   const user = useSelector((state: RootState) => state.auth.user);
   const { data: myWallet } = useGetMyWalletQuery();
 
-  const { data: contracts = [], isLoading, refetch: refetchContracts } = useGetContractsQuery(undefined, {
+  const {
+    data: contracts = [],
+    isLoading,
+    refetch: refetchContracts,
+  } = useGetContractsQuery(undefined, {
     refetchOnMountOrArgChange: true,
   });
   const [signAndDisburseContract, { isLoading: isSd }] =
@@ -875,67 +879,41 @@ export default function Contracts() {
               <>
                 {/* Gateway selection */}
                 <div className="grid grid-cols-2 gap-2">
-                  {/* eSewa card */}
                   <button
                     type="button"
                     onClick={() => setSdGateway("ESEWA")}
-                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer ${
+                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer bg-card dark:bg-card ${
                       sdGateway === "ESEWA"
-                        ? "border-[#2e8b1c] bg-[#4a9d2a]"
-                        : "border-[#60B246]/50 bg-[#60B246] hover:bg-[#54a022] hover:border-[#2e8b1c]"
+                        ? "border-[#60B246] ring-2 ring-[#60B246]/30"
+                        : "border-border hover:border-[#60B246]/60"
                     }`}
                   >
                     <img
-                      src="https://esewa.com.np/common/images/esewa_logo.png"
+                      src="/esewa-logo.png"
                       alt="eSewa"
-                      className="max-h-full max-w-full object-contain"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        const fb = e.currentTarget
-                          .nextElementSibling as HTMLElement | null;
-                        if (fb) fb.style.display = "flex";
-                      }}
+                      className="h-9 w-auto object-contain"
                     />
-                    <span
-                      style={{ display: "none" }}
-                      className="items-center justify-center text-white font-black text-lg"
-                    >
-                      eSewa
-                    </span>
                     {sdGateway === "ESEWA" && (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-white absolute top-1.5 right-1.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#60B246] absolute top-1.5 right-1.5" />
                     )}
                   </button>
 
-                  {/* Khalti card */}
                   <button
                     type="button"
                     onClick={() => setSdGateway("KHALTI")}
-                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer ${
+                    className={`relative flex items-center justify-center rounded-xl border-2 p-3 h-16 transition-all cursor-pointer bg-card dark:bg-card ${
                       sdGateway === "KHALTI"
-                        ? "border-[#3d1a6e] bg-[#4a2278]"
-                        : "border-[#5C2D91]/50 bg-[#5C2D91] hover:bg-[#4f2480] hover:border-[#3d1a6e]"
+                        ? "border-[#5C2D91] ring-2 ring-[#5C2D91]/30"
+                        : "border-border hover:border-[#5C2D91]/60"
                     }`}
                   >
                     <img
-                      src="https://khalti.com/static/img/logo.svg"
+                      src="/khalti-logo.png"
                       alt="Khalti"
-                      className="max-h-full max-w-full object-contain brightness-0 invert"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                        const fb = e.currentTarget
-                          .nextElementSibling as HTMLElement | null;
-                        if (fb) fb.style.display = "flex";
-                      }}
+                      className="h-9 w-auto object-contain"
                     />
-                    <span
-                      style={{ display: "none" }}
-                      className="items-center justify-center text-white font-black text-lg"
-                    >
-                      Khalti
-                    </span>
                     {sdGateway === "KHALTI" && (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-white absolute top-1.5 right-1.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#5C2D91] absolute top-1.5 right-1.5" />
                     )}
                   </button>
                 </div>
@@ -955,11 +933,13 @@ export default function Contracts() {
                         : "!text-purple-900 dark:text-purple-400"
                     }`}
                   />
-                  <p className={`${
+                  <p
+                    className={`${
                       sdGateway === "ESEWA"
                         ? "!text-green-900 dark:text-green-400"
                         : "!text-purple-900 dark:text-purple-400"
-                    }`}>
+                    }`}
+                  >
                     You will be redirected to{" "}
                     <span className="font-semibold">
                       {sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
@@ -1020,14 +1000,11 @@ export default function Contracts() {
                 <img
                   src={
                     sdGateway === "ESEWA"
-                      ? "https://esewa.com.np/common/images/esewa_logo.png"
-                      : "https://khalti.com/static/img/logo.svg"
+                      ? "/esewa-logo.png"
+                      : "/khalti-logo.png"
                   }
                   alt={sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
                   className="h-4 w-auto object-contain brightness-0 invert"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
                 />
                 {isInitiatingPayment
                   ? "Redirecting…"
