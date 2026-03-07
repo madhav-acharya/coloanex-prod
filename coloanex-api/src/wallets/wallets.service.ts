@@ -53,6 +53,40 @@ export class WalletsService {
     return wallet as unknown as Wallet;
   }
 
+  async findOrCreate(userId: string): Promise<Wallet> {
+    const existing = await this.prisma.wallet.findFirst({
+      where: { userId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (existing) return existing as unknown as Wallet;
+
+    return this.prisma.wallet.create({
+      data: {
+        userId,
+        balance: 0,
+        paymentGatewayLinks: {},
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    }) as unknown as Wallet;
+  }
+
   async findOne(id: string): Promise<Wallet> {
     const wallet = await this.prisma.wallet.findUnique({
       where: { id },
