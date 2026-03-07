@@ -7,8 +7,12 @@ import type { TransactionType } from "@/apis/paymentsApi";
 const STORAGE_KEY = "khalti_pending_payment";
 
 interface PendingPayment {
-  transactionId: string;
+  transactionUuid: string;
   amount: number;
+  walletId: string;
+  type: string;
+  contractId?: string;
+  paymentScheduleId?: string;
 }
 
 interface PayOptions {
@@ -62,8 +66,8 @@ export function useKhaltiPayment() {
       paymentScheduleId,
       amount,
       type,
-      successPath = "/wallets?payment=success",
-      failurePath = "/wallets?payment=failed",
+      successPath = "/payment/success",
+      failurePath = "/payment/failure",
     } = options;
 
     const successUrl = `${window.location.origin}${successPath}`;
@@ -81,8 +85,12 @@ export function useKhaltiPayment() {
     }).unwrap();
 
     storePendingPayment({
-      transactionId: result.transactionId,
+      transactionUuid: result.transactionUuid,
       amount,
+      walletId: result.walletId ?? walletId,
+      type,
+      contractId,
+      paymentScheduleId,
     });
 
     window.location.href = result.paymentUrl;
@@ -98,21 +106,25 @@ export function useKhaltiPayment() {
 
     if (callbackParams.status !== "Completed") {
       await verifyPayment({
-        transactionId: pending.transactionId,
         transactionUuid: callbackParams.pidx,
         totalAmount: pending.amount,
+        gateway: "KHALTI",
+        walletId: pending.walletId,
+        type: pending.type as any,
+        contractId: pending.contractId,
+        paymentScheduleId: pending.paymentScheduleId,
       }).unwrap();
-      return {
-        success: false,
-        transactionId: pending.transactionId,
-        status: "FAILED",
-      };
+      return { success: false, transactionId: null, status: "FAILED" };
     }
 
     return verifyPayment({
-      transactionId: pending.transactionId,
       transactionUuid: callbackParams.pidx,
       totalAmount: pending.amount,
+      gateway: "KHALTI",
+      walletId: pending.walletId,
+      type: pending.type as any,
+      contractId: pending.contractId,
+      paymentScheduleId: pending.paymentScheduleId,
     }).unwrap();
   };
 
