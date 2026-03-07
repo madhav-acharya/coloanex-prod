@@ -13,6 +13,12 @@ export const kycApi = {
     return data;
   },
 
+  getMyLatest: async (tenantId?: string): Promise<any> => {
+    const params = tenantId ? { tenantId } : {};
+    const { data } = await apiClient.get("/kyc/my-latest", { params });
+    return data;
+  },
+
   uploadDocument: async (file: any, documentType: string): Promise<string> => {
     const formData = new FormData();
     formData.append("file", file);
