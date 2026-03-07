@@ -7,19 +7,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Modal,
-  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, contractsApi, paymentSchedulesApi } from "@/api";
-import { useToast } from "@/components/ui";
+import { useToast, AppHeader } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentSchedule } from "@/api/paymentSchedulesApi";
-import type { PaymentGateway } from "@/api/paymentsApi";
 import { LoanStatus } from "@/types/loan";
 import { formatCurrency } from "@/utils/currency";
 
@@ -196,8 +193,6 @@ export default function LoanDetailsScreen() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [schedule, setSchedule] = useState<PaymentSchedule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [gatewayModalSchedule, setGatewayModalSchedule] =
-    useState<PaymentSchedule | null>(null);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -277,55 +272,99 @@ export default function LoanDetailsScreen() {
   const canMakePayment =
     loan.status === LoanStatus.LOAN_PROVIDED ||
     loan.status === LoanStatus.PARTIALLY_PAID;
+  const canSignContract = loan.status === LoanStatus.CONTRACT_GENERATED;
+
+  const statusInfo: Record<
+    string,
+    {
+      icon: keyof typeof Ionicons.glyphMap;
+      color: string;
+      bg: string;
+      title: string;
+      body: string;
+    } | null
+  > = {
+    DRAFT: {
+      icon: "document-outline",
+      color: "#6B7280",
+      bg: "#F3F4F6",
+      title: "Application in Draft",
+      body: "Your loan application is saved as a draft. Submit it to the lender to start the review process.",
+    },
+    SUBMITTED: {
+      icon: "paper-plane-outline",
+      color: "#6366F1",
+      bg: "#EEF2FF",
+      title: "Application Submitted",
+      body: "Your application has been submitted and is awaiting review by the lender.",
+    },
+    UNDER_REVIEW: {
+      icon: "time-outline",
+      color: "#F59E0B",
+      bg: "#FEF3C7",
+      title: "Under Review",
+      body: "The lender is currently reviewing your application. You will be notified once a decision is made.",
+    },
+    APPROVED: {
+      icon: "checkmark-circle-outline",
+      color: "#16A34A",
+      bg: "#D1FAE5",
+      title: "Loan Approved",
+      body: "Congratulations! Your loan has been approved. The lender will now generate a contract for you to review and sign.",
+    },
+    REJECTED: {
+      icon: "close-circle-outline",
+      color: "#DC2626",
+      bg: "#FEF2F2",
+      title: "Application Rejected",
+      body: loan.rejectionReason
+        ? `Your application was rejected. Reason: ${loan.rejectionReason}`
+        : "Your application was rejected by the lender. Please contact them for more information.",
+    },
+    CONTRACT_GENERATED: {
+      icon: "document-text-outline",
+      color: "#6366F1",
+      bg: "#EEF2FF",
+      title: "Contract Ready to Sign",
+      body: "Your loan contract is ready. Please review and sign it so the lender can proceed to disburse your funds.",
+    },
+    CONTRACT_SIGNED: {
+      icon: "shield-checkmark-outline",
+      color: "#16A34A",
+      bg: "#D1FAE5",
+      title: "Contract Signed",
+      body: "You have signed the contract. The lender will now verify and disburse the loan amount to you.",
+    },
+    LOAN_PROVIDED: {
+      icon: "trending-up-outline",
+      color: "#16A34A",
+      bg: "#D1FAE5",
+      title: "Loan Disbursed",
+      body: "Your loan has been disbursed. Make timely repayments according to your payment schedule below.",
+    },
+    PARTIALLY_PAID: {
+      icon: "time-outline",
+      color: "#F59E0B",
+      bg: "#FEF3C7",
+      title: "Repayment In Progress",
+      body: "You have made partial repayments. Continue making payments to clear the outstanding balance.",
+    },
+    PAID: {
+      icon: "checkmark-circle-outline",
+      color: "#16A34A",
+      bg: "#D1FAE5",
+      title: "Loan Fully Repaid",
+      body: "Congratulations! You have fully repaid this loan. Thank you for your timely payments.",
+    },
+  };
+
+  const currentInfo = statusInfo[loan.status] ?? null;
 
   const collateral = loan.collateralDetails as Record<string, unknown> | null;
 
-  const handleGatewaySelect = (gateway: PaymentGateway) => {
-    if (!gatewayModalSchedule) return;
-    if (!contract) {
-      setGatewayModalSchedule(null);
-      showToast(
-        "No active contract found for this loan. Please contact your lender.",
-        "error",
-      );
-      return;
-    }
-    setGatewayModalSchedule(null);
-    router.push({
-      pathname: "/repayment/make-repayment",
-      params: {
-        loanId: loan.id,
-        contractId: contract.id,
-        scheduleId: gatewayModalSchedule.id,
-        amount: String(gatewayModalSchedule.totalAmount),
-        gateway,
-      },
-    });
-  };
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.topBar,
-          {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.topBarTitle, { color: colors.text }]}>
-          Loan Details
-        </Text>
-        <View style={{ width: 38 }} />
-      </View>
+      <AppHeader title="Loan Details" showThemeToggle={false} />
 
       <ScrollView
         style={styles.scroll}
@@ -501,23 +540,27 @@ export default function LoanDetailsScreen() {
           )}
         </SectionCard>
 
-        {loan.rejectionReason && (
+        {currentInfo && (
           <View
             style={[
               styles.alertCard,
               {
-                backgroundColor: colors.errorLight,
-                borderColor: colors.error + "30",
+                backgroundColor: currentInfo.bg,
+                borderColor: currentInfo.color + "30",
               },
             ]}
           >
-            <Ionicons name="close-circle" size={18} color={colors.error} />
+            <Ionicons
+              name={currentInfo.icon}
+              size={20}
+              color={currentInfo.color}
+            />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.alertTitle, { color: colors.error }]}>
-                Rejection Reason
+              <Text style={[styles.alertTitle, { color: currentInfo.color }]}>
+                {currentInfo.title}
               </Text>
-              <Text style={[styles.alertBody, { color: colors.error }]}>
-                {loan.rejectionReason}
+              <Text style={[styles.alertBody, { color: currentInfo.color }]}>
+                {currentInfo.body}
               </Text>
             </View>
           </View>
@@ -789,7 +832,28 @@ export default function LoanDetailsScreen() {
                           styles.repayBtn,
                           { backgroundColor: colors.primary },
                         ]}
-                        onPress={() => setGatewayModalSchedule(item)}
+                        onPress={() => {
+                          if (!contract) {
+                            showToast(
+                              "No active contract found for this loan. Please contact your lender.",
+                              "error",
+                            );
+                            return;
+                          }
+                          router.push({
+                            pathname: "/repayment/make-repayment",
+                            params: {
+                              loanId: loan.id,
+                              contractId: contract.id,
+                              scheduleId: item.id,
+                              amount: String(item.totalAmount),
+                              outstandingBalance: String(
+                                contract.outstandingBalance ?? 0,
+                              ),
+                              gateway: "ESEWA",
+                            },
+                          });
+                        }}
                         activeOpacity={0.8}
                       >
                         <Text
@@ -834,15 +898,24 @@ export default function LoanDetailsScreen() {
                 );
                 return;
               }
-              // Use first unpaid schedule item, or fallback to contract amount
               const unpaid = schedule.find((s) => s.status !== "PAID");
-              const fallbackSchedule: any = unpaid ?? {
+              const scheduleItem: any = unpaid ?? {
                 id: "",
                 installmentNumber: 0,
                 totalAmount: contract.installmentAmount,
                 status: "PENDING",
               };
-              setGatewayModalSchedule(fallbackSchedule);
+              router.push({
+                pathname: "/repayment/make-repayment",
+                params: {
+                  loanId: loan.id,
+                  contractId: contract.id,
+                  scheduleId: scheduleItem.id,
+                  amount: String(scheduleItem.totalAmount),
+                  outstandingBalance: String(contract.outstandingBalance ?? 0),
+                  gateway: "ESEWA",
+                },
+              });
             }}
           >
             <Ionicons name="card-outline" size={20} color={colors.buttonText} />
@@ -853,74 +926,29 @@ export default function LoanDetailsScreen() {
         </View>
       )}
 
-      {/* Gateway Selection Modal */}
-      <Modal
-        visible={!!gatewayModalSchedule}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setGatewayModalSchedule(null)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setGatewayModalSchedule(null)}
+      {/* Sticky Sign Contract button — shown when contract is generated but not yet signed */}
+      {canSignContract && contract && (
+        <View
+          style={[
+            styles.stickyFooter,
+            {
+              backgroundColor: colors.background,
+              borderTopColor: colors.border,
+            },
+          ]}
         >
-          <Pressable
-            style={[styles.modalSheet, { backgroundColor: colors.card }]}
+          <TouchableOpacity
+            style={[styles.payBtn, { backgroundColor: "#6366F1" }]}
+            activeOpacity={0.85}
+            onPress={() => router.push(`/contracts/${contract.id}` as any)}
           >
-            <View
-              style={[styles.modalHandle, { backgroundColor: colors.border }]}
-            />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Select Payment Method
+            <Ionicons name="document-text-outline" size={20} color="#FFFFFF" />
+            <Text style={[styles.payBtnText, { color: "#FFFFFF" }]}>
+              View & Sign Contract
             </Text>
-            {gatewayModalSchedule && (
-              <Text
-                style={[styles.modalSubtitle, { color: colors.textSecondary }]}
-              >
-                Installment #{gatewayModalSchedule.installmentNumber} ·{" "}
-                {formatCurrency(gatewayModalSchedule.totalAmount)}
-              </Text>
-            )}
-            <View style={styles.gatewayRow}>
-              <TouchableOpacity
-                style={[styles.gatewayCard, { backgroundColor: "#60BB46" }]}
-                activeOpacity={0.85}
-                onPress={() => handleGatewaySelect("ESEWA")}
-              >
-                <View style={styles.gatewayIconCircle}>
-                  <Text style={styles.gatewayIconText}>e</Text>
-                </View>
-                <Text style={styles.gatewayName}>eSewa</Text>
-                <Text style={styles.gatewayTag}>Nepal's #1 wallet</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.gatewayCard, { backgroundColor: "#5C2D91" }]}
-                activeOpacity={0.85}
-                onPress={() => handleGatewaySelect("KHALTI")}
-              >
-                <View style={styles.gatewayIconCircle}>
-                  <Text style={styles.gatewayIconText}>k</Text>
-                </View>
-                <Text style={styles.gatewayName}>Khalti</Text>
-                <Text style={styles.gatewayTag}>Fast & secure</Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={[styles.modalCancelBtn, { borderColor: colors.border }]}
-              onPress={() => setGatewayModalSchedule(null)}
-            >
-              <Text
-                style={[
-                  styles.modalCancelText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Cancel
-              </Text>
-            </TouchableOpacity>
-          </Pressable>
-        </Pressable>
-      </Modal>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -1066,70 +1094,6 @@ const createStyles = (colors: Record<string, string>) =>
       elevation: 4,
     },
     payBtnText: { fontSize: 16, fontWeight: "700" },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.45)",
-      justifyContent: "flex-end",
-    },
-    modalSheet: {
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: spacing.lg,
-      paddingBottom: spacing.xxl,
-    },
-    modalHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      alignSelf: "center",
-      marginBottom: spacing.md,
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: "800",
-      textAlign: "center",
-      marginBottom: 4,
-    },
-    modalSubtitle: {
-      fontSize: 13,
-      fontWeight: "500",
-      textAlign: "center",
-      marginBottom: spacing.lg,
-    },
-    gatewayRow: {
-      flexDirection: "row",
-      gap: spacing.md,
-      marginBottom: spacing.md,
-    },
-    gatewayCard: {
-      flex: 1,
-      borderRadius: borderRadius.lg,
-      alignItems: "center",
-      paddingVertical: spacing.lg,
-      gap: spacing.sm,
-    },
-    gatewayIconCircle: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: "rgba(255,255,255,0.25)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    gatewayIconText: { fontSize: 24, fontWeight: "900", color: "#fff" },
-    gatewayName: { fontSize: 16, fontWeight: "800", color: "#fff" },
-    gatewayTag: {
-      fontSize: 11,
-      fontWeight: "500",
-      color: "rgba(255,255,255,0.8)",
-    },
-    modalCancelBtn: {
-      paddingVertical: 14,
-      borderRadius: borderRadius.md,
-      borderWidth: 1,
-      alignItems: "center",
-    },
-    modalCancelText: { fontSize: 15, fontWeight: "600" },
     collateralImageRow: {
       paddingVertical: 12,
       borderBottomWidth: 1,
