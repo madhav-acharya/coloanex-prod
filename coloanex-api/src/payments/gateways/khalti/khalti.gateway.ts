@@ -26,9 +26,15 @@ export class KhaltiGateway implements IPaymentGateway {
   ): Promise<InitiatePaymentResult> {
     const { amount, transactionUuid, successUrl, failureUrl } = params;
 
+    const websiteUrl = successUrl.startsWith('http')
+      ? new URL(successUrl).origin
+      : (process.env.KHALTI_WEBSITE_URL ??
+        process.env.API_BASE_URL ??
+        'http://localhost:3000');
+
     const body = {
       return_url: successUrl,
-      website_url: new URL(failureUrl).origin,
+      website_url: websiteUrl,
       amount: Math.round(amount * 100),
       purchase_order_id: transactionUuid,
       purchase_order_name: `Payment-${transactionUuid}`,
