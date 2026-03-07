@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import { useToast } from "@/components/ui";
+import { useToast, AppHeader } from "@/components/ui";
 import { spacing, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi, rulesApi } from "@/api";
 import type { Lender } from "@/types";
@@ -150,26 +150,7 @@ export default function LenderDetailsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View
-          style={[
-            styles.topBar,
-            {
-              backgroundColor: colors.background,
-              borderBottomColor: colors.border,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.topBarTitle, { color: colors.text }]}>
-            Lender Details
-          </Text>
-          <View style={{ width: 38 }} />
-        </View>
+        <AppHeader title="Lender Details" showThemeToggle={false} />
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
@@ -185,27 +166,7 @@ export default function LenderDetailsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.topBar,
-          {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.topBarTitle, { color: colors.text }]}>
-          Lender Details
-        </Text>
-        <View style={{ width: 38 }} />
-      </View>
+      <AppHeader title="Lender Details" showThemeToggle={false} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
