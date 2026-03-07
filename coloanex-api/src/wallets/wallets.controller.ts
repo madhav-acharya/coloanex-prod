@@ -28,7 +28,7 @@ export class WalletsController {
 
   @Get('my-wallet')
   findMyWallet(@Request() req: { user: JwtPayload }) {
-    return this.walletsService.findByUser(req.user.sub);
+    return this.walletsService.findOrCreate(req.user.sub);
   }
 
   @Get('user/:userId')
