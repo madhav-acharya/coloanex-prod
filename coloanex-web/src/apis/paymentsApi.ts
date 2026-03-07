@@ -24,6 +24,7 @@ export interface InitiatePaymentResult {
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
+  walletId: string;
 }
 
 export interface VerifyPaymentPayload {
