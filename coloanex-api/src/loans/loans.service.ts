@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -7,6 +8,7 @@ import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { ContractsService } from '../contracts/contracts.service';
+import { LoanBlockchainService } from '../blockchain/services/loan.blockchain.service';
 import { loanRequestTemplate, loanApprovalTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -22,11 +24,14 @@ import {
 
 @Injectable()
 export class LoansService {
+  private readonly logger = new Logger(LoansService.name);
+
   constructor(
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
     private contractsService: ContractsService,
+    private loanBlockchainService: LoanBlockchainService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -225,6 +230,20 @@ export class LoansService {
         },
       },
     });
+
+    this.loanBlockchainService
+      .createLoan(
+        loan.id,
+        loan.borrowerId,
+        loan.tenantId,
+        loan.requestedAmount.toString(),
+        loan.purpose,
+        loan.collateralDetails as Record<string, unknown>,
+        loan.requestedTermMonths,
+      )
+      .catch((err) =>
+        this.logger.error(`Blockchain createLoan failed [${loan.id}]`, err),
+      );
 
     await this.activityLogsService.logUserActivity(
       user.sub,
@@ -618,8 +637,28 @@ export class LoansService {
           user.tenantId!,
         );
       } catch (error) {
-        console.error('Failed to generate contract:', error);
+        this.logger.error('Failed to generate contract:', error);
       }
+
+      this.loanBlockchainService
+        .approveLoan(
+          id,
+          String(reviewLoanDto.approvedAmount!),
+          reviewLoanDto.approvedTermMonths!,
+        )
+        .catch((err) =>
+          this.logger.error(`Blockchain approveLoan failed [${id}]`, err),
+        );
+    } else {
+      this.loanBlockchainService
+        .updateLoanStatus(
+          id,
+          reviewLoanDto.status,
+          reviewLoanDto.rejectionReason,
+        )
+        .catch((err) =>
+          this.logger.error(`Blockchain updateLoanStatus failed [${id}]`, err),
+        );
     }
 
     const action =

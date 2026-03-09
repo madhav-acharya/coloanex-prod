@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -26,14 +27,18 @@ import {
   buildContractHtml,
   generateTermsAndConditions,
 } from './templates/contract.template';
+import { ContractBlockchainService } from '../blockchain/services/contract.blockchain.service';
 
 @Injectable()
 export class ContractsService {
+  private readonly logger = new Logger(ContractsService.name);
+
   constructor(
     private prisma: PrismaService,
     private cloudinaryUploadsService: CloudinaryUploadsService,
     private mailService: MailService,
     private activityLogsService: ActivityLogsService,
+    private contractBlockchainService: ContractBlockchainService,
   ) {}
 
   private generateContractNumber(): string {
@@ -151,7 +156,7 @@ export class ContractsService {
         createContractDto.paymentFrequency,
       );
 
-    return this.prisma.contract.create({
+    const contract = await this.prisma.contract.create({
       data: {
         contractNumber: this.generateContractNumber(),
         tenantId: user.tenantId,
@@ -190,7 +195,48 @@ export class ContractsService {
           select: { id: true, name: true, ruleType: true },
         },
       },
-    }) as unknown as Contract;
+    });
+
+    this.contractBlockchainService
+      .createContract(
+        contract.id,
+        contract.contractNumber,
+        contract.tenantId,
+        contract.borrowerId,
+        contract.loanId,
+        contract.ruleId,
+        contract.startDate.toISOString(),
+        contract.endDate.toISOString(),
+        contract.loanAmount.toString(),
+        contract.interestRate.toString(),
+        contract.termMonths,
+        contract.paymentFrequency,
+        contract.installmentAmount.toString(),
+        contract.totalInstallments,
+        contract.totalAmountDue.toString(),
+        contract.termsAndConditions,
+      )
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.contract.update({
+            where: { id: contract.id },
+            data: {
+              blockchainData: {
+                txId: result.txId,
+                recordedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
+      .catch((err) =>
+        this.logger.error(
+          `Blockchain createContract failed [${contract.id}]`,
+          err,
+        ),
+      );
+
+    return contract as unknown as Contract;
   }
 
   async findAll(user: JwtPayload): Promise<Contract[]> {
@@ -411,6 +457,17 @@ export class ContractsService {
       });
     }
 
+    this.contractBlockchainService
+      .signContract(
+        id,
+        user.sub,
+        signedBy,
+        Buffer.from(signContractDto.signature).toString('base64'),
+      )
+      .catch((err) =>
+        this.logger.error(`Blockchain signContract failed [${id}]`, err),
+      );
+
     return updatedContract as unknown as Contract;
   }
 
@@ -495,6 +552,26 @@ export class ContractsService {
       data: { status: 'LOAN_PROVIDED' as any },
     });
 
+    this.contractBlockchainService
+      .signContract(
+        id,
+        user.sub,
+        'TENANT',
+        Buffer.from(dto.signature).toString('base64'),
+      )
+      .then(() => this.contractBlockchainService.activateContract(id))
+      .then(() =>
+        this.contractBlockchainService.recordDisbursement(
+          id,
+          updatedContract.loanAmount.toString(),
+          dto.method,
+          dto.transactionId || updatedContract.contractNumber,
+        ),
+      )
+      .catch((err) =>
+        this.logger.error(`Blockchain signAndDisburse failed [${id}]`, err),
+      );
+
     return updatedContract as unknown as Contract;
   }
 
@@ -564,6 +641,20 @@ export class ContractsService {
         status: 'LOAN_PROVIDED' as any,
       },
     });
+
+    this.contractBlockchainService
+      .activateContract(id)
+      .then(() =>
+        this.contractBlockchainService.recordDisbursement(
+          id,
+          updatedContract.loanAmount.toString(),
+          disburseContractDto.method,
+          disburseContractDto.transactionId || updatedContract.contractNumber,
+        ),
+      )
+      .catch((err) =>
+        this.logger.error(`Blockchain disburse failed [${id}]`, err),
+      );
 
     return updatedContract as unknown as Contract;
   }
@@ -693,6 +784,45 @@ export class ContractsService {
         },
       },
     });
+
+    this.contractBlockchainService
+      .createContract(
+        contract.id,
+        contract.contractNumber,
+        contract.tenantId,
+        contract.borrowerId,
+        contract.loanId,
+        contract.ruleId,
+        contract.startDate.toISOString(),
+        contract.endDate.toISOString(),
+        contract.loanAmount.toString(),
+        contract.interestRate.toString(),
+        contract.termMonths,
+        contract.paymentFrequency,
+        contract.installmentAmount.toString(),
+        contract.totalInstallments,
+        contract.totalAmountDue.toString(),
+        contract.termsAndConditions,
+      )
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.contract.update({
+            where: { id: contract.id },
+            data: {
+              blockchainData: {
+                txId: result.txId,
+                recordedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
+      .catch((err) =>
+        this.logger.error(
+          `Blockchain createContract (from approval) failed [${contract.id}]`,
+          err,
+        ),
+      );
 
     return contract as unknown as Contract;
   }
@@ -849,7 +979,7 @@ export class ContractsService {
         updatedContract.tenantId,
       );
     } catch (err) {
-      console.error('Failed to send contract generated email:', err);
+      this.logger.error('Failed to send contract generated email:', err);
     }
 
     return updatedContract as unknown as Contract;
@@ -876,7 +1006,7 @@ export class ContractsService {
       throw new ForbiddenException('Only the borrower can report a contract');
     }
 
-    return this.prisma.contract.update({
+    const reported = await this.prisma.contract.update({
       where: { id },
       data: {
         status: ContractStatus.REPORTED,
@@ -900,6 +1030,17 @@ export class ContractsService {
           select: { id: true, name: true, ruleType: true },
         },
       },
-    }) as unknown as Contract;
+    });
+
+    this.contractBlockchainService
+      .updateContractStatus(id, ContractStatus.REPORTED)
+      .catch((err) =>
+        this.logger.error(
+          `Blockchain updateContractStatus failed [${id}]`,
+          err,
+        ),
+      );
+
+    return reported as unknown as Contract;
   }
 }

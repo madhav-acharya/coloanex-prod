@@ -41,6 +41,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cloudinary": "^2.8.0",
+    "coloanex-fabric-client": "file:../coloanex-blockchain/fabric-client",
     "googleapis": "^171.4.0",
     "ioredis": "^5.8.2",
     "jose": "^6.1.2",
