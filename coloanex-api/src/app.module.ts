@@ -21,6 +21,7 @@ import { CloudinaryUploadsModule } from './cloudinary-uploads/cloudinary-uploads
 import { MailModule } from './mail/mail.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { PaymentsModule } from './payments/payments.module';
+import { BlockchainModule } from './blockchain/blockchain.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
 import { IsUniqueConstraint } from './common/validators/is-unique.validator';
@@ -45,6 +46,7 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     MailModule,
     AnalyticsModule,
     PaymentsModule,
+    BlockchainModule,
   ],
   controllers: [AppController],
   providers: [
