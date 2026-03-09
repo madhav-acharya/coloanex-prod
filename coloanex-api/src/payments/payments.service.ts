@@ -1,17 +1,28 @@
-import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import type { IPaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY_REGISTRY } from './gateways/payment-gateway.interface';
 import type { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import type { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { PaymentBlockchainService } from '../blockchain/services/payment.blockchain.service';
+import { ContractBlockchainService } from '../blockchain/services/contract.blockchain.service';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
     private readonly gatewayRegistry: Map<string, IPaymentGateway>,
+    private readonly paymentBlockchainService: PaymentBlockchainService,
+    private readonly contractBlockchainService: ContractBlockchainService,
   ) {}
 
   private resolveGateway(gateway: string): IPaymentGateway {
@@ -235,6 +246,63 @@ export class PaymentsService {
         where: { id: resolvedWalletId },
         data: { balance: { increment: amount } },
       });
+    }
+
+    if (
+      (type === 'INSTALLMENT_PAYMENT' || type === 'PENALTY_PAYMENT') &&
+      contractId
+    ) {
+      const contractData = await this.prisma.contract.findUnique({
+        where: { id: contractId },
+        select: { borrowerId: true, tenantId: true },
+      });
+
+      const installmentNumber = paymentScheduleId
+        ? await this.prisma.paymentSchedule
+            .findUnique({
+              where: { id: paymentScheduleId },
+              select: { installmentNumber: true },
+            })
+            .then((s) => (s ? [s.installmentNumber] : []))
+        : [];
+
+      if (contractData) {
+        this.paymentBlockchainService
+          .recordPayment(
+            transaction.id,
+            contractId,
+            contractData.borrowerId,
+            contractData.tenantId,
+            totalAmount.toString(),
+            gateway,
+            transactionUuid,
+            installmentNumber,
+            '0',
+          )
+          .then((result) => {
+            if (result?.txId) {
+              return this.prisma.transaction.update({
+                where: { id: transaction.id },
+                data: { blockchainTxHash: result.txId },
+              });
+            }
+          })
+          .catch((err) =>
+            this.logger.error(
+              `Blockchain recordPayment failed [${transaction.id}]`,
+              err,
+            ),
+          );
+
+        this.contractBlockchainService
+          .updatePaymentBalance(contractId, totalAmount.toString())
+          .catch((err) =>
+            this.logger.error(
+              `Blockchain updatePaymentBalance failed [${contractId}]`,
+              err,
+            ),
+          );
+      }
     }
 
     return {
