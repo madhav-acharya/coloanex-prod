@@ -241,6 +241,14 @@ export class LoansService {
         loan.collateralDetails as Record<string, unknown>,
         loan.requestedTermMonths,
       )
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.loan.update({
+            where: { id: loan.id },
+            data: { blockchainTxHash: result.txId },
+          });
+        }
+      })
       .catch((err) =>
         this.logger.error(`Blockchain createLoan failed [${loan.id}]`, err),
       );
@@ -646,6 +654,14 @@ export class LoansService {
           String(reviewLoanDto.approvedAmount!),
           reviewLoanDto.approvedTermMonths!,
         )
+        .then((result) => {
+          if (result?.txId) {
+            return this.prisma.loan.update({
+              where: { id },
+              data: { blockchainTxHash: result.txId },
+            });
+          }
+        })
         .catch((err) =>
           this.logger.error(`Blockchain approveLoan failed [${id}]`, err),
         );
@@ -656,6 +672,14 @@ export class LoansService {
           reviewLoanDto.status,
           reviewLoanDto.rejectionReason,
         )
+        .then((result) => {
+          if (result?.txId) {
+            return this.prisma.loan.update({
+              where: { id },
+              data: { blockchainTxHash: result.txId },
+            });
+          }
+        })
         .catch((err) =>
           this.logger.error(`Blockchain updateLoanStatus failed [${id}]`, err),
         );
