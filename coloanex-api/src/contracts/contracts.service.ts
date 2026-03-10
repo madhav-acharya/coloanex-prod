@@ -464,6 +464,21 @@ export class ContractsService {
         signedBy,
         Buffer.from(signContractDto.signature).toString('base64'),
       )
+      .then((result) => {
+        if (result?.txId) {
+          const existing = (updatedContract as any).blockchainData ?? {};
+          return this.prisma.contract.update({
+            where: { id },
+            data: {
+              blockchainData: {
+                ...existing,
+                signTxId: result.txId,
+                signedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
       .catch((err) =>
         this.logger.error(`Blockchain signContract failed [${id}]`, err),
       );
@@ -568,6 +583,19 @@ export class ContractsService {
           dto.transactionId || updatedContract.contractNumber,
         ),
       )
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.contract.update({
+            where: { id },
+            data: {
+              blockchainData: {
+                disburseTxId: result.txId,
+                disbursedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
       .catch((err) =>
         this.logger.error(`Blockchain signAndDisburse failed [${id}]`, err),
       );
@@ -652,6 +680,19 @@ export class ContractsService {
           disburseContractDto.transactionId || updatedContract.contractNumber,
         ),
       )
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.contract.update({
+            where: { id },
+            data: {
+              blockchainData: {
+                disburseTxId: result.txId,
+                disbursedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
       .catch((err) =>
         this.logger.error(`Blockchain disburse failed [${id}]`, err),
       );
@@ -1034,6 +1075,19 @@ export class ContractsService {
 
     this.contractBlockchainService
       .updateContractStatus(id, ContractStatus.REPORTED)
+      .then((result) => {
+        if (result?.txId) {
+          return this.prisma.contract.update({
+            where: { id },
+            data: {
+              blockchainData: {
+                reportTxId: result.txId,
+                reportedAt: new Date().toISOString(),
+              } as any,
+            },
+          });
+        }
+      })
       .catch((err) =>
         this.logger.error(
           `Blockchain updateContractStatus failed [${id}]`,

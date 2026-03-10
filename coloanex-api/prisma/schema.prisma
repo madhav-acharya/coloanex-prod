@@ -416,6 +416,7 @@ model Loan {
   approvedTermMonths  Int?       @map("approved_term_months")
   status              LoanStatus @default(DRAFT)
   rejectionReason     String?    @map("rejection_reason")
+  blockchainTxHash    String?    @map("blockchain_tx_hash")
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @updatedAt @map("updated_at")
 
