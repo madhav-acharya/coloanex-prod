@@ -549,3 +549,91 @@ The network may still be initialising. Wait a few seconds and retry, or increase
 ```bash
 chmod +x scripts/*.sh
 ```
+
+---
+
+## Verifying Blockchain is Working
+
+Use these steps to confirm the Fabric network is live and the API is recording on-chain events.
+
+### 1. Check Docker containers are running
+
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}"
+```
+
+You should see 9 containers: `ca.org1`, `ca.org2`, `ca.orderer`, `orderer`, `peer0.org1`, `peer1.org1`, `peer0.org2`, `peer1.org2`.
+
+### 2. Check chaincode is installed and committed
+
+```bash
+export FABRIC_CFG_PATH="$(pwd)/config"
+source scripts/utils.sh && set_org1_peer0_vars
+
+./bin/peer lifecycle chaincode querycommitted \
+  --channelID coloanex-channel \
+  --name loans \
+  --output json
+```
+
+You should see name, version, and sequence in the output.
+
+### 3. Trigger a loan creation via the API
+
+Create a loan with `BLOCKCHAIN_ENABLED=true` in the API `.env`. After the API responds, check the loan record in the database:
+
+```sql
+SELECT id, status, blockchain_tx_hash, created_at
+FROM finance.loans
+ORDER BY created_at DESC
+LIMIT 5;
+```
+
+If `blockchain_tx_hash` is populated, the blockchain call succeeded.
+
+### 4. Query the Fabric ledger directly
+
+```bash
+export FABRIC_CFG_PATH="$(pwd)/config"
+source scripts/utils.sh && set_org1_peer0_vars
+
+./bin/peer chaincode query \
+  -C coloanex-channel \
+  -n loans \
+  -c "{\"Args\":[\"GetLoanById\",\"<loan-id>\"]}"
+```
+
+Replace `<loan-id>` with the ID from the database.
+
+### 5. Check contract blockchain data
+
+```sql
+SELECT id, contract_number, blockchain_data, created_at
+FROM finance.contracts
+ORDER BY created_at DESC
+LIMIT 5;
+```
+
+The `blockchain_data` JSON column will contain `txId`, `signTxId`, `disburseTxId`, etc., for each lifecycle event.
+
+### 6. Check payment blockchain hash
+
+```sql
+SELECT id, blockchain_tx_hash, status, created_at
+FROM finance.transactions
+WHERE blockchain_tx_hash IS NOT NULL
+ORDER BY created_at DESC
+LIMIT 10;
+```
+
+---
+
+## Why Blockchain Adds Value Here
+
+| Benefit                  | What It Means for a Lending Platform                                                                        |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| **Tamper-proof records** | Loan terms, contract amounts, and payment history cannot be altered after being committed to the ledger     |
+| **Non-repudiation**      | Every state transition (approval, signing, disbursement) is cryptographically signed and permanently logged |
+| **Auditability**         | Regulators or borrowers can independently verify any transaction using only the `txId` and a Fabric node    |
+| **Multi-party trust**    | Org1 and Org2 both endorse transactions — no single party can unilaterally modify the ledger                |
+| **Dispute resolution**   | In case of a payment dispute, the on-chain record provides an authoritative, timestamped source of truth    |
