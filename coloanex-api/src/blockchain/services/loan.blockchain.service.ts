@@ -26,8 +26,30 @@ export class LoanBlockchainService
       await this.service.connect();
       this.logger.log('Connected to Fabric loans chaincode');
     } catch (error) {
-      this.logger.error('Failed to connect to Fabric loans chaincode', error);
+      this.logBlockchainError('connect to loans chaincode', error);
     }
+  }
+
+  private logBlockchainError(operation: string, error: unknown): void {
+    const e = error as any;
+    const parts: string[] = [];
+    if (e?.message) parts.push(e.message);
+    if (e?.code !== undefined) parts.push(`gRPC code=${e.code}`);
+    if (e?.details) {
+      const details = Array.isArray(e.details)
+        ? e.details
+            .map(
+              (d: any) =>
+                `[${d.mspId ?? '?'}@${d.address ?? '?'}: ${d.message ?? JSON.stringify(d)}]`,
+            )
+            .join(', ')
+        : JSON.stringify(e.details);
+      parts.push(`details: ${details}`);
+    }
+    this.logger.error(
+      `Blockchain error — ${operation}: ${parts.join(' | ') || String(error)}`,
+      e?.stack,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -56,10 +78,7 @@ export class LoanBlockchainService
         requestedTermMonths,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record createLoan on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`createLoan [${id}]`, error);
       return null;
     }
   }
@@ -73,8 +92,8 @@ export class LoanBlockchainService
     try {
       return await this.service.updateLoanStatus(id, newStatus, reason);
     } catch (error) {
-      this.logger.error(
-        `Failed to record updateLoanStatus on blockchain [${id}]`,
+      this.logBlockchainError(
+        `updateLoanStatus [${id}] -> ${newStatus}`,
         error,
       );
       return null;
@@ -94,10 +113,7 @@ export class LoanBlockchainService
         approvedTermMonths,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record approveLoan on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`approveLoan [${id}]`, error);
       return null;
     }
   }

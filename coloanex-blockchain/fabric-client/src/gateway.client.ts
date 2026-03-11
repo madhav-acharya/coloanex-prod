@@ -18,6 +18,7 @@ export class FabricGatewayClient {
   private client: grpc.Client | null = null;
   private contract: Contract | null = null;
   private readonly profile: FabricConnectionProfile;
+  private reconnecting = false;
 
   constructor(profile: FabricConnectionProfile) {
     this.profile = profile;
@@ -52,6 +53,38 @@ export class FabricGatewayClient {
     ...args: string[]
   ): Promise<TransactionResult> {
     this.ensureConnected();
+    try {
+      return await this.executeTransaction(fnName, args);
+    } catch (error: any) {
+      if (error?.code === 14 && !this.reconnecting) {
+        this.reconnecting = true;
+        console.warn(
+          `[FabricGatewayClient] gRPC connection lost (code=14) for chaincode "${this.profile.chaincodeName}" — reconnecting...`,
+        );
+        try {
+          await this.disconnect();
+          await this.connect();
+          console.warn(
+            `[FabricGatewayClient] Reconnected successfully to chaincode "${this.profile.chaincodeName}"`,
+          );
+          return await this.executeTransaction(fnName, args);
+        } catch (reconnectError: any) {
+          console.error(
+            `[FabricGatewayClient] Reconnection failed for chaincode "${this.profile.chaincodeName}": ${reconnectError?.message ?? reconnectError}`,
+          );
+          throw reconnectError;
+        } finally {
+          this.reconnecting = false;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async executeTransaction(
+    fnName: string,
+    args: string[],
+  ): Promise<TransactionResult> {
     const transaction = await this.contract!.submitAsync(fnName, {
       arguments: args,
     });

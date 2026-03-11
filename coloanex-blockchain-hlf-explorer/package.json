@@ -1,0 +1,13 @@
+{
+  "name": "coloanex-blockchain-hlf-explorer",
+  "version": "1.0.0",
+  "scripts": {
+    "setup": "bash setup.sh",
+    "up": "npm run setup && docker-compose up -d",
+    "down": "docker-compose down",
+    "reset": "docker-compose down -v",
+    "logs": "docker-compose logs -f explorer",
+    "logs:db": "docker-compose logs -f explorerdb",
+    "ps": "docker-compose ps"
+  }
+}

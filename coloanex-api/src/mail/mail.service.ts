@@ -173,7 +173,12 @@ export class MailService {
 
   async sendMail(sendMailDto: SendMailDto, tenantId: string): Promise<void> {
     // uncomment this to enable mail sending functionality.
-    console.log('sendMail called with:', { sendMailDto, tenantId });
+    console.log(
+      'sending mail to ',
+      sendMailDto.to,
+      ' with subject ',
+      sendMailDto.subject,
+    );
     // if (tenantId === 'default' && this.envTransporter) {
     //   try {
     //     await this.envTransporter.sendMail({

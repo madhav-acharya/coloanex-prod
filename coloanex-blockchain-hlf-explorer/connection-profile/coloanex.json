@@ -1,0 +1,102 @@
+{
+  "name": "coloanex-network",
+  "version": "1.0.0",
+  "client": {
+    "tlsEnable": true,
+    "adminCredential": {
+      "id": "admin",
+      "password": "adminpw"
+    },
+    "enableAuthentication": true,
+    "organization": "Org1MSP",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "channels": {
+    "coloanex-channel": {
+      "peers": {
+        "peer0.org1.coloanex.com": {},
+        "peer1.org1.coloanex.com": {},
+        "peer0.org2.coloanex.com": {},
+        "peer1.org2.coloanex.com": {}
+      }
+    }
+  },
+  "organizations": {
+    "Org1MSP": {
+      "mspid": "Org1MSP",
+      "adminPrivateKey": {
+        "path": "/crypto-config/peerOrganizations/org1.coloanex.com/users/Admin@org1.coloanex.com/msp/keystore/priv_sk"
+      },
+      "peers": ["peer0.org1.coloanex.com", "peer1.org1.coloanex.com"],
+      "signedCert": {
+        "path": "/crypto-config/peerOrganizations/org1.coloanex.com/users/Admin@org1.coloanex.com/msp/signcerts/Admin@org1.coloanex.com-cert.pem"
+      }
+    },
+    "Org2MSP": {
+      "mspid": "Org2MSP",
+      "adminPrivateKey": {
+        "path": "/crypto-config/peerOrganizations/org2.coloanex.com/users/Admin@org2.coloanex.com/msp/keystore/priv_sk"
+      },
+      "peers": ["peer0.org2.coloanex.com", "peer1.org2.coloanex.com"],
+      "signedCert": {
+        "path": "/crypto-config/peerOrganizations/org2.coloanex.com/users/Admin@org2.coloanex.com/msp/signcerts/Admin@org2.coloanex.com-cert.pem"
+      }
+    }
+  },
+  "peers": {
+    "peer0.org1.coloanex.com": {
+      "tlsCACerts": {
+        "path": "/crypto-config/peerOrganizations/org1.coloanex.com/peers/peer0.org1.coloanex.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org1.coloanex.com:7051",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org1.coloanex.com"
+      }
+    },
+    "peer1.org1.coloanex.com": {
+      "tlsCACerts": {
+        "path": "/crypto-config/peerOrganizations/org1.coloanex.com/peers/peer1.org1.coloanex.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer1.org1.coloanex.com:8051",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer1.org1.coloanex.com"
+      }
+    },
+    "peer0.org2.coloanex.com": {
+      "tlsCACerts": {
+        "path": "/crypto-config/peerOrganizations/org2.coloanex.com/peers/peer0.org2.coloanex.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer0.org2.coloanex.com:9051",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.org2.coloanex.com"
+      }
+    },
+    "peer1.org2.coloanex.com": {
+      "tlsCACerts": {
+        "path": "/crypto-config/peerOrganizations/org2.coloanex.com/peers/peer1.org2.coloanex.com/tls/ca.crt"
+      },
+      "url": "grpcs://peer1.org2.coloanex.com:10051",
+      "grpcOptions": {
+        "ssl-target-name-override": "peer1.org2.coloanex.com"
+      }
+    }
+  },
+  "orderers": {
+    "orderer.coloanex.com": {
+      "tlsCACerts": {
+        "path": "/crypto-config/ordererOrganizations/orderer.coloanex.com/orderers/orderer.orderer.coloanex.com/tls/ca.crt"
+      },
+      "url": "grpcs://orderer.coloanex.com:7050",
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer.coloanex.com"
+      }
+    }
+  }
+}

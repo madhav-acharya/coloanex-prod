@@ -26,11 +26,30 @@ export class ContractBlockchainService
       await this.service.connect();
       this.logger.log('Connected to Fabric contracts chaincode');
     } catch (error) {
-      this.logger.error(
-        'Failed to connect to Fabric contracts chaincode',
-        error,
-      );
+      this.logBlockchainError('connect to contracts chaincode', error);
     }
+  }
+
+  private logBlockchainError(operation: string, error: unknown): void {
+    const e = error as any;
+    const parts: string[] = [];
+    if (e?.message) parts.push(e.message);
+    if (e?.code !== undefined) parts.push(`gRPC code=${e.code}`);
+    if (e?.details) {
+      const details = Array.isArray(e.details)
+        ? e.details
+            .map(
+              (d: any) =>
+                `[${d.mspId ?? '?'}@${d.address ?? '?'}: ${d.message ?? JSON.stringify(d)}]`,
+            )
+            .join(', ')
+        : JSON.stringify(e.details);
+      parts.push(`details: ${details}`);
+    }
+    this.logger.error(
+      `Blockchain error — ${operation}: ${parts.join(' | ') || String(error)}`,
+      e?.stack,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -77,10 +96,7 @@ export class ContractBlockchainService
         termsAndConditions,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record createContract on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`createContract [${id}]`, error);
       return null;
     }
   }
@@ -100,10 +116,7 @@ export class ContractBlockchainService
         signatureHash,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record signContract on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`signContract [${id}]`, error);
       return null;
     }
   }
@@ -113,10 +126,7 @@ export class ContractBlockchainService
     try {
       return await this.service.activateContract(id);
     } catch (error) {
-      this.logger.error(
-        `Failed to record activateContract on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`activateContract [${id}]`, error);
       return null;
     }
   }
@@ -136,10 +146,7 @@ export class ContractBlockchainService
         reference,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record disbursement on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`recordDisbursement [${id}]`, error);
       return null;
     }
   }
@@ -152,10 +159,7 @@ export class ContractBlockchainService
     try {
       return await this.service.updatePaymentBalance(id, paymentAmount);
     } catch (error) {
-      this.logger.error(
-        `Failed to record updatePaymentBalance on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`updatePaymentBalance [${id}]`, error);
       return null;
     }
   }
@@ -168,8 +172,8 @@ export class ContractBlockchainService
     try {
       return await this.service.updateContractStatus(id, newStatus);
     } catch (error) {
-      this.logger.error(
-        `Failed to record updateContractStatus on blockchain [${id}]`,
+      this.logBlockchainError(
+        `updateContractStatus [${id}] -> ${newStatus}`,
         error,
       );
       return null;

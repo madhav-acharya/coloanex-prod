@@ -37,16 +37,16 @@ generate_channel_block() {
 
 start_network() {
   echo "Starting Hyperledger Fabric network..."
-  docker-compose -f "${NETWORK_DIR}/docker-compose-ca.yaml" up -d
+  docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose-ca.yaml" up -d
   sleep "$DELAY"
-  docker-compose -f "${NETWORK_DIR}/docker-compose.yaml" up -d
+  docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose.yaml" up -d
   echo "Network started."
 }
 
 stop_network() {
   echo "Stopping Hyperledger Fabric network..."
-  docker-compose -f "${NETWORK_DIR}/docker-compose.yaml" down --volumes --remove-orphans
-  docker-compose -f "${NETWORK_DIR}/docker-compose-ca.yaml" down --volumes --remove-orphans
+  docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose.yaml" down --volumes --remove-orphans
+  docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose-ca.yaml" down --volumes --remove-orphans
   echo "Network stopped."
 }
 
