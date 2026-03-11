@@ -1,0 +1,9 @@
+{
+  "network-configs": {
+    "coloanex-network": {
+      "name": "coloanex-network",
+      "profile": "./connection-profile/coloanex.json"
+    }
+  },
+  "license": "Apache-2.0"
+}
