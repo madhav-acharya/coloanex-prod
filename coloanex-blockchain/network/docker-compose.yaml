@@ -1,3 +1,5 @@
+name: coloanex-blockchain
+
 volumes:
   orderer.coloanex.com:
   peer0.org1.coloanex.com:
