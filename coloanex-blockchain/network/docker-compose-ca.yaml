@@ -1,3 +1,5 @@
+name: coloanex-blockchain
+
 networks:
   coloanex:
     name: coloanex_network
