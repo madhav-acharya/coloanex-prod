@@ -16,6 +16,17 @@ source "${SCRIPT_DIR}/utils.sh"
 
 ORDERER_TLS_CA="${NETWORK_DIR}/crypto-config/ordererOrganizations/orderer.coloanex.com/orderers/orderer.orderer.coloanex.com/tls/ca.crt"
 
+echo "Ensuring fabric-nodeenv:2.5 image is available..."
+docker pull hyperledger/fabric-nodeenv:2.5 2>/dev/null || true
+echo "fabric-nodeenv:2.5 ready."
+
+install_on_peer() {
+  local CC_NAME="${1}"
+  local PEER_LABEL="${2}"
+  peer lifecycle chaincode install "${CC_NAME}.tar.gz" 2>&1 | grep -v "already successfully installed" || true
+  echo "Installed/verified ${CC_NAME} on ${PEER_LABEL}"
+}
+
 install_chaincode() {
   local CC_NAME="${1}"
   local CC_PATH="${CHAINCODE_DIR}/${CC_NAME}"
@@ -36,19 +47,19 @@ install_chaincode() {
 
   echo "Installing ${CC_NAME} on Org1 peer0..."
   set_org1_peer0_vars
-  peer lifecycle chaincode install "${CC_NAME}.tar.gz"
+  install_on_peer "${CC_NAME}" "Org1 peer0"
 
   echo "Installing ${CC_NAME} on Org1 peer1..."
   set_org1_peer1_vars
-  peer lifecycle chaincode install "${CC_NAME}.tar.gz"
+  install_on_peer "${CC_NAME}" "Org1 peer1"
 
   echo "Installing ${CC_NAME} on Org2 peer0..."
   set_org2_peer0_vars
-  peer lifecycle chaincode install "${CC_NAME}.tar.gz"
+  install_on_peer "${CC_NAME}" "Org2 peer0"
 
   echo "Installing ${CC_NAME} on Org2 peer1..."
   set_org2_peer1_vars
-  peer lifecycle chaincode install "${CC_NAME}.tar.gz"
+  install_on_peer "${CC_NAME}" "Org2 peer1"
 
   PACKAGE_ID=$(peer lifecycle chaincode queryinstalled | grep "${CC_NAME}_${CC_VERSION}" | awk '{print $3}' | tr -d ',')
 
