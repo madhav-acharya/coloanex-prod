@@ -6,6 +6,7 @@ OrdererOrgs:
         SANS:
           - localhost
           - 127.0.0.1
+          - orderer.coloanex.com
 
 PeerOrgs:
   - Name: Org1
