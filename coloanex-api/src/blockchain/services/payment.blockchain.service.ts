@@ -26,11 +26,30 @@ export class PaymentBlockchainService
       await this.service.connect();
       this.logger.log('Connected to Fabric payments chaincode');
     } catch (error) {
-      this.logger.error(
-        'Failed to connect to Fabric payments chaincode',
-        error,
-      );
+      this.logBlockchainError('connect to payments chaincode', error);
     }
+  }
+
+  private logBlockchainError(operation: string, error: unknown): void {
+    const e = error as any;
+    const parts: string[] = [];
+    if (e?.message) parts.push(e.message);
+    if (e?.code !== undefined) parts.push(`gRPC code=${e.code}`);
+    if (e?.details) {
+      const details = Array.isArray(e.details)
+        ? e.details
+            .map(
+              (d: any) =>
+                `[${d.mspId ?? '?'}@${d.address ?? '?'}: ${d.message ?? JSON.stringify(d)}]`,
+            )
+            .join(', ')
+        : JSON.stringify(e.details);
+      parts.push(`details: ${details}`);
+    }
+    this.logger.error(
+      `Blockchain error — ${operation}: ${parts.join(' | ') || String(error)}`,
+      e?.stack,
+    );
   }
 
   async onApplicationShutdown(): Promise<void> {
@@ -63,10 +82,7 @@ export class PaymentBlockchainService
         penaltyAmount,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record payment on blockchain [${id}]`,
-        error,
-      );
+      this.logBlockchainError(`recordPayment [${id}]`, error);
       return null;
     }
   }
@@ -84,8 +100,8 @@ export class PaymentBlockchainService
         gatewayTransactionId,
       );
     } catch (error) {
-      this.logger.error(
-        `Failed to record updatePaymentStatus on blockchain [${id}]`,
+      this.logBlockchainError(
+        `updatePaymentStatus [${id}] -> ${newStatus}`,
         error,
       );
       return null;
