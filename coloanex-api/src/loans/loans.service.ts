@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
@@ -21,6 +22,12 @@ import {
   ActivityEntityType,
   ActivityAction,
 } from '../activity-logs/entities/activity-log.entity';
+
+const DB_TO_BLOCKCHAIN_STATUS: Partial<Record<LoanStatus, string>> = {
+  [LoanStatus.SUBMITTED]: 'PENDING',
+  [LoanStatus.UNDER_REVIEW]: 'UNDER_REVIEW',
+  [LoanStatus.REJECTED]: 'REJECTED',
+};
 
 @Injectable()
 export class LoansService {
@@ -231,8 +238,8 @@ export class LoansService {
       },
     });
 
-    this.loanBlockchainService
-      .createLoan(
+    try {
+      const bcResult = await this.loanBlockchainService.createLoan(
         loan.id,
         loan.borrowerId,
         loan.tenantId,
@@ -240,18 +247,20 @@ export class LoansService {
         loan.purpose,
         loan.collateralDetails as Record<string, unknown>,
         loan.requestedTermMonths,
-      )
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.loan.update({
-            where: { id: loan.id },
-            data: { blockchainTxHash: result.txId },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(`Blockchain createLoan failed [${loan.id}]`, err),
       );
+      if (bcResult?.txId) {
+        await this.prisma.loan.update({
+          where: { id: loan.id },
+          data: { blockchainTxHash: bcResult.txId },
+        });
+      }
+    } catch (err) {
+      this.logger.error(`Blockchain createLoan failed [${loan.id}]`, err);
+      await this.prisma.loan.delete({ where: { id: loan.id } });
+      throw new InternalServerErrorException(
+        'Failed to record loan on blockchain. Please try again.',
+      );
+    }
 
     await this.activityLogsService.logUserActivity(
       user.sub,
@@ -617,6 +626,40 @@ export class LoansService {
       updateData.ruleId = reviewLoanDto.ruleId;
     }
 
+    if (reviewLoanDto.status === LoanStatus.APPROVED) {
+      const bcResult = await this.loanBlockchainService.approveLoan(
+        id,
+        String(reviewLoanDto.approvedAmount!),
+        reviewLoanDto.approvedTermMonths!,
+        {
+          borrowerId: loan.borrowerId,
+          tenantId: loan.tenantId,
+          requestedAmount: loan.requestedAmount.toString(),
+          purpose: loan.purpose,
+          collateralDetails: (loan.collateralDetails ?? {}) as Record<
+            string,
+            unknown
+          >,
+          requestedTermMonths: loan.requestedTermMonths,
+        },
+      );
+      if (bcResult?.txId) {
+        updateData.blockchainTxHash = bcResult.txId;
+      }
+    } else {
+      const blockchainStatus = DB_TO_BLOCKCHAIN_STATUS[reviewLoanDto.status];
+      if (blockchainStatus) {
+        const bcResult = await this.loanBlockchainService.updateLoanStatus(
+          id,
+          blockchainStatus,
+          reviewLoanDto.rejectionReason,
+        );
+        if (bcResult?.txId) {
+          updateData.blockchainTxHash = bcResult.txId;
+        }
+      }
+    }
+
     const updated = await this.prisma.loan.update({
       where: { id },
       data: updateData,
@@ -647,42 +690,6 @@ export class LoansService {
       } catch (error) {
         this.logger.error('Failed to generate contract:', error);
       }
-
-      this.loanBlockchainService
-        .approveLoan(
-          id,
-          String(reviewLoanDto.approvedAmount!),
-          reviewLoanDto.approvedTermMonths!,
-        )
-        .then((result) => {
-          if (result?.txId) {
-            return this.prisma.loan.update({
-              where: { id },
-              data: { blockchainTxHash: result.txId },
-            });
-          }
-        })
-        .catch((err) =>
-          this.logger.error(`Blockchain approveLoan failed [${id}]`, err),
-        );
-    } else {
-      this.loanBlockchainService
-        .updateLoanStatus(
-          id,
-          reviewLoanDto.status,
-          reviewLoanDto.rejectionReason,
-        )
-        .then((result) => {
-          if (result?.txId) {
-            return this.prisma.loan.update({
-              where: { id },
-              data: { blockchainTxHash: result.txId },
-            });
-          }
-        })
-        .catch((err) =>
-          this.logger.error(`Blockchain updateLoanStatus failed [${id}]`, err),
-        );
     }
 
     const action =
