@@ -44,6 +44,8 @@ start_network() {
 }
 
 stop_network() {
+  echo "Stopping chaincode services..."
+  docker rm -f chaincode-loans chaincode-contracts chaincode-payments 2>/dev/null || true
   echo "Stopping Hyperledger Fabric network..."
   docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose.yaml" down --volumes --remove-orphans
   docker-compose -p coloanex-blockchain -f "${NETWORK_DIR}/docker-compose-ca.yaml" down --volumes --remove-orphans
@@ -99,9 +101,14 @@ network_down() {
 
 MODE="${1}"
 
+deploy_all_chaincodes() {
+  bash "${SCRIPT_DIR}/deploy-chaincode.sh" all
+}
+
 case "${MODE}" in
   up)
     network_up
+    deploy_all_chaincodes
     ;;
   down)
     network_down
@@ -109,6 +116,7 @@ case "${MODE}" in
   restart)
     network_down
     network_up
+    deploy_all_chaincodes
     ;;
   generate)
     generate_crypto
