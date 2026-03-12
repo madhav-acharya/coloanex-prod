@@ -75,8 +75,8 @@ export class ContractChaincode extends Contract {
       termsAndConditions,
       disbursementInfo: null,
       signedAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: this.txTime(ctx),
+      updatedAt: this.txTime(ctx),
     };
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(contract)));
@@ -121,12 +121,12 @@ export class ContractChaincode extends Contract {
     const signature: ContractSignature = {
       signerId,
       signerRole,
-      signedAt: new Date().toISOString(),
+      signedAt: this.txTime(ctx),
       signatureHash,
     };
 
     contract.signatures.push(signature);
-    contract.updatedAt = new Date().toISOString();
+    contract.updatedAt = this.txTime(ctx);
 
     if (contract.status === "DRAFT") {
       contract.status = "PENDING_SIGNATURES";
@@ -151,8 +151,8 @@ export class ContractChaincode extends Contract {
     }
 
     contract.status = "ACTIVE";
-    contract.signedAt = new Date().toISOString();
-    contract.updatedAt = new Date().toISOString();
+    contract.signedAt = this.txTime(ctx);
+    contract.updatedAt = this.txTime(ctx);
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(contract)));
     ctx.stub.setEvent("ContractActivated", Buffer.from(JSON.stringify({ id })));
@@ -178,12 +178,12 @@ export class ContractChaincode extends Contract {
     }
 
     contract.disbursementInfo = {
-      disbursedAt: new Date().toISOString(),
+      disbursedAt: this.txTime(ctx),
       disbursedAmount,
       method,
       reference,
     };
-    contract.updatedAt = new Date().toISOString();
+    contract.updatedAt = this.txTime(ctx);
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(contract)));
     ctx.stub.setEvent(
@@ -211,7 +211,7 @@ export class ContractChaincode extends Contract {
 
     contract.totalAmountPaid = paid.toFixed(2);
     contract.outstandingBalance = Math.max(0, outstanding).toFixed(2);
-    contract.updatedAt = new Date().toISOString();
+    contract.updatedAt = this.txTime(ctx);
 
     if (outstanding <= 0) {
       contract.status = "COMPLETED";
@@ -250,7 +250,7 @@ export class ContractChaincode extends Contract {
     }
 
     contract.status = newStatus;
-    contract.updatedAt = new Date().toISOString();
+    contract.updatedAt = this.txTime(ctx);
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(contract)));
     ctx.stub.setEvent(
@@ -317,6 +317,11 @@ export class ContractChaincode extends Contract {
   async contractExists(ctx: Context, id: string): Promise<boolean> {
     const contractBytes = await ctx.stub.getState(id);
     return !!contractBytes && contractBytes.length > 0;
+  }
+
+  private txTime(ctx: Context): string {
+    const ts = ctx.stub.getTxTimestamp();
+    return new Date(Number(ts.seconds) * 1000).toISOString();
   }
 
   private async fetchContract(
