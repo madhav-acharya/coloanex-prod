@@ -120,7 +120,56 @@ coloanex-blockchain/
 
 ---
 
-## Getting Started
+## Chaincode as a Service (CCaaS)
+
+Chaincodes run as **persistent Docker containers** instead of being spawned on demand by peers. This avoids `dev-peer*` container sprawl and groups all blockchain containers under a single Docker Desktop project.
+
+**How it works:**
+
+1. Each chaincode is built into a Docker image (`coloanex-chaincode-loans:latest`, etc.)
+2. The CCaaS package installed on peers contains only a `connection.json` pointing to the running container — not actual chaincode code
+3. The peer **connects TO the chaincode** over gRPC instead of spawning a new container per call
+4. Containers are started with `--label com.docker.compose.project=coloanex-blockchain` so Docker Desktop groups them with the rest of the network
+
+**CCaaS container ports:**
+
+| Chaincode   | Container             | Port  |
+| ----------- | --------------------- | ----- |
+| `loans`     | `chaincode-loans`     | 9999  |
+| `contracts` | `chaincode-contracts` | 10000 |
+| `payments`  | `chaincode-payments`  | 10001 |
+
+**Docker Desktop groups (after `deploy:all`):**
+
+```
+coloanex-blockchain           ← peers, orderer, CAs, chaincode-* containers
+coloanex-blockchain-hlf-explorer
+postgresql
+oracle19c
+```
+
+> On network restart (`npm run network:restart`), the CCaaS containers are stopped first, then recreated by `deploy:all`.
+
+---
+
+## Data Consistency: Blockchain ↔ Database
+
+All blockchain calls in `coloanex-api` are **synchronous and fail-fast**:
+
+- **Create loan**: blockchain `createLoan` is awaited before returning. If it fails, the database record is rolled back and a `500` error is returned to the client.
+- **Review/approve loan**: blockchain `approveLoan` or `updateLoanStatus` is awaited **before** the database status update. If the blockchain call fails, the database is not modified and the error propagates to the client.
+
+This ensures the database and the Fabric ledger are never in an inconsistent state.
+
+**Common consistency errors:**
+
+| Error                                               | Cause                                                                                          | Fix                                                                                    |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ABORTED: Loan <id> does not exist`                 | Loan in DB but not on blockchain (from old fire-and-forget code or a failed blockchain create) | Delete the DB loan record and re-create it, or re-run `createLoan` for the affected ID |
+| `ABORTED: Loan must be UNDER_REVIEW to be approved` | Blockchain and DB loan statuses are out of sync                                                | Check the loan's on-chain state with `peer chaincode query` and reconcile              |
+| `ProposalResponsePayloads do not match`             | Non-deterministic chaincode (e.g. `new Date()`)                                                | All timestamps now use `ctx.stub.getTxTimestamp()` — deterministic across endorsers    |
+
+---
 
 ### 1. Install Fabric Binaries
 
@@ -515,6 +564,27 @@ If Docker is not able to pull `linux/amd64` images, ensure **Rosetta 2** is enab
 
 ## Troubleshooting
 
+**`ABORTED: Loan <id> does not exist`**
+
+The loan was recorded in the database but its blockchain `createLoan` transaction failed (e.g. network issue during creation). The loan ID does not exist in the Fabric ledger. Delete the database loan record and re-create the loan so both DB and blockchain are in sync.
+
+**`ABORTED: Loan must be UNDER_REVIEW to be approved`**
+
+The loan status in the database differs from its status on the Fabric ledger. This can occur if a previous review action updated the database but not the ledger (old fire-and-forget pattern). Query the on-chain state:
+
+```bash
+export FABRIC_CFG_PATH="$(pwd)/config"
+source scripts/utils.sh && set_org1_peer0_vars
+./bin/peer chaincode query -C coloanex-channel -n loans \
+  -c '{"Args":["GetLoan","<loan-id>"]}'
+```
+
+Reconcile by calling the appropriate status-update function directly or by re-deploying the chaincode after resetting the database.
+
+**`ProposalResponsePayloads do not match`**
+
+Caused by non-deterministic chaincode logic (e.g. `new Date()` called inside a transaction returns different timestamps on different endorsing peers). All timestamps in the chaincodes now use `ctx.stub.getTxTimestamp()` which is deterministic across peers. If this error reappears, search the chaincode source for `new Date()` and replace with `this.txTime(ctx)`.
+
 **`error: core.yaml not found`**
 
 `FABRIC_CFG_PATH` must point to the `config/` directory. The scripts set this automatically. If calling `peer` manually:
@@ -562,7 +632,7 @@ Use these steps to confirm the Fabric network is live and the API is recording o
 docker ps --format "table {{.Names}}\t{{.Status}}"
 ```
 
-You should see 9 containers: `ca.org1`, `ca.org2`, `ca.orderer`, `orderer`, `peer0.org1`, `peer1.org1`, `peer0.org2`, `peer1.org2`.
+You should see **12 containers**: `ca.org1`, `ca.org2`, `ca.orderer`, `orderer`, `peer0.org1`, `peer1.org1`, `peer0.org2`, `peer1.org2`, and `chaincode-loans`, `chaincode-contracts`, `chaincode-payments` (3 CCaaS chaincode containers).
 
 ### 2. Check chaincode is installed and committed
 
