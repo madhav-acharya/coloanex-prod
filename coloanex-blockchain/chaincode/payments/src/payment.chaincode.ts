@@ -53,13 +53,13 @@ export class PaymentChaincode extends Contract {
       amount,
       paymentMethod: paymentMethod as PaymentAsset["paymentMethod"],
       status: "PENDING",
-      paymentDate: new Date().toISOString(),
+      paymentDate: this.txTime(ctx),
       reference,
       gatewayTransactionId: null,
       installmentNumbers: JSON.parse(installmentNumbersJson),
       penaltyAmount,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: this.txTime(ctx),
+      updatedAt: this.txTime(ctx),
     };
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(payment)));
@@ -100,7 +100,7 @@ export class PaymentChaincode extends Contract {
     }
 
     payment.status = newStatus;
-    payment.updatedAt = new Date().toISOString();
+    payment.updatedAt = this.txTime(ctx);
 
     if (gatewayTransactionId) {
       payment.gatewayTransactionId = gatewayTransactionId;
@@ -189,6 +189,11 @@ export class PaymentChaincode extends Contract {
   async paymentExists(ctx: Context, id: string): Promise<boolean> {
     const paymentBytes = await ctx.stub.getState(id);
     return !!paymentBytes && paymentBytes.length > 0;
+  }
+
+  private txTime(ctx: Context): string {
+    const ts = ctx.stub.getTxTimestamp();
+    return new Date(Number(ts.seconds) * 1000).toISOString();
   }
 
   private async fetchPayment(ctx: Context, id: string): Promise<PaymentAsset> {

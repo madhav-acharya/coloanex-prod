@@ -13,6 +13,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { FabricConnectionProfile, TransactionResult } from "./types";
 
+const RECONNECT_GRPC_CODES = new Set([9, 14]);
+const RECONNECT_RETRY_DELAYS_MS = [2000, 4000, 8000];
+
 export class FabricGatewayClient {
   private gateway: Gateway | null = null;
   private client: grpc.Client | null = null;
@@ -56,18 +59,35 @@ export class FabricGatewayClient {
     try {
       return await this.executeTransaction(fnName, args);
     } catch (error: any) {
-      if (error?.code === 14 && !this.reconnecting) {
+      if (RECONNECT_GRPC_CODES.has(error?.code) && !this.reconnecting) {
         this.reconnecting = true;
         console.warn(
-          `[FabricGatewayClient] gRPC connection lost (code=14) for chaincode "${this.profile.chaincodeName}" — reconnecting...`,
+          `[FabricGatewayClient] gRPC error (code=${error?.code}) for chaincode "${this.profile.chaincodeName}" — reconnecting...`,
         );
         try {
+          for (const delay of RECONNECT_RETRY_DELAYS_MS) {
+            await new Promise((r) => setTimeout(r, delay));
+            await this.disconnect();
+            await this.connect();
+            try {
+              const result = await this.executeTransaction(fnName, args);
+              console.warn(
+                `[FabricGatewayClient] Reconnected successfully to chaincode "${this.profile.chaincodeName}"`,
+              );
+              return result;
+            } catch (retryError: any) {
+              if (!RECONNECT_GRPC_CODES.has(retryError?.code)) {
+                throw retryError;
+              }
+            }
+          }
           await this.disconnect();
           await this.connect();
+          const result = await this.executeTransaction(fnName, args);
           console.warn(
             `[FabricGatewayClient] Reconnected successfully to chaincode "${this.profile.chaincodeName}"`,
           );
-          return await this.executeTransaction(fnName, args);
+          return result;
         } catch (reconnectError: any) {
           console.error(
             `[FabricGatewayClient] Reconnection failed for chaincode "${this.profile.chaincodeName}": ${reconnectError?.message ?? reconnectError}`,
@@ -104,10 +124,62 @@ export class FabricGatewayClient {
     ...args: string[]
   ): Promise<unknown> {
     this.ensureConnected();
-    const result = await this.contract!.evaluateTransaction(fnName, ...args);
-    return result.length > 0
-      ? JSON.parse(Buffer.from(result).toString())
-      : null;
+    try {
+      const result = await this.contract!.evaluateTransaction(fnName, ...args);
+      return result.length > 0
+        ? JSON.parse(Buffer.from(result).toString())
+        : null;
+    } catch (error: any) {
+      if (RECONNECT_GRPC_CODES.has(error?.code) && !this.reconnecting) {
+        this.reconnecting = true;
+        console.warn(
+          `[FabricGatewayClient] gRPC error (code=${error?.code}) for chaincode "${this.profile.chaincodeName}" — reconnecting...`,
+        );
+        try {
+          for (const delay of RECONNECT_RETRY_DELAYS_MS) {
+            await new Promise((r) => setTimeout(r, delay));
+            await this.disconnect();
+            await this.connect();
+            try {
+              const evalResult = await this.contract!.evaluateTransaction(
+                fnName,
+                ...args,
+              );
+              console.warn(
+                `[FabricGatewayClient] Reconnected successfully to chaincode "${this.profile.chaincodeName}"`,
+              );
+              return evalResult.length > 0
+                ? JSON.parse(Buffer.from(evalResult).toString())
+                : null;
+            } catch (retryError: any) {
+              if (!RECONNECT_GRPC_CODES.has(retryError?.code)) {
+                throw retryError;
+              }
+            }
+          }
+          await this.disconnect();
+          await this.connect();
+          const finalResult = await this.contract!.evaluateTransaction(
+            fnName,
+            ...args,
+          );
+          console.warn(
+            `[FabricGatewayClient] Reconnected successfully to chaincode "${this.profile.chaincodeName}"`,
+          );
+          return finalResult.length > 0
+            ? JSON.parse(Buffer.from(finalResult).toString())
+            : null;
+        } catch (reconnectError: any) {
+          console.error(
+            `[FabricGatewayClient] Reconnection failed for chaincode "${this.profile.chaincodeName}": ${reconnectError?.message ?? reconnectError}`,
+          );
+          throw reconnectError;
+        } finally {
+          this.reconnecting = false;
+        }
+      }
+      throw error;
+    }
   }
 
   private ensureConnected(): void {

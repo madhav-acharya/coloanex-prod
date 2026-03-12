@@ -37,6 +37,7 @@ export class LoanChaincode extends Contract {
       throw new Error(`Loan ${id} already exists`);
     }
 
+    const now = this.txTime(ctx);
     const loan: LoanAsset = {
       docType: "loan",
       id,
@@ -50,8 +51,8 @@ export class LoanChaincode extends Contract {
       approvedTermMonths: null,
       status: "DRAFT",
       rejectionReason: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(loan)));
@@ -92,7 +93,7 @@ export class LoanChaincode extends Contract {
     }
 
     loan.status = newStatus;
-    loan.updatedAt = new Date().toISOString();
+    loan.updatedAt = this.txTime(ctx);
 
     if (newStatus === "REJECTED" && reason) {
       loan.rejectionReason = reason;
@@ -122,7 +123,7 @@ export class LoanChaincode extends Contract {
     loan.approvedAmount = approvedAmount;
     loan.approvedTermMonths = approvedTermMonths;
     loan.status = "APPROVED";
-    loan.updatedAt = new Date().toISOString();
+    loan.updatedAt = this.txTime(ctx);
 
     await ctx.stub.putState(id, Buffer.from(JSON.stringify(loan)));
     ctx.stub.setEvent(
@@ -186,6 +187,11 @@ export class LoanChaincode extends Contract {
   async loanExists(ctx: Context, id: string): Promise<boolean> {
     const loanBytes = await ctx.stub.getState(id);
     return !!loanBytes && loanBytes.length > 0;
+  }
+
+  private txTime(ctx: Context): string {
+    const ts = ctx.stub.getTxTimestamp();
+    return new Date(Number(ts.seconds) * 1000).toISOString();
   }
 
   private async fetchLoan(ctx: Context, id: string): Promise<LoanAsset> {
