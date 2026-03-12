@@ -42,8 +42,12 @@ export class LoanFabricService {
   }
 
   async updateLoanStatus(id: string, newStatus: string, reason?: string) {
-    const args = reason ? [id, newStatus, reason] : [id, newStatus];
-    return this.client.submitTransaction("updateLoanStatus", ...args);
+    return this.client.submitTransaction(
+      "updateLoanStatus",
+      id,
+      newStatus,
+      reason ?? "",
+    );
   }
 
   async approveLoan(
