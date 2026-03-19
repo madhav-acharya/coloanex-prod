@@ -147,11 +147,12 @@ export class AnalyticsService {
   }
 
   async getBorrowerAnalytics(user: any) {
-    const borrower = await this.prisma.borrower.findFirst({
+    const borrowers = await this.prisma.borrower.findMany({
       where: { userId: user.id },
+      select: { id: true },
     });
 
-    if (!borrower) {
+    if (!borrowers.length) {
       return {
         totalLoans: 0,
         activeLoans: 0,
@@ -162,6 +163,8 @@ export class AnalyticsService {
       };
     }
 
+    const borrowerIds = borrowers.map((b) => b.id);
+
     const [
       totalLoans,
       activeLoans,
@@ -170,26 +173,28 @@ export class AnalyticsService {
       pendingSchedules,
       overdueSchedules,
     ] = await Promise.all([
-      this.prisma.loan.count({ where: { borrowerId: borrower.id } }),
       this.prisma.loan.count({
-        where: { borrowerId: borrower.id, status: 'APPROVED' },
+        where: { borrowerId: { in: borrowerIds } },
+      }),
+      this.prisma.loan.count({
+        where: { borrowerId: { in: borrowerIds }, status: 'APPROVED' },
       }),
       this.prisma.contract.findMany({
-        where: { loan: { borrowerId: borrower.id } },
+        where: { loan: { borrowerId: { in: borrowerIds } } },
         select: { loanAmount: true },
       }),
       this.prisma.transaction.aggregate({
         where: {
           type: { in: ['INSTALLMENT_PAYMENT', 'PENALTY_PAYMENT'] },
           status: 'COMPLETED',
-          contract: { loan: { borrowerId: borrower.id } },
+          contract: { loan: { borrowerId: { in: borrowerIds } } },
         },
         _sum: { amount: true },
       }),
       this.prisma.paymentSchedule.aggregate({
         where: {
           status: 'PENDING',
-          contract: { loan: { borrowerId: borrower.id } },
+          contract: { loan: { borrowerId: { in: borrowerIds } } },
         },
         _sum: { totalAmount: true },
       }),
@@ -197,7 +202,7 @@ export class AnalyticsService {
         where: {
           status: 'PENDING',
           dueDate: { lt: new Date() },
-          contract: { loan: { borrowerId: borrower.id } },
+          contract: { loan: { borrowerId: { in: borrowerIds } } },
         },
       }),
     ]);
