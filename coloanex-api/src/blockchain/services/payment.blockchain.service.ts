@@ -107,4 +107,14 @@ export class PaymentBlockchainService
       return null;
     }
   }
+
+  async getPaymentHistory(id: string): Promise<any> {
+    if (!this.enabled) return null;
+    try {
+      return await this.service.getPaymentHistory(id);
+    } catch (error) {
+      this.logBlockchainError(`getPaymentHistory [${id}]`, error);
+      throw error;
+    }
+  }
 }
