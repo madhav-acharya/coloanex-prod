@@ -75,4 +75,9 @@ export const transactionsApi = {
     });
     return response.data;
   },
+
+  getBlockchainHistory: async (id: string): Promise<any> => {
+    const response = await client.get(`/transactions/${id}/blockchain-history`);
+    return response.data;
+  },
 };
