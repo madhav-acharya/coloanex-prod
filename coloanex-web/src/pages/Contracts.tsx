@@ -11,7 +11,6 @@ import {
   ExternalLink,
   FilePlus,
   ShieldCheck,
-  CreditCard,
   CheckCircle2,
   AlertCircle,
   Banknote,
@@ -48,6 +47,7 @@ import {
   useVerifyPaymentMutation,
 } from "@/apis/paymentsApi";
 import { useGetMyWalletQuery } from "@/apis/walletsApi";
+import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 
 type ContractStatus =
   | "DRAFT"
@@ -132,6 +132,8 @@ export default function Contracts() {
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null,
   );
+  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<any>(null);
   const [disburseData, setDisburseData] = useState<DisburseContractDto>({
     method: "WALLET",
     accountNumber: "",
@@ -218,6 +220,27 @@ export default function Contracts() {
       ),
     },
     {
+      key: "blockchain",
+      label: "Blockchain",
+      sortable: false,
+      render: (contract) =>
+        contract.blockchainData?.transactionHash ? (
+          <Badge
+            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(contract)}
+          >
+            On-Chain
+          </Badge>
+        ) : (
+          <Badge
+            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(contract)}
+          >
+            Off-Chain
+          </Badge>
+        ),
+    },
+    {
       key: "borrower",
       label: "Borrower",
       render: (c) => c.borrower?.user?.fullName ?? "—",
@@ -290,6 +313,25 @@ export default function Contracts() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBlockchainVerify = (contract: Contract) => {
+    setSelectedBlockchainRecord({
+      id: contract.id,
+      type: 'contract',
+      status: contract.status,
+      amount: contract.loanAmount,
+      transactionHash: contract.blockchainData?.transactionHash,
+      createdAt: contract.createdAt,
+      updatedAt: contract.updatedAt,
+      details: {
+        contractNumber: contract.contractNumber,
+        borrower: contract.loan?.borrower?.user?.fullName,
+        interestRate: contract.interestRate,
+        termMonths: contract.termMonths
+      }
+    });
+    setBlockchainModalOpen(true);
   };
 
   useEffect(() => {
@@ -1111,6 +1153,12 @@ export default function Contracts() {
         title="Delete Contract"
         description={`Are you sure you want to delete contract "${contractToDelete?.contractNumber}"? This cannot be undone.`}
         isLoading={isDeleting}
+      />
+
+      <BlockchainVerificationModal
+        open={blockchainModalOpen}
+        onOpenChange={setBlockchainModalOpen}
+        record={selectedBlockchainRecord}
       />
     </DashboardLayout>
   );
