@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Eye, Plus, RefreshCw, FileText } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -7,6 +7,7 @@ import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 import {
   Dialog,
   DialogContent,
@@ -18,8 +19,6 @@ import { FormSheet } from "@/components/shared/FormSheet";
 import {
   useGetMyWalletQuery,
   useCreateWalletMutation,
-  useUpdateWalletBalanceMutation,
-  Wallet,
 } from "@/apis/walletsApi";
 import {
   useGetTransactionsByWalletQuery,
@@ -44,6 +43,8 @@ export default function Wallets() {
     amount: "",
     description: "",
   });
+  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<any>(null);
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
   const { data: transactions = [] } = useGetTransactionsByWalletQuery(
@@ -53,8 +54,6 @@ export default function Wallets() {
     },
   );
   const [createWallet, { isLoading: isCreating }] = useCreateWalletMutation();
-  const [updateBalance, { isLoading: isUpdating }] =
-    useUpdateWalletBalanceMutation();
   const [createTransaction, { isLoading: isCreatingTransaction }] =
     useCreateTransactionMutation();
 
@@ -165,6 +164,27 @@ export default function Wallets() {
       },
     },
     {
+      key: "blockchain",
+      label: "Blockchain",
+      sortable: false,
+      render: (transaction) =>
+        transaction.blockchainTxHash ? (
+          <Badge
+            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(transaction)}
+          >
+            On-Chain
+          </Badge>
+        ) : (
+          <Badge
+            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(transaction)}
+          >
+            Off-Chain
+          </Badge>
+        ),
+    },
+    {
       key: "paymentDetails",
       label: "Description",
       render: (transaction) => transaction.paymentDetails?.remarks || "-",
@@ -223,6 +243,24 @@ export default function Wallets() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBlockchainVerify = (transaction: Transaction) => {
+    setSelectedBlockchainRecord({
+      id: transaction.id,
+      type: 'payment',
+      status: transaction.status,
+      amount: transaction.amount,
+      transactionHash: transaction.blockchainTxHash,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      details: {
+        type: transaction.type,
+        description: transaction.paymentDetails?.remarks,
+        walletId: transaction.walletId
+      }
+    });
+    setBlockchainModalOpen(true);
   };
 
   if (isLoading) {
@@ -371,6 +409,7 @@ export default function Wallets() {
             onSort={handleSort}
             sortBy={sortBy}
             sortOrder={sortOrder}
+            actions={[]}
           />
 
           <div className="mt-6">
@@ -435,6 +474,12 @@ export default function Wallets() {
           submitText="Load Wallet"
           cancelText="Cancel"
           isSubmitting={isCreatingTransaction}
+        />
+
+        <BlockchainVerificationModal
+          open={blockchainModalOpen}
+          onOpenChange={setBlockchainModalOpen}
+          record={selectedBlockchainRecord}
         />
       </div>
     </DashboardLayout>
