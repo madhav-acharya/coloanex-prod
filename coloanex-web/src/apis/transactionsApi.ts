@@ -29,6 +29,7 @@ export interface Transaction {
   status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   paymentDetails?: PaymentDetails;
   gatewayDetails?: GatewayDetails;
+  blockchainTxHash?: string;
   createdAt: string;
   updatedAt: string;
   contract?: {
@@ -88,6 +89,10 @@ export const transactionsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Transactions"],
     }),
+
+    getTransactionBlockchainHistory: builder.query<any, string>({
+      query: (id) => `/transactions/${id}/blockchain-history`,
+    }),
   }),
 });
 
@@ -97,4 +102,5 @@ export const {
   useGetTransactionsByWalletQuery,
   useGetTransactionQuery,
   useUpdateTransactionStatusMutation,
+  useGetTransactionBlockchainHistoryQuery,
 } = transactionsApi;
