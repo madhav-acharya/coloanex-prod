@@ -23,7 +23,6 @@ import {
   FileText,
   Landmark,
   ScrollText,
-  FileSignature,
   Wallet,
   Lock,
 } from "lucide-react";
