@@ -152,4 +152,14 @@ export class LoanBlockchainService
       throw error;
     }
   }
+
+  async getLoanHistory(id: string): Promise<any> {
+    if (!this.enabled) return null;
+    try {
+      return await this.service.getLoanHistory(id);
+    } catch (error) {
+      this.logBlockchainError(`getLoanHistory [${id}]`, error);
+      throw error;
+    }
+  }
 }
