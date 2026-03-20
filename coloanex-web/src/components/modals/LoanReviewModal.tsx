@@ -512,7 +512,7 @@ export function LoanReviewModal({
               <button
                 onClick={() => setConfirmDialogOpen(false)}
                 disabled={isSubmitting}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
               >
                 <X size={20} />
               </button>
@@ -520,7 +520,7 @@ export function LoanReviewModal({
 
             <div className="space-y-5 mb-6">
               {/* Borrower Info Section */}
-              <div className="bg-slate-100 dark:bg-muted/50 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-border">
+              <div className="bg-black-300 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-border">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Loan Information
                 </h4>
