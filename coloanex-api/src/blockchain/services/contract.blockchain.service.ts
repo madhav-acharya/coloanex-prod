@@ -179,4 +179,14 @@ export class ContractBlockchainService
       return null;
     }
   }
+
+  async getContractHistory(id: string): Promise<any> {
+    if (!this.enabled) return null;
+    try {
+      return await this.service.getContractHistory(id);
+    } catch (error) {
+      this.logBlockchainError(`getContractHistory [${id}]`, error);
+      throw error;
+    }
+  }
 }
