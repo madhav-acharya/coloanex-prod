@@ -4,6 +4,7 @@ import {
   BadRequestException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -13,13 +14,17 @@ import {
   TransactionType,
 } from './entities/transaction.entity';
 import { WalletsService } from '../wallets/wallets.service';
+import { PaymentBlockchainService } from '../blockchain/services/payment.blockchain.service';
 
 @Injectable()
 export class TransactionsService {
+  private readonly logger = new Logger(TransactionsService.name);
+
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => WalletsService))
     private walletsService: WalletsService,
+    private paymentBlockchainService: PaymentBlockchainService,
   ) {}
 
   async create(
@@ -175,5 +180,39 @@ export class TransactionsService {
         },
       },
     }) as unknown as Transaction;
+  }
+
+  async getBlockchainHistory(id: string) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id },
+      include: {
+        contract: true,
+        wallet: true,
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException(`Transaction with ID ${id} not found`);
+    }
+
+    try {
+      const history = await this.paymentBlockchainService.getPaymentHistory(id);
+      return {
+        transactionId: id,
+        history: history || [],
+        blockchainEnabled: process.env.BLOCKCHAIN_ENABLED === 'true',
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch blockchain history for transaction ${id}`,
+        error,
+      );
+      return {
+        transactionId: id,
+        history: [],
+        blockchainEnabled: process.env.BLOCKCHAIN_ENABLED === 'true',
+        error: 'Failed to fetch blockchain history',
+      };
+    }
   }
 }
