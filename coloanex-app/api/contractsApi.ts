@@ -127,4 +127,9 @@ export const contractsApi = {
     const response = await client.post(`/contracts/${id}/report`, data);
     return response.data;
   },
+
+  getBlockchainHistory: async (id: string): Promise<any> => {
+    const response = await client.get(`/contracts/${id}/blockchain-history`);
+    return response.data;
+  },
 };
