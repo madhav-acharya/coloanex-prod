@@ -222,6 +222,10 @@ export const contractsApi = baseApi.injectEndpoints({
         { type: "Contracts", id: "LIST" },
       ],
     }),
+
+    getContractBlockchainHistory: builder.query<any, string>({
+      query: (id) => `/contracts/${id}/blockchain-history`,
+    }),
   }),
 });
 
@@ -235,4 +239,5 @@ export const {
   useDeleteContractMutation,
   useGenerateContractPdfMutation,
   useSignAndDisburseContractMutation,
+  useGetContractBlockchainHistoryQuery,
 } = contractsApi;
