@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Banknote,
 } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -80,19 +81,19 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
   DRAFT:
     "bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
   GENERATED:
-    "bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border-blue-200 dark:border-blue-800",
+    "bg-blue-100 dark:bg-blue-600 text-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800",
   SIGNED:
-    "bg-purple-100 dark:bg-purple-600 text-white dark:text-purple-300 border-purple-200 dark:border-purple-800",
+    "bg-purple-100 dark:bg-purple-600 text-purple-900 dark:text-purple-300 border-purple-200 dark:border-purple-800",
   ACTIVE:
-    "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
+    "bg-green-100 dark:bg-green-600 text-green-900 dark:text-green-300 border-green-200 dark:border-green-800",
   COMPLETED:
-    "bg-emerald-100 dark:bg-emerald-600 text-white dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    "bg-emerald-100 dark:bg-emerald-600 text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   DEFAULTED:
-    "bg-red-100 dark:bg-red-600 text-white dark:text-red-300 border-red-200 dark:border-red-800",
+    "bg-red-100 dark:bg-red-600 text-red-900 dark:text-red-300 border-red-200 dark:border-red-800",
   CANCELLED:
     "bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
   REPORTED:
-    "bg-orange-100 dark:bg-orange-600 text-white dark:text-orange-300 border-orange-200 dark:border-orange-800",
+    "bg-orange-100 dark:bg-orange-600 text-orange-900 dark:text-orange-300 border-orange-200 dark:border-orange-800",
 };
 
 function ContractStatusBadge({ status }: { status: ContractStatus }) {
@@ -133,7 +134,8 @@ export default function Contracts() {
     null,
   );
   const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<any>(null);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
+    useState<any>(null);
   const [disburseData, setDisburseData] = useState<DisburseContractDto>({
     method: "WALLET",
     accountNumber: "",
@@ -223,8 +225,13 @@ export default function Contracts() {
       key: "blockchain",
       label: "Blockchain",
       sortable: false,
-      render: (contract) =>
-        contract.blockchainData?.transactionHash ? (
+      render: (contract) => {
+        const hasBlockchainData = contract.blockchainData?.txId ||
+          contract.blockchainData?.signTxId ||
+          contract.blockchainData?.disburseTxId ||
+          contract.blockchainData?.transactionHash;
+
+        return hasBlockchainData ? (
           <Badge
             className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
             onClick={() => handleBlockchainVerify(contract)}
@@ -238,7 +245,8 @@ export default function Contracts() {
           >
             Off-Chain
           </Badge>
-        ),
+        );
+      }
     },
     {
       key: "borrower",
@@ -249,7 +257,12 @@ export default function Contracts() {
       key: "loanAmount",
       label: "Amount",
       sortable: true,
-      render: (c) => `NPR ${c.loanAmount.toLocaleString()}`,
+      render: (c) => (
+        <span className="flex items-center gap-1">
+          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+          {c.loanAmount.toLocaleString()}
+        </span>
+      ),
     },
     {
       key: "interestRate",
@@ -267,7 +280,12 @@ export default function Contracts() {
       key: "outstandingBalance",
       label: "Outstanding",
       sortable: true,
-      render: (c) => `NPR ${c.outstandingBalance.toLocaleString()}`,
+      render: (c) => (
+        <span className="flex items-center gap-1">
+          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+          {c.outstandingBalance.toLocaleString()}
+        </span>
+      ),
     },
     {
       key: "createdAt",
@@ -288,6 +306,7 @@ export default function Contracts() {
       toast({
         title: "Success",
         description: "Contract PDF generated successfully",
+        variant: "success",
       });
     } catch (err: any) {
       sonnerToast.dismiss(toastId);
@@ -303,7 +322,11 @@ export default function Contracts() {
     if (!contractToDelete) return;
     try {
       await deleteContract(contractToDelete.id).unwrap();
-      toast({ title: "Success", description: "Contract deleted successfully" });
+      toast({
+        title: "Success",
+        description: "Contract deleted successfully",
+        variant: "success"
+      });
       setDeleteDialogOpen(false);
       setContractToDelete(null);
     } catch (err: any) {
@@ -318,18 +341,22 @@ export default function Contracts() {
   const handleBlockchainVerify = (contract: Contract) => {
     setSelectedBlockchainRecord({
       id: contract.id,
-      type: 'contract',
+      type: "contract",
       status: contract.status,
       amount: contract.loanAmount,
-      transactionHash: contract.blockchainData?.transactionHash,
+      transactionHash:
+        contract.blockchainData?.txId ||
+        contract.blockchainData?.signTxId ||
+        contract.blockchainData?.disburseTxId ||
+        contract.blockchainData?.transactionHash,
       createdAt: contract.createdAt,
       updatedAt: contract.updatedAt,
       details: {
         contractNumber: contract.contractNumber,
-        borrower: contract.loan?.borrower?.user?.fullName,
+        borrower: contract.borrower?.user?.fullName,
         interestRate: contract.interestRate,
-        termMonths: contract.termMonths
-      }
+        termMonths: contract.termMonths,
+      },
     });
     setBlockchainModalOpen(true);
   };
@@ -405,6 +432,7 @@ export default function Contracts() {
           title: "Success",
           description:
             "Contract signed and loan disbursed successfully via eSewa.",
+          variant: "success",
         });
         refetchContracts();
       })
@@ -475,6 +503,7 @@ export default function Contracts() {
           title: "Success",
           description:
             "Contract signed and loan disbursed successfully via Khalti.",
+          variant: "success",
         });
         refetchContracts();
       })
@@ -489,6 +518,34 @@ export default function Contracts() {
         });
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clean up old session storage entries
+  useEffect(() => {
+    const cleanupOldEntries = () => {
+      const now = Date.now();
+      const keys = Object.keys(sessionStorage);
+
+      keys.forEach(key => {
+        if (key.startsWith('khalti_test_processed_') || key.startsWith('last_khalti_attempt_')) {
+          try {
+            const value = sessionStorage.getItem(key);
+            if (value && !isNaN(Number(value))) {
+              const timestamp = parseInt(value);
+              if (now - timestamp > 3600000) { // 1 hour
+                sessionStorage.removeItem(key);
+              }
+            } else if (key.startsWith('khalti_test_processed_')) {
+              sessionStorage.removeItem(key);
+            }
+          } catch (error) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      });
+    };
+
+    cleanupOldEntries();
   }, []);
 
   const openSdDialog = (c: Contract) => {
@@ -517,6 +574,7 @@ export default function Contracts() {
       toast({
         title: "Success",
         description: "Contract signed and loan disbursed successfully.",
+        variant: "success",
       });
       setSdDialogOpen(false);
       setContractToSd(null);
@@ -592,6 +650,23 @@ export default function Contracts() {
       });
       return;
     }
+
+    // Prevent rapid successive payments
+    const lastAttemptKey = `last_khalti_attempt_${contractToSd.id}`;
+    const lastAttempt = sessionStorage.getItem(lastAttemptKey);
+    const now = Date.now();
+
+    if (lastAttempt && (now - parseInt(lastAttempt)) < 5000) { // 5 second cooldown
+      toast({
+        title: "Please Wait",
+        description: "Please wait a moment before trying again",
+        variant: "warning",
+      });
+      return;
+    }
+
+    sessionStorage.setItem(lastAttemptKey, now.toString());
+
     try {
       const successUrl = `${window.location.origin}${window.location.pathname}?sd_khalti=1`;
       const failureUrl = `${window.location.origin}${window.location.pathname}?sd_khalti_fail=1`;
@@ -633,7 +708,11 @@ export default function Contracts() {
         id: contractToDisburse.id,
         data: disburseData,
       }).unwrap();
-      toast({ title: "Success", description: "Loan disbursed successfully" });
+      toast({
+        title: "Success",
+        description: "Loan disbursed successfully",
+        variant: "success"
+      });
       setDisburseDialogOpen(false);
       setContractToDisburse(null);
       setDisburseData({
@@ -875,8 +954,9 @@ export default function Contracts() {
                   <span className="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Amount
                   </span>
-                  <span className="text-xs font-bold text-foreground mt-1">
-                    NPR {contractToSd.loanAmount.toLocaleString()}
+                  <span className="text-xs font-bold text-foreground mt-1 flex items-center gap-1">
+                    <IconCurrencyRupeeNepalese className="inline h-3.5 w-3.5" />
+                    {contractToSd.loanAmount.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex flex-col items-center rounded-lg bg-muted/50 border px-3 py-2.5">
@@ -1046,7 +1126,7 @@ export default function Contracts() {
                       : "/khalti-logo.png"
                   }
                   alt={sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
-                  className="h-4 w-auto object-contain brightness-0 invert"
+                  className="h-4 w-auto object-contain"
                 />
                 {isInitiatingPayment
                   ? "Redirecting…"
@@ -1171,18 +1251,33 @@ function ContractDetailFallback({ contract }: { contract: Contract }) {
     { label: "Borrower", value: contract.borrower?.user?.fullName ?? "—" },
     {
       label: "Loan Amount",
-      value: `NPR ${contract.loanAmount.toLocaleString()}`,
+      value: (
+        <span className="flex items-center gap-1">
+          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+          {contract.loanAmount.toLocaleString()}
+        </span>
+      ),
     },
     { label: "Interest Rate", value: `${contract.interestRate}%` },
     { label: "Term", value: `${contract.termMonths} months` },
     { label: "Payment Frequency", value: contract.paymentFrequency },
     {
       label: "Total Amount Due",
-      value: `NPR ${contract.totalAmountDue.toLocaleString()}`,
+      value: (
+        <span className="flex items-center gap-1">
+          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+          {contract.totalAmountDue.toLocaleString()}
+        </span>
+      ),
     },
     {
       label: "Installment Amount",
-      value: `NPR ${contract.installmentAmount.toLocaleString()}`,
+      value: (
+        <span className="flex items-center gap-1">
+          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+          {contract.installmentAmount.toLocaleString()}
+        </span>
+      ),
     },
     { label: "Total Installments", value: String(contract.totalInstallments) },
     {
