@@ -13,7 +13,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, contractsApi, paymentSchedulesApi } from "@/api";
-import { useToast, AppHeader } from "@/components/ui";
+import { useToast, AppHeader, CurrencyIcon } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentSchedule } from "@/api/paymentSchedulesApi";
@@ -37,6 +37,39 @@ function DetailRow({
       <Text style={[detailRowStyle.value, { color: colors.text }]}>
         {value}
       </Text>
+    </View>
+  );
+}
+
+function CurrencyDetailRow({
+  label,
+  amount,
+  colors,
+}: {
+  label: string;
+  amount: number | null | undefined;
+  colors: Record<string, string>;
+}) {
+  const safeAmount = amount ?? 0;
+
+  return (
+    <View style={[detailRowStyle.row, { borderBottomColor: colors.border }]}>
+      <Text style={[detailRowStyle.label, { color: colors.textSecondary }]}>
+        {label}
+      </Text>
+      <View style={{ alignItems: "flex-end" }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <CurrencyIcon size={14} color="#16A34A" />
+          <Text
+            style={[
+              detailRowStyle.value,
+              { color: colors.text, marginLeft: 4 },
+            ]}
+          >
+            {safeAmount.toLocaleString("en-NP")}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -193,6 +226,35 @@ export default function LoanDetailsScreen() {
   const [contract, setContract] = useState<Contract | null>(null);
   const [schedule, setSchedule] = useState<PaymentSchedule[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const formatCurrencyWithIcon = (
+    value: number | null | undefined,
+    isPositive: boolean = true,
+    size: number = 16,
+  ) => {
+    const safeValue = value ?? 0;
+    const color = isPositive ? "#16A34A" : "#DC2626";
+    // Format number without currency symbol
+    const formattedValue = safeValue.toLocaleString("en-NP");
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <CurrencyIcon size={size} color={color} />
+        <Text
+          style={[
+            { fontSize: size, fontWeight: "700" },
+            { color, marginLeft: 4 },
+          ]}
+        >
+          {formattedValue}
+        </Text>
+      </View>
+    );
+  };
+
+  const formatCurrencyInline = (value: number | null | undefined) => {
+    const safeValue = value ?? 0;
+    return safeValue.toLocaleString("en-NP");
+  };
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -416,9 +478,9 @@ export default function LoanDetailsScreen() {
           >
             {loan.approvedAmount ? "Approved Amount" : "Requested Amount"}
           </Text>
-          <Text style={[styles.heroAmount, { color: colors.text }]}>
-            {formatCurrency(amount)}
-          </Text>
+          <View style={{ alignItems: "center" }}>
+            {formatCurrencyWithIcon(amount, true)}
+          </View>
 
           <View style={styles.heroStats}>
             <View
@@ -469,9 +531,9 @@ export default function LoanDetailsScreen() {
                   size={16}
                   color={colors.success}
                 />
-                <Text style={[styles.heroStatVal, { color: colors.text }]}>
-                  {formatCurrency(loan.approvedAmount)}
-                </Text>
+                <View style={{ alignItems: "center" }}>
+                  {formatCurrencyWithIcon(loan.approvedAmount ?? 0, true)}
+                </View>
                 <Text
                   style={[styles.heroStatLbl, { color: colors.textSecondary }]}
                 >
@@ -484,15 +546,15 @@ export default function LoanDetailsScreen() {
 
         <SectionCard title="Loan Information" colors={colors}>
           <DetailRow label="Purpose" value={loan.purpose} colors={colors} />
-          <DetailRow
+          <CurrencyDetailRow
             label="Requested Amount"
-            value={formatCurrency(loan.requestedAmount)}
+            amount={loan.requestedAmount}
             colors={colors}
           />
           {loan.approvedAmount !== undefined && (
-            <DetailRow
+            <CurrencyDetailRow
               label="Approved Amount"
-              value={formatCurrency(loan.approvedAmount)}
+              amount={loan.approvedAmount}
               colors={colors}
             />
           )}
@@ -629,9 +691,9 @@ export default function LoanDetailsScreen() {
               colors={colors}
             />
             <DetailRow label="Status" value={contract.status} colors={colors} />
-            <DetailRow
+            <CurrencyDetailRow
               label="Loan Amount"
-              value={formatCurrency(contract.loanAmount)}
+              amount={contract.loanAmount}
               colors={colors}
             />
             <DetailRow
@@ -650,9 +712,9 @@ export default function LoanDetailsScreen() {
               colors={colors}
             />
             {contract.installmentAmount !== undefined && (
-              <DetailRow
+              <CurrencyDetailRow
                 label="Installment Amount"
-                value={formatCurrency(contract.installmentAmount)}
+                amount={contract.installmentAmount}
                 colors={colors}
               />
             )}
@@ -664,22 +726,22 @@ export default function LoanDetailsScreen() {
               />
             )}
             {contract.totalAmountDue !== undefined && (
-              <DetailRow
+              <CurrencyDetailRow
                 label="Total Amount Due"
-                value={formatCurrency(contract.totalAmountDue)}
+                amount={contract.totalAmountDue}
                 colors={colors}
               />
             )}
             {contract.totalAmountPaid !== undefined && (
-              <DetailRow
+              <CurrencyDetailRow
                 label="Amount Paid"
-                value={formatCurrency(contract.totalAmountPaid)}
+                amount={contract.totalAmountPaid}
                 colors={colors}
               />
             )}
-            <DetailRow
+            <CurrencyDetailRow
               label="Outstanding Balance"
-              value={formatCurrency(contract.outstandingBalance)}
+              amount={contract.outstandingBalance}
               colors={colors}
             />
             <DetailRow
@@ -774,7 +836,7 @@ export default function LoanDetailsScreen() {
                           { color: colors.textSecondary },
                         ]}
                       >
-                        P: {formatCurrency(item.principalAmount)}
+                        P: {formatCurrencyInline(item.principalAmount)}
                       </Text>
                       <Text
                         style={[
@@ -790,7 +852,7 @@ export default function LoanDetailsScreen() {
                           { color: colors.textSecondary },
                         ]}
                       >
-                        I: {formatCurrency(item.interestAmount)}
+                        I: {formatCurrencyInline(item.interestAmount)}
                       </Text>
                     </View>
                     {isPartial && amtPaid > 0 && (
@@ -800,8 +862,8 @@ export default function LoanDetailsScreen() {
                           { color: "#F59E0B" },
                         ]}
                       >
-                        Paid {formatCurrency(amtPaid)} of{" "}
-                        {formatCurrency(item.totalAmount)}
+                        Paid {formatCurrencyInline(amtPaid)} of{" "}
+                        {formatCurrencyInline(item.totalAmount)}
                       </Text>
                     )}
                   </View>
@@ -809,7 +871,7 @@ export default function LoanDetailsScreen() {
                     <Text
                       style={[styles.scheduleAmount, { color: colors.text }]}
                     >
-                      {formatCurrency(item.totalAmount)}
+                      {formatCurrencyInline(item.totalAmount)}
                     </Text>
                     <View
                       style={[
