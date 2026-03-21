@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Eye, Edit, Trash2, FileText } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -37,7 +38,8 @@ export default function LoanRequests() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<any>(null);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
+    useState<any>(null);
 
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
@@ -305,7 +307,7 @@ export default function LoanRequests() {
   const handleBlockchainVerify = (loan: Loan) => {
     setSelectedBlockchainRecord({
       id: loan.id,
-      type: 'loan',
+      type: "loan",
       status: loan.status,
       amount: loan.requestedAmount,
       transactionHash: loan.blockchainTxHash,
@@ -314,8 +316,8 @@ export default function LoanRequests() {
       details: {
         purpose: loan.purpose,
         borrower: loan.borrower?.user?.fullName,
-        collateralDetails: loan.collateralDetails
-      }
+        collateralDetails: loan.collateralDetails,
+      },
     });
     setBlockchainModalOpen(true);
   };
@@ -655,18 +657,28 @@ export default function LoanRequests() {
       label: "Requested Amount",
       sortable: true,
       render: (loan) =>
-        loan?.requestedAmount
-          ? `NPR ${loan.requestedAmount.toLocaleString()}`
-          : "N/A",
+        loan?.requestedAmount ? (
+          <span className="flex items-center gap-1">
+            <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+            {loan.requestedAmount.toLocaleString()}
+          </span>
+        ) : (
+          "N/A"
+        ),
     },
     {
       key: "approvedAmount",
       label: "Approved Amount",
       sortable: true,
       render: (loan) =>
-        loan?.approvedAmount
-          ? `NPR ${loan.approvedAmount.toLocaleString()}`
-          : "Pending",
+        loan?.approvedAmount ? (
+          <span className="flex items-center gap-1">
+            <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+            {loan.approvedAmount.toLocaleString()}
+          </span>
+        ) : (
+          "Pending"
+        ),
     },
     {
       key: "collateralDetails.type",
@@ -680,7 +692,14 @@ export default function LoanRequests() {
       sortable: false,
       render: (loan) => {
         const value = (loan?.collateralDetails as any)?.value;
-        return value ? `NPR ${Number(value).toLocaleString()}` : "N/A";
+        return value ? (
+          <span className="flex items-center gap-1">
+            <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+            {Number(value).toLocaleString()}
+          </span>
+        ) : (
+          "N/A"
+        );
       },
     },
     {
@@ -755,7 +774,7 @@ export default function LoanRequests() {
       : []),
     {
       name: "amount",
-      label: "Loan Amount (NPR)",
+      label: "Loan Amount",
       type: "number" as const,
       required: true,
       disabled: isReadOnly,
@@ -854,7 +873,7 @@ export default function LoanRequests() {
         fields: [
           {
             id: "requestedAmount",
-            label: "Requested Loan Amount (NPR)",
+            label: "Requested Loan Amount",
             value: String(formData.requestedAmount || ""),
             type: "number" as const,
             required: true,
@@ -865,7 +884,7 @@ export default function LoanRequests() {
             ? [
                 {
                   id: "approvedAmount",
-                  label: "Approved Loan Amount (NPR)",
+                  label: "Approved Loan Amount",
                   value: String(editingLoan.approvedAmount || ""),
                   type: "number" as const,
                   required: false,
@@ -902,7 +921,7 @@ export default function LoanRequests() {
           },
           {
             id: "collateralValue",
-            label: "Collateral Value (NPR)",
+            label: "Collateral Value",
             value: String(formData.collateralValue || ""),
             type: "number" as const,
             required: true,
