@@ -15,9 +15,7 @@ export class RedisSessionService implements OnModuleInit {
       url: process.env.REDIS_URL,
     });
 
-    this.client.on('error', (err) => {
-      console.error('Redis Client Error:', err);
-    });
+    this.client.on('error', (err) => {});
 
     await this.client.connect();
   }
