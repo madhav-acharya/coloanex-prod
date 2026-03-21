@@ -317,9 +317,7 @@ export class LoansService {
           },
           tenantId,
         );
-      } catch (error) {
-        console.error('Failed to send loan submission email:', error);
-      }
+      } catch (error) {}
     }
 
     return loan as unknown as Loan;
@@ -803,9 +801,7 @@ export class LoansService {
           updated.tenantId,
         );
       }
-    } catch (error) {
-      console.error('Failed to send loan status email:', error);
-    }
+    } catch (error) {}
 
     return updated as unknown as Loan;
   }
@@ -1068,6 +1064,133 @@ export class LoansService {
       throw new InternalServerErrorException(
         'Failed to fetch blockchain statistics',
       );
+    }
+  }
+
+  async verifyBlockchainTransaction(
+    id: string,
+    user: JwtPayload,
+  ): Promise<{
+    success: boolean;
+    isVerified: boolean;
+    onChain: boolean;
+    transactionHash?: string;
+    blockNumber?: string;
+    timestamp?: string;
+    confirmations?: number;
+    chainData?: any;
+    error?: string;
+  }> {
+    try {
+      const loan = await this.prisma.loan.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          blockchainTxHash: true,
+          tenantId: true,
+          borrower: {
+            include: {
+              user: true,
+            },
+          },
+        },
+      });
+
+      if (!loan) {
+        return {
+          success: false,
+          isVerified: false,
+          onChain: false,
+          error: 'Loan not found',
+        };
+      }
+
+      if (!this.isSuperAdmin(user)) {
+        if (this.isBorrower(user) && loan.borrower.userId !== user.sub) {
+          return {
+            success: false,
+            isVerified: false,
+            onChain: false,
+            error: 'Unauthorized',
+          };
+        } else if (this.isLender(user) && loan.tenantId !== user.tenantId) {
+          return {
+            success: false,
+            isVerified: false,
+            onChain: false,
+            error: 'Unauthorized',
+          };
+        }
+      }
+
+      const txId = loan.blockchainTxHash;
+
+      if (!txId) {
+        return {
+          success: true,
+          isVerified: false,
+          onChain: false,
+          error: 'No blockchain transaction hash found',
+        };
+      }
+
+      try {
+        const verification =
+          await this.loanBlockchainService.verifyLoanOnChain(id);
+
+        if (verification.exists && verification.onChain && verification.data) {
+          const chaincodeName = verification.data.chaincodeName;
+          if (chaincodeName !== 'loans') {
+            return {
+              success: true,
+              isVerified: false,
+              onChain: false,
+              error: `Transaction found on blockchain but belongs to ${chaincodeName} chaincode, not loans`,
+            };
+          }
+
+          return {
+            success: true,
+            isVerified: true,
+            onChain: true,
+            transactionHash: txId,
+            blockNumber: verification.data.blockNumber,
+            timestamp: verification.data.timestamp,
+            confirmations: verification.data.confirmations,
+            chainData: verification.data,
+          };
+        } else {
+          return {
+            success: true,
+            isVerified: false,
+            onChain: false,
+            error: 'Transaction not found on blockchain',
+          };
+        }
+      } catch (blockchainError) {
+        this.logger.warn(
+          `Blockchain verification failed for loan ${id}`,
+          blockchainError,
+        );
+
+        return {
+          success: true,
+          isVerified: false,
+          onChain: false,
+          error: 'Blockchain verification service unavailable',
+        };
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to verify blockchain transaction for loan ${id}`,
+        error,
+      );
+      return {
+        success: false,
+        isVerified: false,
+        onChain: false,
+        error: 'Failed to verify blockchain transaction',
+      };
     }
   }
 }
