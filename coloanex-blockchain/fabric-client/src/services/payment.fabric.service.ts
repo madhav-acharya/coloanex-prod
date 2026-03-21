@@ -82,4 +82,5 @@ export class PaymentFabricService {
     const result = await this.client.evaluateTransaction("paymentExists", id);
     return result === true || result === "true";
   }
+
 }
