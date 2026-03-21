@@ -9,6 +9,14 @@ export interface Signature {
 
 export interface BlockchainData {
   transactionHash?: string;
+  txId?: string;
+  signTxId?: string;
+  disburseTxId?: string;
+  recordedAt?: string;
+  signedAt?: string;
+  disbursedAt?: string;
+  reportTxId?: string;
+  reportedAt?: string;
   blockNumber?: number;
   network?: string;
   contractAddress?: string;
