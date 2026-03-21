@@ -41,6 +41,14 @@ export class ContractsController {
     return this.contractsService.getBlockchainStats(req.user);
   }
 
+  @Get('blockchain/verify/:id')
+  verifyBlockchainTransaction(
+    @Param('id') id: string,
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.contractsService.verifyBlockchainTransaction(id, req.user);
+  }
+
   @Get(':id/blockchain-history')
   getBlockchainHistory(
     @Param('id') id: string,
