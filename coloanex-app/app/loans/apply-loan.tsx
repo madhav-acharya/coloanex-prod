@@ -23,6 +23,7 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
 import { formatCurrency } from "@/utils/currency";
+import { CurrencyIcon } from "@/components/ui";
 import { uploadToCloudinary } from "@/utils/upload";
 
 const COLLATERAL_TYPE_OPTIONS = [
@@ -412,10 +413,13 @@ export default function LoanApplicationScreen() {
               numberOfLines={3}
             />
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Estimated Value (NPR){" "}
-              <Text style={[styles.required, { color: colors.error }]}>*</Text>
-            </Text>
+            <View style={[styles.label, { flexDirection: "row", alignItems: "center", marginBottom: 8, marginTop: 12 }]}>
+              <Text style={[{ fontSize: 14, fontWeight: "600" }, { color: colors.text }]}>
+                Estimated Value{" "}
+              </Text>
+              <CurrencyIcon size={16} color={colors.text} />
+              <Text style={[styles.required, { color: colors.error, marginLeft: 4 }]}>*</Text>
+            </View>
             <Input
               value={collateralValue}
               onChangeText={setCollateralValue}
