@@ -42,10 +42,8 @@ const Login = () => {
         email: formData.email,
         password: formData.password,
       });
-      console.log("res", res);
       toast.success("Login successful!");
     } catch (err) {
-      console.log("error", err);
       let errorMessage = "Login failed";
       if (
         err &&
