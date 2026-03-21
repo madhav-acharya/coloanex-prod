@@ -206,7 +206,6 @@ export default function ActivityLogsScreen() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
-      console.error("Failed to mark as read:", error);
     }
   };
 
@@ -229,7 +228,6 @@ export default function ActivityLogsScreen() {
       );
       setUnreadCount((prev) => Math.max(0, prev - unreadNotifications.length));
     } catch (error) {
-      console.error("Failed to mark notifications as read:", error);
     }
   };
 
