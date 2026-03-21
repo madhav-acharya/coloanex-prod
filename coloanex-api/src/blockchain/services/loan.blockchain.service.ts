@@ -141,13 +141,39 @@ export class LoanBlockchainService
         await this.service.updateLoanStatus(id, 'UNDER_REVIEW');
       } else if (bcStatus === 'PENDING') {
         await this.service.updateLoanStatus(id, 'UNDER_REVIEW');
+      } else if (bcStatus === 'APPROVED') {
+        throw new Error(
+          `Loan ${id} is already approved and cannot be approved again`,
+        );
+      } else if (bcStatus === 'REJECTED') {
+        throw new Error(`Loan ${id} has been rejected and cannot be approved`);
+      } else if (bcStatus !== 'UNDER_REVIEW') {
+        throw new Error(
+          `Loan ${id} has invalid status '${bcStatus}' for approval. Expected 'UNDER_REVIEW'`,
+        );
       }
+
       return await this.service.approveLoan(
         id,
         approvedAmount,
         approvedTermMonths,
       );
     } catch (error) {
+      if (error?.message?.includes('must be UNDER_REVIEW to be approved')) {
+        this.logBlockchainError(`approveLoan [${id}]`, error);
+        throw new Error(
+          `Cannot approve loan ${id}: The loan must be in review status to be approved. Current blockchain status may be out of sync.`,
+        );
+      }
+
+      if (
+        error?.message?.includes('already approved') ||
+        error?.message?.includes('already rejected')
+      ) {
+        this.logBlockchainError(`approveLoan [${id}]`, error);
+        throw error;
+      }
+
       this.logBlockchainError(`approveLoan [${id}]`, error);
       throw error;
     }
@@ -162,4 +188,75 @@ export class LoanBlockchainService
       throw error;
     }
   }
+
+  async verifyLoanOnChain(id: string): Promise<{
+    exists: boolean;
+    data?: any;
+    onChain: boolean;
+  }> {
+    if (!this.enabled) {
+      return { exists: false, onChain: false };
+    }
+    try {
+      let exists = await this.service.loanExists(id);
+      let data: any = null;
+      let chaincodeName = 'loans';
+
+      if (!exists) {
+        try {
+          const contractService = require('./contract.blockchain.service').ContractBlockchainService;
+          const contractInstance = new contractService();
+          if (contractInstance.enabled) {
+            const contractExists = await contractInstance.service.contractExists(id);
+            if (contractExists) {
+              data = await contractInstance.service.getContract(id);
+              chaincodeName = 'contracts';
+              exists = true;
+            }
+          }
+        } catch (err) {}
+
+        if (!exists) {
+          try {
+            const paymentService = require('./payment.blockchain.service').PaymentBlockchainService;
+            const paymentInstance = new paymentService();
+            if (paymentInstance.enabled) {
+              const paymentExists = await paymentInstance.service.paymentExists(id);
+              if (paymentExists) {
+                data = await paymentInstance.service.getPayment(id);
+                chaincodeName = 'payments';
+                exists = true;
+              }
+            }
+          } catch (err) {}
+        }
+      } else {
+        data = await this.service.getLoan(id);
+      }
+
+      if (!exists) {
+        return { exists: false, onChain: false };
+      }
+
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      const enrichedData = {
+        ...parsedData,
+        chaincodeName: chaincodeName,
+        channelName: 'coloanex-channel',
+        mspId: 'Org1MSP',
+        functionName: chaincodeName === 'loans' ? 'getLoan' : chaincodeName === 'contracts' ? 'getContract' : 'getPayment',
+      };
+
+      return {
+        exists: true,
+        onChain: true,
+        data: enrichedData,
+      };
+    } catch (error) {
+      this.logBlockchainError(`verifyLoanOnChain [${id}]`, error);
+      return { exists: false, onChain: false };
+    }
+  }
+
 }
