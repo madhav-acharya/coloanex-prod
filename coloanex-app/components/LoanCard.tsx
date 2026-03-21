@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Card, LenderLogo, Button } from "./ui";
+import { Card, LenderLogo, Button, CurrencyIcon } from "./ui";
 import { formatCurrency as formatNPR } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
 
@@ -30,8 +30,22 @@ export default function LoanCard({
   const router = useRouter();
   const { colors } = useTheme();
 
-  const formatCurrency = (value: number) => {
-    return formatNPR(value);
+  const formatCurrencyWithIcon = (
+    value: number | null | undefined,
+    isPositive: boolean = true,
+  ) => {
+    const safeValue = value ?? 0;
+    const color = isPositive ? "#16A34A" : "#DC2626";
+    // Format number without currency symbol
+    const formattedValue = safeValue.toLocaleString("en-NP");
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <CurrencyIcon size={16} color={color} />
+        <Text style={[styles.currencyText, { color, marginLeft: 4 }]}>
+          {formattedValue}
+        </Text>
+      </View>
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -69,9 +83,7 @@ export default function LoanCard({
           <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
             Loan Amount
           </Text>
-          <Text style={[styles.amountValue, { color: colors.text }]}>
-            {formatCurrency(amount)}
-          </Text>
+          {formatCurrencyWithIcon(amount, true)}
         </View>
         <View style={styles.amountItem}>
           <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
@@ -88,17 +100,13 @@ export default function LoanCard({
           <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
             Remaining Balance
           </Text>
-          <Text style={[styles.remainingBalance, { color: colors.error }]}>
-            {formatCurrency(remainingBalance)}
-          </Text>
+          {formatCurrencyWithIcon(remainingBalance, false)}
         </View>
         <View style={styles.amountItem}>
           <Text style={[styles.amountLabel, { color: colors.textSecondary }]}>
             Monthly Payment
           </Text>
-          <Text style={[styles.amountValue, { color: colors.text }]}>
-            {formatCurrency(monthlyPayment)}
-          </Text>
+          {formatCurrencyWithIcon(monthlyPayment, true)}
         </View>
       </View>
 
@@ -176,9 +184,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   amountLabel: {
-    fontSize: 12,
-    marginBottom: 6,
-    fontWeight: "600",
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -187,6 +195,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   remainingBalance: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  currencyText: {
     fontSize: 16,
     fontWeight: "700",
   },
