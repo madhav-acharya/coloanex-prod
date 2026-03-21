@@ -39,14 +39,10 @@ export class IsUniqueConstraint implements ValidatorConstraintInterface {
       const repo = prismaModels[modelKey];
 
       if (!repo) {
-        console.error(
-          `Prisma model '${modelKey}' not found. Model passed: '${model}'`,
-        );
         return false;
       }
 
       if (typeof repo.findFirst !== 'function') {
-        console.error(`findFirst method not found on model '${modelKey}'`);
         return false;
       }
 
@@ -67,7 +63,6 @@ export class IsUniqueConstraint implements ValidatorConstraintInterface {
       const existing = await repo.findFirst({ where });
       return !existing;
     } catch (error) {
-      console.error(`Error in IsUnique validator:`, error);
       throw error;
     }
   }
