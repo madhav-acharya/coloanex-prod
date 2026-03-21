@@ -40,10 +40,11 @@ export class KhaltiGateway implements IPaymentGateway {
       purchase_order_name: `Payment-${transactionUuid}`,
     };
 
+    let response: Response;
     let data: Record<string, unknown>;
 
     try {
-      const response = await fetch(this.paymentUrl, {
+      response = await fetch(this.paymentUrl, {
         method: 'POST',
         headers: {
           Authorization: `Key ${this.secretKey}`,
@@ -51,25 +52,42 @@ export class KhaltiGateway implements IPaymentGateway {
         },
         body: JSON.stringify(body),
       });
+
       data = (await response.json()) as Record<string, unknown>;
-    } catch {
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new InternalServerErrorException(
+            'Khalti authentication failed. Please check your API credentials.'
+          );
+        } else {
+          throw new InternalServerErrorException(
+            `Khalti payment initiation failed with status ${response.status}`
+          );
+        }
+      }
+
+      if (!data['payment_url']) {
+        throw new InternalServerErrorException(
+          'Khalti response missing payment_url'
+        );
+      }
+
+      return {
+        paymentUrl: data['payment_url'] as string,
+        formData: {
+          pidx: data['pidx'] as string,
+        },
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(
-        'Failed to reach Khalti payment service',
+        `Failed to reach Khalti payment service: ${error?.message || 'Unknown error'}`
       );
     }
-
-    if (!data['payment_url']) {
-      throw new InternalServerErrorException(
-        `Khalti initiation failed: ${JSON.stringify(data)}`,
-      );
-    }
-
-    return {
-      paymentUrl: data['payment_url'] as string,
-      formData: {
-        pidx: data['pidx'] as string,
-      },
-    };
   }
 
   async verifyPayment(
@@ -77,10 +95,11 @@ export class KhaltiGateway implements IPaymentGateway {
   ): Promise<VerifyPaymentResult> {
     const { transactionUuid } = params;
 
+    let response: Response;
     let data: Record<string, unknown>;
 
     try {
-      const response = await fetch(this.verificationUrl, {
+      response = await fetch(this.verificationUrl, {
         method: 'POST',
         headers: {
           Authorization: `Key ${this.secretKey}`,
@@ -88,17 +107,34 @@ export class KhaltiGateway implements IPaymentGateway {
         },
         body: JSON.stringify({ pidx: transactionUuid }),
       });
+
       data = (await response.json()) as Record<string, unknown>;
-    } catch {
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new InternalServerErrorException(
+            'Khalti verification failed - Invalid authentication. Please check your API credentials.'
+          );
+        } else {
+          throw new InternalServerErrorException(
+            `Khalti verification failed with status ${response.status}`
+          );
+        }
+      }
+
+      return {
+        success: data['status'] === 'Completed',
+        gatewayTransactionId: data['transaction_id'] as string | undefined,
+        gatewayResponse: data,
+      };
+    } catch (error) {
+      if (error instanceof InternalServerErrorException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(
-        'Failed to reach Khalti verification service',
+        `Failed to verify payment with Khalti: ${error?.message || 'Network error'}`
       );
     }
-
-    return {
-      success: data['status'] === 'Completed',
-      gatewayTransactionId: data['transaction_id'] as string | undefined,
-      gatewayResponse: data,
-    };
   }
 }
