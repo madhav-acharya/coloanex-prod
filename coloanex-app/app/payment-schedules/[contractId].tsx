@@ -30,7 +30,6 @@ export default function PaymentSchedulesScreen() {
       const data = await paymentSchedulesApi.getByContract(contractId);
       setSchedules(data);
     } catch (error) {
-      console.error("Failed to load payment schedules:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);

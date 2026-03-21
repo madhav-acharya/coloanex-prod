@@ -36,7 +36,6 @@ export default function ProfileScreen() {
       const userData = await usersApi.getCurrentUser();
       dispatch(setUser(userData));
     } catch (error) {
-      console.error("Failed to load user data:", error);
     }
   };
 
@@ -48,7 +47,6 @@ export default function ProfileScreen() {
       dispatch(logout());
       router.replace("/auth/login");
     } catch (error) {
-      console.error("Logout error:", error);
       showToast("Logout failed, clearing session", "warning");
       dispatch(logout());
       router.replace("/auth/login");
