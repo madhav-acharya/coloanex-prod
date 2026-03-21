@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { XCircle, RotateCcw, LayoutDashboard } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -36,8 +37,9 @@ export default function PaymentFailure() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-foreground">Payment Failed</h1>
           {amount && (
-            <p className="text-xl font-semibold text-muted-foreground">
-              NPR {Number(amount).toLocaleString()}
+            <p className="text-xl font-semibold text-muted-foreground flex items-center justify-center gap-1">
+              <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
+              {Number(amount).toLocaleString()}
             </p>
           )}
           <p className="text-muted-foreground">
