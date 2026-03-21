@@ -117,4 +117,83 @@ export class PaymentBlockchainService
       throw error;
     }
   }
+
+  async verifyPaymentOnChain(id: string): Promise<{
+    exists: boolean;
+    data?: any;
+    onChain: boolean;
+  }> {
+    if (!this.enabled) {
+      return { exists: false, onChain: false };
+    }
+    try {
+      let exists = await this.service.paymentExists(id);
+      let data: any = null;
+      let chaincodeName = 'payments';
+
+      if (!exists) {
+        try {
+          const loanService =
+            require('./loan.blockchain.service').LoanBlockchainService;
+          const loanInstance = new loanService();
+          if (loanInstance.enabled) {
+            const loanExists = await loanInstance.service.loanExists(id);
+            if (loanExists) {
+              data = await loanInstance.service.getLoan(id);
+              chaincodeName = 'loans';
+              exists = true;
+            }
+          }
+        } catch (err) {}
+
+        if (!exists) {
+          try {
+            const contractService =
+              require('./contract.blockchain.service').ContractBlockchainService;
+            const contractInstance = new contractService();
+            if (contractInstance.enabled) {
+              const contractExists =
+                await contractInstance.service.contractExists(id);
+              if (contractExists) {
+                data = await contractInstance.service.getContract(id);
+                chaincodeName = 'contracts';
+                exists = true;
+              }
+            }
+          } catch (err) {}
+        }
+      } else {
+        data = await this.service.getPayment(id);
+      }
+
+      if (!exists) {
+        return { exists: false, onChain: false };
+      }
+
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      const enrichedData = {
+        ...parsedData,
+        chaincodeName: chaincodeName,
+        channelName: 'coloanex-channel',
+        mspId: 'Org1MSP',
+        functionName:
+          chaincodeName === 'loans'
+            ? 'getLoan'
+            : chaincodeName === 'contracts'
+              ? 'getContract'
+              : 'getPayment',
+      };
+
+      return {
+        exists: true,
+        onChain: true,
+        data: enrichedData,
+      };
+    } catch (error) {
+      this.logBlockchainError(`verifyPaymentOnChain [${id}]`, error);
+      return { exists: false, onChain: false };
+    }
+  }
+
 }
