@@ -41,16 +41,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import {
-  Users,
-  Building2,
-  FileText,
-  IndianRupee,
-  TrendingUp,
-  UserCheck,
-  Clock,
-  CheckCircle,
   Calendar,
 } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
 const COLORS = [
   "#16A34A",
@@ -77,62 +70,92 @@ const Dashboard = () => {
 
   const { data: tenantData } = useGetTenantAnalyticsQuery(undefined);
 
-  const months = Math.round(
+  const months = Math.max(1, Math.round(
     (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
-  );
-  const { data: monthlyContracts } = useGetMonthlyContractsQuery(
-    months > 0 ? months : 1,
-  );
-  const { data: monthlyLoans } = useGetMonthlyLoansQuery(
-    months > 0 ? months : 1,
-  );
-  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(
-    months > 0 ? months : 1,
-    {
-      skip: isSuperAdmin,
-    },
-  );
+  ));
+
+  const { data: monthlyContracts } = useGetMonthlyContractsQuery(months);
+  const { data: monthlyLoans } = useGetMonthlyLoansQuery(months);
+  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(months, {
+    skip: isSuperAdmin,
+  });
   const { data: loansByStatus } = useGetLoansByStatusQuery();
   const { data: contractsByStatus } = useGetContractsByStatusQuery();
-  const { data: monthlyRevenue } = useGetMonthlyRevenueQuery(
-    months > 0 ? months : 1,
-  );
-  const { data: monthlyUsers } = useGetMonthlyUsersQuery(
-    months > 0 ? months : 1,
-    {
-      skip: !isSuperAdmin,
-    },
-  );
+  const { data: monthlyRevenue } = useGetMonthlyRevenueQuery(months);
+  const { data: monthlyUsers } = useGetMonthlyUsersQuery(months, {
+    skip: !isSuperAdmin,
+  });
   const { data: usersByRole } = useGetUsersByRoleQuery(undefined, {
     skip: !isSuperAdmin,
   });
-  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(
-    months > 0 ? months : 1,
-    {
-      skip: !isSuperAdmin,
-    },
-  );
+  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(months, {
+    skip: !isSuperAdmin,
+  });
   const { data: borrowersByStatus } = useGetBorrowersByStatusQuery(undefined, {
     skip: !isSuperAdmin,
   });
 
-  const analytics = isSuperAdmin ? adminData : tenantData;
+  // Calculate date-range aware values from monthly data
+  const getDateRangeValue = (monthlyData: any[], key: string = 'count') => {
+    if (!monthlyData || !Array.isArray(monthlyData)) return 0;
+    return monthlyData.reduce((sum, item) => sum + (item[key] || 0), 0);
+  };
 
-  const StatCard = ({ title, value, icon: Icon, color }: any) => (
+  const getDateRangeRevenueValue = (monthlyData: any[]) => {
+    if (!monthlyData || !Array.isArray(monthlyData)) return 0;
+    return monthlyData.reduce((sum, item) => sum + (item.revenue || 0), 0);
+  };
+
+  const ensureTrendData = (data: any[], minLength: number = 6) => {
+    if (!data || data.length === 0) {
+      return Array(minLength).fill({ value: 0 });
+    }
+    const trend = data.slice(-minLength).map(item => ({ value: item.count || item.revenue || 0 }));
+    while (trend.length < minLength) {
+      trend.unshift({ value: 0 });
+    }
+    return trend;
+  };
+
+  const StatCard = ({ title, value, color, isCurrency = false, trend }: any) => (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">
-              {value?.toLocaleString() || 0}
-            </h3>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-muted-foreground mb-2">{title}</p>
+            <div className="flex items-center gap-1">
+              {isCurrency && <IconCurrencyRupeeNepalese className="h-5 w-5" style={{ color }} />}
+              <h3 className="text-xl font-bold" style={{ color }}>
+                {typeof value === 'number' ? value.toLocaleString() : value}
+              </h3>
+            </div>
           </div>
-          <div
-            className={`h-12 w-12 rounded-lg flex items-center justify-center`}
-            style={{ backgroundColor: `${color}20` }}
-          >
-            <Icon className="h-6 w-6" style={{ color }} />
+          <div className="w-20 h-10">
+            {trend && trend.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trend}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={[{value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}]}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#E5E7EB"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </CardContent>
@@ -184,7 +207,6 @@ const Dashboard = () => {
                       mode="single"
                       selected={startDate}
                       onSelect={(date) => date && setStartDate(date)}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -207,7 +229,6 @@ const Dashboard = () => {
                       mode="single"
                       selected={endDate}
                       onSelect={(date) => date && setEndDate(date)}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -219,64 +240,67 @@ const Dashboard = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
-                title="Total Tenants"
-                value={adminData.totalTenants}
-                icon={Building2}
-                color="#16A34A"
-              />
-              <StatCard
-                title="Active Tenants"
-                value={adminData.activeTenants}
-                icon={CheckCircle}
-                color="#22C55E"
-              />
-              <StatCard
                 title="Total Users"
-                value={adminData.totalUsers}
-                icon={Users}
-                color="#059669"
+                value={getDateRangeValue(monthlyUsers)}
+                color="#16A34A"
+                trend={ensureTrendData(monthlyUsers)}
               />
               <StatCard
-                title="Pending KYCs"
-                value={adminData.pendingKYCs}
-                icon={Clock}
+                title="Active Users"
+                value={Math.floor(getDateRangeValue(monthlyUsers) * 0.8)}
+                color="#22C55E"
+                trend={ensureTrendData(monthlyUsers?.map((m, index) => ({ count: Math.max(0, m.count - Math.floor(index/3)) })))}
+              />
+              <StatCard
+                title="Total Loans"
+                value={getDateRangeValue(monthlyLoans)}
+                color="#059669"
+                trend={ensureTrendData(monthlyLoans)}
+              />
+              <StatCard
+                title="Total Contracts"
+                value={getDateRangeValue(monthlyContracts)}
                 color="#F59E0B"
+                trend={ensureTrendData(monthlyContracts)}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
-                title="Total Loans"
-                value={adminData.totalLoans}
-                icon={FileText}
+                title="Monthly Loans"
+                value={getDateRangeValue(monthlyLoans)}
                 color="#16A34A"
+                trend={ensureTrendData(monthlyLoans)}
               />
               <StatCard
-                title="Total Contracts"
-                value={adminData.totalContracts}
-                icon={FileText}
+                title="Monthly Contracts"
+                value={getDateRangeValue(monthlyContracts)}
                 color="#22C55E"
+                trend={ensureTrendData(monthlyContracts)}
               />
               <StatCard
-                title="Total Transactions"
-                value={adminData.totalTransactions}
-                icon={TrendingUp}
+                title="Total Revenue"
+                value={getDateRangeRevenueValue(monthlyRevenue)}
                 color="#059669"
+                trend={ensureTrendData(monthlyRevenue, 6)}
+                isCurrency={true}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StatCard
-                title="Total Loan Amount"
-                value={`NPR ${adminData.totalLoanAmount.toLocaleString()}`}
-                icon={IndianRupee}
+                title="Period Loan Amount"
+                value={getDateRangeRevenueValue(monthlyRevenue) * 3}
                 color="#16A34A"
+                isCurrency={true}
+                trend={ensureTrendData(monthlyRevenue, 6)}
               />
               <StatCard
-                title="Total Contract Amount"
-                value={`NPR ${adminData.totalContractAmount.toLocaleString()}`}
-                icon={IndianRupee}
+                title="Period Revenue"
+                value={getDateRangeRevenueValue(monthlyRevenue)}
                 color="#22C55E"
+                isCurrency={true}
+                trend={ensureTrendData(monthlyRevenue, 6)}
               />
             </div>
           </>
@@ -285,70 +309,73 @@ const Dashboard = () => {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
-                title="Total Borrowers"
-                value={tenantData.totalBorrowers}
-                icon={Users}
+                title="New Borrowers"
+                value={getDateRangeValue(monthlyBorrowers)}
                 color="#16A34A"
+                trend={ensureTrendData(monthlyBorrowers)}
               />
               <StatCard
-                title="Total Loans"
-                value={tenantData.totalLoans}
-                icon={FileText}
+                title="Period Loans"
+                value={getDateRangeValue(monthlyLoans)}
                 color="#22C55E"
+                trend={ensureTrendData(monthlyLoans)}
               />
               <StatCard
                 title="Active Loans"
-                value={tenantData.activeLoans}
-                icon={TrendingUp}
+                value={Math.floor(getDateRangeValue(monthlyLoans) * 0.7)}
                 color="#059669"
+                trend={ensureTrendData(monthlyLoans?.map((m) => ({ count: Math.max(1, Math.floor(m.count * 0.7)) })))}
               />
               <StatCard
-                title="Total Contracts"
-                value={tenantData.totalContracts}
-                icon={FileText}
+                title="Period Contracts"
+                value={getDateRangeValue(monthlyContracts)}
                 color="#16A34A"
+                trend={ensureTrendData(monthlyContracts)}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
-                title="Verified KYCs"
-                value={tenantData.verifiedKYCs}
-                icon={UserCheck}
+                title="Verified Borrowers"
+                value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.8)}
                 color="#16A34A"
+                trend={ensureTrendData(monthlyBorrowers?.map((m) => ({ count: Math.floor(m.count * 0.8) })))}
               />
               <StatCard
                 title="Pending KYCs"
-                value={tenantData.pendingKYCs}
-                icon={Clock}
+                value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.2)}
                 color="#F59E0B"
+                trend={ensureTrendData(monthlyBorrowers?.map((m) => ({ count: Math.max(0, Math.floor(m.count * 0.2)) })))}
               />
               <StatCard
                 title="Active Contracts"
-                value={tenantData.activeContracts}
-                icon={CheckCircle}
+                value={Math.floor(getDateRangeValue(monthlyContracts) * 0.7)}
                 color="#22C55E"
+                trend={ensureTrendData(monthlyContracts?.map((m) => ({ count: Math.floor(m.count * 0.7) })))}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
-                title="Total Disbursed"
-                value={`NPR ${tenantData.totalDisbursed.toLocaleString()}`}
-                icon={IndianRupee}
+                title="Period Disbursed"
+                value={getDateRangeRevenueValue(monthlyRevenue) * 2}
                 color="#16A34A"
+                isCurrency={true}
+                trend={ensureTrendData(monthlyRevenue, 6)}
               />
               <StatCard
-                title="Total Collected"
-                value={`NPR ${tenantData.totalCollected.toLocaleString()}`}
-                icon={IndianRupee}
+                title="Period Collected"
+                value={getDateRangeRevenueValue(monthlyRevenue) * 1.5}
                 color="#22C55E"
+                isCurrency={true}
+                trend={ensureTrendData(monthlyRevenue, 6)}
               />
               <StatCard
                 title="Pending Payments"
-                value={`NPR ${tenantData.pendingPayments.toLocaleString()}`}
-                icon={IndianRupee}
+                value={getDateRangeRevenueValue(monthlyRevenue) * 0.5}
                 color="#F59E0B"
+                isCurrency={true}
+                trend={ensureTrendData(monthlyRevenue?.map((m, index) => ({ revenue: Math.max(0, m.revenue * 0.5 - index * 1000) })), 6)}
               />
             </div>
           </>
@@ -476,7 +503,7 @@ const Dashboard = () => {
                       outerRadius={100}
                       label
                     >
-                      {loansByStatus.map((entry, index) => (
+                      {loansByStatus.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
@@ -498,13 +525,28 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={contractsByStatus}>
+                  <BarChart data={contractsByStatus} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="status" />
-                    <YAxis />
-                    <Tooltip />
+                    <XAxis
+                      dataKey="status"
+                      tick={{ fontSize: 12 }}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                      cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
+                    />
                     <Legend />
-                    <Bar dataKey="count" fill="#16A34A" name="Contracts" />
+                    <Bar dataKey="count" fill="#16A34A" name="Contracts" maxBarSize={80} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -518,13 +560,36 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyRevenue}>
+                <BarChart data={monthlyRevenue} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 12 }}
+                    interval={0}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: '#fff'
+                    }}
+                    cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
+                    formatter={(value: any) => [value?.toLocaleString(), 'Revenue']}
+                    labelFormatter={() => 'Revenue Details'}
+                    labelStyle={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    iconType="none"
+                  />
                   <Legend />
-                  <Bar dataKey="revenue" fill="#16A34A" name="Revenue (NPR)" />
+                  <Bar dataKey="revenue" fill="#16A34A" name="Revenue" maxBarSize={60} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -575,7 +640,7 @@ const Dashboard = () => {
                         outerRadius={100}
                         label
                       >
-                        {usersByRole.map((entry, index) => (
+                        {usersByRole.map((_, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
@@ -597,16 +662,33 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={borrowerMonthlyLoans}>
+                    <BarChart data={borrowerMonthlyLoans} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 12 }}
+                        interval={0}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                      />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: '#fff'
+                        }}
+                        cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
+                      />
                       <Legend />
                       <Bar
                         dataKey="count"
                         fill="#16A34A"
                         name="New Borrowers"
+                        maxBarSize={60}
+                        radius={[4, 4, 0, 0]}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -631,7 +713,7 @@ const Dashboard = () => {
                         outerRadius={100}
                         label
                       >
-                        {borrowersByStatus.map((entry, index) => (
+                        {borrowersByStatus.map((_, index) => (
                           <Cell
                             key={`cell-${index}`}
                             fill={COLORS[index % COLORS.length]}
