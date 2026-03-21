@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { X } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import {
   Select,
   SelectContent,
@@ -34,8 +35,18 @@ const formatDate = (dateString?: string) => {
 };
 
 const formatCurrency = (amount?: number) => {
-  if (!amount) return "NPR 0";
-  return `NPR ${amount.toLocaleString()}`;
+  if (!amount)
+    return (
+      <span className="flex items-center gap-1">
+        <IconCurrencyRupeeNepalese className="inline h-4 w-4" />0
+      </span>
+    );
+  return (
+    <span className="flex items-center gap-1">
+      <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+      {amount.toLocaleString()}
+    </span>
+  );
 };
 
 interface LoanReviewModalProps {
