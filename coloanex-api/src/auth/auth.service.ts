@@ -149,9 +149,7 @@ export class AuthService {
         },
         tenantId,
       );
-    } catch (error) {
-      console.error('Failed to send registration email:', error);
-    }
+    } catch (error) {}
 
     return result;
   }
@@ -200,9 +198,7 @@ export class AuthService {
         },
         tenantId,
       );
-    } catch (error) {
-      console.error('Failed to send registration email:', error);
-    }
+    } catch (error) {}
 
     return result;
   }
