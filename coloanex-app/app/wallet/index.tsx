@@ -16,6 +16,8 @@ import type { Wallet } from "@/api/walletsApi";
 import type { Transaction } from "@/api/transactionsApi";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
+import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
+import type { BlockchainRecord } from "@/services/blockchainVerification";
 
 export default function WalletScreen() {
   const { colors } = useTheme();
@@ -24,6 +26,9 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [blockchainModalVisible, setBlockchainModalVisible] = useState(false);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
+    useState<BlockchainRecord | null>(null);
 
   const loadWallet = useCallback(async () => {
     try {
@@ -37,7 +42,6 @@ export default function WalletScreen() {
         setTransactions(transactionsData);
       }
     } catch (error) {
-      console.error("Failed to load wallet:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -89,6 +93,25 @@ export default function WalletScreen() {
       CANCELLED: colors.textLight,
     };
     return colors_map[status] || colors.textLight;
+  };
+
+  const handleBlockchainVerify = (transaction: Transaction) => {
+    if (transaction.blockchainTxHash) {
+      setSelectedBlockchainRecord({
+        id: transaction.id,
+        type: "payment",
+        status: transaction.status,
+        amount: transaction.amount,
+        transactionHash: transaction.blockchainTxHash,
+        createdAt: transaction.createdAt,
+        updatedAt: transaction.updatedAt,
+        details: {
+          type: transaction.type,
+          description: transaction.description,
+        },
+      });
+      setBlockchainModalVisible(true);
+    }
   };
 
   if (!wallet && !loading) {
@@ -268,6 +291,30 @@ export default function WalletScreen() {
                       {formatCurrency(transaction.amount)}
                     </Text>
                   </View>
+
+                  {transaction.blockchainTxHash && (
+                    <TouchableOpacity
+                      style={[
+                        styles.blockchainBadge,
+                        {
+                          backgroundColor: "#10b981" + "20",
+                          borderColor: "#10b981" + "40",
+                        },
+                      ]}
+                      onPress={() => handleBlockchainVerify(transaction)}
+                    >
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={12}
+                        color="#10b981"
+                      />
+                      <Text
+                        style={[styles.blockchainText, { color: "#10b981" }]}
+                      >
+                        On-Chain
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </Card>
               ))}
 
@@ -301,6 +348,12 @@ export default function WalletScreen() {
           </>
         )}
       </ScrollView>
+
+      <BlockchainVerificationModal
+        visible={blockchainModalVisible}
+        onClose={() => setBlockchainModalVisible(false)}
+        record={selectedBlockchainRecord}
+      />
     </View>
   );
 }
@@ -467,5 +520,20 @@ const createStyles = (colors: any) =>
     emptyText: {
       marginTop: spacing.md,
       fontSize: 16,
+    },
+    blockchainBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      alignSelf: "flex-start",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderWidth: 1,
+      borderRadius: 4,
+      marginTop: 4,
+    },
+    blockchainText: {
+      fontSize: 10,
+      fontWeight: "600",
     },
   });
