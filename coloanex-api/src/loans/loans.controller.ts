@@ -80,6 +80,15 @@ export class LoansController {
     return this.loansService.getBlockchainStats(user);
   }
 
+  @Get('blockchain/verify/:id')
+  @RequirePermissions(READ_LOANS)
+  verifyBlockchainTransaction(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.loansService.verifyBlockchainTransaction(id, user);
+  }
+
   @Get(':id/blockchain-history')
   @RequirePermissions(READ_LOANS)
   getBlockchainHistory(
