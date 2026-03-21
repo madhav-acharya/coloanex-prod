@@ -124,7 +124,6 @@ const Logout = () => {
       try {
         await logoutMutation().unwrap();
       } catch (error) {
-        console.error("Logout error:", error);
       } finally {
         dispatch(logout());
         navigate("/", { replace: true });
