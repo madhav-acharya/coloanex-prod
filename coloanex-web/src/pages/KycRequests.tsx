@@ -605,13 +605,6 @@ export default function KycRequests() {
           : undefined,
     } as CreateKycDto;
 
-    console.log("Submitting KYC with:", {
-      tenantId: kycData.tenantId,
-      userId: kycData.userId,
-      selectedUserId,
-      formDataTenantId: formData.tenantId,
-    });
-
     try {
       if (editingKyc) {
         await updateKyc({ id: editingKyc.id, data: kycData }).unwrap();
