@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, AppHeader } from "@/components/ui";
+import { Button, AppHeader, CurrencyIcon } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/api/contractsApi";
@@ -42,7 +42,6 @@ export default function ContractDetailsScreen() {
       const data = await contractsApi.getById(id);
       setContract(data);
     } catch (error: any) {
-      console.error("Failed to load contract:", error);
       const msg =
         error?.response?.data?.message ||
         error?.message ||
@@ -486,10 +485,13 @@ export default function ContractDetailsScreen() {
                   <Text style={styles.signSummaryLabel}>Contract No.: </Text>
                   {contract.contractNumber}
                 </Text>
-                <Text style={styles.signSummaryRow}>
+                <View style={[styles.signSummaryRow, { flexDirection: "row", alignItems: "center" }]}>
                   <Text style={styles.signSummaryLabel}>Loan Amount: </Text>
-                  NPR {contract.loanAmount.toLocaleString()}
-                </Text>
+                  <CurrencyIcon size={16} color="#000" />
+                  <Text style={{ marginLeft: 4 }}>
+                    {contract.loanAmount.toLocaleString()}
+                  </Text>
+                </View>
                 <Text style={styles.signSummaryRow}>
                   <Text style={styles.signSummaryLabel}>Interest Rate: </Text>
                   {contract.interestRate}% per month
@@ -499,10 +501,13 @@ export default function ContractDetailsScreen() {
                   {contract.termMonths} months &bull;{" "}
                   {contract.totalInstallments} installments
                 </Text>
-                <Text style={styles.signSummaryRow}>
+                <View style={[styles.signSummaryRow, { flexDirection: "row", alignItems: "center" }]}>
                   <Text style={styles.signSummaryLabel}>Total Due: </Text>
-                  NPR {contract.totalAmountDue.toLocaleString()}
-                </Text>
+                  <CurrencyIcon size={16} color="#000" />
+                  <Text style={{ marginLeft: 4 }}>
+                    {contract.totalAmountDue.toLocaleString()}
+                  </Text>
+                </View>
               </View>
             )}
 

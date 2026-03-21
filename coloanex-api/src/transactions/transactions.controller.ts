@@ -32,6 +32,11 @@ export class TransactionsController {
     return this.transactionsService.findByWallet(walletId);
   }
 
+  @Get(':id/blockchain-history')
+  getBlockchainHistory(@Param('id') id: string) {
+    return this.transactionsService.getBlockchainHistory(id);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.transactionsService.findOne(id);

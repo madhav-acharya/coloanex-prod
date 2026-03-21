@@ -52,7 +52,6 @@ export default function SearchBar({
           setSuggestions(results);
           setShowSuggestions(results.length > 0);
         } catch (error) {
-          console.error("Failed to fetch suggestions:", error);
           setSuggestions([]);
           setShowSuggestions(false);
         }

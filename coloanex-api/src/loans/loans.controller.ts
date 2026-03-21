@@ -74,6 +74,36 @@ export class LoansController {
     return this.loansService.findAll(query, user);
   }
 
+  @Get('blockchain/stats')
+  @RequirePermissions(READ_LOANS)
+  getBlockchainStats(@CurrentUser() user: JwtPayload) {
+    return this.loansService.getBlockchainStats(user);
+  }
+
+  @Get('blockchain/verify/:id')
+  @RequirePermissions(READ_LOANS)
+  verifyBlockchainTransaction(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.loansService.verifyBlockchainTransaction(id, user);
+  }
+
+  @Get(':id/blockchain-history')
+  @RequirePermissions(READ_LOANS)
+  getBlockchainHistory(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.loansService.getBlockchainHistory(id, user);
+  }
+
+  @Get(':id/payment-schedule')
+  @RequirePermissions(READ_LOANS)
+  getPaymentSchedule(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.loansService.getPaymentSchedule(id, user);
+  }
+
   @Get(':id')
   @RequirePermissions(READ_LOANS)
   findOne(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
@@ -97,12 +127,6 @@ export class LoansController {
       ipAddress,
       userAgent,
     );
-  }
-
-  @Get(':id/payment-schedule')
-  @RequirePermissions(READ_LOANS)
-  getPaymentSchedule(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
-    return this.loansService.getPaymentSchedule(id, user);
   }
 
   @Post(':id/payment')

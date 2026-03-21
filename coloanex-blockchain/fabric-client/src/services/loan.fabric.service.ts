@@ -79,4 +79,5 @@ export class LoanFabricService {
     const result = await this.client.evaluateTransaction("loanExists", id);
     return result === true || result === "true";
   }
+
 }

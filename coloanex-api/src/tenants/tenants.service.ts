@@ -109,9 +109,7 @@ export class TenantsService {
           },
           tenant.id,
         );
-      } catch (error) {
-        console.error('Failed to send tenant creation email:', error);
-      }
+      } catch (error) {}
     }
 
     return tenant;
@@ -130,7 +128,6 @@ export class TenantsService {
     } = query;
 
     const limitNum = Number(limit);
-    // Support both page-based and offset-based pagination
     const skip =
       offset !== undefined
         ? Number(offset)

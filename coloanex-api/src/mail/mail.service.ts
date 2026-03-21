@@ -98,7 +98,6 @@ export class MailService {
         email: userInfo.data.email,
       };
     } catch (error) {
-      console.error('Mail connection error:', error);
       throw new BadRequestException(
         error?.message || 'Failed to connect mail service',
       );
@@ -172,13 +171,7 @@ export class MailService {
   }
 
   async sendMail(sendMailDto: SendMailDto, tenantId: string): Promise<void> {
-    // uncomment this to enable mail sending functionality.
-    console.log(
-      'sending mail to ',
-      sendMailDto.to,
-      ' with subject ',
-      sendMailDto.subject,
-    );
+    // uncomment below to send mail using transporter, currently disabled to avoid accidental emails during development/testing
     // if (tenantId === 'default' && this.envTransporter) {
     //   try {
     //     await this.envTransporter.sendMail({
@@ -248,13 +241,13 @@ export class MailService {
     //     });
     //     this.transporters.set(tenantId, transporter);
     //   }
-    //   await transporter.sendMail({
-    //     from: tenant.mailEmail!,
-    //     to: sendMailDto.to,
-    //     subject: sendMailDto.subject,
-    //     html: sendMailDto.html,
-    //     text: sendMailDto.text,
-    //   });
+    //   // await transporter.sendMail({
+    //   //   from: tenant.mailEmail!,
+    //   //   to: sendMailDto.to,
+    //   //   subject: sendMailDto.subject,
+    //   //   html: sendMailDto.html,
+    //   //   text: sendMailDto.text,
+    //   // });
     // } catch (error) {
     //   this.transporters.delete(tenantId);
     //   throw new InternalServerErrorException('Failed to send email');

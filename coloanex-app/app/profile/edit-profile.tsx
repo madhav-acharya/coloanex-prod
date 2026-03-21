@@ -70,7 +70,6 @@ export default function EditProfileScreen() {
       setProfileImageUrl(userData.profileImage || null);
       dispatch(setUser(userData));
     } catch (error) {
-      console.error("Failed to load user data:", error);
       showToast("Failed to load user data", "error");
     } finally {
       setLoading(false);

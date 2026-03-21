@@ -182,6 +182,7 @@ export class FabricGatewayClient {
     }
   }
 
+
   private ensureConnected(): void {
     if (!this.contract) {
       throw new Error(

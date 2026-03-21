@@ -204,10 +204,7 @@ export default function Permissions() {
       setSheetOpen(false);
       setSelectedPermission(null);
       resetFields();
-    } catch (error) {
-      console.error("Submit error:", error);
-      // Error will be handled by useEffect
-    }
+    } catch (error) {}
   };
 
   return (

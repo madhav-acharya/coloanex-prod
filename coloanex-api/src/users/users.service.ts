@@ -1221,9 +1221,7 @@ export class UsersService {
         undefined,
         tenantId,
       );
-    } catch (error) {
-      console.error('Failed to log activity:', error);
-    }
+    } catch (error) {}
   }
 
   async markUserAsOnline(

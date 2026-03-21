@@ -16,7 +16,10 @@ import { loansApi } from "@/api";
 import type { Loan } from "@/types";
 import { LoanStatus } from "@/types/loan";
 import { formatCurrency } from "@/utils/currency";
+import { CurrencyIcon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
+import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
+import type { BlockchainRecord } from "@/services/blockchainVerification";
 
 type StatusConfig = {
   label: string;
@@ -152,6 +155,26 @@ export default function MyLoansScreen() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [blockchainModalVisible, setBlockchainModalVisible] = useState(false);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<BlockchainRecord | null>(null);
+
+  const formatCurrencyWithIcon = (
+    value: number | null | undefined,
+    isPositive: boolean = true,
+  ) => {
+    const safeValue = value ?? 0;
+    const color = isPositive ? "#16A34A" : "#DC2626";
+    // Format number without currency symbol
+    const formattedValue = safeValue.toLocaleString("en-NP");
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <CurrencyIcon size={16} color={color} />
+        <Text style={[styles.currencyText, { color, marginLeft: 4 }]}>
+          {formattedValue}
+        </Text>
+      </View>
+    );
+  };
 
   const loadLoans = useCallback(async () => {
     try {
@@ -173,6 +196,26 @@ export default function MyLoansScreen() {
     loadLoans();
   };
 
+  const handleBlockchainVerify = (loan: Loan) => {
+    if (loan.blockchainTxHash) {
+      setSelectedBlockchainRecord({
+        id: loan.id,
+        type: "loan",
+        status: loan.status,
+        amount: loan.requestedAmount,
+        transactionHash: loan.blockchainTxHash,
+        createdAt: loan.createdAt,
+        updatedAt: loan.updatedAt,
+        details: {
+          purpose: loan.purpose,
+          borrower: loan.borrower?.user?.fullName,
+          lender: loan.borrower?.tenant?.name,
+        },
+      });
+      setBlockchainModalVisible(true);
+    }
+  };
+
   const activeCount = loans.filter(
     (l) =>
       l.status === LoanStatus.LOAN_PROVIDED ||
@@ -190,7 +233,7 @@ export default function MyLoansScreen() {
     ).includes(l.status),
   ).length;
   const totalAmount = loans.reduce(
-    (sum, l) => sum + (l.approvedAmount ?? l.requestedAmount),
+    (sum, l) => sum + Number(l.approvedAmount ?? l.requestedAmount ?? 0),
     0,
   );
 
@@ -252,14 +295,9 @@ export default function MyLoansScreen() {
               >
                 {loan.approvedAmount ? "Approved Amount" : "Requested Amount"}
               </Text>
-              <Text
-                style={[
-                  styles.amountValue,
-                  { color: isActive ? colors.primary : colors.text },
-                ]}
-              >
-                {formatCurrency(amount)}
-              </Text>
+              <View style={{ alignItems: "flex-start" }}>
+                {formatCurrencyWithIcon(amount, true)}
+              </View>
             </View>
             <View style={styles.termBlock}>
               <Text style={[styles.termLabel, { color: colors.textSecondary }]}>
@@ -313,6 +351,31 @@ export default function MyLoansScreen() {
                 {loan.rejectionReason}
               </Text>
             </View>
+          )}
+
+          {loan.blockchainTxHash && (
+            <TouchableOpacity
+              style={[
+                styles.blockchainBadge,
+                {
+                  backgroundColor: "#10b981" + "20",
+                  borderColor: "#10b981" + "40",
+                },
+              ]}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                handleBlockchainVerify(loan);
+              }}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color="#10b981"
+              />
+              <Text style={[styles.blockchainText, { color: "#10b981" }]}>
+                On-Chain
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </TouchableOpacity>
@@ -424,13 +487,9 @@ export default function MyLoansScreen() {
                 style={[styles.statDivider, { backgroundColor: colors.border }]}
               />
               <View style={styles.statItem}>
-                <Text
-                  style={[styles.statNum, { color: colors.text }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {formatCurrency(totalAmount)}
-                </Text>
+                <View style={{ alignItems: "center" }}>
+                  {formatCurrencyWithIcon(totalAmount, true)}
+                </View>
                 <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
                   Total Value
                 </Text>
@@ -439,6 +498,12 @@ export default function MyLoansScreen() {
           }
         />
       )}
+
+      <BlockchainVerificationModal
+        visible={blockchainModalVisible}
+        onClose={() => setBlockchainModalVisible(false)}
+        record={selectedBlockchainRecord}
+      />
     </SafeAreaView>
   );
 }
@@ -596,4 +661,23 @@ const createStyles = (colors: Record<string, string>) =>
       borderRadius: borderRadius.full,
     },
     emptyButtonText: { fontSize: 15, fontWeight: "700" },
+    currencyText: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    blockchainBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      alignSelf: "flex-start",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderWidth: 1,
+      borderRadius: 4,
+      marginTop: 8,
+    },
+    blockchainText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
   });

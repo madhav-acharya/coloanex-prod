@@ -217,9 +217,7 @@ export default function Roles() {
       setSelectedRole(null);
       resetFields();
       setSelectedPermissions([]);
-    } catch (error) {
-      console.error("Submit error:", error);
-    }
+    } catch (error) {}
   };
 
   return (

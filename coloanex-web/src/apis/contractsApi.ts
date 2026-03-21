@@ -9,6 +9,14 @@ export interface Signature {
 
 export interface BlockchainData {
   transactionHash?: string;
+  txId?: string;
+  signTxId?: string;
+  disburseTxId?: string;
+  recordedAt?: string;
+  signedAt?: string;
+  disbursedAt?: string;
+  reportTxId?: string;
+  reportedAt?: string;
   blockNumber?: number;
   network?: string;
   contractAddress?: string;
@@ -222,6 +230,10 @@ export const contractsApi = baseApi.injectEndpoints({
         { type: "Contracts", id: "LIST" },
       ],
     }),
+
+    getContractBlockchainHistory: builder.query<any, string>({
+      query: (id) => `/contracts/${id}/blockchain-history`,
+    }),
   }),
 });
 
@@ -235,4 +247,5 @@ export const {
   useDeleteContractMutation,
   useGenerateContractPdfMutation,
   useSignAndDisburseContractMutation,
+  useGetContractBlockchainHistoryQuery,
 } = contractsApi;

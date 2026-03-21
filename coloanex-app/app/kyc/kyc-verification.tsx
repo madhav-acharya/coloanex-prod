@@ -19,6 +19,7 @@ import {
   PickerInput,
   useToast,
   AppHeader,
+  CurrencyIcon,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
@@ -825,10 +826,13 @@ export default function KYCVerificationScreen() {
               placeholder="Your occupation"
             />
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Monthly Income (NPR){" "}
-              <Text style={[styles.required, { color: colors.error }]}>*</Text>
-            </Text>
+            <View style={[styles.label, { flexDirection: "row", alignItems: "center" }]}>
+              <Text style={[{ fontSize: 14, fontWeight: "600" }, { color: colors.text }]}>
+                Monthly Income{" "}
+              </Text>
+              <CurrencyIcon size={16} color={colors.text} />
+              <Text style={[styles.required, { color: colors.error, marginLeft: 4 }]}>*</Text>
+            </View>
             <Input
               value={financialInfo.monthlyIncome}
               onChangeText={(text) =>

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { KycStatus, type Kyc } from "@/types/kyc";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -604,8 +605,9 @@ export function KycVerificationModal({
                         <Label className="text-xs text-muted-foreground">
                           Monthly Income
                         </Label>
-                        <p className="text-sm font-medium mt-1">
-                          NPR {document.monthlyIncome.toLocaleString()}
+                        <p className="text-sm font-medium mt-1 flex items-center gap-1">
+                          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
+                          {document.monthlyIncome.toLocaleString()}
                         </p>
                       </div>
                     )}

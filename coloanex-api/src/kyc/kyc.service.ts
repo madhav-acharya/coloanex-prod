@@ -613,9 +613,7 @@ export class KycService {
         },
         updated.borrower.tenantId,
       );
-    } catch (error) {
-      console.error('Failed to send KYC status email:', error);
-    }
+    } catch (error) {}
 
     return updated as unknown as Kyc;
   }

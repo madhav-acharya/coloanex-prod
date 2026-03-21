@@ -51,7 +51,6 @@ function AuthLoader({ children }: { children: React.ReactNode }) {
           dispatch(setAuth({ token, user }));
         }
       } catch (error) {
-        console.error("Failed to load auth:", error);
       } finally {
         setLoading(false);
       }

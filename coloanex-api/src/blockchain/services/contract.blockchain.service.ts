@@ -179,4 +179,93 @@ export class ContractBlockchainService
       return null;
     }
   }
+
+  async getContractHistory(id: string): Promise<any> {
+    if (!this.enabled) return null;
+    try {
+      return await this.service.getContractHistory(id);
+    } catch (error) {
+      this.logBlockchainError(`getContractHistory [${id}]`, error);
+      throw error;
+    }
+  }
+
+  async verifyContractOnChain(id: string): Promise<{
+    exists: boolean;
+    data?: any;
+    onChain: boolean;
+  }> {
+    if (!this.enabled) {
+      return { exists: false, onChain: false };
+    }
+    try {
+      let exists = await this.service.contractExists(id);
+      let data: any = null;
+      let chaincodeName = 'contracts';
+
+      if (!exists) {
+        try {
+          const loanService =
+            require('./loan.blockchain.service').LoanBlockchainService;
+          const loanInstance = new loanService();
+          if (loanInstance.enabled) {
+            const loanExists = await loanInstance.service.loanExists(id);
+            if (loanExists) {
+              data = await loanInstance.service.getLoan(id);
+              chaincodeName = 'loans';
+              exists = true;
+            }
+          }
+        } catch (err) {}
+
+        if (!exists) {
+          try {
+            const paymentService =
+              require('./payment.blockchain.service').PaymentBlockchainService;
+            const paymentInstance = new paymentService();
+            if (paymentInstance.enabled) {
+              const paymentExists =
+                await paymentInstance.service.paymentExists(id);
+              if (paymentExists) {
+                data = await paymentInstance.service.getPayment(id);
+                chaincodeName = 'payments';
+                exists = true;
+              }
+            }
+          } catch (err) {}
+        }
+      } else {
+        data = await this.service.getContract(id);
+      }
+
+      if (!exists) {
+        return { exists: false, onChain: false };
+      }
+
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+      const enrichedData = {
+        ...parsedData,
+        chaincodeName: chaincodeName,
+        channelName: 'coloanex-channel',
+        mspId: 'Org1MSP',
+        functionName:
+          chaincodeName === 'loans'
+            ? 'getLoan'
+            : chaincodeName === 'contracts'
+              ? 'getContract'
+              : 'getPayment',
+      };
+
+      return {
+        exists: true,
+        onChain: true,
+        data: enrichedData,
+      };
+    } catch (error) {
+      this.logBlockchainError(`verifyContractOnChain [${id}]`, error);
+      return { exists: false, onChain: false };
+    }
+  }
+
 }

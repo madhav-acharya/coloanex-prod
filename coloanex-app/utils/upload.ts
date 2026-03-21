@@ -47,7 +47,6 @@ export const uploadToCloudinary = async (
 
     return response.data.data;
   } catch (error: any) {
-    console.error("Upload error:", error);
     throw new Error(error.response?.data?.message || "Upload failed");
   }
 };
@@ -89,7 +88,6 @@ export const uploadMultipleToCloudinary = async (
 
     return response.data.data;
   } catch (error: any) {
-    console.error("Multiple upload error:", error);
     throw new Error(error.response?.data?.message || "Upload failed");
   }
 };

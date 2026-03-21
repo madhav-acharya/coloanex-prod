@@ -124,4 +124,5 @@ export class ContractFabricService {
     const result = await this.client.evaluateTransaction("contractExists", id);
     return result === true || result === "true";
   }
+
 }

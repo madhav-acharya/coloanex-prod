@@ -36,6 +36,27 @@ export class ContractsController {
     return this.contractsService.findAll(req.user);
   }
 
+  @Get('blockchain/stats')
+  getBlockchainStats(@Request() req: { user: JwtPayload }) {
+    return this.contractsService.getBlockchainStats(req.user);
+  }
+
+  @Get('blockchain/verify/:id')
+  verifyBlockchainTransaction(
+    @Param('id') id: string,
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.contractsService.verifyBlockchainTransaction(id, req.user);
+  }
+
+  @Get(':id/blockchain-history')
+  getBlockchainHistory(
+    @Param('id') id: string,
+    @Request() req: { user: JwtPayload },
+  ) {
+    return this.contractsService.getBlockchainHistory(id, req.user);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
     return this.contractsService.findOne(id, req.user);

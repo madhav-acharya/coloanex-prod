@@ -1,12 +1,15 @@
 import { useState, useMemo } from "react";
-import { Eye, Plus, RefreshCw, FileText } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
 import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 import {
   Dialog,
   DialogContent,
@@ -16,10 +19,13 @@ import {
 } from "@/components/ui/dialog";
 import { FormSheet } from "@/components/shared/FormSheet";
 import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+} from "recharts";
+import {
   useGetMyWalletQuery,
   useCreateWalletMutation,
-  useUpdateWalletBalanceMutation,
-  Wallet,
 } from "@/apis/walletsApi";
 import {
   useGetTransactionsByWalletQuery,
@@ -44,6 +50,9 @@ export default function Wallets() {
     amount: "",
     description: "",
   });
+  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
+  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
+    useState<any>(null);
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
   const { data: transactions = [] } = useGetTransactionsByWalletQuery(
@@ -53,10 +62,65 @@ export default function Wallets() {
     },
   );
   const [createWallet, { isLoading: isCreating }] = useCreateWalletMutation();
-  const [updateBalance, { isLoading: isUpdating }] =
-    useUpdateWalletBalanceMutation();
   const [createTransaction, { isLoading: isCreatingTransaction }] =
     useCreateTransactionMutation();
+
+  const WalletCard = ({ title, value, color, isCurrency = false, trend }: any) => (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-muted-foreground mb-2">{title}</p>
+            <div className="flex items-center gap-1">
+              {isCurrency && <IconCurrencyRupeeNepalese className="h-5 w-5" style={{ color }} />}
+              <h3 className="text-xl font-bold" style={{ color }}>
+                {typeof value === 'number' ? value.toLocaleString() : value}
+              </h3>
+            </div>
+          </div>
+          <div className="w-20 h-10">
+            {trend && trend.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trend}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={[{value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}]}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#E5E7EB"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  // Generate trend data for wallet cards
+  const generateWalletTrend = (baseValue: number, isPositive: boolean = true) => {
+    const trend = [];
+    for (let i = 0; i < 6; i++) {
+      const variation = isPositive
+        ? Math.floor(baseValue * (0.7 + (i * 0.05))) + Math.random() * baseValue * 0.1
+        : Math.max(0, Math.floor(baseValue * (1 - (i * 0.05))) - Math.random() * baseValue * 0.1);
+      trend.push({ value: Math.floor(variation) });
+    }
+    return trend;
+  };
 
   const filteredTransactions = useMemo(() => {
     let filtered = transactions.filter((transaction) => {
@@ -132,7 +196,13 @@ export default function Wallets() {
             transaction.type === "DEPOSIT" ? "text-green-600" : "text-red-600"
           }
         >
-          {transaction.type === "DEPOSIT" ? "+" : "-"}NPR{" "}
+          {transaction.type === "DEPOSIT" ? "+" : "-"}
+          <IconCurrencyRupeeNepalese
+            className="inline h-4 w-4 mx-0.5"
+            style={{
+              color: transaction.type === "DEPOSIT" ? "#16A34A" : "#DC2626"
+            }}
+          />
           {Number(transaction.amount || 0).toLocaleString()}
         </span>
       ),
@@ -163,6 +233,27 @@ export default function Wallets() {
           </Badge>
         );
       },
+    },
+    {
+      key: "blockchain",
+      label: "Blockchain",
+      sortable: false,
+      render: (transaction) =>
+        transaction.blockchainTxHash ? (
+          <Badge
+            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(transaction)}
+          >
+            On-Chain
+          </Badge>
+        ) : (
+          <Badge
+            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
+            onClick={() => handleBlockchainVerify(transaction)}
+          >
+            Off-Chain
+          </Badge>
+        ),
     },
     {
       key: "paymentDetails",
@@ -223,6 +314,24 @@ export default function Wallets() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBlockchainVerify = (transaction: Transaction) => {
+    setSelectedBlockchainRecord({
+      id: transaction.id,
+      type: "payment",
+      status: transaction.status,
+      amount: transaction.amount,
+      transactionHash: transaction.blockchainTxHash,
+      createdAt: transaction.createdAt,
+      updatedAt: transaction.updatedAt,
+      details: {
+        type: transaction.type,
+        description: transaction.paymentDetails?.remarks,
+        walletId: transaction.walletId,
+      },
+    });
+    setBlockchainModalOpen(true);
   };
 
   if (isLoading) {
@@ -337,27 +446,27 @@ export default function Wallets() {
       }}
     >
       <div className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-lg border p-6">
-            <p className="text-sm text-muted-foreground mb-2">Balance</p>
-            <p className="text-3xl font-bold">
-              NPR {wallet.balance.toLocaleString()}
-            </p>
-          </div>
-          <div className="rounded-lg border p-6">
-            <p className="text-sm text-muted-foreground mb-2">
-              Pending Balance
-            </p>
-            <p className="text-3xl font-bold">
-              NPR {(wallet.pendingBalance || 0).toLocaleString()}
-            </p>
-          </div>
-          <div className="rounded-lg border p-6">
-            <p className="text-sm text-muted-foreground mb-2">
-              Total Transactions
-            </p>
-            <p className="text-3xl font-bold">{transactions.length}</p>
-          </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <WalletCard
+            title="Balance"
+            value={wallet.balance}
+            color="#16A34A"
+            isCurrency={true}
+            trend={generateWalletTrend(wallet.balance, true)}
+          />
+          <WalletCard
+            title="Pending Balance"
+            value={wallet.pendingBalance || 0}
+            color="#F59E0B"
+            isCurrency={true}
+            trend={generateWalletTrend(wallet.pendingBalance || 0, false)}
+          />
+          <WalletCard
+            title="Total Transactions"
+            value={transactions.length}
+            color="#059669"
+            trend={generateWalletTrend(transactions.length, true)}
+          />
         </div>
 
         <div>
@@ -371,6 +480,7 @@ export default function Wallets() {
             onSort={handleSort}
             sortBy={sortBy}
             sortOrder={sortOrder}
+            actions={[]}
           />
 
           <div className="mt-6">
@@ -435,6 +545,12 @@ export default function Wallets() {
           submitText="Load Wallet"
           cancelText="Cancel"
           isSubmitting={isCreatingTransaction}
+        />
+
+        <BlockchainVerificationModal
+          open={blockchainModalOpen}
+          onOpenChange={setBlockchainModalOpen}
+          record={selectedBlockchainRecord}
         />
       </div>
     </DashboardLayout>

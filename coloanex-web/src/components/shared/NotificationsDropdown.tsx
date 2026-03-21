@@ -161,17 +161,13 @@ export const NotificationsDropdown = () => {
   const handleMarkAsRead = async (id: string) => {
     try {
       await markAsRead(id).unwrap();
-    } catch (error) {
-      console.error("Failed to mark as read:", error);
-    }
+    } catch (error) {}
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead().unwrap();
-    } catch (error) {
-      console.error("Failed to mark all as read:", error);
-    }
+    } catch (error) {}
   };
 
   const handleLoadMore = () => {

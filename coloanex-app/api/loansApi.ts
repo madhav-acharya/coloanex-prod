@@ -62,4 +62,9 @@ export const loansApi = {
       (Math.pow(1 + monthlyRate, term) - 1);
     return Math.round(payment * 100) / 100;
   },
+
+  getBlockchainHistory: async (id: string): Promise<any> => {
+    const { data } = await apiClient.get(`/loans/${id}/blockchain-history`);
+    return data;
+  },
 };

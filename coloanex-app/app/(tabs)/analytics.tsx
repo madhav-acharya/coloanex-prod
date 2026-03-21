@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { LineChart, PieChart } from "react-native-chart-kit";
-import { Card } from "@/components/ui";
+import { Card, CurrencyIcon } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import analyticsApi, {
   BorrowerAnalytics,
@@ -56,7 +56,6 @@ export default function AnalyticsScreen() {
       setMonthlyLoans(monthlyData);
       setLoansByStatus(statusData);
     } catch (error) {
-      console.error("Failed to load analytics:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -113,7 +112,7 @@ export default function AnalyticsScreen() {
       <View style={styles.statContent}>
         <View style={[styles.statIcon, { backgroundColor: `${color}20` }]}>
           {icon === "rupee" ? (
-            <Text style={[styles.rupeeIcon, { color }]}>{"\u20B9"}</Text>
+            <CurrencyIcon size={24} color={color} />
           ) : (
             <Ionicons name={icon} size={24} color={color} />
           )}
@@ -189,21 +188,21 @@ export default function AnalyticsScreen() {
             />
             <StatCard
               title="Total Borrowed"
-              value={`NPR ${(analytics.totalBorrowed / 1000).toFixed(0)}K`}
+              value={`${(analytics.totalBorrowed / 1000).toFixed(0)}K`}
               icon="rupee"
               color={colors.primary}
               subtitle="Total loan amount"
             />
             <StatCard
               title="Total Paid"
-              value={`NPR ${(analytics.totalPaid / 1000).toFixed(0)}K`}
+              value={`${(analytics.totalPaid / 1000).toFixed(0)}K`}
               icon="rupee"
               color={colors.success}
               subtitle="Payments made"
             />
             <StatCard
               title="Pending Amount"
-              value={`NPR ${(analytics.pendingAmount / 1000).toFixed(0)}K`}
+              value={`${(analytics.pendingAmount / 1000).toFixed(0)}K`}
               icon="rupee"
               color={colors.warning}
               subtitle="Outstanding balance"
@@ -538,10 +537,6 @@ const createStyles = (colors: any) =>
       justifyContent: "center",
       alignItems: "center",
       marginRight: spacing.md,
-    },
-    rupeeIcon: {
-      fontSize: 28,
-      fontWeight: "700",
     },
     statInfo: {
       flex: 1,
