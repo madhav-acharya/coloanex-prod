@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Card, Button, AppHeader } from "@/components/ui";
+import { Card, Button, AppHeader, CurrencyIcon } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { rulesApi } from "@/api";
 import type { Rule } from "@/types";
@@ -27,7 +27,6 @@ export default function RulesScreen() {
       const data = await rulesApi.getAll();
       setRules(data);
     } catch (error) {
-      console.error("Failed to load rules:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -158,10 +157,12 @@ export default function RulesScreen() {
                 >
                   Loan Amount
                 </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  NPR {rule.loanLimits.minAmount.toLocaleString()} - NPR{" "}
-                  {rule.loanLimits.maxAmount.toLocaleString()}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <CurrencyIcon size={16} color={colors.text} />
+                  <Text style={[styles.detailValue, { color: colors.text, marginLeft: 4 }]}>
+                    {rule.loanLimits.minAmount.toLocaleString()} - {rule.loanLimits.maxAmount.toLocaleString()}
+                  </Text>
+                </View>
               </View>
 
               <View style={styles.detailRow}>
@@ -184,11 +185,20 @@ export default function RulesScreen() {
                 >
                   Late Penalty
                 </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {rule.penaltyConfig.penaltyType === "PERCENTAGE"
-                    ? `${rule.penaltyConfig.penaltyAmount}%`
-                    : `NPR ${rule.penaltyConfig.penaltyAmount}`}
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {rule.penaltyConfig.penaltyType === "PERCENTAGE" ? (
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      {rule.penaltyConfig.penaltyAmount}%
+                    </Text>
+                  ) : (
+                    <>
+                      <CurrencyIcon size={16} color={colors.text} />
+                      <Text style={[styles.detailValue, { color: colors.text, marginLeft: 4 }]}>
+                        {rule.penaltyConfig.penaltyAmount.toLocaleString()}
+                      </Text>
+                    </>
+                  )}
+                </View>
               </View>
 
               <View style={styles.detailRow}>
