@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import { useToast, AppHeader } from "@/components/ui";
+import { useToast, AppHeader, CurrencyIcon } from "@/components/ui";
 import { spacing, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi, rulesApi } from "@/api";
 import type { Lender } from "@/types";
@@ -471,10 +471,13 @@ export default function LenderDetailsScreen() {
 
                 <View style={styles.ruleStatsRow}>
                   <View style={styles.ruleStat}>
-                    <Text style={[styles.ruleStatVal, { color: colors.text }]}>
-                      Rs {(rule.loanLimits.minAmount / 1000).toFixed(0)}K –{" "}
-                      {(rule.loanLimits.maxAmount / 1000).toFixed(0)}K
-                    </Text>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <CurrencyIcon size={16} color={colors.text} />
+                      <Text style={[styles.ruleStatVal, { color: colors.text, marginLeft: 4 }]}>
+                        {(rule.loanLimits.minAmount / 1000).toFixed(0)}K –{" "}
+                        {(rule.loanLimits.maxAmount / 1000).toFixed(0)}K
+                      </Text>
+                    </View>
                     <Text
                       style={[
                         styles.ruleStatLbl,
