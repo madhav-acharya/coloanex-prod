@@ -319,6 +319,38 @@ export class ContractChaincode extends Contract {
     return !!contractBytes && contractBytes.length > 0;
   }
 
+  @Transaction(false)
+  @Returns("string")
+  async verifyTransactionHash(
+    ctx: Context,
+    id: string,
+    txHash: string,
+  ): Promise<string> {
+    const results: any[] = [];
+    const iterator = await ctx.stub.getHistoryForKey(id);
+
+    while (true) {
+      const { done, value } = await iterator.next();
+      if (done || !value) break;
+
+      if (value.txId === txHash) {
+        results.push({
+          txId: value.txId,
+          timestamp: value.timestamp,
+          isDelete: value.isDelete,
+          value: value.value.toString(),
+          verified: true,
+        });
+      }
+    }
+
+    await iterator.close();
+    return JSON.stringify({
+      verified: results.length > 0,
+      transaction: results.length > 0 ? results[0] : null,
+    });
+  }
+
   private txTime(ctx: Context): string {
     const ts = ctx.stub.getTxTimestamp();
     return new Date(Number(ts.seconds) * 1000).toISOString();

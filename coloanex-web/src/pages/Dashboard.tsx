@@ -40,9 +40,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import {
-  Calendar,
-} from "lucide-react";
+import { Calendar } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
 const COLORS = [
@@ -70,9 +68,12 @@ const Dashboard = () => {
 
   const { data: tenantData } = useGetTenantAnalyticsQuery(undefined);
 
-  const months = Math.max(1, Math.round(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
-  ));
+  const months = Math.max(
+    1,
+    Math.round(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
+    ),
+  );
 
   const { data: monthlyContracts } = useGetMonthlyContractsQuery(months);
   const { data: monthlyLoans } = useGetMonthlyLoansQuery(months);
@@ -88,15 +89,18 @@ const Dashboard = () => {
   const { data: usersByRole } = useGetUsersByRoleQuery(undefined, {
     skip: !isSuperAdmin,
   });
-  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(months, {
-    skip: !isSuperAdmin,
-  });
+  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(
+    months,
+    {
+      skip: !isSuperAdmin,
+    },
+  );
   const { data: borrowersByStatus } = useGetBorrowersByStatusQuery(undefined, {
     skip: !isSuperAdmin,
   });
 
   // Calculate date-range aware values from monthly data
-  const getDateRangeValue = (monthlyData: any[], key: string = 'count') => {
+  const getDateRangeValue = (monthlyData: any[], key: string = "count") => {
     if (!monthlyData || !Array.isArray(monthlyData)) return 0;
     return monthlyData.reduce((sum, item) => sum + (item[key] || 0), 0);
   };
@@ -110,23 +114,38 @@ const Dashboard = () => {
     if (!data || data.length === 0) {
       return Array(minLength).fill({ value: 0 });
     }
-    const trend = data.slice(-minLength).map(item => ({ value: item.count || item.revenue || 0 }));
+    const trend = data
+      .slice(-minLength)
+      .map((item) => ({ value: item.count || item.revenue || 0 }));
     while (trend.length < minLength) {
       trend.unshift({ value: 0 });
     }
     return trend;
   };
 
-  const StatCard = ({ title, value, color, isCurrency = false, trend }: any) => (
+  const StatCard = ({
+    title,
+    value,
+    color,
+    isCurrency = false,
+    trend,
+  }: any) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">{title}</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">
+              {title}
+            </p>
             <div className="flex items-center gap-1">
-              {isCurrency && <IconCurrencyRupeeNepalese className="h-5 w-5" style={{ color }} />}
+              {isCurrency && (
+                <IconCurrencyRupeeNepalese
+                  className="h-5 w-5"
+                  style={{ color }}
+                />
+              )}
               <h3 className="text-xl font-bold" style={{ color }}>
-                {typeof value === 'number' ? value.toLocaleString() : value}
+                {typeof value === "number" ? value.toLocaleString() : value}
               </h3>
             </div>
           </div>
@@ -145,7 +164,16 @@ const Dashboard = () => {
               </ResponsiveContainer>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={[{value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}]}>
+                <LineChart
+                  data={[
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                  ]}
+                >
                   <Line
                     type="monotone"
                     dataKey="value"
@@ -249,7 +277,11 @@ const Dashboard = () => {
                 title="Active Users"
                 value={Math.floor(getDateRangeValue(monthlyUsers) * 0.8)}
                 color="#22C55E"
-                trend={ensureTrendData(monthlyUsers?.map((m, index) => ({ count: Math.max(0, m.count - Math.floor(index/3)) })))}
+                trend={ensureTrendData(
+                  monthlyUsers?.map((m, index) => ({
+                    count: Math.max(0, m.count - Math.floor(index / 3)),
+                  })),
+                )}
               />
               <StatCard
                 title="Total Loans"
@@ -324,7 +356,11 @@ const Dashboard = () => {
                 title="Active Loans"
                 value={Math.floor(getDateRangeValue(monthlyLoans) * 0.7)}
                 color="#059669"
-                trend={ensureTrendData(monthlyLoans?.map((m) => ({ count: Math.max(1, Math.floor(m.count * 0.7)) })))}
+                trend={ensureTrendData(
+                  monthlyLoans?.map((m) => ({
+                    count: Math.max(1, Math.floor(m.count * 0.7)),
+                  })),
+                )}
               />
               <StatCard
                 title="Period Contracts"
@@ -339,19 +375,31 @@ const Dashboard = () => {
                 title="Verified Borrowers"
                 value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.8)}
                 color="#16A34A"
-                trend={ensureTrendData(monthlyBorrowers?.map((m) => ({ count: Math.floor(m.count * 0.8) })))}
+                trend={ensureTrendData(
+                  monthlyBorrowers?.map((m) => ({
+                    count: Math.floor(m.count * 0.8),
+                  })),
+                )}
               />
               <StatCard
                 title="Pending KYCs"
                 value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.2)}
                 color="#F59E0B"
-                trend={ensureTrendData(monthlyBorrowers?.map((m) => ({ count: Math.max(0, Math.floor(m.count * 0.2)) })))}
+                trend={ensureTrendData(
+                  monthlyBorrowers?.map((m) => ({
+                    count: Math.max(0, Math.floor(m.count * 0.2)),
+                  })),
+                )}
               />
               <StatCard
                 title="Active Contracts"
                 value={Math.floor(getDateRangeValue(monthlyContracts) * 0.7)}
                 color="#22C55E"
-                trend={ensureTrendData(monthlyContracts?.map((m) => ({ count: Math.floor(m.count * 0.7) })))}
+                trend={ensureTrendData(
+                  monthlyContracts?.map((m) => ({
+                    count: Math.floor(m.count * 0.7),
+                  })),
+                )}
               />
             </div>
 
@@ -375,7 +423,12 @@ const Dashboard = () => {
                 value={getDateRangeRevenueValue(monthlyRevenue) * 0.5}
                 color="#F59E0B"
                 isCurrency={true}
-                trend={ensureTrendData(monthlyRevenue?.map((m, index) => ({ revenue: Math.max(0, m.revenue * 0.5 - index * 1000) })), 6)}
+                trend={ensureTrendData(
+                  monthlyRevenue?.map((m, index) => ({
+                    revenue: Math.max(0, m.revenue * 0.5 - index * 1000),
+                  })),
+                  6,
+                )}
               />
             </div>
           </>
@@ -525,7 +578,10 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={contractsByStatus} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart
+                    data={contractsByStatus}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                       dataKey="status"
@@ -538,15 +594,21 @@ const Dashboard = () => {
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#1f2937',
-                        border: 'none',
-                        borderRadius: '8px',
-                        color: '#fff'
+                        backgroundColor: "#1f2937",
+                        border: "none",
+                        borderRadius: "8px",
+                        color: "#fff",
                       }}
-                      cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
+                      cursor={{ fill: "rgba(22, 163, 74, 0.1)" }}
                     />
                     <Legend />
-                    <Bar dataKey="count" fill="#16A34A" name="Contracts" maxBarSize={80} radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey="count"
+                      fill="#16A34A"
+                      name="Contracts"
+                      maxBarSize={80}
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -560,7 +622,10 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyRevenue} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart
+                  data={monthlyRevenue}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis
                     dataKey="month"
@@ -573,23 +638,32 @@ const Dashboard = () => {
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: 'none',
-                      borderRadius: '8px',
-                      color: '#fff'
+                      backgroundColor: "#1f2937",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "#fff",
                     }}
-                    cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
-                    formatter={(value: any) => [value?.toLocaleString(), 'Revenue']}
-                    labelFormatter={() => 'Revenue Details'}
+                    cursor={{ fill: "rgba(22, 163, 74, 0.1)" }}
+                    formatter={(value: any) => [
+                      value?.toLocaleString(),
+                      "Revenue",
+                    ]}
+                    labelFormatter={() => "Revenue Details"}
                     labelStyle={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
                     }}
-                    iconType="none"
+                    // iconType="none"
                   />
                   <Legend />
-                  <Bar dataKey="revenue" fill="#16A34A" name="Revenue" maxBarSize={60} radius={[4, 4, 0, 0]} />
+                  <Bar
+                    dataKey="revenue"
+                    fill="#16A34A"
+                    name="Revenue"
+                    maxBarSize={60}
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -662,7 +736,10 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={borrowerMonthlyLoans} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart
+                      data={borrowerMonthlyLoans}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="month"
@@ -675,12 +752,12 @@ const Dashboard = () => {
                       <YAxis tick={{ fontSize: 12 }} />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#1f2937',
-                          border: 'none',
-                          borderRadius: '8px',
-                          color: '#fff'
+                          backgroundColor: "#1f2937",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: "#fff",
                         }}
-                        cursor={{ fill: 'rgba(22, 163, 74, 0.1)' }}
+                        cursor={{ fill: "rgba(22, 163, 74, 0.1)" }}
                       />
                       <Legend />
                       <Bar

@@ -32,7 +32,7 @@ get_next_sequence() {
   COMMITTED=$(peer lifecycle chaincode querycommitted \
     --channelID "${CHANNEL_NAME}" \
     --name "${CC_NAME}" 2>/dev/null \
-    | sed -n "s/.*Sequence: \([0-9]*\).*/\1/p")
+    | sed -n "s/.*Sequence: \([0-9]*\).*/\1/p" | head -1)
   if [ -z "${COMMITTED}" ]; then
     echo "1"
   else
