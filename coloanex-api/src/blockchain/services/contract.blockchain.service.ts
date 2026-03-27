@@ -268,4 +268,36 @@ export class ContractBlockchainService
     }
   }
 
+  async verifyTransactionHash(
+    id: string,
+    txHash: string,
+  ): Promise<{
+    verified: boolean;
+    transaction?: any;
+    error?: string;
+  }> {
+    if (!this.enabled) {
+      return { verified: false, error: 'Blockchain is disabled' };
+    }
+
+    try {
+      const result = await this.service.verifyTransactionHash(id, txHash);
+      const parsedResult =
+        typeof result === 'string' ? JSON.parse(result) : result;
+
+      return {
+        verified: parsedResult.verified,
+        transaction: parsedResult.transaction,
+      };
+    } catch (error) {
+      this.logBlockchainError(
+        `verifyTransactionHash [${id}] hash [${txHash}]`,
+        error,
+      );
+      return {
+        verified: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }

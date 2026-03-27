@@ -1135,38 +1135,59 @@ export class LoansService {
       }
 
       try {
+        // First check if the record exists on blockchain
         const verification =
           await this.loanBlockchainService.verifyLoanOnChain(id);
 
-        if (verification.exists && verification.onChain && verification.data) {
-          const chaincodeName = verification.data.chaincodeName;
-          if (chaincodeName !== 'loans') {
-            return {
-              success: true,
-              isVerified: false,
-              onChain: false,
-              error: `Transaction found on blockchain but belongs to ${chaincodeName} chaincode, not loans`,
-            };
-          }
-
-          return {
-            success: true,
-            isVerified: true,
-            onChain: true,
-            transactionHash: txId,
-            blockNumber: verification.data.blockNumber,
-            timestamp: verification.data.timestamp,
-            confirmations: verification.data.confirmations,
-            chainData: verification.data,
-          };
-        } else {
+        if (!verification.exists || !verification.onChain) {
           return {
             success: true,
             isVerified: false,
             onChain: false,
             error: 'Transaction not found on blockchain',
+            transactionHash: txId,
           };
         }
+
+        const chaincodeName = verification.data.chaincodeName;
+        if (chaincodeName !== 'loans') {
+          return {
+            success: true,
+            isVerified: false,
+            onChain: false,
+            error: `Transaction found on blockchain but belongs to ${chaincodeName} chaincode, not loans`,
+          };
+        }
+
+        // Now verify that the stored transaction hash matches blockchain records
+        const hashVerification =
+          await this.loanBlockchainService.verifyTransactionHash(id, txId);
+
+        if (!hashVerification.verified) {
+          return {
+            success: true,
+            isVerified: false,
+            onChain: true,
+            error: 'Transaction exists on blockchain but stored hash does not match blockchain records',
+            transactionHash: txId,
+            chainData: verification.data,
+          };
+        }
+
+        // Both record and hash are verified
+        return {
+          success: true,
+          isVerified: true,
+          onChain: true,
+          transactionHash: txId,
+          blockNumber: verification.data.blockNumber,
+          timestamp: hashVerification.transaction?.timestamp,
+          confirmations: verification.data.confirmations,
+          chainData: {
+            ...verification.data,
+            verifiedTransaction: hashVerification.transaction,
+          },
+        };
       } catch (blockchainError) {
         this.logger.warn(
           `Blockchain verification failed for loan ${id}`,

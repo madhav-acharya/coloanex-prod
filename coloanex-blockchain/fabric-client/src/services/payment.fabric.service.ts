@@ -83,4 +83,7 @@ export class PaymentFabricService {
     return result === true || result === "true";
   }
 
+  async verifyTransactionHash(id: string, txHash: string) {
+    return this.client.evaluateTransaction("verifyTransactionHash", id, txHash);
+  }
 }

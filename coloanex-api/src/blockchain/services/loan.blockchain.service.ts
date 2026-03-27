@@ -204,10 +204,12 @@ export class LoanBlockchainService
 
       if (!exists) {
         try {
-          const contractService = require('./contract.blockchain.service').ContractBlockchainService;
+          const contractService =
+            require('./contract.blockchain.service').ContractBlockchainService;
           const contractInstance = new contractService();
           if (contractInstance.enabled) {
-            const contractExists = await contractInstance.service.contractExists(id);
+            const contractExists =
+              await contractInstance.service.contractExists(id);
             if (contractExists) {
               data = await contractInstance.service.getContract(id);
               chaincodeName = 'contracts';
@@ -218,10 +220,12 @@ export class LoanBlockchainService
 
         if (!exists) {
           try {
-            const paymentService = require('./payment.blockchain.service').PaymentBlockchainService;
+            const paymentService =
+              require('./payment.blockchain.service').PaymentBlockchainService;
             const paymentInstance = new paymentService();
             if (paymentInstance.enabled) {
-              const paymentExists = await paymentInstance.service.paymentExists(id);
+              const paymentExists =
+                await paymentInstance.service.paymentExists(id);
               if (paymentExists) {
                 data = await paymentInstance.service.getPayment(id);
                 chaincodeName = 'payments';
@@ -245,7 +249,12 @@ export class LoanBlockchainService
         chaincodeName: chaincodeName,
         channelName: 'coloanex-channel',
         mspId: 'Org1MSP',
-        functionName: chaincodeName === 'loans' ? 'getLoan' : chaincodeName === 'contracts' ? 'getContract' : 'getPayment',
+        functionName:
+          chaincodeName === 'loans'
+            ? 'getLoan'
+            : chaincodeName === 'contracts'
+              ? 'getContract'
+              : 'getPayment',
       };
 
       return {
@@ -259,4 +268,36 @@ export class LoanBlockchainService
     }
   }
 
+  async verifyTransactionHash(
+    id: string,
+    txHash: string,
+  ): Promise<{
+    verified: boolean;
+    transaction?: any;
+    error?: string;
+  }> {
+    if (!this.enabled) {
+      return { verified: false, error: 'Blockchain is disabled' };
+    }
+
+    try {
+      const result = await this.service.verifyTransactionHash(id, txHash);
+      const parsedResult =
+        typeof result === 'string' ? JSON.parse(result) : result;
+
+      return {
+        verified: parsedResult.verified,
+        transaction: parsedResult.transaction,
+      };
+    } catch (error) {
+      this.logBlockchainError(
+        `verifyTransactionHash [${id}] hash [${txHash}]`,
+        error,
+      );
+      return {
+        verified: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
