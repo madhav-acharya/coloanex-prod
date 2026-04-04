@@ -485,7 +485,7 @@ export default function ContractDetailsScreen() {
                   <Text style={styles.signSummaryLabel}>Contract No.: </Text>
                   {contract.contractNumber}
                 </Text>
-                <View style={[styles.signSummaryRow, { flexDirection: "row", alignItems: "center" }]}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Text style={styles.signSummaryLabel}>Loan Amount: </Text>
                   <CurrencyIcon size={16} color="#000" />
                   <Text style={{ marginLeft: 4 }}>
@@ -501,7 +501,7 @@ export default function ContractDetailsScreen() {
                   {contract.termMonths} months &bull;{" "}
                   {contract.totalInstallments} installments
                 </Text>
-                <View style={[styles.signSummaryRow, { flexDirection: "row", alignItems: "center" }]}>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Text style={styles.signSummaryLabel}>Total Due: </Text>
                   <CurrencyIcon size={16} color="#000" />
                   <Text style={{ marginLeft: 4 }}>

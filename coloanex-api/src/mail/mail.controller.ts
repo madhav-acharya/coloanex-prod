@@ -40,20 +40,14 @@ export class MailController {
     @Res() res: Response,
   ) {
     if (!code || !tenantId) {
-      return res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?mail=error`,
-      );
+      return res.redirect(`${process.env.FRONTEND_URL!}/settings?mail=error`);
     }
 
     try {
       await this.mailService.handleCallback(code, tenantId);
-      return res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?mail=success`,
-      );
+      return res.redirect(`${process.env.FRONTEND_URL!}/settings?mail=success`);
     } catch (error) {
-      return res.redirect(
-        `${process.env.FRONTEND_URL || 'http://localhost:5173'}/settings?mail=error`,
-      );
+      return res.redirect(`${process.env.FRONTEND_URL!}/settings?mail=error`);
     }
   }
 

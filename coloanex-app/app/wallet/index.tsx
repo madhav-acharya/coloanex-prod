@@ -90,20 +90,6 @@ export default function WalletScreen() {
     return colors_map[status] || colors.textLight;
   };
 
-        id: transaction.id,
-        type: "payment",
-        status: transaction.status,
-        amount: transaction.amount,
-        createdAt: transaction.createdAt,
-        updatedAt: transaction.updatedAt,
-        details: {
-          type: transaction.type,
-          description: transaction.description,
-        },
-      });
-    }
-  };
-
   if (!wallet && !loading) {
     return (
       <View style={styles.container}>
@@ -281,26 +267,6 @@ export default function WalletScreen() {
                       {formatCurrency(transaction.amount)}
                     </Text>
                   </View>
-
-                    <TouchableOpacity
-                      style={[
-                        {
-                          backgroundColor: "#10b981" + "20",
-                          borderColor: "#10b981" + "40",
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={12}
-                        color="#10b981"
-                      />
-                      <Text
-                      >
-                        On-Chain
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </Card>
               ))}
 
@@ -334,8 +300,6 @@ export default function WalletScreen() {
           </>
         )}
       </ScrollView>
-
-      />
     </View>
   );
 }
@@ -502,18 +466,5 @@ const createStyles = (colors: any) =>
     emptyText: {
       marginTop: spacing.md,
       fontSize: 16,
-    },
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      alignSelf: "flex-start",
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderWidth: 1,
-      borderRadius: 4,
-      marginTop: 4,
-    },
-      fontSize: 10,
-      fontWeight: "600",
     },
   });

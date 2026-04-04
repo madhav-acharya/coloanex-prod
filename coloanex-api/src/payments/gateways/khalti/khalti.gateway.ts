@@ -28,9 +28,7 @@ export class KhaltiGateway implements IPaymentGateway {
 
     const websiteUrl = successUrl.startsWith('http')
       ? new URL(successUrl).origin
-      : (process.env.KHALTI_WEBSITE_URL ??
-        process.env.API_BASE_URL ??
-        'http://localhost:3000');
+      : process.env.KHALTI_WEBSITE_URL!;
 
     const body = {
       return_url: successUrl,
@@ -58,18 +56,18 @@ export class KhaltiGateway implements IPaymentGateway {
       if (!response.ok) {
         if (response.status === 401) {
           throw new InternalServerErrorException(
-            'Khalti authentication failed. Please check your API credentials.'
+            'Khalti authentication failed. Please check your API credentials.',
           );
         } else {
           throw new InternalServerErrorException(
-            `Khalti payment initiation failed with status ${response.status}`
+            `Khalti payment initiation failed with status ${response.status}`,
           );
         }
       }
 
       if (!data['payment_url']) {
         throw new InternalServerErrorException(
-          'Khalti response missing payment_url'
+          'Khalti response missing payment_url',
         );
       }
 
@@ -85,7 +83,7 @@ export class KhaltiGateway implements IPaymentGateway {
       }
 
       throw new InternalServerErrorException(
-        `Failed to reach Khalti payment service: ${error?.message || 'Unknown error'}`
+        `Failed to reach Khalti payment service: ${error || 'Unknown error'}`,
       );
     }
   }
@@ -113,11 +111,11 @@ export class KhaltiGateway implements IPaymentGateway {
       if (!response.ok) {
         if (response.status === 401) {
           throw new InternalServerErrorException(
-            'Khalti verification failed - Invalid authentication. Please check your API credentials.'
+            'Khalti verification failed - Invalid authentication. Please check your API credentials.',
           );
         } else {
           throw new InternalServerErrorException(
-            `Khalti verification failed with status ${response.status}`
+            `Khalti verification failed with status ${response.status}`,
           );
         }
       }
@@ -133,7 +131,7 @@ export class KhaltiGateway implements IPaymentGateway {
       }
 
       throw new InternalServerErrorException(
-        `Failed to verify payment with Khalti: ${error?.message || 'Network error'}`
+        `Failed to verify payment with Khalti: ${error || 'Network error'}`,
       );
     }
   }

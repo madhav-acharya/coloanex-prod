@@ -72,23 +72,6 @@ export default function ContractsScreen() {
     return icons[status] || "document-text";
   };
 
-
-        id: contract.id,
-        type: "contract",
-        status: contract.status,
-        amount: contract.loanAmount,
-        transactionHash:
-        createdAt: contract.createdAt,
-        updatedAt: contract.updatedAt,
-        details: {
-          contractNumber: contract.contractNumber,
-          borrower: contract.borrower?.user?.fullName,
-          lender: contract.borrower?.tenant?.name,
-        },
-      });
-    }
-  };
-
   return (
     <View style={styles.container}>
       <AppHeader title="My Contracts" showThemeToggle={false} />
@@ -202,22 +185,6 @@ export default function ContractsScreen() {
                 </Text>
               </View>
 
-                <TouchableOpacity
-                  style={[
-                    {
-                      backgroundColor: "#10b981" + "20",
-                      borderColor: "#10b981" + "40",
-                    },
-                  ]}
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                  }}
-                >
-                  <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                    On-Chain
-                  </Text>
-                </TouchableOpacity>
-              )}
 
               {contract.signedAt && (
                 <View style={styles.dateRow}>
@@ -313,8 +280,6 @@ export default function ContractsScreen() {
           </View>
         )}
       </ScrollView>
-
-      />
     </View>
   );
 }
@@ -472,19 +437,6 @@ const createStyles = (colors: any) =>
     },
     actionBannerText: {
       fontSize: 13,
-      fontWeight: "600" as any,
-    },
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.xs,
-      alignSelf: "flex-start",
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
-      borderWidth: 1,
-      borderRadius: borderRadius.sm,
-      marginTop: spacing.xs,
-    },
-      fontSize: 12,
       fontWeight: "600" as any,
     },
   });

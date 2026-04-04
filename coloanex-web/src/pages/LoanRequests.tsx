@@ -36,7 +36,6 @@ export default function LoanRequests() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-    useState<any>(null);
 
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
@@ -301,7 +300,6 @@ export default function LoanRequests() {
     }
   };
 
-
   const handleReviewSubmit = async (
     status: LoanStatus,
     rejectionReason?: string,
@@ -345,6 +343,7 @@ export default function LoanRequests() {
   };
 
   const handleLoanSubmit = async () => {
+    console.log("Submitting loan with form data:", formData);
     if (
       isSuperAdmin &&
       (!formData.tenantId || formData.tenantId.trim() === "")
@@ -375,7 +374,7 @@ export default function LoanRequests() {
       return;
     }
 
-    if (!formData.loanPurpose || formData.loanPurpose.trim() === "") {
+    if (!formData.purpose || formData.purpose.trim() === "") {
       toast({
         title: "Validation Error",
         description: "Loan purpose is required",
@@ -445,23 +444,17 @@ export default function LoanRequests() {
     }
 
     const loanData: CreateLoanDto = {
-      requestedAmount: formData.requestedAmount || 0,
-      purpose: formData.purpose || "",
+      requestedAmount: formData.requestedAmount,
+      purpose: formData.purpose,
       collateralDetails: {
-        type: formData.collateralType || "",
-        description: formData.collateralDescription || "",
-        value: formData.collateralValue || 0,
-        imageUrl: formData.collateralImageUrl || "",
+        type: formData.collateralType,
+        description: formData.collateralDescription,
+        value: formData.collateralValue,
+        imageUrl: formData.collateralImageUrl,
       },
-      requestedTermMonths: formData.requestedTermMonths || 0,
-      tenantId:
-        formData.tenantId && formData.tenantId.trim() !== ""
-          ? formData.tenantId
-          : undefined,
-      userId:
-        formData.userId && formData.userId.trim() !== ""
-          ? formData.userId
-          : undefined,
+      requestedTermMonths: formData.requestedTermMonths,
+      tenantId: formData.tenantId && formData.tenantId.trim() !== "" ? formData.tenantId : undefined,
+      userId: formData.userId && formData.userId.trim() !== "" ? formData.userId : undefined,
     };
 
     try {
@@ -1158,8 +1151,6 @@ export default function LoanRequests() {
         description={`Are you sure you want to delete this loan request? This action cannot be undone.`}
         isLoading={isDeletingLoan}
       />
-
-
     </DashboardLayout>
   );
 }

@@ -179,5 +179,4 @@ export class TransactionsService {
       },
     }) as unknown as Transaction;
   }
-
 }

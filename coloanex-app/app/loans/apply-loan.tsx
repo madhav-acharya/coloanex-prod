@@ -196,15 +196,15 @@ export default function LoanApplicationScreen() {
     try {
       const loanData = {
         tenantId: lenderId as string,
-        requestedAmount: parseFloat(loanAmount.toString()) || 0,
-        purpose: loanPurpose || "",
+        requestedAmount: Number(loanAmount),
+        purpose: loanPurpose,
         collateralDetails: {
-          type: collateralType || "",
-          description: collateralDescription || "",
-          value: parseFloat(collateralValue) || 0,
-          imageUrl: collateralImage || "",
+          type: collateralType,
+          description: collateralDescription,
+          value: Number(collateralValue),
+          imageUrl: collateralImage,
         },
-        requestedTermMonths: parseInt(termMonths.toString()) || 1,
+        requestedTermMonths: Number(termMonths),
       };
 
       await loansApi.applyForLoan(loanData);
@@ -413,12 +413,34 @@ export default function LoanApplicationScreen() {
               numberOfLines={3}
             />
 
-            <View style={[styles.label, { flexDirection: "row", alignItems: "center", marginBottom: 8, marginTop: 12 }]}>
-              <Text style={[{ fontSize: 14, fontWeight: "600" }, { color: colors.text }]}>
+            <View
+              style={[
+                styles.label,
+                {
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 8,
+                  marginTop: 12,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  { fontSize: 14, fontWeight: "600" },
+                  { color: colors.text },
+                ]}
+              >
                 Estimated Value{" "}
               </Text>
               <CurrencyIcon size={16} color={colors.text} />
-              <Text style={[styles.required, { color: colors.error, marginLeft: 4 }]}>*</Text>
+              <Text
+                style={[
+                  styles.required,
+                  { color: colors.error, marginLeft: 4 },
+                ]}
+              >
+                *
+              </Text>
             </View>
             <Input
               value={collateralValue}

@@ -193,7 +193,7 @@ model User {
   id              String    @id @default(uuid())
   fullName        String    @map("full_name")
   email           String    @unique @db.VarChar(255)
-  phone           String?   @unique @db.VarChar(10)
+  phone           String?   @unique @db.VarChar(20)
   password        String    @db.VarChar(255)
   profileImage    String?   @map("profile_image")
   tenantId        String?   @map("tenant_id")

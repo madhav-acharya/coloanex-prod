@@ -192,21 +192,6 @@ export default function MyLoansScreen() {
     loadLoans();
   };
 
-        id: loan.id,
-        type: "loan",
-        status: loan.status,
-        amount: loan.requestedAmount,
-        createdAt: loan.createdAt,
-        updatedAt: loan.updatedAt,
-        details: {
-          purpose: loan.purpose,
-          borrower: loan.borrower?.user?.fullName,
-          lender: loan.borrower?.tenant?.name,
-        },
-      });
-    }
-  };
-
   const activeCount = loans.filter(
     (l) =>
       l.status === LoanStatus.LOAN_PROVIDED ||
@@ -343,27 +328,6 @@ export default function MyLoansScreen() {
               </Text>
             </View>
           )}
-
-            <TouchableOpacity
-              style={[
-                {
-                  backgroundColor: "#10b981" + "20",
-                  borderColor: "#10b981" + "40",
-                },
-              ]}
-              onPress={(e) => {
-                e.stopPropagation?.();
-              }}
-            >
-              <Ionicons
-                name="checkmark-circle"
-                size={16}
-                color="#10b981"
-              />
-                On-Chain
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       </TouchableOpacity>
     );
@@ -485,8 +449,6 @@ export default function MyLoansScreen() {
           }
         />
       )}
-
-      />
     </SafeAreaView>
   );
 }
@@ -647,18 +609,5 @@ const createStyles = (colors: Record<string, string>) =>
     currencyText: {
       fontSize: 16,
       fontWeight: "700",
-    },
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      alignSelf: "flex-start",
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderWidth: 1,
-      borderRadius: 4,
-      marginTop: 8,
-    },
-      fontSize: 12,
-      fontWeight: "600",
     },
   });
