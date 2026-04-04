@@ -10,8 +10,6 @@ import type { IPaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY_REGISTRY } from './gateways/payment-gateway.interface';
 import type { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import type { VerifyPaymentDto } from './dto/verify-payment.dto';
-import { PaymentBlockchainService } from '../blockchain/services/payment.blockchain.service';
-import { ContractBlockchainService } from '../blockchain/services/contract.blockchain.service';
 
 @Injectable()
 export class PaymentsService {
@@ -21,8 +19,6 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
     private readonly gatewayRegistry: Map<string, IPaymentGateway>,
-    private readonly paymentBlockchainService: PaymentBlockchainService,
-    private readonly contractBlockchainService: ContractBlockchainService,
   ) {}
 
   private resolveGateway(gateway: string): IPaymentGateway {
@@ -248,98 +244,6 @@ export class PaymentsService {
       });
     }
 
-    if (contractId) {
-      const contractData = await this.prisma.contract.findUnique({
-        where: { id: contractId },
-        select: { borrowerId: true, tenantId: true },
-      });
-
-      if (contractData) {
-        if (type === 'INSTALLMENT_PAYMENT' || type === 'PENALTY_PAYMENT') {
-          const installmentNumber = paymentScheduleId
-            ? await this.prisma.paymentSchedule
-                .findUnique({
-                  where: { id: paymentScheduleId },
-                  select: { installmentNumber: true },
-                })
-                .then((s) => (s ? [s.installmentNumber] : []))
-            : [];
-
-          this.paymentBlockchainService
-            .recordPayment(
-              transaction.id,
-              contractId,
-              contractData.borrowerId,
-              contractData.tenantId,
-              totalAmount.toString(),
-              gateway,
-              transactionUuid,
-              installmentNumber,
-              '0',
-            )
-            .then((result) => {
-              if (result?.txId) {
-                return this.prisma.transaction.update({
-                  where: { id: transaction.id },
-                  data: { blockchainTxHash: result.txId },
-                });
-              }
-            })
-            .catch((err) =>
-              this.logger.error(
-                `Blockchain recordPayment failed [${transaction.id}]`,
-                err,
-              ),
-            );
-
-          this.contractBlockchainService
-            .updatePaymentBalance(contractId, totalAmount.toString())
-            .catch((err) =>
-              this.logger.error(
-                `Blockchain updatePaymentBalance failed [${contractId}]`,
-                err,
-              ),
-            );
-        } else if (type === 'DISBURSEMENT') {
-          this.paymentBlockchainService
-            .recordPayment(
-              transaction.id,
-              contractId,
-              contractData.borrowerId,
-              contractData.tenantId,
-              totalAmount.toString(),
-              gateway,
-              transactionUuid,
-              [],
-              '1',
-            )
-            .then((result) => {
-              if (result?.txId) {
-                return this.prisma.transaction.update({
-                  where: { id: transaction.id },
-                  data: { blockchainTxHash: result.txId },
-                });
-              }
-            })
-            .catch((err) =>
-              this.logger.error(
-                `Blockchain recordPayment failed [${transaction.id}]`,
-                err,
-              ),
-            );
-
-          this.contractBlockchainService
-            .updatePaymentBalance(contractId, totalAmount.toString())
-            .catch((err) =>
-              this.logger.error(
-                `Blockchain updatePaymentBalance failed [${contractId}]`,
-                err,
-              ),
-            );
-        }
-      }
-    }
-
     return {
       success: true,
       transactionId: transaction.id,
@@ -347,138 +251,5 @@ export class PaymentsService {
     };
   }
 
-  async verifyBlockchainTransaction(
-    id: string,
-    user: any,
-  ): Promise<{
-    success: boolean;
-    isVerified: boolean;
-    onChain: boolean;
-    transactionHash?: string;
-    blockNumber?: string;
-    timestamp?: string;
-    confirmations?: number;
-    chainData?: any;
-    error?: string;
-  }> {
-    try {
-      const payment = await this.prisma.transaction.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          blockchainTxHash: true,
-          contractId: true,
-          contract: {
-            select: {
-              tenantId: true,
-              borrower: {
-                include: {
-                  user: true,
-                },
-              },
-            },
-          },
-        },
-      });
 
-      if (!payment) {
-        return {
-          success: false,
-          isVerified: false,
-          onChain: false,
-          error: 'Payment not found',
-        };
-      }
-
-      const txId = payment.blockchainTxHash;
-
-      if (!txId) {
-        return {
-          success: true,
-          isVerified: false,
-          onChain: false,
-          error: 'No blockchain transaction hash found',
-        };
-      }
-
-      try {
-        // First check if the record exists on blockchain
-        const verification =
-          await this.paymentBlockchainService.verifyPaymentOnChain(id);
-
-        if (!verification.exists || !verification.onChain) {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: false,
-            error: 'Transaction not found on blockchain',
-            transactionHash: txId,
-          };
-        }
-
-        const chaincodeName = verification.data.chaincodeName;
-        if (chaincodeName !== 'payments') {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: false,
-            error: `Transaction found on blockchain but belongs to ${chaincodeName} chaincode, not payments`,
-          };
-        }
-
-        // Now verify that the stored transaction hash matches blockchain records
-        const hashVerification =
-          await this.paymentBlockchainService.verifyTransactionHash(id, txId);
-
-        if (!hashVerification.verified) {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: true,
-            error: 'Transaction exists on blockchain but stored hash does not match blockchain records',
-            transactionHash: txId,
-            chainData: verification.data,
-          };
-        }
-
-        // Both record and hash are verified
-        return {
-          success: true,
-          isVerified: true,
-          onChain: true,
-          transactionHash: txId,
-          blockNumber: verification.data.blockNumber,
-          timestamp: hashVerification.transaction?.timestamp,
-          confirmations: verification.data.confirmations,
-          chainData: {
-            ...verification.data,
-            verifiedTransaction: hashVerification.transaction,
-          },
-        };
-      } catch (blockchainError) {
-        this.logger.warn(
-          'Blockchain verification failed for payment ' + id,
-          blockchainError,
-        );
-
-        return {
-          success: true,
-          isVerified: false,
-          onChain: false,
-          error: 'Blockchain verification service unavailable',
-        };
-      }
-    } catch (error) {
-      this.logger.error(
-        'Failed to verify blockchain transaction for payment ' + id,
-        error,
-      );
-      return {
-        success: false,
-        isVerified: false,
-        onChain: false,
-        error: 'Failed to verify blockchain transaction',
-      };
-    }
-  }
 }

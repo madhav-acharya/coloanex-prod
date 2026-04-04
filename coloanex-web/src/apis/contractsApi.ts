@@ -7,21 +7,7 @@ export interface Signature {
   ipAddress?: string;
 }
 
-export interface BlockchainData {
-  transactionHash?: string;
-  txId?: string;
-  signTxId?: string;
-  disburseTxId?: string;
-  recordedAt?: string;
-  signedAt?: string;
-  disbursedAt?: string;
-  reportTxId?: string;
-  reportedAt?: string;
-  blockNumber?: number;
-  network?: string;
-  contractAddress?: string;
-  timestamp?: string;
-}
+
 
 export interface DisbursementInfo {
   method: "ESEWA" | "FONEPAY" | "KHALTI" | "WALLET" | "BANK_TRANSFER";
@@ -61,7 +47,6 @@ export interface Contract {
   outstandingBalance: number;
   contractPdfUrl?: string;
   signatures?: Signature[];
-  blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
   reportReason?: string;
@@ -231,9 +216,7 @@ export const contractsApi = baseApi.injectEndpoints({
       ],
     }),
 
-    getContractBlockchainHistory: builder.query<any, string>({
-      query: (id) => `/contracts/${id}/blockchain-history`,
-    }),
+
   }),
 });
 
@@ -247,5 +230,4 @@ export const {
   useDeleteContractMutation,
   useGenerateContractPdfMutation,
   useSignAndDisburseContractMutation,
-  useGetContractBlockchainHistoryQuery,
 } = contractsApi;

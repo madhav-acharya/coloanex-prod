@@ -103,7 +103,6 @@ export interface Transaction {
   amount: number;
   status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   gatewayDetails?: Record<string, unknown>;
-  blockchainTxHash?: string;
   completedAt?: string;
   description?: string;
   createdAt: string;

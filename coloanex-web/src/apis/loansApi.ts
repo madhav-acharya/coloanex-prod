@@ -77,9 +77,7 @@ export const loansApi = baseApi.injectEndpoints({
       ],
     }),
 
-    getLoanBlockchainHistory: builder.query<any, string>({
-      query: (id) => `/loans/${id}/blockchain-history`,
-    }),
+
   }),
 });
 
@@ -90,5 +88,4 @@ export const {
   useUpdateLoanMutation,
   useDeleteLoanMutation,
   useReviewLoanMutation,
-  useGetLoanBlockchainHistoryQuery,
 } = loansApi;

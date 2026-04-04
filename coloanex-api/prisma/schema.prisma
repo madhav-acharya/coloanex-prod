@@ -416,7 +416,6 @@ model Loan {
   approvedTermMonths  Int?       @map("approved_term_months")
   status              LoanStatus @default(DRAFT)
   rejectionReason     String?    @map("rejection_reason")
-  blockchainTxHash    String?    @map("blockchain_tx_hash")
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @updatedAt @map("updated_at")
 
@@ -481,7 +480,6 @@ model Contract {
   outstandingBalance Decimal          @map("outstanding_balance") @db.Decimal(20, 2)
   contractPdfUrl     String?          @map("contract_pdf_url")
   signatures         Json?            @map("signatures")
-  blockchainData     Json?            @map("blockchain_data")
   termsAndConditions String           @map("terms_and_conditions") @db.Text
   disbursementInfo   Json?            @map("disbursement_info")
   reportReason       String?          @map("report_reason") @db.Text
@@ -541,7 +539,6 @@ model Transaction {
   amount            Decimal           @db.Decimal(20, 2)
   status            TransactionStatus @default(PENDING)
   gatewayDetails    Json?             @map("gateway_details")
-  blockchainTxHash  String?           @map("blockchain_tx_hash")
   description       String?
   createdAt         DateTime          @default(now()) @map("created_at")
   completedAt       DateTime?         @map("completed_at")

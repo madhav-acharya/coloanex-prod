@@ -45,13 +45,7 @@ export interface Signature {
   ipAddress?: string;
 }
 
-export interface BlockchainData {
-  transactionHash?: string;
-  blockNumber?: number;
-  network?: string;
-  contractAddress?: string;
-  timestamp?: string;
-}
+
 
 export interface DisbursementInfo {
   method: "ESEWA" | "FONEPAY" | "KHALTI" | "WALLET" | "BANK_TRANSFER";
@@ -83,7 +77,6 @@ export interface Contract {
   outstandingBalance: number;
   contractPdfUrl?: string;
   signatures?: Signature[];
-  blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
   createdAt: string;
