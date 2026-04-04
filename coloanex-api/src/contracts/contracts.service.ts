@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma.service';
 import { CloudinaryUploadsService } from '../cloudinary-uploads/cloudinary-uploads.service';
 import { MailService } from '../mail/mail.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { SolanaService } from '../solana/solana.service';
 import { contractGeneratedTemplate } from '../mail/templates';
 import {
   ActivityEntityType,
@@ -38,6 +39,7 @@ export class ContractsService {
     private cloudinaryUploadsService: CloudinaryUploadsService,
     private mailService: MailService,
     private activityLogsService: ActivityLogsService,
+    private solanaService: SolanaService,
   ) {}
 
   private async generateContractNumber(tenantId: string): Promise<string> {
@@ -408,7 +410,7 @@ export class ContractsService {
         rule: {
           select: { id: true, name: true, ruleType: true },
         },
-      }
+      },
     });
 
     if (hasBorrowerSignature && hasTenantSignature) {
@@ -418,6 +420,11 @@ export class ContractsService {
           status: 'CONTRACT_SIGNED' as any,
         },
       });
+      this.solanaService
+        .signContract(id)
+        .catch((err: Error) =>
+          this.logger.error('Solana signContract failed', err.message),
+        );
     }
 
     return updatedContract as unknown as Contract;
@@ -703,6 +710,20 @@ export class ContractsService {
       },
     });
 
+    this.solanaService
+      .createContract(
+        contract.id,
+        loanId,
+        contractNumber,
+        approvedAmount,
+        interestRate,
+        approvedTermMonths,
+        totalAmountDue,
+      )
+      .catch((err: Error) =>
+        this.logger.error('Solana createContract failed', err.message),
+      );
+
     return contract as unknown as Contract;
   }
 
@@ -911,5 +932,4 @@ export class ContractsService {
 
     return reported as unknown as Contract;
   }
-
 }
