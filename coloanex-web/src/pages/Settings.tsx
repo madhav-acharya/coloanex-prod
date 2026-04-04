@@ -172,8 +172,7 @@ const Settings = () => {
 
   const handleMailConnect = async () => {
     try {
-      const API_BASE_URL =
-        import.meta.env.VITE_API_BASE_URL || "http://localhost:3000/api";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL!;
       const token = localStorage.getItem("token");
 
       const response = await fetch(`${API_BASE_URL}/mail/connect`, {
