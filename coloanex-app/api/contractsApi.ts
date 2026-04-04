@@ -128,6 +128,7 @@ export const contractsApi = {
   },
 
   getBlockchainHistory: async (id: string): Promise<any> => {
+    const response = await client.get(`/contracts/${id}/blockchain-history`);
     return response.data;
   },
 };
