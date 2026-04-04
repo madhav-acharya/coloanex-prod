@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { ContractsService } from '../contracts/contracts.service';
+import { SolanaService } from '../solana/solana.service';
 import { loanRequestTemplate, loanApprovalTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -22,7 +23,6 @@ import {
   ActivityAction,
 } from '../activity-logs/entities/activity-log.entity';
 
-
 @Injectable()
 export class LoansService {
   private readonly logger = new Logger(LoansService.name);
@@ -32,6 +32,7 @@ export class LoansService {
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
     private contractsService: ContractsService,
+    private solanaService: SolanaService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -231,7 +232,6 @@ export class LoansService {
       },
     });
 
-
     await this.activityLogsService.logUserActivity(
       user.sub,
       ActivityAction.CREATE,
@@ -248,14 +248,30 @@ export class LoansService {
       tenantId,
     );
 
+    const backendWallet = this.solanaService.getWalletPublicKey();
+    if (backendWallet) {
+      const solanaTx = await this.solanaService.createLoan(
+        loan.id,
+        Number(loan.requestedAmount),
+        100,
+        loan.requestedTermMonths,
+        backendWallet,
+        backendWallet,
+      );
+      if (solanaTx) {
+        this.logger.log(
+          `Loan ${loan.id} recorded on Solana: tx=${solanaTx.txId} pda=${solanaTx.pda}`,
+        );
+      }
+    }
+
     if (loan.status === LoanStatus.SUBMITTED) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: tenantId },
       });
 
       try {
-        const dashboardUrl =
-          process.env.APP_URL || 'https://app.example.com/loans';
+        const dashboardUrl = process.env.APP_URL!;
 
         await this.mailService.sendMail(
           {
@@ -597,8 +613,6 @@ export class LoansService {
       updateData.ruleId = reviewLoanDto.ruleId;
     }
 
-
-
     const updated = await this.prisma.loan.update({
       where: { id },
       data: updateData,
@@ -618,13 +632,13 @@ export class LoansService {
     });
 
     if (reviewLoanDto.status === LoanStatus.APPROVED) {
-        await this.contractsService.generateFromLoanApproval(
-          id,
-          reviewLoanDto.ruleId!,
-          reviewLoanDto.approvedAmount!,
-          reviewLoanDto.approvedTermMonths!,
-          user.tenantId!,
-        );
+      await this.contractsService.generateFromLoanApproval(
+        id,
+        reviewLoanDto.ruleId!,
+        reviewLoanDto.approvedAmount!,
+        reviewLoanDto.approvedTermMonths!,
+        user.tenantId!,
+      );
     }
 
     const action =
@@ -739,9 +753,14 @@ export class LoansService {
         );
       }
     } catch (error) {
-      // Email sending failed, but don't block loan review
       this.logger.error('Failed to send loan review email', error);
     }
+
+    this.solanaService
+      .updateLoanStatus(id, reviewLoanDto.status)
+      .catch((err: Error) =>
+        this.logger.error('Solana updateLoanStatus failed', err.message),
+      );
 
     return updated as unknown as Loan;
   }
@@ -806,6 +825,24 @@ export class LoansService {
       loan.tenantId,
     );
 
+    const contract = await this.prisma.contract.findFirst({
+      where: { loanId: id },
+      select: { id: true },
+    });
+    if (contract) {
+      this.solanaService
+        .recordPayment(
+          `pay-${id}-${Date.now()}`,
+          contract.id,
+          amount,
+          paymentMethodId || 'WALLET',
+          `payment-${id}`,
+        )
+        .catch((err: Error) =>
+          this.logger.error('Solana recordPayment failed', err.message),
+        );
+    }
+
     return {
       success: true,
       message: 'Payment processed successfully',
@@ -825,4 +862,3 @@ export class LoansService {
     return Math.round(payment * 100) / 100;
   }
 }
-
