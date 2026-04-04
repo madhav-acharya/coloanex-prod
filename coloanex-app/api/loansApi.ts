@@ -64,6 +64,7 @@ export const loansApi = {
   },
 
   getBlockchainHistory: async (id: string): Promise<any> => {
+    const { data } = await apiClient.get(`/loans/${id}/blockchain-history`);
     return data;
   },
 };
