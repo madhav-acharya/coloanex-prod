@@ -23,7 +23,6 @@ import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 
 export default function LoanRequests() {
   const { toast } = useToast();
@@ -37,8 +36,6 @@ export default function LoanRequests() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
     useState<any>(null);
 
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
@@ -304,23 +301,6 @@ export default function LoanRequests() {
     }
   };
 
-  const handleBlockchainVerify = (loan: Loan) => {
-    setSelectedBlockchainRecord({
-      id: loan.id,
-      type: "loan",
-      status: loan.status,
-      amount: loan.requestedAmount,
-      transactionHash: loan.blockchainTxHash,
-      createdAt: loan.createdAt,
-      updatedAt: loan.updatedAt,
-      details: {
-        purpose: loan.purpose,
-        borrower: loan.borrower?.user?.fullName,
-        collateralDetails: loan.collateralDetails,
-      },
-    });
-    setBlockchainModalOpen(true);
-  };
 
   const handleReviewSubmit = async (
     status: LoanStatus,
@@ -717,27 +697,7 @@ export default function LoanRequests() {
       sortable: true,
       render: (loan) => (loan?.status ? getStatusBadge(loan.status) : "N/A"),
     },
-    {
-      key: "blockchain",
-      label: "Blockchain",
-      sortable: false,
-      render: (loan) =>
-        loan.blockchainTxHash ? (
-          <Badge
-            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(loan)}
-          >
-            On-Chain
-          </Badge>
-        ) : (
-          <Badge
-            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(loan)}
-          >
-            Off-Chain
-          </Badge>
-        ),
-    },
+
     {
       key: "createdAt",
       label: "Created At",
@@ -1199,11 +1159,7 @@ export default function LoanRequests() {
         isLoading={isDeletingLoan}
       />
 
-      <BlockchainVerificationModal
-        open={blockchainModalOpen}
-        onOpenChange={setBlockchainModalOpen}
-        record={selectedBlockchainRecord}
-      />
+
     </DashboardLayout>
   );
 }

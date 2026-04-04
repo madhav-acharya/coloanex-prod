@@ -48,7 +48,6 @@ import {
   useVerifyPaymentMutation,
 } from "@/apis/paymentsApi";
 import { useGetMyWalletQuery } from "@/apis/walletsApi";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 
 type ContractStatus =
   | "DRAFT"
@@ -133,8 +132,6 @@ export default function Contracts() {
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null,
   );
-  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
     useState<any>(null);
   const [disburseData, setDisburseData] = useState<DisburseContractDto>({
     method: "WALLET",
@@ -221,33 +218,7 @@ export default function Contracts() {
         <ContractStatusBadge status={c.status as ContractStatus} />
       ),
     },
-    {
-      key: "blockchain",
-      label: "Blockchain",
-      sortable: false,
-      render: (contract) => {
-        const hasBlockchainData = contract.blockchainData?.txId ||
-          contract.blockchainData?.signTxId ||
-          contract.blockchainData?.disburseTxId ||
-          contract.blockchainData?.transactionHash;
 
-        return hasBlockchainData ? (
-          <Badge
-            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(contract)}
-          >
-            On-Chain
-          </Badge>
-        ) : (
-          <Badge
-            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(contract)}
-          >
-            Off-Chain
-          </Badge>
-        );
-      }
-    },
     {
       key: "borrower",
       label: "Borrower",
@@ -338,28 +309,6 @@ export default function Contracts() {
     }
   };
 
-  const handleBlockchainVerify = (contract: Contract) => {
-    setSelectedBlockchainRecord({
-      id: contract.id,
-      type: "contract",
-      status: contract.status,
-      amount: contract.loanAmount,
-      transactionHash:
-        contract.blockchainData?.txId ||
-        contract.blockchainData?.signTxId ||
-        contract.blockchainData?.disburseTxId ||
-        contract.blockchainData?.transactionHash,
-      createdAt: contract.createdAt,
-      updatedAt: contract.updatedAt,
-      details: {
-        contractNumber: contract.contractNumber,
-        borrower: contract.borrower?.user?.fullName,
-        interestRate: contract.interestRate,
-        termMonths: contract.termMonths,
-      },
-    });
-    setBlockchainModalOpen(true);
-  };
 
   useEffect(() => {
     const raw = window.location.search;
@@ -1235,11 +1184,7 @@ export default function Contracts() {
         isLoading={isDeleting}
       />
 
-      <BlockchainVerificationModal
-        open={blockchainModalOpen}
-        onOpenChange={setBlockchainModalOpen}
-        record={selectedBlockchainRecord}
-      />
+
     </DashboardLayout>
   );
 }

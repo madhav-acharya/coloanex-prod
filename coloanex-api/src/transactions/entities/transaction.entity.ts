@@ -45,7 +45,6 @@ export interface Transaction {
   amount: number;
   status: TransactionStatus;
   gatewayDetails?: GatewayDetails;
-  blockchainTxHash?: string;
   description?: string;
   createdAt: Date;
   completedAt?: Date;

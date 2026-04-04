@@ -16,8 +16,6 @@ import { contractsApi } from "@/api";
 import type { Contract } from "@/types";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
-import type { BlockchainRecord } from "@/services/blockchainVerification";
 
 export default function ContractsScreen() {
   const { colors } = useTheme();
@@ -25,9 +23,6 @@ export default function ContractsScreen() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [blockchainModalVisible, setBlockchainModalVisible] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
-    useState<BlockchainRecord | null>(null);
 
   const loadContracts = async () => {
     try {
@@ -77,24 +72,12 @@ export default function ContractsScreen() {
     return icons[status] || "document-text";
   };
 
-  const handleBlockchainVerify = (contract: Contract) => {
-    const hasBlockchainData =
-      contract.blockchainData?.txId ||
-      contract.blockchainData?.signTxId ||
-      contract.blockchainData?.disburseTxId ||
-      contract.blockchainData?.transactionHash;
 
-    if (hasBlockchainData) {
-      setSelectedBlockchainRecord({
         id: contract.id,
         type: "contract",
         status: contract.status,
         amount: contract.loanAmount,
         transactionHash:
-          contract.blockchainData?.txId ||
-          contract.blockchainData?.signTxId ||
-          contract.blockchainData?.disburseTxId ||
-          contract.blockchainData?.transactionHash,
         createdAt: contract.createdAt,
         updatedAt: contract.updatedAt,
         details: {
@@ -103,7 +86,6 @@ export default function ContractsScreen() {
           lender: contract.borrower?.tenant?.name,
         },
       });
-      setBlockchainModalVisible(true);
     }
   };
 
@@ -220,13 +202,8 @@ export default function ContractsScreen() {
                 </Text>
               </View>
 
-              {(contract.blockchainData?.txId ||
-                contract.blockchainData?.signTxId ||
-                contract.blockchainData?.disburseTxId ||
-                contract.blockchainData?.transactionHash) && (
                 <TouchableOpacity
                   style={[
-                    styles.blockchainBadge,
                     {
                       backgroundColor: "#10b981" + "20",
                       borderColor: "#10b981" + "40",
@@ -234,11 +211,9 @@ export default function ContractsScreen() {
                   ]}
                   onPress={(e) => {
                     e.stopPropagation?.();
-                    handleBlockchainVerify(contract);
                   }}
                 >
                   <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-                  <Text style={[styles.blockchainText, { color: "#10b981" }]}>
                     On-Chain
                   </Text>
                 </TouchableOpacity>
@@ -339,10 +314,6 @@ export default function ContractsScreen() {
         )}
       </ScrollView>
 
-      <BlockchainVerificationModal
-        visible={blockchainModalVisible}
-        onClose={() => setBlockchainModalVisible(false)}
-        record={selectedBlockchainRecord}
       />
     </View>
   );
@@ -503,7 +474,6 @@ const createStyles = (colors: any) =>
       fontSize: 13,
       fontWeight: "600" as any,
     },
-    blockchainBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
@@ -514,7 +484,6 @@ const createStyles = (colors: any) =>
       borderRadius: borderRadius.sm,
       marginTop: spacing.xs,
     },
-    blockchainText: {
       fontSize: 12,
       fontWeight: "600" as any,
     },

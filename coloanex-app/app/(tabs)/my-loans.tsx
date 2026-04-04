@@ -18,8 +18,6 @@ import { LoanStatus } from "@/types/loan";
 import { formatCurrency } from "@/utils/currency";
 import { CurrencyIcon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
-import type { BlockchainRecord } from "@/services/blockchainVerification";
 
 type StatusConfig = {
   label: string;
@@ -155,8 +153,6 @@ export default function MyLoansScreen() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [blockchainModalVisible, setBlockchainModalVisible] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] = useState<BlockchainRecord | null>(null);
 
   const formatCurrencyWithIcon = (
     value: number | null | undefined,
@@ -196,14 +192,10 @@ export default function MyLoansScreen() {
     loadLoans();
   };
 
-  const handleBlockchainVerify = (loan: Loan) => {
-    if (loan.blockchainTxHash) {
-      setSelectedBlockchainRecord({
         id: loan.id,
         type: "loan",
         status: loan.status,
         amount: loan.requestedAmount,
-        transactionHash: loan.blockchainTxHash,
         createdAt: loan.createdAt,
         updatedAt: loan.updatedAt,
         details: {
@@ -212,7 +204,6 @@ export default function MyLoansScreen() {
           lender: loan.borrower?.tenant?.name,
         },
       });
-      setBlockchainModalVisible(true);
     }
   };
 
@@ -353,10 +344,8 @@ export default function MyLoansScreen() {
             </View>
           )}
 
-          {loan.blockchainTxHash && (
             <TouchableOpacity
               style={[
-                styles.blockchainBadge,
                 {
                   backgroundColor: "#10b981" + "20",
                   borderColor: "#10b981" + "40",
@@ -364,7 +353,6 @@ export default function MyLoansScreen() {
               ]}
               onPress={(e) => {
                 e.stopPropagation?.();
-                handleBlockchainVerify(loan);
               }}
             >
               <Ionicons
@@ -372,7 +360,6 @@ export default function MyLoansScreen() {
                 size={16}
                 color="#10b981"
               />
-              <Text style={[styles.blockchainText, { color: "#10b981" }]}>
                 On-Chain
               </Text>
             </TouchableOpacity>
@@ -499,10 +486,6 @@ export default function MyLoansScreen() {
         />
       )}
 
-      <BlockchainVerificationModal
-        visible={blockchainModalVisible}
-        onClose={() => setBlockchainModalVisible(false)}
-        record={selectedBlockchainRecord}
       />
     </SafeAreaView>
   );
@@ -665,7 +648,6 @@ const createStyles = (colors: Record<string, string>) =>
       fontSize: 16,
       fontWeight: "700",
     },
-    blockchainBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
@@ -676,7 +658,6 @@ const createStyles = (colors: Record<string, string>) =>
       borderRadius: 4,
       marginTop: 8,
     },
-    blockchainText: {
       fontSize: 12,
       fontWeight: "600",
     },

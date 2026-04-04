@@ -91,7 +91,6 @@ export interface Contract {
   outstandingBalance: number;
   contractPdfUrl?: string;
   signatures?: Signature[];
-  blockchainData?: BlockchainData;
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
   reportReason?: string;

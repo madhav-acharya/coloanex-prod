@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
 import {
   Dialog,
   DialogContent,
@@ -50,8 +49,6 @@ export default function Wallets() {
     amount: "",
     description: "",
   });
-  const [blockchainModalOpen, setBlockchainModalOpen] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
     useState<any>(null);
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
@@ -234,27 +231,7 @@ export default function Wallets() {
         );
       },
     },
-    {
-      key: "blockchain",
-      label: "Blockchain",
-      sortable: false,
-      render: (transaction) =>
-        transaction.blockchainTxHash ? (
-          <Badge
-            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 cursor-pointer hover:bg-emerald-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(transaction)}
-          >
-            On-Chain
-          </Badge>
-        ) : (
-          <Badge
-            className="bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/30 cursor-pointer hover:bg-gray-500/20 transition-colors"
-            onClick={() => handleBlockchainVerify(transaction)}
-          >
-            Off-Chain
-          </Badge>
-        ),
-    },
+
     {
       key: "paymentDetails",
       label: "Description",
@@ -316,23 +293,6 @@ export default function Wallets() {
     }
   };
 
-  const handleBlockchainVerify = (transaction: Transaction) => {
-    setSelectedBlockchainRecord({
-      id: transaction.id,
-      type: "payment",
-      status: transaction.status,
-      amount: transaction.amount,
-      transactionHash: transaction.blockchainTxHash,
-      createdAt: transaction.createdAt,
-      updatedAt: transaction.updatedAt,
-      details: {
-        type: transaction.type,
-        description: transaction.paymentDetails?.remarks,
-        walletId: transaction.walletId,
-      },
-    });
-    setBlockchainModalOpen(true);
-  };
 
   if (isLoading) {
     return (
@@ -547,11 +507,7 @@ export default function Wallets() {
           isSubmitting={isCreatingTransaction}
         />
 
-        <BlockchainVerificationModal
-          open={blockchainModalOpen}
-          onOpenChange={setBlockchainModalOpen}
-          record={selectedBlockchainRecord}
-        />
+
       </div>
     </DashboardLayout>
   );

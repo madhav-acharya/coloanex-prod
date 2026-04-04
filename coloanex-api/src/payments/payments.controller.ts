@@ -82,10 +82,4 @@ export class PaymentsController {
   verifyPayment(@Body() dto: VerifyPaymentDto, @Req() req: any) {
     return this.paymentsService.verifyPayment(dto, req.user.sub);
   }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('blockchain/verify/:id')
-  verifyBlockchainTransaction(@Param('id') id: string, @Req() req: any) {
-    return this.paymentsService.verifyBlockchainTransaction(id, req.user);
-  }
 }

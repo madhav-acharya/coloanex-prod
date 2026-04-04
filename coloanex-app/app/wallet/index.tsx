@@ -16,8 +16,6 @@ import type { Wallet } from "@/api/walletsApi";
 import type { Transaction } from "@/api/transactionsApi";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
-import { BlockchainVerificationModal } from "@/components/modals/BlockchainVerificationModal";
-import type { BlockchainRecord } from "@/services/blockchainVerification";
 
 export default function WalletScreen() {
   const { colors } = useTheme();
@@ -26,9 +24,6 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [blockchainModalVisible, setBlockchainModalVisible] = useState(false);
-  const [selectedBlockchainRecord, setSelectedBlockchainRecord] =
-    useState<BlockchainRecord | null>(null);
 
   const loadWallet = useCallback(async () => {
     try {
@@ -95,14 +90,10 @@ export default function WalletScreen() {
     return colors_map[status] || colors.textLight;
   };
 
-  const handleBlockchainVerify = (transaction: Transaction) => {
-    if (transaction.blockchainTxHash) {
-      setSelectedBlockchainRecord({
         id: transaction.id,
         type: "payment",
         status: transaction.status,
         amount: transaction.amount,
-        transactionHash: transaction.blockchainTxHash,
         createdAt: transaction.createdAt,
         updatedAt: transaction.updatedAt,
         details: {
@@ -110,7 +101,6 @@ export default function WalletScreen() {
           description: transaction.description,
         },
       });
-      setBlockchainModalVisible(true);
     }
   };
 
@@ -292,16 +282,13 @@ export default function WalletScreen() {
                     </Text>
                   </View>
 
-                  {transaction.blockchainTxHash && (
                     <TouchableOpacity
                       style={[
-                        styles.blockchainBadge,
                         {
                           backgroundColor: "#10b981" + "20",
                           borderColor: "#10b981" + "40",
                         },
                       ]}
-                      onPress={() => handleBlockchainVerify(transaction)}
                     >
                       <Ionicons
                         name="checkmark-circle"
@@ -309,7 +296,6 @@ export default function WalletScreen() {
                         color="#10b981"
                       />
                       <Text
-                        style={[styles.blockchainText, { color: "#10b981" }]}
                       >
                         On-Chain
                       </Text>
@@ -349,10 +335,6 @@ export default function WalletScreen() {
         )}
       </ScrollView>
 
-      <BlockchainVerificationModal
-        visible={blockchainModalVisible}
-        onClose={() => setBlockchainModalVisible(false)}
-        record={selectedBlockchainRecord}
       />
     </View>
   );
@@ -521,7 +503,6 @@ const createStyles = (colors: any) =>
       marginTop: spacing.md,
       fontSize: 16,
     },
-    blockchainBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
@@ -532,7 +513,6 @@ const createStyles = (colors: any) =>
       borderRadius: 4,
       marginTop: 4,
     },
-    blockchainText: {
       fontSize: 10,
       fontWeight: "600",
     },

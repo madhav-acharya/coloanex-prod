@@ -28,7 +28,6 @@ import {
   buildContractHtml,
   generateTermsAndConditions,
 } from './templates/contract.template';
-import { ContractBlockchainService } from '../blockchain/services/contract.blockchain.service';
 
 @Injectable()
 export class ContractsService {
@@ -39,7 +38,6 @@ export class ContractsService {
     private cloudinaryUploadsService: CloudinaryUploadsService,
     private mailService: MailService,
     private activityLogsService: ActivityLogsService,
-    private contractBlockchainService: ContractBlockchainService,
   ) {}
 
   private async generateContractNumber(tenantId: string): Promise<string> {
@@ -200,45 +198,6 @@ export class ContractsService {
         },
       },
     });
-
-    this.contractBlockchainService
-      .createContract(
-        contract.id,
-        contract.contractNumber,
-        contract.tenantId,
-        contract.borrowerId,
-        contract.loanId,
-        contract.ruleId,
-        contract.startDate.toISOString(),
-        contract.endDate.toISOString(),
-        contract.loanAmount.toString(),
-        contract.interestRate.toString(),
-        contract.termMonths,
-        contract.paymentFrequency,
-        contract.installmentAmount.toString(),
-        contract.totalInstallments,
-        contract.totalAmountDue.toString(),
-        contract.termsAndConditions,
-      )
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.contract.update({
-            where: { id: contract.id },
-            data: {
-              blockchainData: {
-                txId: result.txId,
-                recordedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(
-          `Blockchain createContract failed [${contract.id}]`,
-          err,
-        ),
-      );
 
     return contract as unknown as Contract;
   }
@@ -449,7 +408,7 @@ export class ContractsService {
         rule: {
           select: { id: true, name: true, ruleType: true },
         },
-      },
+      }
     });
 
     if (hasBorrowerSignature && hasTenantSignature) {
@@ -460,32 +419,6 @@ export class ContractsService {
         },
       });
     }
-
-    this.contractBlockchainService
-      .signContract(
-        id,
-        user.sub,
-        signedBy,
-        Buffer.from(signContractDto.signature).toString('base64'),
-      )
-      .then((result) => {
-        if (result?.txId) {
-          const existing = (updatedContract as any).blockchainData ?? {};
-          return this.prisma.contract.update({
-            where: { id },
-            data: {
-              blockchainData: {
-                ...existing,
-                signTxId: result.txId,
-                signedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(`Blockchain signContract failed [${id}]`, err),
-      );
 
     return updatedContract as unknown as Contract;
   }
@@ -571,39 +504,6 @@ export class ContractsService {
       data: { status: 'LOAN_PROVIDED' as any },
     });
 
-    this.contractBlockchainService
-      .signContract(
-        id,
-        user.sub,
-        'TENANT',
-        Buffer.from(dto.signature).toString('base64'),
-      )
-      .then(() => this.contractBlockchainService.activateContract(id))
-      .then(() =>
-        this.contractBlockchainService.recordDisbursement(
-          id,
-          updatedContract.loanAmount.toString(),
-          dto.method,
-          dto.transactionId || updatedContract.contractNumber,
-        ),
-      )
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.contract.update({
-            where: { id },
-            data: {
-              blockchainData: {
-                disburseTxId: result.txId,
-                disbursedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(`Blockchain signAndDisburse failed [${id}]`, err),
-      );
-
     return updatedContract as unknown as Contract;
   }
 
@@ -673,33 +573,6 @@ export class ContractsService {
         status: 'LOAN_PROVIDED' as any,
       },
     });
-
-    this.contractBlockchainService
-      .activateContract(id)
-      .then(() =>
-        this.contractBlockchainService.recordDisbursement(
-          id,
-          updatedContract.loanAmount.toString(),
-          disburseContractDto.method,
-          disburseContractDto.transactionId || updatedContract.contractNumber,
-        ),
-      )
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.contract.update({
-            where: { id },
-            data: {
-              blockchainData: {
-                disburseTxId: result.txId,
-                disbursedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(`Blockchain disburse failed [${id}]`, err),
-      );
 
     return updatedContract as unknown as Contract;
   }
@@ -829,45 +702,6 @@ export class ContractsService {
         },
       },
     });
-
-    this.contractBlockchainService
-      .createContract(
-        contract.id,
-        contract.contractNumber,
-        contract.tenantId,
-        contract.borrowerId,
-        contract.loanId,
-        contract.ruleId,
-        contract.startDate.toISOString(),
-        contract.endDate.toISOString(),
-        contract.loanAmount.toString(),
-        contract.interestRate.toString(),
-        contract.termMonths,
-        contract.paymentFrequency,
-        contract.installmentAmount.toString(),
-        contract.totalInstallments,
-        contract.totalAmountDue.toString(),
-        contract.termsAndConditions,
-      )
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.contract.update({
-            where: { id: contract.id },
-            data: {
-              blockchainData: {
-                txId: result.txId,
-                recordedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(
-          `Blockchain createContract (from approval) failed [${contract.id}]`,
-          err,
-        ),
-      );
 
     return contract as unknown as Contract;
   }
@@ -1075,412 +909,7 @@ export class ContractsService {
       },
     });
 
-    this.contractBlockchainService
-      .updateContractStatus(id, ContractStatus.REPORTED)
-      .then((result) => {
-        if (result?.txId) {
-          return this.prisma.contract.update({
-            where: { id },
-            data: {
-              blockchainData: {
-                reportTxId: result.txId,
-                reportedAt: new Date().toISOString(),
-              } as any,
-            },
-          });
-        }
-      })
-      .catch((err) =>
-        this.logger.error(
-          `Blockchain updateContractStatus failed [${id}]`,
-          err,
-        ),
-      );
-
     return reported as unknown as Contract;
   }
 
-  async getBlockchainHistory(id: string, user: JwtPayload) {
-    const contract = await this.prisma.contract.findUnique({
-      where: { id },
-      include: {
-        borrower: {
-          include: {
-            user: true,
-          },
-        },
-        loan: true,
-        rule: true,
-      },
-    });
-
-    if (!contract) {
-      throw new NotFoundException(`Contract with ID ${id} not found`);
-    }
-
-    const isSuperAdmin = user.roles?.includes('Super Admin');
-    const isAdmin = user.roles?.includes('Admin');
-    const isBorrower = user.roles?.includes('Borrower');
-    const isLender = user.roles?.includes('Lender');
-
-    if (!isSuperAdmin && !isAdmin) {
-      if (isBorrower && contract.borrower.userId !== user.sub) {
-        throw new NotFoundException(`Contract with ID ${id} not found`);
-      } else if (isLender && contract.loan.tenantId !== user.tenantId) {
-        throw new NotFoundException(`Contract with ID ${id} not found`);
-      }
-    }
-
-    try {
-      const history =
-        await this.contractBlockchainService.getContractHistory(id);
-      return {
-        contractId: id,
-        history: history || [],
-        blockchainEnabled: process.env.BLOCKCHAIN_ENABLED === 'true',
-        transparencyMetrics: {
-          immutability: 100,
-          traceability: history?.length || 0,
-          decentralization: 'Multi-Org',
-          security: 'Verified',
-          signaturesCount: Array.isArray(contract.signatures)
-            ? contract.signatures.length
-            : 0,
-          networkHealth: 99.9,
-          lastUpdate: new Date().toISOString(),
-        },
-        networkInfo: {
-          protocol: 'Hyperledger Fabric',
-          consensus: 'Raft',
-          peers: 9,
-          organizations: 3,
-          chaincode: 'contracts-ccaas',
-          uptime: '99.9%',
-        },
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to fetch blockchain history for contract ${id}`,
-        error,
-      );
-      return {
-        contractId: id,
-        history: [],
-        blockchainEnabled: process.env.BLOCKCHAIN_ENABLED === 'true',
-        error: 'Failed to fetch blockchain history',
-        transparencyMetrics: {
-          immutability: 0,
-          traceability: 0,
-          decentralization: 'Unavailable',
-          security: 'Unable to verify',
-          signaturesCount: 0,
-          networkHealth: 0,
-          lastUpdate: new Date().toISOString(),
-        },
-      };
-    }
-  }
-
-  async getBlockchainStats(user: JwtPayload) {
-    try {
-      let totalContracts = 0;
-      let onChainContracts = 0;
-      let totalSignatures = 0;
-
-      const isSuperAdmin = user.roles?.includes('Super Admin');
-      const isAdmin = user.roles?.includes('Admin');
-      const isLender = user.roles?.includes('Lender');
-      const isBorrower = user.roles?.includes('Borrower');
-
-      if (isSuperAdmin || isAdmin) {
-        const allContracts = await this.prisma.contract.findMany({
-          select: {
-            id: true,
-            blockchainData: true,
-            signatures: true,
-          },
-        });
-        totalContracts = allContracts.length;
-        onChainContracts = allContracts.filter(
-          (contract) => contract.blockchainData,
-        ).length;
-        totalSignatures = allContracts.reduce(
-          (sum, contract) =>
-            sum +
-            (Array.isArray(contract.signatures)
-              ? contract.signatures.length
-              : 0),
-          0,
-        );
-      } else if (isLender) {
-        const tenantContracts = await this.prisma.contract.findMany({
-          where: { tenantId: user.tenantId },
-          select: {
-            id: true,
-            blockchainData: true,
-            signatures: true,
-          },
-        });
-        totalContracts = tenantContracts.length;
-        onChainContracts = tenantContracts.filter(
-          (contract) => contract.blockchainData,
-        ).length;
-        totalSignatures = tenantContracts.reduce(
-          (sum, contract) =>
-            sum +
-            (Array.isArray(contract.signatures)
-              ? contract.signatures.length
-              : 0),
-          0,
-        );
-      } else if (isBorrower) {
-        const borrowerContracts = await this.prisma.contract.findMany({
-          where: {
-            borrower: {
-              userId: user.sub,
-            },
-          },
-          select: {
-            id: true,
-            blockchainData: true,
-            signatures: true,
-          },
-        });
-        totalContracts = borrowerContracts.length;
-        onChainContracts = borrowerContracts.filter(
-          (contract) => contract.blockchainData,
-        ).length;
-        totalSignatures = borrowerContracts.reduce(
-          (sum, contract) =>
-            sum +
-            (Array.isArray(contract.signatures)
-              ? contract.signatures.length
-              : 0),
-          0,
-        );
-      }
-
-      const blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
-      const onChainPercentage =
-        totalContracts > 0
-          ? Math.round((onChainContracts / totalContracts) * 100)
-          : 0;
-
-      return {
-        blockchainEnabled,
-        totalContracts,
-        onChainContracts,
-        onChainPercentage,
-        totalSignatures,
-        features: {
-          immutability: {
-            status: 'ACTIVE',
-            description: 'All contract data permanently recorded',
-            metric: '100%',
-          },
-          transparency: {
-            status: 'ACTIVE',
-            description: 'Complete audit trail visible',
-            metric: `${onChainContracts} contracts`,
-          },
-          decentralization: {
-            status: 'ACTIVE',
-            description: 'Multi-organization network',
-            metric: 'Distributed',
-          },
-          traceability: {
-            status: 'ACTIVE',
-            description: 'Every signature tracked',
-            metric: `${totalSignatures} signatures`,
-          },
-          security: {
-            status: 'ACTIVE',
-            description: 'Cryptographic validation',
-            metric: 'Multi-party verified',
-          },
-        },
-        network: {
-          health: 99.9,
-          uptime: '99.9%',
-          peers: 9,
-          organizations: 3,
-          latency: '2.3s',
-          lastBlock: new Date().toISOString(),
-        },
-        guarantees: [
-          'All parties must sign',
-          'Signatures are immutable',
-          'No unauthorized changes',
-          'Complete audit trail',
-          'Multi-party validation',
-          'Cryptographic proof',
-          'Real-time verification',
-          'Role-based access control',
-        ],
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      this.logger.error('Failed to fetch blockchain stats', error);
-      throw new InternalServerErrorException(
-        'Failed to fetch blockchain statistics',
-      );
-    }
-  }
-
-  async verifyBlockchainTransaction(
-    id: string,
-    user: JwtPayload,
-  ): Promise<{
-    success: boolean;
-    isVerified: boolean;
-    onChain: boolean;
-    transactionHash?: string;
-    blockNumber?: string;
-    timestamp?: string;
-    confirmations?: number;
-    chainData?: any;
-    error?: string;
-  }> {
-    try {
-      const contract = await this.prisma.contract.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          blockchainData: true,
-          tenantId: true,
-          borrower: {
-            include: {
-              user: true,
-            },
-          },
-        },
-      });
-
-      if (!contract) {
-        return {
-          success: false,
-          isVerified: false,
-          onChain: false,
-          error: 'Contract not found',
-        };
-      }
-
-      const isSuperAdmin = user.roles?.includes('Super Admin');
-      const isAdmin = user.roles?.includes('Admin');
-      const isBorrower = user.roles?.includes('Borrower');
-      const isLender = user.roles?.includes('Lender');
-
-      if (!isSuperAdmin && !isAdmin) {
-        if (isBorrower && contract.borrower.userId !== user.sub) {
-          return {
-            success: false,
-            isVerified: false,
-            onChain: false,
-            error: 'Unauthorized',
-          };
-        } else if (isLender && contract.tenantId !== user.tenantId) {
-          return {
-            success: false,
-            isVerified: false,
-            onChain: false,
-            error: 'Unauthorized',
-          };
-        }
-      }
-
-      const blockchainData = contract.blockchainData as any;
-      const txId =
-        blockchainData?.txId ||
-        blockchainData?.signTxId ||
-        blockchainData?.disburseTxId ||
-        blockchainData?.transactionHash;
-
-      if (!txId) {
-        return {
-          success: true,
-          isVerified: false,
-          onChain: false,
-          error: 'No blockchain transaction hash found',
-        };
-      }
-
-      try {
-        const verification =
-          await this.contractBlockchainService.verifyContractOnChain(id);
-
-        if (!verification.exists || !verification.onChain) {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: false,
-            error: 'Transaction not found on blockchain',
-            transactionHash: txId,
-          };
-        }
-
-        const chaincodeName = verification.data.chaincodeName;
-        if (chaincodeName !== 'contracts') {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: false,
-            error: `Transaction found on blockchain but belongs to ${chaincodeName} chaincode, not contracts`,
-          };
-        }
-
-        const hashVerification =
-          await this.contractBlockchainService.verifyTransactionHash(id, txId);
-
-        if (!hashVerification.verified) {
-          return {
-            success: true,
-            isVerified: false,
-            onChain: true,
-            error:
-              'Transaction exists on blockchain but stored hash does not match blockchain records',
-            transactionHash: txId,
-            chainData: verification.data,
-          };
-        }
-
-        // Both record and hash are verified
-        return {
-          success: true,
-          isVerified: true,
-          onChain: true,
-          transactionHash: txId,
-          blockNumber: verification.data.blockNumber,
-          timestamp: hashVerification.transaction?.timestamp,
-          confirmations: verification.data.confirmations,
-          chainData: {
-            ...verification.data,
-            verifiedTransaction: hashVerification.transaction,
-          },
-        };
-      } catch (blockchainError) {
-        this.logger.warn(
-          `Blockchain verification failed for contract ${id}`,
-          blockchainError,
-        );
-
-        return {
-          success: true,
-          isVerified: false,
-          onChain: false,
-          error: 'Blockchain verification service unavailable',
-        };
-      }
-    } catch (error) {
-      this.logger.error(
-        `Failed to verify blockchain transaction for contract ${id}`,
-        error,
-      );
-      return {
-        success: false,
-        isVerified: false,
-        onChain: false,
-        error: 'Failed to verify blockchain transaction',
-      };
-    }
-  }
 }

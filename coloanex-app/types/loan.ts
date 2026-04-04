@@ -35,7 +35,6 @@ export interface Loan {
   requestedTermMonths: number;
   status: LoanStatus | string;
   rejectionReason?: string;
-  blockchainTxHash?: string;
   createdAt: string;
   updatedAt: string;
   borrower?: {
