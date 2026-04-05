@@ -6,7 +6,7 @@ export function generateTermsAndConditions(
   termMonths: number,
   rule: any,
 ): string {
-  const penaltyConfig = rule.penaltyConfig as any;
+  const penaltyConfig = rule.penaltyConfig;
   const graceDays = penaltyConfig?.gracePeriodDays ?? 7;
 
   const penaltyClause =
@@ -82,7 +82,7 @@ export function buildContractHtml(
   paymentFrequency: string,
   contractNumber: string,
 ): string {
-  const penaltyConfig = rule.penaltyConfig as any;
+  const penaltyConfig = rule.penaltyConfig;
   const graceDays = penaltyConfig?.gracePeriodDays ?? 7;
   const penaltyAmount =
     penaltyConfig?.penaltyType === 'PERCENTAGE'
