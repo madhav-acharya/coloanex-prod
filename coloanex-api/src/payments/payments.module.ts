@@ -6,11 +6,12 @@ import { KhaltiGateway } from './gateways/khalti/khalti.gateway';
 import type { IPaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY_REGISTRY } from './gateways/payment-gateway.interface';
 import { PrismaService } from '../prisma.service';
+import { BlockchainModule } from '../blockchain/blockchain.module';
 
 const gateways: (new () => IPaymentGateway)[] = [EsewaGateway, KhaltiGateway];
 
 @Module({
-  imports: [],
+  imports: [BlockchainModule],
   controllers: [PaymentsController],
   providers: [
     PaymentsService,
