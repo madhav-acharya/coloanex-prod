@@ -2,7 +2,8 @@ import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL!;
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_BASE_URL!;
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -21,7 +22,7 @@ apiClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 apiClient.interceptors.response.use(
@@ -80,7 +81,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;
