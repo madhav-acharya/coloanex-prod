@@ -1,0 +1,120 @@
+export const LOAN_REGISTRY_ABI = [
+  {
+    inputs: [
+      { internalType: 'string', name: 'loanId', type: 'string' },
+      { internalType: 'uint256', name: 'amount', type: 'uint256' },
+      { internalType: 'uint256', name: 'interestRate', type: 'uint256' },
+      { internalType: 'uint256', name: 'termMonths', type: 'uint256' },
+      { internalType: 'address', name: 'borrower', type: 'address' },
+      { internalType: 'address', name: 'lender', type: 'address' },
+    ],
+    name: 'createLoan',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      { internalType: 'string', name: 'loanId', type: 'string' },
+      { internalType: 'string', name: 'newStatus', type: 'string' },
+    ],
+    name: 'updateLoanStatus',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ internalType: 'string', name: 'loanId', type: 'string' }],
+    name: 'getLoan',
+    outputs: [
+      {
+        components: [
+          { internalType: 'string', name: 'loanId', type: 'string' },
+          { internalType: 'uint256', name: 'amount', type: 'uint256' },
+          { internalType: 'uint256', name: 'interestRate', type: 'uint256' },
+          { internalType: 'uint256', name: 'termMonths', type: 'uint256' },
+          { internalType: 'address', name: 'borrower', type: 'address' },
+          { internalType: 'address', name: 'lender', type: 'address' },
+          { internalType: 'string', name: 'status', type: 'string' },
+          { internalType: 'uint256', name: 'createdAt', type: 'uint256' },
+          { internalType: 'uint256', name: 'updatedAt', type: 'uint256' },
+        ],
+        internalType: 'struct LoanRegistry.Loan',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'string', name: 'loanId', type: 'string' },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'interestRate',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'termMonths',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'borrower',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'lender',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'timestamp',
+        type: 'uint256',
+      },
+    ],
+    name: 'LoanCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: 'string', name: 'loanId', type: 'string' },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'oldStatus',
+        type: 'string',
+      },
+      {
+        indexed: false,
+        internalType: 'string',
+        name: 'newStatus',
+        type: 'string',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'timestamp',
+        type: 'uint256',
+      },
+    ],
+    name: 'LoanStatusUpdated',
+    type: 'event',
+  },
+] as const;
