@@ -7,7 +7,7 @@ export class PaymentSchedulesService {
   constructor(private prisma: PrismaService) {}
 
   async findByContract(contractId: string): Promise<PaymentSchedule[]> {
-    return this.prisma.paymentSchedule.findMany({
+    return await this.prisma.paymentSchedule.findMany({
       where: { contractId },
       include: {
         contract: {
