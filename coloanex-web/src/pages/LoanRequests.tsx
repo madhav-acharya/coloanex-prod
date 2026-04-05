@@ -19,6 +19,7 @@ import {
 } from "@/apis/loansApi";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useGetUsersQuery } from "@/apis/usersApi";
+import { useGetBlockchainEnabledQuery } from "@/apis/configApi";
 import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,6 +38,7 @@ export default function LoanRequests() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
+  const { data: blockchainConfig } = useGetBlockchainEnabledQuery();
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
   const [deleteLoan] = useDeleteLoanMutation();
@@ -356,19 +358,19 @@ export default function LoanRequests() {
       return;
     }
 
-    if (!formData.providedLoanAmount || formData.providedLoanAmount <= 0) {
+    if (!formData.requestedAmount || formData.requestedAmount <= 0) {
       toast({
         title: "Validation Error",
-        description: `Provided loan amount must be greater than 0 but its ${formData.providedLoanAmount}`,
+        description: "Loan amount must be greater than 0",
         variant: "destructive",
       });
       return;
     }
 
-    if (!formData.expectedLoanAmount || formData.expectedLoanAmount <= 0) {
+    if (!formData.requestedTermMonths || formData.requestedTermMonths <= 0) {
       toast({
         title: "Validation Error",
-        description: "Expected loan amount must be greater than 0",
+        description: "Term months must be greater than 0",
         variant: "destructive",
       });
       return;
@@ -425,24 +427,6 @@ export default function LoanRequests() {
       return;
     }
 
-    if (!formData.requestedAmount || formData.requestedAmount <= 0) {
-      toast({
-        title: "Validation Error",
-        description: "Loan amount must be greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.requestedTermMonths || formData.requestedTermMonths <= 0) {
-      toast({
-        title: "Validation Error",
-        description: "Term months must be greater than 0",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const loanData: CreateLoanDto = {
       requestedAmount: formData.requestedAmount,
       purpose: formData.purpose,
@@ -453,11 +437,61 @@ export default function LoanRequests() {
         imageUrl: formData.collateralImageUrl,
       },
       requestedTermMonths: formData.requestedTermMonths,
-      tenantId: formData.tenantId && formData.tenantId.trim() !== "" ? formData.tenantId : undefined,
-      userId: formData.userId && formData.userId.trim() !== "" ? formData.userId : undefined,
+      tenantId:
+        formData.tenantId && formData.tenantId.trim() !== ""
+          ? formData.tenantId
+          : undefined,
+      userId:
+        formData.userId && formData.userId.trim() !== ""
+          ? formData.userId
+          : undefined,
     };
 
     try {
+      let blockchainTxHash: string | undefined;
+
+      if (blockchainConfig?.enabled && !editingLoan) {
+        try {
+          const { recordLoanOnBlockchain } = await import('@/utils/blockchain');
+          blockchainTxHash = await recordLoanOnBlockchain(
+            loanData.borrowerId || 'temp-' + Date.now(),
+            loanData.requestedAmount * 100,
+            0,
+            loanData.requestedTermMonths
+          );
+        } catch (blockchainError: any) {
+          if (blockchainError.code === 'ACTION_REJECTED') {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.code === 'INSUFFICIENT_FUNDS') {
+            toast({
+              title: "Insufficient Funds",
+              description: "Not enough funds for gas fees. Get testnet tokens from faucet.",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.message?.includes('MetaMask')) {
+            toast({
+              title: "MetaMask Error",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error",
+              description: blockchainError.message || "Failed to sign blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
       if (editingLoan) {
         await updateLoan({ id: editingLoan.id, data: loanData }).unwrap();
         toast({
@@ -465,7 +499,10 @@ export default function LoanRequests() {
           description: "Loan request updated successfully",
         });
       } else {
-        await createLoan(loanData).unwrap();
+        const payload = blockchainTxHash 
+          ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
+          : loanData;
+        await createLoan(payload).unwrap();
         toast({
           title: "Success",
           description: "Loan request created successfully",
