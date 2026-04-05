@@ -10,6 +10,7 @@ import type { IPaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY_REGISTRY } from './gateways/payment-gateway.interface';
 import type { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import type { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class PaymentsService {
@@ -19,6 +20,7 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_GATEWAY_REGISTRY)
     private readonly gatewayRegistry: Map<string, IPaymentGateway>,
+    private readonly blockchainService: BlockchainService,
   ) {}
 
   private resolveGateway(gateway: string): IPaymentGateway {
@@ -126,11 +128,44 @@ export class PaymentsService {
         success: true,
         transactionId: existingTransaction.id,
         status: 'COMPLETED',
+        blockchain_tx_hash: existingTransaction.blockchain_tx_hash,
       };
+    }
+
+    const paymentId = randomUUID();
+
+    let blockchain_tx_hash: string | null = null;
+    let gasFeeGwei: string | null = null;
+    let blockchainExplorerUrl: string | null = null;
+
+    const bcTx = await this.blockchainService.recordPayment(
+      paymentId,
+      contractId ?? 'no-contract',
+      Math.round(Number(totalAmount) * 100),
+      gateway,
+      verifyResult.gatewayTransactionId ?? transactionUuid,
+    );
+
+    if (bcTx) {
+      blockchain_tx_hash = bcTx.txHash;
+      gasFeeGwei = bcTx.gasFeeGwei;
+      blockchainExplorerUrl = bcTx.explorerUrl;
+      this.logger.log(
+        `Payment ${paymentId} recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+      );
+    } else if (this.blockchainService.isEnabled()) {
+      throw new BadRequestException(
+        'Blockchain is enabled but unavailable. Cannot record payment without blockchain record.',
+      );
+    } else {
+      this.logger.warn(
+        `Payment ${paymentId} — blockchain disabled, proceeding without chain record`,
+      );
     }
 
     const transaction = await this.prisma.transaction.create({
       data: {
+        id: paymentId,
         walletId: resolvedWalletId as string,
         contractId: contractId ?? null,
         paymentScheduleId: paymentScheduleId ?? null,
@@ -139,6 +174,7 @@ export class PaymentsService {
         status: 'COMPLETED' as never,
         completedAt: new Date(),
         description: `${gateway} payment verified`,
+        blockchain_tx_hash,
         gatewayDetails: {
           gateway,
           transactionUuid,
@@ -164,7 +200,8 @@ export class PaymentsService {
       });
 
       if (
-        (type === 'INSTALLMENT_PAYMENT' || type === 'PENALTY_PAYMENT') &&
+        (String(type) === 'INSTALLMENT_PAYMENT' ||
+          String(type) === 'PENALTY_PAYMENT') &&
         contractId
       ) {
         const contract = await this.prisma.contract.findUnique({
@@ -248,8 +285,9 @@ export class PaymentsService {
       success: true,
       transactionId: transaction.id,
       status: 'COMPLETED',
+      blockchain_tx_hash,
+      gasFeeGwei,
+      blockchainExplorerUrl,
     };
   }
-
-
 }
