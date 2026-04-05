@@ -1,8 +1,6 @@
 import {
   Injectable,
   BadRequestException,
-  InternalServerErrorException,
-  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import * as nodemailer from 'nodemailer';
@@ -58,7 +56,7 @@ export class MailService {
       prompt: 'consent',
     });
 
-    return authUrl;
+    return String(authUrl);
   }
 
   async handleCallback(code: string, tenantId: string) {
@@ -170,7 +168,7 @@ export class MailService {
     };
   }
 
-  async sendMail(sendMailDto: SendMailDto, tenantId: string): Promise<void> {
+  async sendMail(_sendMailDto: SendMailDto, _tenantId: string): Promise<void> {
     // uncomment below to send mail using transporter, currently disabled to avoid accidental emails during development/testing
     // if (tenantId === 'default' && this.envTransporter) {
     //   try {
