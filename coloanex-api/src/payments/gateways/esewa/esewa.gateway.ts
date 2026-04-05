@@ -31,14 +31,16 @@ export class EsewaGateway implements IPaymentGateway {
       .digest('base64');
   }
 
-  async initiatePayment(params: InitiatePaymentParams): Promise<InitiatePaymentResult> {
+  async initiatePayment(
+    params: InitiatePaymentParams,
+  ): Promise<InitiatePaymentResult> {
     const { amount, transactionUuid, successUrl, failureUrl } = params;
 
     const signedFieldNames = 'total_amount,transaction_uuid,product_code';
     const message = `total_amount=${amount},transaction_uuid=${transactionUuid},product_code=${this.merchantId}`;
     const signature = this.computeSignature(message);
 
-    return {
+    return Promise.resolve({
       paymentUrl: this.paymentUrl,
       formData: {
         amount: String(amount),
@@ -53,7 +55,7 @@ export class EsewaGateway implements IPaymentGateway {
         signed_field_names: signedFieldNames,
         signature,
       },
-    };
+    });
   }
 
   async verifyPayment(

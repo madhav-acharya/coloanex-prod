@@ -22,6 +22,7 @@ import {
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
+import { getBlockchainEnabled } from "@/api/configApi";
 import { formatCurrency } from "@/utils/currency";
 import { CurrencyIcon } from "@/components/ui";
 import { uploadToCloudinary } from "@/utils/upload";
@@ -54,6 +55,7 @@ export default function LoanApplicationScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [blockchainEnabled, setBlockchainEnabled] = useState<boolean>(false);
   const [lender, setLender] = useState<any>(null);
   const [loanAmount, setLoanAmount] = useState(50000);
   const [loanPurpose, setLoanPurpose] = useState("");
@@ -94,8 +96,21 @@ export default function LoanApplicationScreen() {
   ]);
 
   useEffect(() => {
-    loadLender();
+    if (lenderId) {
+      loadLender();
+      loadBlockchainConfig();
+    }
   }, [lenderId]);
+
+  const loadBlockchainConfig = async () => {
+    try {
+      const config = await getBlockchainEnabled();
+      setBlockchainEnabled(config.enabled);
+    } catch (error) {
+      console.error('Failed to load blockchain config:', error);
+      setBlockchainEnabled(false);
+    }
+  };
 
   const loadLender = async () => {
     try {
@@ -194,6 +209,12 @@ export default function LoanApplicationScreen() {
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      if (blockchainEnabled === true) {
+        showToast("Blockchain is enabled but MetaMask not supported on mobile. Please disable blockchain or use web version.", "error");
+        setLoading(false);
+        return;
+      }
+
       const loanData = {
         tenantId: lenderId as string,
         requestedAmount: Number(loanAmount),

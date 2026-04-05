@@ -24,16 +24,20 @@ export class CreateLoanDto {
 
   @IsNumber()
   @IsPositive()
-  requestedAmount: number;
+  requestedAmount!: number;
 
   @IsString()
-  purpose: string;
+  purpose!: string;
 
   @IsNotEmpty()
-  collateralDetails: Record<string, unknown>;
+  collateralDetails!: Record<string, unknown>;
 
   @IsInt()
   @IsPositive()
   @Min(1)
-  requestedTermMonths: number;
+  requestedTermMonths!: number;
+
+  @IsOptional()
+  @IsString()
+  blockchain_tx_hash?: string;
 }

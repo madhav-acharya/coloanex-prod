@@ -93,7 +93,7 @@ export class TransactionsService {
   }
 
   async findByContract(contractId: string): Promise<Transaction[]> {
-    return this.prisma.transaction.findMany({
+    return await this.prisma.transaction.findMany({
       where: { contractId },
       include: {
         contract: {
@@ -108,7 +108,7 @@ export class TransactionsService {
   }
 
   async findByWallet(walletId: string): Promise<Transaction[]> {
-    return this.prisma.transaction.findMany({
+    return await this.prisma.transaction.findMany({
       where: { walletId },
       include: {
         wallet: {

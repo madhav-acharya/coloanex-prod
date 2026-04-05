@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Header,
-  Param,
   Post,
   Query,
   Req,

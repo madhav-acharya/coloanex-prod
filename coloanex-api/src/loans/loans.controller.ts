@@ -74,9 +74,6 @@ export class LoansController {
     return this.loansService.findAll(query, user);
   }
 
-
-
-
   @Get(':id/payment-schedule')
   @RequirePermissions(READ_LOANS)
   getPaymentSchedule(@Param('id') id: string, @CurrentUser() user: JwtPayload) {

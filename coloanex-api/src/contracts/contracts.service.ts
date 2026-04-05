@@ -6,12 +6,13 @@ import {
   BadRequestException,
   InternalServerErrorException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import * as puppeteer from 'puppeteer';
 import { PrismaService } from '../prisma.service';
 import { CloudinaryUploadsService } from '../cloudinary-uploads/cloudinary-uploads.service';
 import { MailService } from '../mail/mail.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
-import { SolanaService } from '../solana/solana.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { contractGeneratedTemplate } from '../mail/templates';
 import {
   ActivityEntityType,
@@ -39,7 +40,7 @@ export class ContractsService {
     private cloudinaryUploadsService: CloudinaryUploadsService,
     private mailService: MailService,
     private activityLogsService: ActivityLogsService,
-    private solanaService: SolanaService,
+    private blockchainService: BlockchainService,
   ) {}
 
   private async generateContractNumber(tenantId: string): Promise<string> {
@@ -160,9 +161,38 @@ export class ContractsService {
         createContractDto.paymentFrequency,
       );
 
+    const contractNumber = await this.generateContractNumber(user.tenantId);
+    const contractId = randomUUID();
+    let blockchain_data: any = null;
+    const bcTx = await this.blockchainService.recordContract(
+      contractId,
+      createContractDto.loanId,
+      Math.round(loanAmount * 100),
+      Math.round(interestRate * 100),
+      createContractDto.termMonths,
+      Math.round(totalAmountDue * 100),
+    );
+    if (bcTx) {
+      blockchain_data = {
+        txHash: bcTx.txHash,
+        blockNumber: bcTx.blockNumber,
+        gasFeeGwei: bcTx.gasFeeGwei,
+        explorerUrl: bcTx.explorerUrl,
+      };
+    } else if (this.blockchainService.isEnabled()) {
+      throw new BadRequestException(
+        'Blockchain is enabled but unavailable. Cannot create contract without blockchain record.',
+      );
+    } else {
+      this.logger.warn(
+        `[create] blockchain disabled — contract ${contractId} saved without chain record`,
+      );
+    }
+
     const contract = await this.prisma.contract.create({
       data: {
-        contractNumber: await this.generateContractNumber(user.tenantId),
+        id: contractId,
+        contractNumber,
         tenantId: user.tenantId,
         borrowerId: loan.borrowerId,
         loanId: createContractDto.loanId,
@@ -180,7 +210,8 @@ export class ContractsService {
         totalAmountPaid: 0,
         outstandingBalance: totalAmountDue,
         termsAndConditions: createContractDto.termsAndConditions,
-      },
+        blockchain_data,
+      } as any,
       include: {
         tenant: {
           select: { id: true, name: true, logo: true },
@@ -420,11 +451,37 @@ export class ContractsService {
           status: 'CONTRACT_SIGNED' as any,
         },
       });
-      this.solanaService
-        .signContract(id)
-        .catch((err: Error) =>
-          this.logger.error('Solana signContract failed', err.message),
+      const signBcTx = await this.blockchainService.signContract(id);
+      const anyContract = updatedContract as any;
+      const existingBlockchainData = anyContract.blockchain_data ?? {};
+      const signData = signBcTx
+        ? {
+            signTxHash: signBcTx.txHash,
+            signBlockNumber: signBcTx.blockNumber,
+            signGasFeeGwei: signBcTx.gasFeeGwei,
+            signExplorerUrl: signBcTx.explorerUrl,
+          }
+        : {};
+      if (
+        Object.keys(signData).length > 0 ||
+        Object.keys(existingBlockchainData).length > 0
+      ) {
+        await this.prisma.contract.update({
+          where: { id },
+          data: {
+            blockchain_data: { ...existingBlockchainData, ...signData },
+          },
+        });
+      }
+      if (!signBcTx && this.blockchainService.isEnabled()) {
+        throw new BadRequestException(
+          'Blockchain is enabled but unavailable. Cannot sign contract without blockchain record.',
         );
+      } else if (!signBcTx) {
+        this.logger.warn(
+          `[signContract] blockchain disabled — signature for contract ${id} saved without chain record`,
+        );
+      }
     }
 
     return updatedContract as unknown as Contract;
@@ -668,9 +725,32 @@ export class ContractsService {
     );
 
     const contractNumber = await this.generateContractNumber(loan.tenantId);
+    const contractId = randomUUID();
+    let blockchain_data: any = null;
+    const bcTx = await this.blockchainService.recordContract(
+      contractId,
+      loanId,
+      Math.round(approvedAmount * 100),
+      Math.round(interestRate * 100),
+      approvedTermMonths,
+      Math.round(totalAmountDue * 100),
+    );
+    if (bcTx) {
+      blockchain_data = {
+        txHash: bcTx.txHash,
+        blockNumber: bcTx.blockNumber,
+        gasFeeGwei: bcTx.gasFeeGwei,
+        explorerUrl: bcTx.explorerUrl,
+      };
+    } else {
+      this.logger.warn(
+        `[generateFromLoanApproval] blockchain unavailable — contract ${contractId} saved without chain record`,
+      );
+    }
 
     const contract = await this.prisma.contract.create({
       data: {
+        id: contractId,
         contractNumber,
         tenantId: loan.tenantId,
         borrowerId: loan.borrowerId,
@@ -689,7 +769,8 @@ export class ContractsService {
         totalAmountPaid: 0,
         outstandingBalance: totalAmountDue,
         termsAndConditions,
-      },
+        blockchain_data,
+      } as any,
       include: {
         tenant: {
           select: { id: true, name: true, logo: true },
@@ -709,20 +790,6 @@ export class ContractsService {
         },
       },
     });
-
-    this.solanaService
-      .createContract(
-        contract.id,
-        loanId,
-        contractNumber,
-        approvedAmount,
-        interestRate,
-        approvedTermMonths,
-        totalAmountDue,
-      )
-      .catch((err: Error) =>
-        this.logger.error('Solana createContract failed', err.message),
-      );
 
     return contract as unknown as Contract;
   }

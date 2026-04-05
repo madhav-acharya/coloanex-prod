@@ -136,8 +136,7 @@ export default function LenderDetailsScreen() {
         });
         break;
       case KycStatus.PENDING:
-        if (kycId) router.push(`/kyc/kyc-details?id=${kycId}` as any);
-        else showToast("KYC is being reviewed", "info");
+        showToast("Your KYC verification is currently under review", "info");
         break;
       case KycStatus.REJECTED:
         router.push(`/kyc/kyc-verification?tenantId=${lender?.id}` as any);

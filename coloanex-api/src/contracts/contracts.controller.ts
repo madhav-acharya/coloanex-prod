@@ -36,9 +36,6 @@ export class ContractsController {
     return this.contractsService.findAll(req.user);
   }
 
-
-
-
   @Get(':id')
   findOne(@Param('id') id: string, @Request() req: { user: JwtPayload }) {
     return this.contractsService.findOne(id, req.user);

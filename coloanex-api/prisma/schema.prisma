@@ -7,6 +7,400 @@ datasource db {
   schemas  = ["auth", "borrower", "core", "finance"]
 }
 
+model Role {
+  id          BigInt           @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+  @@schema("auth")
+}
+
+model Permission {
+  id          BigInt           @id @default(autoincrement())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
+  users       UserPermission[]
+
+  @@map("permissions")
+  @@schema("auth")
+}
+
+model RolePermission {
+  roleId       BigInt     @map("role_id")
+  permissionId BigInt     @map("permission_id")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+  @@schema("auth")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique @db.VarChar(255)
+  phone           String?          @unique @db.VarChar(10)
+  password        String           @db.VarChar(255)
+  tenantId        String?          @map("tenant_id")
+  profileImage    String?          @map("profile_image")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  fullName        String           @map("full_name")
+  isActive        Boolean          @default(true) @map("is_active")
+  isBanned        Boolean          @default(false) @map("is_banned")
+  isEmailVerified Boolean          @default(false) @map("is_email_verified")
+  lastActiveAt    DateTime?        @map("last_active_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  permissions     UserPermission[]
+  roles           UserRole[]
+  tenant          Tenant?          @relation(fields: [tenantId], references: [id])
+  borrowers       Borrower[]       @relation("BorrowerUser")
+  activities      ActivityLog[]
+  ownedTenants    Tenant[]         @relation("TenantOwner")
+  wallets         Wallet[]         @relation("UserWallet")
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([email])
+  @@map("users")
+  @@schema("auth")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId BigInt @map("role_id")
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+  @@schema("auth")
+}
+
+model UserPermission {
+  userId       String     @map("user_id")
+  permissionId BigInt     @map("permission_id")
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@map("user_permissions")
+  @@schema("auth")
+}
+
+model Tenant {
+  id                String        @id @default(uuid())
+  name              String
+  address           String?
+  ownerUserId       String?       @map("owner_user_id")
+  contactEmail      String?       @map("contact_email") @db.VarChar(255)
+  contactPhone      String?       @map("contact_phone") @db.VarChar(20)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  description       String?
+  establishedYear   Int?          @map("established_year")
+  isActive          Boolean       @default(true) @map("is_active")
+  isBanned          Boolean       @default(false) @map("is_banned")
+  isPubliclyVisible Boolean       @default(true) @map("is_publicly_visible")
+  logo              String?
+  totalLoansIssued  Int           @default(0) @map("total_loans_issued")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  website           String?
+  mailAccessToken   String?       @map("mail_access_token")
+  mailEmail         String?       @map("mail_email")
+  mailRefreshToken  String?       @map("mail_refresh_token")
+  mailTokenExpiry   DateTime?     @map("mail_token_expiry")
+  primaryColor      String?       @map("primary_color") @db.VarChar(20)
+  users             User[]
+  borrowers         Borrower[]
+  activities        ActivityLog[]
+  ownerUser         User?         @relation("TenantOwner", fields: [ownerUserId], references: [id])
+  contracts         Contract[]
+  loans             Loan[]
+  rules             Rule[]
+
+  @@index([isActive])
+  @@index([isBanned])
+  @@index([isPubliclyVisible])
+  @@map("tenants")
+  @@schema("core")
+}
+
+model ActivityLog {
+  id          String             @id @default(uuid())
+  actorUserId String?            @map("actor_user_id")
+  tenantId    String?            @map("tenant_id")
+  action      ActivityAction
+  description String?
+  before      Json?
+  after       Json?
+  createdAt   DateTime           @default(now()) @map("created_at")
+  entityId    String?            @map("entity_id")
+  entityType  ActivityEntityType @map("entity_type")
+  ipAddress   String?            @map("ip_address") @db.VarChar(45)
+  userAgent   String?            @map("user_agent")
+  actorUser   User?              @relation(fields: [actorUserId], references: [id])
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
+  readBy      NotificationRead[]
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+  @@schema("core")
+}
+
+model NotificationRead {
+  id            String      @id @default(uuid())
+  activityLogId String      @map("activity_log_id")
+  userId        String      @map("user_id")
+  readAt        DateTime    @default(now()) @map("read_at")
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+
+  @@unique([activityLogId, userId])
+  @@index([userId])
+  @@index([activityLogId])
+  @@map("notification_reads")
+  @@schema("core")
+}
+
+model Borrower {
+  id               String     @id @default(uuid())
+  userId           String     @map("user_id")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  creditScore      Float?     @map("credit_score")
+  kycLastCheckedAt DateTime?  @map("kyc_last_checked_at")
+  kycStatus        KycStatus  @default(PENDING) @map("kyc_status")
+  tenantId         String     @map("tenant_id")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+  tenant           Tenant     @relation(fields: [tenantId], references: [id])
+  user             User       @relation("BorrowerUser", fields: [userId], references: [id])
+  kycs             Kyc[]
+  contracts        Contract[]
+  loans            Loan[]
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, kycStatus])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("borrowers")
+  @@schema("borrower")
+}
+
+model Kyc {
+  id               String    @id @default(uuid())
+  borrowerId       String    @map("borrower_id")
+  dateOfBirth      DateTime  @map("date_of_birth")
+  occupation       String
+  monthlyIncome    Float     @map("monthly_income")
+  status           KycStatus @default(PENDING)
+  rejectionReason  String?   @map("rejection_reason")
+  verifiedBy       String?   @map("verified_by")
+  verifiedAt       DateTime? @map("verified_at")
+  notes            String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  bankDetails      Json      @map("bank_details")
+  fullName         String    @map("full_name")
+  permanentAddress Json      @map("permanent_address")
+  personalDetails  Json      @map("personal_details")
+  photoUrl         String    @map("photo_url")
+  files            KycFile[]
+  borrower         Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+
+  @@index([borrowerId])
+  @@index([status])
+  @@map("kycs")
+  @@schema("borrower")
+}
+
+model KycFile {
+  id               String      @id @default(uuid())
+  kycId            String      @map("kyc_id")
+  fileType         KycFileType @map("file_type")
+  fileUrl          String      @map("file_url")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  documentMetadata Json        @map("document_metadata")
+  kyc              Kyc         @relation(fields: [kycId], references: [id], onDelete: Cascade)
+
+  @@index([kycId])
+  @@index([fileType])
+  @@map("kyc_files")
+  @@schema("borrower")
+}
+
+model Wallet {
+  id                  String        @id @default(uuid())
+  userId              String        @map("user_id")
+  balance             Decimal       @default(0) @db.Decimal(20, 2)
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  paymentGatewayLinks Json?         @map("payment_gateway_links")
+  pendingBalance      Decimal       @default(0) @map("pending_balance") @db.Decimal(20, 2)
+  transactions        Transaction[]
+  user                User          @relation("UserWallet", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("wallets")
+  @@schema("finance")
+}
+
+model Loan {
+  id                  String     @id @default(uuid())
+  borrowerId          String     @map("borrower_id")
+  status              LoanStatus @default(DRAFT)
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+  tenantId            String     @map("tenant_id")
+  approvedAmount      Decimal?   @map("approved_amount") @db.Decimal(20, 2)
+  collateralDetails   Json       @map("collateral_details")
+  purpose             String
+  rejectionReason     String?    @map("rejection_reason")
+  requestedAmount     Decimal    @map("requested_amount") @db.Decimal(20, 2)
+  requestedTermMonths Int        @map("requested_term_months")
+  approvedTermMonths  Int?       @map("approved_term_months")
+  ruleId              String?    @map("rule_id")
+  blockchain_tx_hash  String?
+  contract            Contract?
+  borrower            Borrower   @relation(fields: [borrowerId], references: [id])
+  rule                Rule?      @relation(fields: [ruleId], references: [id])
+  tenant              Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([borrowerId])
+  @@index([ruleId])
+  @@index([status])
+  @@map("loans")
+  @@schema("finance")
+}
+
+model Rule {
+  id                String     @id @default(uuid())
+  tenantId          String     @map("tenant_id")
+  name              String
+  description       String?
+  ruleType          RuleType   @map("rule_type")
+  interestRate      Decimal    @map("interest_rate") @db.Decimal(5, 2)
+  loanLimits        Json       @map("loan_limits")
+  penaltyConfig     Json       @map("penalty_config")
+  paymentConfig     Json       @map("payment_config")
+  isActive          Boolean    @default(true) @map("is_active")
+  isPubliclyVisible Boolean    @default(true) @map("is_publicly_visible")
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+  contracts         Contract[]
+  loans             Loan[]
+  tenant            Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([ruleType])
+  @@index([isActive])
+  @@index([isPubliclyVisible])
+  @@map("rules")
+  @@schema("finance")
+}
+
+model Contract {
+  id                 String            @id @default(uuid())
+  contractNumber     String            @unique @map("contract_number")
+  tenantId           String            @map("tenant_id")
+  borrowerId         String            @map("borrower_id")
+  loanId             String            @unique @map("loan_id")
+  ruleId             String            @map("rule_id")
+  status             ContractStatus    @default(DRAFT)
+  startDate          DateTime          @map("start_date")
+  endDate            DateTime          @map("end_date")
+  loanAmount         Decimal           @map("loan_amount") @db.Decimal(20, 2)
+  interestRate       Decimal           @map("interest_rate") @db.Decimal(5, 2)
+  termMonths         Int               @map("term_months")
+  paymentFrequency   PaymentFrequency  @map("payment_frequency")
+  installmentAmount  Decimal           @map("installment_amount") @db.Decimal(20, 2)
+  totalInstallments  Int               @map("total_installments")
+  totalAmountDue     Decimal           @map("total_amount_due") @db.Decimal(20, 2)
+  totalAmountPaid    Decimal           @default(0) @map("total_amount_paid") @db.Decimal(20, 2)
+  outstandingBalance Decimal           @map("outstanding_balance") @db.Decimal(20, 2)
+  contractPdfUrl     String?           @map("contract_pdf_url")
+  signatures         Json?             @map("signatures")
+  blockchain_data    Json?
+  termsAndConditions String            @map("terms_and_conditions")
+  disbursementInfo   Json?             @map("disbursement_info")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  reportReason       String?           @map("report_reason")
+  signedAt           DateTime?         @map("signed_at")
+  borrower           Borrower          @relation(fields: [borrowerId], references: [id])
+  loan               Loan              @relation(fields: [loanId], references: [id])
+  rule               Rule              @relation(fields: [ruleId], references: [id])
+  tenant             Tenant            @relation(fields: [tenantId], references: [id])
+  paymentSchedules   PaymentSchedule[]
+  transactions       Transaction[]
+
+  @@index([tenantId])
+  @@index([borrowerId])
+  @@index([loanId])
+  @@index([ruleId])
+  @@index([status])
+  @@map("contracts")
+  @@schema("finance")
+}
+
+model PaymentSchedule {
+  id                String            @id @default(uuid())
+  contractId        String            @map("contract_id")
+  installmentNumber Int               @map("installment_number")
+  dueDate           DateTime          @map("due_date")
+  principalAmount   Decimal           @map("principal_amount") @db.Decimal(20, 2)
+  interestAmount    Decimal           @map("interest_amount") @db.Decimal(20, 2)
+  totalAmount       Decimal           @map("total_amount") @db.Decimal(20, 2)
+  status            InstallmentStatus @default(PENDING)
+  amountPaid        Decimal           @default(0) @map("amount_paid") @db.Decimal(20, 2)
+  penaltyAmount     Decimal           @default(0) @map("penalty_amount") @db.Decimal(10, 2)
+  paidAt            DateTime?         @map("paid_at")
+  paymentDetails    Json?             @map("payment_details")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  contract          Contract          @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+
+  @@unique([contractId, installmentNumber])
+  @@index([contractId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("payment_schedules")
+  @@schema("finance")
+}
+
+model Transaction {
+  id                 String            @id @default(uuid())
+  walletId           String            @map("wallet_id")
+  type               TransactionType
+  amount             Decimal           @db.Decimal(20, 2)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  status             TransactionStatus @default(PENDING)
+  blockchain_tx_hash String?
+  completedAt        DateTime?         @map("completed_at")
+  contractId         String?           @map("contract_id")
+  description        String?
+  gatewayDetails     Json?             @map("gateway_details")
+  paymentScheduleId  String?           @map("payment_schedule_id")
+  contract           Contract?         @relation(fields: [contractId], references: [id])
+  paymentSchedule    PaymentSchedule?  @relation(fields: [paymentScheduleId], references: [id])
+  wallet             Wallet            @relation(fields: [walletId], references: [id])
+
+  @@index([walletId])
+  @@index([contractId])
+  @@index([paymentScheduleId])
+  @@index([status])
+  @@map("transactions")
+  @@schema("finance")
+}
+
 enum KycStatus {
   PENDING
   VERIFIED
@@ -70,8 +464,6 @@ enum LoanStatus {
   CONTRACT_GENERATED
   CONTRACT_SIGNED
   LOAN_PROVIDED
-  PARTIALLY_PAID
-  PAID
 
   @@schema("finance")
 }
@@ -80,7 +472,7 @@ enum InstallmentStatus {
   PENDING
   PAID
   OVERDUE
-  PARTIALLY_PAID
+  PARTIAL
 
   @@schema("finance")
 }
@@ -123,12 +515,12 @@ enum PenaltyType {
 
 enum ContractStatus {
   DRAFT
-  GENERATED
-  SIGNED
   ACTIVE
   COMPLETED
   DEFAULTED
   CANCELLED
+  GENERATED
+  SIGNED
   REPORTED
 
   @@schema("finance")
@@ -149,408 +541,5 @@ enum PaymentGateway {
   WALLET
   BANK_TRANSFER
 
-  @@schema("finance")
-}
-
-model Role {
-  id          BigInt           @id @default(autoincrement())
-  name        String           @unique
-  description String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  permissions RolePermission[]
-  users       UserRole[]
-
-  @@map("roles")
-  @@schema("auth")
-}
-
-model Permission {
-  id          BigInt           @id @default(autoincrement())
-  name        String           @unique
-  description String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  roles       RolePermission[]
-  users       UserPermission[]
-
-  @@map("permissions")
-  @@schema("auth")
-}
-
-model RolePermission {
-  roleId       BigInt     @map("role_id")
-  permissionId BigInt     @map("permission_id")
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-
-  @@id([roleId, permissionId])
-  @@map("role_permissions")
-  @@schema("auth")
-}
-
-model User {
-  id              String    @id @default(uuid())
-  fullName        String    @map("full_name")
-  email           String    @unique @db.VarChar(255)
-  phone           String?   @unique @db.VarChar(20)
-  password        String    @db.VarChar(255)
-  profileImage    String?   @map("profile_image")
-  tenantId        String?   @map("tenant_id")
-  isBanned        Boolean   @default(false) @map("is_banned")
-  isEmailVerified Boolean   @default(false) @map("is_email_verified")
-  isActive        Boolean   @default(true) @map("is_active")
-  lastActiveAt    DateTime? @map("last_active_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  tenant       Tenant?          @relation(fields: [tenantId], references: [id])
-  permissions  UserPermission[]
-  roles        UserRole[]
-  borrowers    Borrower[]       @relation("BorrowerUser")
-  activities   ActivityLog[]
-  ownedTenants Tenant[]         @relation("TenantOwner")
-  wallets      Wallet[]         @relation("UserWallet")
-
-  @@index([tenantId])
-  @@index([tenantId, isActive])
-  @@index([email])
-  @@map("users")
-  @@schema("auth")
-}
-
-model UserRole {
-  userId String @map("user_id")
-  roleId BigInt @map("role_id")
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, roleId])
-  @@map("user_roles")
-  @@schema("auth")
-}
-
-model UserPermission {
-  userId       String     @map("user_id")
-  permissionId BigInt     @map("permission_id")
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, permissionId])
-  @@map("user_permissions")
-  @@schema("auth")
-}
-
-model Tenant {
-  id                String   @id @default(uuid())
-  name              String
-  description       String?  @db.Text
-  logo              String?
-  isActive          Boolean  @default(true) @map("is_active")
-  isBanned          Boolean  @default(false) @map("is_banned")
-  isPubliclyVisible Boolean  @default(true) @map("is_publicly_visible")
-  contactEmail      String?  @map("contact_email") @db.VarChar(255)
-  contactPhone      String?  @map("contact_phone") @db.VarChar(20)
-  address           String?
-  website           String?
-  primaryColor      String?  @map("primary_color") @db.VarChar(20)
-  establishedYear   Int?     @map("established_year")
-  totalLoansIssued  Int      @default(0) @map("total_loans_issued")
-  ownerUserId       String?  @map("owner_user_id")
-  mailEmail         String?  @map("mail_email")
-  mailAccessToken   String?  @map("mail_access_token") @db.Text
-  mailRefreshToken  String?  @map("mail_refresh_token") @db.Text
-  mailTokenExpiry   DateTime? @map("mail_token_expiry")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  ownerUser  User?         @relation("TenantOwner", fields: [ownerUserId], references: [id])
-  users      User[]
-  borrowers  Borrower[]
-  activities ActivityLog[]
-  loans      Loan[]
-  contracts  Contract[]
-  rules      Rule[]
-
-  @@index([isActive])
-  @@index([isBanned])
-  @@index([isPubliclyVisible])
-  @@map("tenants")
-  @@schema("core")
-}
-
-model ActivityLog {
-  id          String             @id @default(uuid())
-  actorUserId String?            @map("actor_user_id")
-  tenantId    String?            @map("tenant_id")
-  entityType  ActivityEntityType @map("entity_type")
-  entityId    String?            @map("entity_id")
-  action      ActivityAction
-  description String?
-  before      Json?
-  after       Json?
-  ipAddress   String?            @map("ip_address") @db.VarChar(45)
-  userAgent   String?            @map("user_agent")
-  createdAt   DateTime           @default(now()) @map("created_at")
-
-  actorUser User?              @relation(fields: [actorUserId], references: [id])
-  tenant    Tenant?            @relation(fields: [tenantId], references: [id])
-  readBy    NotificationRead[]
-
-  @@index([tenantId, createdAt])
-  @@index([actorUserId, createdAt])
-  @@index([entityType, entityId])
-  @@map("activity_logs")
-  @@schema("core")
-}
-
-model NotificationRead {
-  id            String      @id @default(uuid())
-  activityLogId String      @map("activity_log_id")
-  userId        String      @map("user_id")
-  readAt        DateTime    @default(now()) @map("read_at")
-  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
-
-  @@unique([activityLogId, userId])
-  @@index([userId])
-  @@index([activityLogId])
-  @@map("notification_reads")
-  @@schema("core")
-}
-
-model Borrower {
-  id               String    @id @default(uuid())
-  tenantId         String    @map("tenant_id")
-  userId           String    @map("user_id")
-  kycStatus        KycStatus @default(PENDING) @map("kyc_status")
-  creditScore      Float?    @map("credit_score")
-  kycLastCheckedAt DateTime? @map("kyc_last_checked_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
-  user      User       @relation("BorrowerUser", fields: [userId], references: [id])
-  kycs      Kyc[]
-  loans     Loan[]
-  contracts Contract[]
-
-  @@unique([tenantId, userId])
-  @@index([tenantId, kycStatus])
-  @@index([tenantId])
-  @@index([userId])
-  @@map("borrowers")
-  @@schema("borrower")
-}
-
-model Kyc {
-  id               String    @id @default(uuid())
-  borrowerId       String    @map("borrower_id")
-  fullName         String    @map("full_name")
-  dateOfBirth      DateTime  @map("date_of_birth")
-  photoUrl         String    @map("photo_url")
-  personalDetails  Json      @map("personal_details")
-  permanentAddress Json      @map("permanent_address")
-  occupation       String
-  monthlyIncome    Float     @map("monthly_income")
-  bankDetails      Json      @map("bank_details")
-  status           KycStatus @default(PENDING)
-  rejectionReason  String?   @map("rejection_reason")
-  verifiedBy       String?   @map("verified_by")
-  verifiedAt       DateTime? @map("verified_at")
-  notes            String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-
-  borrower Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
-  files    KycFile[]
-
-  @@index([borrowerId])
-  @@index([status])
-  @@map("kycs")
-  @@schema("borrower")
-}
-
-model KycFile {
-  id               String      @id @default(uuid())
-  kycId            String      @map("kyc_id")
-  fileType         KycFileType @map("file_type")
-  fileUrl          String      @map("file_url")
-  documentMetadata Json        @map("document_metadata")
-  createdAt        DateTime    @default(now()) @map("created_at")
-
-  kyc Kyc @relation(fields: [kycId], references: [id], onDelete: Cascade)
-
-  @@index([kycId])
-  @@index([fileType])
-  @@map("kyc_files")
-  @@schema("borrower")
-}
-
-model Wallet {
-  id                  String   @id @default(uuid())
-  userId              String   @map("user_id")
-  balance             Decimal  @default(0) @db.Decimal(20, 2)
-  pendingBalance      Decimal  @default(0) @map("pending_balance") @db.Decimal(20, 2)
-  paymentGatewayLinks Json?    @map("payment_gateway_links")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
-
-  user         User          @relation("UserWallet", fields: [userId], references: [id])
-  transactions Transaction[]
-
-  @@index([userId])
-  @@map("wallets")
-  @@schema("finance")
-}
-
-model Loan {
-  id                  String     @id @default(uuid())
-  borrowerId          String     @map("borrower_id")
-  tenantId            String     @map("tenant_id")
-  ruleId              String?    @map("rule_id")
-  requestedAmount     Decimal    @map("requested_amount") @db.Decimal(20, 2)
-  approvedAmount      Decimal?   @map("approved_amount") @db.Decimal(20, 2)
-  purpose             String
-  collateralDetails   Json       @map("collateral_details")
-  requestedTermMonths Int        @map("requested_term_months")
-  approvedTermMonths  Int?       @map("approved_term_months")
-  status              LoanStatus @default(DRAFT)
-  rejectionReason     String?    @map("rejection_reason")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt           DateTime   @updatedAt @map("updated_at")
-
-  tenant   Tenant    @relation(fields: [tenantId], references: [id])
-  borrower Borrower  @relation(fields: [borrowerId], references: [id])
-  rule     Rule?     @relation(fields: [ruleId], references: [id])
-  contract Contract?
-
-  @@index([tenantId])
-  @@index([borrowerId])
-  @@index([ruleId])
-  @@index([status])
-  @@map("loans")
-  @@schema("finance")
-}
-
-model Rule {
-  id                String   @id @default(uuid())
-  tenantId          String   @map("tenant_id")
-  name              String
-  description       String?  @db.Text
-  ruleType          RuleType @map("rule_type")
-  interestRate      Decimal  @map("interest_rate") @db.Decimal(5, 2)
-  loanLimits        Json     @map("loan_limits")
-  penaltyConfig     Json     @map("penalty_config")
-  paymentConfig     Json     @map("payment_config")
-  isActive          Boolean  @default(true) @map("is_active")
-  isPubliclyVisible Boolean  @default(true) @map("is_publicly_visible")
-  loans     Loan[]
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  contracts Contract[]
-
-  @@index([tenantId])
-  @@index([ruleType])
-  @@index([isActive])
-  @@index([isPubliclyVisible])
-  @@map("rules")
-  @@schema("finance")
-}
-
-model Contract {
-  id                 String           @id @default(uuid())
-  contractNumber     String           @unique @map("contract_number")
-  tenantId           String           @map("tenant_id")
-  borrowerId         String           @map("borrower_id")
-  loanId             String           @unique @map("loan_id")
-  ruleId             String           @map("rule_id")
-  status             ContractStatus   @default(DRAFT)
-  startDate          DateTime         @map("start_date")
-  endDate            DateTime         @map("end_date")
-  loanAmount         Decimal          @map("loan_amount") @db.Decimal(20, 2)
-  interestRate       Decimal          @map("interest_rate") @db.Decimal(5, 2)
-  termMonths         Int              @map("term_months")
-  paymentFrequency   PaymentFrequency @map("payment_frequency")
-  installmentAmount  Decimal          @map("installment_amount") @db.Decimal(20, 2)
-  totalInstallments  Int              @map("total_installments")
-  totalAmountDue     Decimal          @map("total_amount_due") @db.Decimal(20, 2)
-  totalAmountPaid    Decimal          @default(0) @map("total_amount_paid") @db.Decimal(20, 2)
-  outstandingBalance Decimal          @map("outstanding_balance") @db.Decimal(20, 2)
-  contractPdfUrl     String?          @map("contract_pdf_url")
-  signatures         Json?            @map("signatures")
-  termsAndConditions String           @map("terms_and_conditions") @db.Text
-  disbursementInfo   Json?            @map("disbursement_info")
-  reportReason       String?          @map("report_reason") @db.Text
-  signedAt           DateTime?        @map("signed_at")
-  createdAt          DateTime         @default(now()) @map("created_at")
-  updatedAt          DateTime         @updatedAt @map("updated_at")
-
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
-  borrower         Borrower          @relation(fields: [borrowerId], references: [id])
-  loan             Loan              @relation(fields: [loanId], references: [id])
-  rule             Rule              @relation(fields: [ruleId], references: [id])
-  paymentSchedules PaymentSchedule[]
-  transactions     Transaction[]
-
-  @@index([tenantId])
-  @@index([borrowerId])
-  @@index([loanId])
-  @@index([ruleId])
-  @@index([status])
-  @@map("contracts")
-  @@schema("finance")
-}
-
-model PaymentSchedule {
-  id                String            @id @default(uuid())
-  contractId        String            @map("contract_id")
-  installmentNumber Int               @map("installment_number")
-  dueDate           DateTime          @map("due_date")
-  principalAmount   Decimal           @map("principal_amount") @db.Decimal(20, 2)
-  interestAmount    Decimal           @map("interest_amount") @db.Decimal(20, 2)
-  totalAmount       Decimal           @map("total_amount") @db.Decimal(20, 2)
-  status            InstallmentStatus @default(PENDING)
-  amountPaid        Decimal           @default(0) @map("amount_paid") @db.Decimal(20, 2)
-  penaltyAmount     Decimal           @default(0) @map("penalty_amount") @db.Decimal(10, 2)
-  paidAt            DateTime?         @map("paid_at")
-  paymentDetails    Json?             @map("payment_details")
-  createdAt         DateTime          @default(now()) @map("created_at")
-  updatedAt         DateTime          @updatedAt @map("updated_at")
-
-  contract     Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-
-  @@unique([contractId, installmentNumber])
-  @@index([contractId])
-  @@index([status])
-  @@index([dueDate])
-  @@map("payment_schedules")
-  @@schema("finance")
-}
-
-model Transaction {
-  id                String            @id @default(uuid())
-  walletId          String            @map("wallet_id")
-  contractId        String?           @map("contract_id")
-  paymentScheduleId String?           @map("payment_schedule_id")
-  type              TransactionType
-  amount            Decimal           @db.Decimal(20, 2)
-  status            TransactionStatus @default(PENDING)
-  gatewayDetails    Json?             @map("gateway_details")
-  description       String?
-  createdAt         DateTime          @default(now()) @map("created_at")
-  completedAt       DateTime?         @map("completed_at")
-
-  wallet          Wallet           @relation(fields: [walletId], references: [id])
-  contract        Contract?        @relation(fields: [contractId], references: [id])
-  paymentSchedule PaymentSchedule? @relation(fields: [paymentScheduleId], references: [id])
-
-  @@index([walletId])
-  @@index([contractId])
-  @@index([paymentScheduleId])
-  @@index([status])
-  @@map("transactions")
   @@schema("finance")
 }

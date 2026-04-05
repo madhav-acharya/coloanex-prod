@@ -3,13 +3,13 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { ContractsService } from '../contracts/contracts.service';
-import { SolanaService } from '../solana/solana.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { loanRequestTemplate, loanApprovalTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -32,7 +32,7 @@ export class LoansService {
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
     private contractsService: ContractsService,
-    private solanaService: SolanaService,
+    private blockchainService: BlockchainService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -190,7 +190,7 @@ export class LoansService {
       targetUserId = createLoanDto.userId;
     }
 
-    let borrower = await this.prisma.borrower.findUnique({
+    const borrower = await this.prisma.borrower.findUnique({
       where: {
         tenantId_userId: {
           tenantId,
@@ -205,7 +205,42 @@ export class LoansService {
       );
     }
 
+    const loanId = randomUUID();
+    let blockchain_tx_hash: string | undefined =
+      createLoanDto.blockchain_tx_hash;
+
+    if (!blockchain_tx_hash && this.blockchainService.isEnabled()) {
+      const bcTx = await this.blockchainService.recordLoan(
+        loanId,
+        Math.round(Number(createLoanDto.requestedAmount) * 100),
+        0,
+        createLoanDto.requestedTermMonths,
+        '0x0000000000000000000000000000000000000000',
+        '0x0000000000000000000000000000000000000000',
+      );
+
+      if (bcTx) {
+        blockchain_tx_hash = bcTx.txHash;
+        this.logger.log(
+          `Loan ${loanId} recorded on blockchain: tx=${bcTx.txHash} block=${bcTx.blockNumber} gas=${bcTx.gasFeeGwei} GWEI`,
+        );
+      } else {
+        throw new BadRequestException(
+          'Blockchain is enabled but unavailable. Cannot create loan without blockchain record.',
+        );
+      }
+    } else if (blockchain_tx_hash) {
+      this.logger.log(
+        `Loan ${loanId} — using client-signed blockchain tx: ${blockchain_tx_hash}`,
+      );
+    } else {
+      this.logger.warn(
+        `Loan ${loanId} — blockchain disabled, proceeding without chain record`,
+      );
+    }
+
     const loanData = {
+      id: loanId,
       tenantId,
       borrowerId: borrower.id,
       requestedAmount: createLoanDto.requestedAmount,
@@ -213,6 +248,7 @@ export class LoansService {
       requestedTermMonths: createLoanDto.requestedTermMonths,
       collateralDetails: createLoanDto.collateralDetails,
       status: LoanStatus.DRAFT,
+      blockchain_tx_hash,
     };
 
     const loan = await this.prisma.loan.create({
@@ -248,24 +284,7 @@ export class LoansService {
       tenantId,
     );
 
-    const backendWallet = this.solanaService.getWalletPublicKey();
-    if (backendWallet) {
-      const solanaTx = await this.solanaService.createLoan(
-        loan.id,
-        Number(loan.requestedAmount),
-        100,
-        loan.requestedTermMonths,
-        backendWallet,
-        backendWallet,
-      );
-      if (solanaTx) {
-        this.logger.log(
-          `Loan ${loan.id} recorded on Solana: tx=${solanaTx.txId} pda=${solanaTx.pda}`,
-        );
-      }
-    }
-
-    if (loan.status === LoanStatus.SUBMITTED) {
+    if (String(loan.status) === String(LoanStatus.SUBMITTED)) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: tenantId },
       });
@@ -613,6 +632,21 @@ export class LoansService {
       updateData.ruleId = reviewLoanDto.ruleId;
     }
 
+    const bcStatusTx = await this.blockchainService.updateLoanStatus(
+      id,
+      reviewLoanDto.status,
+    );
+    if (bcStatusTx) {
+      updateData.blockchain_tx_hash = bcStatusTx.txHash;
+      this.logger.log(
+        `Loan ${id} status updated on blockchain: tx=${bcStatusTx.txHash} gas=${bcStatusTx.gasFeeGwei} GWEI`,
+      );
+    } else {
+      this.logger.warn(
+        `Loan ${id} status update — blockchain unavailable, proceeding without chain record`,
+      );
+    }
+
     const updated = await this.prisma.loan.update({
       where: { id },
       data: updateData,
@@ -625,6 +659,9 @@ export class LoansService {
                 fullName: true,
                 email: true,
               },
+            },
+            tenant: {
+              select: { name: true },
             },
           },
         },
@@ -756,11 +793,7 @@ export class LoansService {
       this.logger.error('Failed to send loan review email', error);
     }
 
-    this.solanaService
-      .updateLoanStatus(id, reviewLoanDto.status)
-      .catch((err: Error) =>
-        this.logger.error('Solana updateLoanStatus failed', err.message),
-      );
+    // Blockchain update handled synchronously above
 
     return updated as unknown as Loan;
   }
@@ -830,17 +863,23 @@ export class LoansService {
       select: { id: true },
     });
     if (contract) {
-      this.solanaService
-        .recordPayment(
-          `pay-${id}-${Date.now()}`,
-          contract.id,
-          amount,
-          paymentMethodId || 'WALLET',
-          `payment-${id}`,
-        )
-        .catch((err: Error) =>
-          this.logger.error('Solana recordPayment failed', err.message),
+      const paymentIdStr = randomUUID();
+      const bcPayTx = await this.blockchainService.recordPayment(
+        paymentIdStr,
+        contract.id,
+        Math.round(amount * 100),
+        paymentMethodId || 'WALLET',
+        `payment-${id}`,
+      );
+      if (bcPayTx) {
+        this.logger.log(
+          `Payment ${paymentIdStr} recorded on blockchain: tx=${bcPayTx.txHash} gas=${bcPayTx.gasFeeGwei} GWEI`,
         );
+      } else {
+        this.logger.warn(
+          `Payment ${paymentIdStr} — blockchain unavailable, proceeding without chain record`,
+        );
+      }
     }
 
     return {

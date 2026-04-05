@@ -24,7 +24,7 @@ export class KhaltiGateway implements IPaymentGateway {
   async initiatePayment(
     params: InitiatePaymentParams,
   ): Promise<InitiatePaymentResult> {
-    const { amount, transactionUuid, successUrl, failureUrl } = params;
+    const { amount, transactionUuid, successUrl, failureUrl: _failureUrl } = params;
 
     const websiteUrl = successUrl.startsWith('http')
       ? new URL(successUrl).origin
