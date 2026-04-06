@@ -69,23 +69,26 @@ async function main() {
   const existingLoan = process.env.EVM_LOAN_REGISTRY_ADDRESS || '';
   const existingContract = process.env.EVM_CONTRACT_REGISTRY_ADDRESS || '';
   const existingPayment = process.env.EVM_PAYMENT_REGISTRY_ADDRESS || '';
+  const existingKYC = process.env.EVM_KYC_REGISTRY_ADDRESS || '';
 
   console.log('🔍 Checking existing deployments...\n');
 
   const loanExists = await checkContractExists(provider, existingLoan);
   const contractExists = await checkContractExists(provider, existingContract);
   const paymentExists = await checkContractExists(provider, existingPayment);
+  const kycExists = await checkContractExists(provider, existingKYC);
 
   if (loanExists) console.log(`   ✅ LoanRegistry: ${existingLoan}`);
   if (contractExists) console.log(`   ✅ ContractRegistry: ${existingContract}`);
   if (paymentExists) console.log(`   ✅ PaymentRegistry: ${existingPayment}`);
+  if (kycExists) console.log(`   ✅ KYCRegistry: ${existingKYC}`);
 
-  if (loanExists && contractExists && paymentExists) {
+  if (loanExists && contractExists && paymentExists && kycExists) {
     console.log('\n🎉 All contracts already deployed!\n');
     return;
   }
 
-  const needsDeploy = !loanExists || !contractExists || !paymentExists;
+  const needsDeploy = !loanExists || !contractExists || !paymentExists || !kycExists;
 
   if (needsDeploy && balance < ethers.parseEther('0.005')) {
     console.error('❌ Need more test MATIC!\n');
@@ -98,6 +101,7 @@ async function main() {
   let loanAddr = existingLoan;
   let contractAddr = existingContract;
   let paymentAddr = existingPayment;
+  let kycAddr = existingKYC;
 
   if (!loanExists) {
     console.log('\n⏳ Deploying LoanRegistry...');
@@ -129,14 +133,30 @@ async function main() {
     console.log(`   ✅ ${paymentAddr}`);
   }
 
+  if (!kycExists) {
+    console.log('\n⏳ Deploying KYCRegistry...');
+    const compiled = compileSolidity('KYCRegistry');
+    const factory = new ethers.ContractFactory(compiled.abi, compiled.bytecode, signer);
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+    kycAddr = await contract.getAddress();
+    console.log(`   ✅ ${kycAddr}`);
+  }
+
   if (needsDeploy) {
     console.log('\n✅ Deployment complete!\n');
     const envPath = path.resolve(__dirname, '../.env');
     let envContent = fs.readFileSync(envPath, 'utf-8');
+    
+    if (!envContent.includes('EVM_KYC_REGISTRY_ADDRESS=')) {
+      envContent += `EVM_KYC_REGISTRY_ADDRESS=${kycAddr}\n`;
+    }
+    
     envContent = envContent
       .replace(/EVM_LOAN_REGISTRY_ADDRESS=.*/, `EVM_LOAN_REGISTRY_ADDRESS=${loanAddr}`)
       .replace(/EVM_CONTRACT_REGISTRY_ADDRESS=.*/, `EVM_CONTRACT_REGISTRY_ADDRESS=${contractAddr}`)
-      .replace(/EVM_PAYMENT_REGISTRY_ADDRESS=.*/, `EVM_PAYMENT_REGISTRY_ADDRESS=${paymentAddr}`);
+      .replace(/EVM_PAYMENT_REGISTRY_ADDRESS=.*/, `EVM_PAYMENT_REGISTRY_ADDRESS=${paymentAddr}`)
+      .replace(/EVM_KYC_REGISTRY_ADDRESS=.*/, `EVM_KYC_REGISTRY_ADDRESS=${kycAddr}`);
     fs.writeFileSync(envPath, envContent);
     console.log('.env updated!\n');
   }
