@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { FormSheet } from "@/components/shared/FormSheet";
+import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
 import type { UploadedFile } from "@/types/upload";
 import {
   useGetLoansQuery,
@@ -19,7 +20,6 @@ import {
 } from "@/apis/loansApi";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useGetUsersQuery } from "@/apis/usersApi";
-import { useGetBlockchainEnabledQuery } from "@/apis/configApi";
 import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +38,6 @@ export default function LoanRequests() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
 
-  const { data: blockchainConfig } = useGetBlockchainEnabledQuery();
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
   const [deleteLoan] = useDeleteLoanMutation();
@@ -270,6 +269,31 @@ export default function LoanRequests() {
 
     setIsDeletingLoan(true);
     try {
+      let blockchainTxHash: string | undefined;
+      
+      try {
+        const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
+        blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
+      } catch (blockchainError: any) {
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Rejected",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        } else {
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.message ||
+              "Failed to sign blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       await deleteLoan(loanToDelete.id).unwrap();
       toast({
         title: "Success",
@@ -280,7 +304,7 @@ export default function LoanRequests() {
     } catch {
       toast({
         title: "Error",
-        description: "Failed to create loan request",
+        description: "Failed to delete loan request",
         variant: "destructive",
       });
     } finally {
@@ -450,56 +474,69 @@ export default function LoanRequests() {
     try {
       let blockchainTxHash: string | undefined;
 
-      if (blockchainConfig?.enabled && !editingLoan) {
-        try {
-          const { recordLoanOnBlockchain } = await import('@/utils/blockchain');
+      try {
+        if (editingLoan) {
+          const { updateLoanOnBlockchain } = await import("@/utils/blockchain");
+          blockchainTxHash = await updateLoanOnBlockchain(
+            editingLoan.id,
+            loanData.requestedAmount * 100,
+            loanData.requestedTermMonths,
+          );
+        } else {
+          const { recordLoanOnBlockchain } = await import("@/utils/blockchain");
           blockchainTxHash = await recordLoanOnBlockchain(
-            loanData.borrowerId || 'temp-' + Date.now(),
+            loanData.borrowerId || "temp-" + Date.now(),
             loanData.requestedAmount * 100,
             0,
-            loanData.requestedTermMonths
+            loanData.requestedTermMonths,
           );
-        } catch (blockchainError: any) {
-          if (blockchainError.code === 'ACTION_REJECTED') {
-            toast({
-              title: "Transaction Rejected",
-              description: "You rejected the blockchain transaction",
-              variant: "destructive",
-            });
-            return;
-          } else if (blockchainError.code === 'INSUFFICIENT_FUNDS') {
-            toast({
-              title: "Insufficient Funds",
-              description: "Not enough funds for gas fees. Get testnet tokens from faucet.",
-              variant: "destructive",
-            });
-            return;
-          } else if (blockchainError.message?.includes('MetaMask')) {
-            toast({
-              title: "MetaMask Error",
-              description: blockchainError.message,
-              variant: "destructive",
-            });
-            return;
-          } else {
-            toast({
-              title: "Blockchain Error",
-              description: blockchainError.message || "Failed to sign blockchain transaction",
-              variant: "destructive",
-            });
-            return;
-          }
+        }
+      } catch (blockchainError: any) {
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Rejected",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        } else if (blockchainError.code === "INSUFFICIENT_FUNDS") {
+          toast({
+            title: "Insufficient Funds",
+            description:
+              "Not enough funds for gas fees. Get testnet tokens from faucet.",
+            variant: "destructive",
+          });
+          return;
+        } else if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Error",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          return;
+        } else {
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.message ||
+              "Failed to sign blockchain transaction",
+            variant: "destructive",
+          });
+          return;
         }
       }
 
       if (editingLoan) {
-        await updateLoan({ id: editingLoan.id, data: loanData }).unwrap();
+        const payload = blockchainTxHash
+          ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
+          : loanData;
+        await updateLoan({ id: editingLoan.id, data: payload }).unwrap();
         toast({
           title: "Success",
           description: "Loan request updated successfully",
         });
       } else {
-        const payload = blockchainTxHash 
+        const payload = blockchainTxHash
           ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
           : loanData;
         await createLoan(payload).unwrap();
@@ -727,7 +764,35 @@ export default function LoanRequests() {
       sortable: true,
       render: (loan) => (loan?.status ? getStatusBadge(loan.status) : "N/A"),
     },
-
+    {
+      key: "blockchain_tx_hash",
+      label: "Blockchain",
+      sortable: false,
+      render: (loan) => {
+        const hasBlockchainTx = !!loan?.blockchain_tx_hash;
+        return (
+          <button
+            onClick={() => {
+              if (hasBlockchainTx) {
+                window.open(`https://sepolia.etherscan.io/tx/${loan.blockchain_tx_hash}`, '_blank');
+              } else {
+                toast({
+                  title: "Info",
+                  description: "This record is stored off-chain only.",
+                });
+              }
+            }}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+              hasBlockchainTx
+                ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                : 'bg-gray-100 text-gray-600 cursor-default'
+            }`}
+          >
+            {hasBlockchainTx ? 'On-Chain' : 'Off-Chain'}
+          </button>
+        );
+      },
+    },
     {
       key: "createdAt",
       label: "Created At",
