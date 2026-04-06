@@ -194,25 +194,27 @@ model Borrower {
 }
 
 model Kyc {
-  id               String    @id @default(uuid())
-  borrowerId       String    @map("borrower_id")
-  dateOfBirth      DateTime  @map("date_of_birth")
-  occupation       String
-  monthlyIncome    Float     @map("monthly_income")
-  status           KycStatus @default(PENDING)
-  rejectionReason  String?   @map("rejection_reason")
-  verifiedBy       String?   @map("verified_by")
-  verifiedAt       DateTime? @map("verified_at")
-  notes            String?
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  bankDetails      Json      @map("bank_details")
-  fullName         String    @map("full_name")
-  permanentAddress Json      @map("permanent_address")
-  personalDetails  Json      @map("personal_details")
-  photoUrl         String    @map("photo_url")
-  files            KycFile[]
-  borrower         Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  id                String    @id @default(uuid())
+  borrowerId        String    @map("borrower_id")
+  dateOfBirth       DateTime  @map("date_of_birth")
+  occupation        String
+  monthlyIncome     Float     @map("monthly_income")
+  status            KycStatus @default(PENDING)
+  rejectionReason   String?   @map("rejection_reason")
+  verifiedBy        String?   @map("verified_by")
+  verifiedAt        DateTime? @map("verified_at")
+  notes             String?
+  blockchainTxHash  String?   @map("blockchain_tx_hash")
+  blockchainData    Json?     @map("blockchain_data")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  bankDetails       Json      @map("bank_details")
+  fullName          String    @map("full_name")
+  permanentAddress  Json      @map("permanent_address")
+  personalDetails   Json      @map("personal_details")
+  photoUrl          String    @map("photo_url")
+  files             KycFile[]
+  borrower          Borrower  @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
 
   @@index([borrowerId])
   @@index([status])
@@ -266,7 +268,8 @@ model Loan {
   requestedTermMonths Int        @map("requested_term_months")
   approvedTermMonths  Int?       @map("approved_term_months")
   ruleId              String?    @map("rule_id")
-  blockchain_tx_hash  String?
+  blockchainTxHash    String? @map("blockchain_tx_hash")
+  blockchainData      Json?   @map("blockchain_data")
   contract            Contract?
   borrower            Borrower   @relation(fields: [borrowerId], references: [id])
   rule                Rule?      @relation(fields: [ruleId], references: [id])
@@ -327,7 +330,8 @@ model Contract {
   outstandingBalance Decimal           @map("outstanding_balance") @db.Decimal(20, 2)
   contractPdfUrl     String?           @map("contract_pdf_url")
   signatures         Json?             @map("signatures")
-  blockchain_data    Json?
+  blockchainTxHash   String?           @map("blockchain_tx_hash")
+  blockchainData     Json?             @map("blockchain_data")
   termsAndConditions String            @map("terms_and_conditions")
   disbursementInfo   Json?             @map("disbursement_info")
   createdAt          DateTime          @default(now()) @map("created_at")
@@ -383,7 +387,8 @@ model Transaction {
   amount             Decimal           @db.Decimal(20, 2)
   createdAt          DateTime          @default(now()) @map("created_at")
   status             TransactionStatus @default(PENDING)
-  blockchain_tx_hash String?
+  blockchainTxHash   String? @map("blockchain_tx_hash")
+  blockchainData     Json?   @map("blockchain_data")
   completedAt        DateTime?         @map("completed_at")
   contractId         String?           @map("contract_id")
   description        String?
