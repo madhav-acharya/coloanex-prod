@@ -128,7 +128,7 @@ export class PaymentsService {
         success: true,
         transactionId: existingTransaction.id,
         status: 'COMPLETED',
-        blockchain_tx_hash: existingTransaction.blockchain_tx_hash,
+        blockchain_tx_hash: existingTransaction.blockchainTxHash,
       };
     }
 
@@ -174,7 +174,7 @@ export class PaymentsService {
         status: 'COMPLETED' as never,
         completedAt: new Date(),
         description: `${gateway} payment verified`,
-        blockchain_tx_hash,
+        blockchainTxHash: blockchain_tx_hash,
         gatewayDetails: {
           gateway,
           transactionUuid,
