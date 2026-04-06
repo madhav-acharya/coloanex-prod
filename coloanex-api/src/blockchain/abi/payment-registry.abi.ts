@@ -13,6 +13,16 @@ export const PAYMENT_REGISTRY_ABI = [
     type: 'function',
   },
   {
+    inputs: [
+      { internalType: 'string', name: 'transactionId', type: 'string' },
+      { internalType: 'string', name: 'status', type: 'string' },
+    ],
+    name: 'updateTransaction',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [{ internalType: 'string', name: 'paymentId', type: 'string' }],
     name: 'getPayment',
     outputs: [
