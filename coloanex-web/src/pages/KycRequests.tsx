@@ -29,6 +29,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { UploadedFile } from "@/types/upload";
+import { recordKYCOnBlockchain, updateKYCOnBlockchain } from "@/utils/blockchain";
+import { ethers } from "ethers";
 
 // Local enum for UI document type selection (not in schema)
 enum KycDocumentType {
@@ -354,6 +356,44 @@ export default function KycRequests() {
     if (!selectedDocument) return;
 
     try {
+      if (status === KycStatus.VERIFIED) {
+        try {
+          const userAddress = ethers.getAddress(
+            '0x' + ethers.keccak256(ethers.toUtf8Bytes(selectedDocument.borrowerId)).slice(2, 42)
+          );
+          
+          await updateKYCOnBlockchain(selectedDocument.id, status);
+          
+          toast({
+            title: "Blockchain Transaction",
+            description: "KYC verification recorded on blockchain successfully",
+          });
+        } catch (blockchainError) {
+          const error = blockchainError as Error;
+          if (error.message.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: "Please install and connect MetaMask to proceed with blockchain verification",
+              variant: "destructive",
+            });
+            return;
+          } else if (error.message.includes("User rejected")) {
+            toast({
+              title: "Transaction Rejected",
+              description: "Blockchain verification was cancelled",
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error", 
+              description: `Failed to record on blockchain: ${error.message}`,
+              variant: "destructive",
+            });
+          }
+        }
+      }
+
       await verifyKycDocument({
         id: selectedDocument.id,
         data: { status, notes },
@@ -613,11 +653,38 @@ export default function KycRequests() {
           description: "KYC request updated successfully",
         });
       } else {
-        await createKyc(kycData).unwrap();
-        toast({
-          title: "Success",
-          description: "KYC request submitted successfully",
-        });
+        const kycResponse = await createKyc(kycData).unwrap();
+        
+        try {
+          const userAddress = ethers.getAddress(
+            '0x' + ethers.keccak256(ethers.toUtf8Bytes(kycResponse.id)).slice(2, 42)
+          );
+          
+          await recordKYCOnBlockchain(kycResponse.id, userAddress);
+          
+          toast({
+            title: "Success",
+            description: "KYC request submitted and recorded on blockchain successfully",
+          });
+        } catch (blockchainError) {
+          const error = blockchainError as Error;
+          if (error.message.includes("MetaMask")) {
+            toast({
+              title: "KYC Submitted",
+              description: "KYC request submitted successfully. MetaMask is required for blockchain verification.",
+            });
+          } else if (error.message.includes("User rejected")) {
+            toast({
+              title: "KYC Submitted", 
+              description: "KYC request submitted successfully. Blockchain recording was cancelled.",
+            });
+          } else {
+            toast({
+              title: "KYC Submitted",
+              description: "KYC request submitted successfully. Blockchain recording failed.",
+            });
+          }
+        }
       }
 
       setKycFormOpen(false);
@@ -1431,6 +1498,38 @@ export default function KycRequests() {
       label: "Status",
       sortable: true,
       render: (doc: Kyc) => getStatusBadge(doc.status),
+    },
+    {
+      key: "blockchainTxHash",
+      label: "Blockchain",
+      sortable: false,
+      render: (doc: Kyc) => {
+        const hasBlockchainTx = !!(doc as any)?.blockchainTxHash;
+        return (
+          <button
+            onClick={() => {
+              if (hasBlockchainTx) {
+                window.open(
+                  `https://sepolia.etherscan.io/tx/${(doc as any).blockchainTxHash}`,
+                  "_blank",
+                );
+              } else {
+                toast({
+                  title: "Info",
+                  description: "This record is stored off-chain only.",
+                });
+              }
+            }}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+              hasBlockchainTx
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-600 cursor-default"
+            }`}
+          >
+            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+          </button>
+        );
+      },
     },
     {
       key: "createdAt",
