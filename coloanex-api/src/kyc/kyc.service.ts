@@ -2,10 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 import { kycApprovalTemplate } from '../mail/templates';
 import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
@@ -21,10 +23,13 @@ import {
 
 @Injectable()
 export class KycService {
+  private readonly logger = new Logger(KycService.name);
+  
   constructor(
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
+    private blockchainService: BlockchainService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -117,27 +122,67 @@ export class KycService {
     delete (kycData as any).borrowerId;
     delete (kycData as any).userId;
 
-    const kyc = await this.prisma.kyc.create({
+    const kycId = await this.prisma.$transaction(async (tx) => {
+      const kycResult = await tx.kyc.create({
+        data: {
+          borrowerId: borrower.id,
+          fullName: kycData.fullName,
+          dateOfBirth: new Date(kycData.dateOfBirth),
+          photoUrl: kycData.photoUrl,
+          personalDetails: kycData.personalDetails as any,
+          permanentAddress: kycData.permanentAddress as any,
+          occupation: kycData.occupation,
+          monthlyIncome: kycData.monthlyIncome,
+          bankDetails: kycData.bankDetails as any,
+          notes: kycData.notes,
+          files: files
+            ? {
+                create: files.map((file) => ({
+                  fileType: file.fileType,
+                  fileUrl: file.fileUrl,
+                  documentMetadata: (file.documentMetadata || {}) as any,
+                })),
+              }
+            : undefined,
+        },
+      });
+      return kycResult.id;
+    });
+
+    let blockchainTxHash: string | null = null;
+    let blockchainData: any = null;
+
+    if (this.blockchainService.isEnabled()) {
+      const bcTx = await this.blockchainService.recordKyc(
+        kycId,
+        targetUserId,
+        kycData.fullName,
+        kycData.occupation,
+        kycData.monthlyIncome,
+      );
+
+      if (bcTx) {
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = {
+          txHash: bcTx.txHash,
+          blockNumber: bcTx.blockNumber,
+          gasUsed: bcTx.gasUsed,
+          gasPriceGwei: bcTx.gasPriceGwei,
+          gasFeeGwei: bcTx.gasFeeGwei,
+          explorerUrl: bcTx.explorerUrl,
+        };
+      } else {
+        throw new BadRequestException(
+          'Blockchain is enabled but transaction failed. Cannot create KYC without blockchain record.',
+        );
+      }
+    }
+
+    const kyc = await this.prisma.kyc.update({
+      where: { id: kycId },
       data: {
-        borrowerId: borrower.id,
-        fullName: kycData.fullName,
-        dateOfBirth: new Date(kycData.dateOfBirth),
-        photoUrl: kycData.photoUrl,
-        personalDetails: kycData.personalDetails as any,
-        permanentAddress: kycData.permanentAddress as any,
-        occupation: kycData.occupation,
-        monthlyIncome: kycData.monthlyIncome,
-        bankDetails: kycData.bankDetails as any,
-        notes: kycData.notes,
-        files: files
-          ? {
-              create: files.map((file) => ({
-                fileType: file.fileType,
-                fileUrl: file.fileUrl,
-                documentMetadata: (file.documentMetadata || {}) as any,
-              })),
-            }
-          : undefined,
+        blockchainTxHash,
+        blockchainData,
       },
       include: {
         files: true,
@@ -485,6 +530,32 @@ export class KycService {
       user.tenantId,
     );
 
+    const bcTx = await this.blockchainService.updateKYC(id, updated.status);
+    let blockchainTxHash: string | null = null;
+    let blockchainData: any = null;
+    
+    if (bcTx) {
+      blockchainTxHash = bcTx.txHash;
+      blockchainData = {
+        txHash: bcTx.txHash,
+        blockNumber: bcTx.blockNumber,
+        gasUsed: bcTx.gasUsed,
+        gasPriceGwei: bcTx.gasPriceGwei,
+        gasFeeGwei: bcTx.gasFeeGwei,
+        explorerUrl: bcTx.explorerUrl,
+      };
+      
+      await this.prisma.kyc.update({
+        where: { id },
+        data: { 
+          blockchainTxHash,
+          blockchainData,
+        },
+      });
+    } else if (this.blockchainService.isEnabled()) {
+      throw new BadRequestException('Failed to record KYC update on blockchain');
+    }
+
     return this.findOne(id);
   }
 
@@ -515,6 +586,53 @@ export class KycService {
       );
     }
 
+    let blockchainTxHash: string | undefined;
+    let blockchainData: any = null;
+
+    if (this.blockchainService.isEnabled() && verifyKycDto.status === KycStatus.VERIFIED) {
+      let blockchainResult = await this.blockchainService.verifyKYC(
+        kyc.id,
+        kyc.borrowerId,
+        verifyKycDto.status,
+      );
+      
+      if (!blockchainResult) {
+        this.logger.log(`[verifyKyc] KYC ${kyc.id} direct verification failed, attempting to create and update instead`);
+        
+        const createResult = await this.blockchainService.recordKyc(
+          kyc.id,
+          kyc.borrowerId,
+          kyc.fullName,
+          kyc.occupation,
+          kyc.monthlyIncome,
+        );
+        
+        if (createResult) {
+          this.logger.log(`[verifyKyc] KYC ${kyc.id} created on blockchain, updating status to verified`);
+          blockchainResult = await this.blockchainService.updateKYC(
+            kyc.id,
+            verifyKycDto.status,
+          );
+        } else {
+          this.logger.warn(`[verifyKyc] Failed to create KYC ${kyc.id} on blockchain`);
+        }
+      }
+      
+      if (blockchainResult) {
+        blockchainTxHash = blockchainResult.txHash;
+        blockchainData = {
+          txHash: blockchainResult.txHash,
+          blockNumber: blockchainResult.blockNumber,
+          gasUsed: blockchainResult.gasUsed,
+          gasPriceGwei: blockchainResult.gasPriceGwei,
+          gasFeeGwei: blockchainResult.gasFeeGwei,
+          explorerUrl: blockchainResult.explorerUrl,
+        };
+      } else {
+        throw new BadRequestException('Blockchain recording failed - verification aborted');
+      }
+    }
+
     const updated = await this.prisma.kyc.update({
       where: { id },
       data: {
@@ -523,6 +641,8 @@ export class KycService {
         notes: verifyKycDto.notes,
         verifiedBy: user.sub,
         verifiedAt: new Date(),
+        blockchainTxHash,
+        blockchainData,
       },
       include: {
         files: true,
@@ -625,6 +745,11 @@ export class KycService {
     userAgent?: string,
   ): Promise<void> {
     const kyc = await this.findOne(id);
+
+    const bcTx = await this.blockchainService.deleteKYC(id);
+    if (!bcTx && this.blockchainService.isEnabled()) {
+      throw new BadRequestException('Failed to record KYC deletion on blockchain');
+    }
 
     await this.prisma.kyc.delete({
       where: { id },
