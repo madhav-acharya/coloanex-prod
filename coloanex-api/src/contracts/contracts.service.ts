@@ -163,7 +163,9 @@ export class ContractsService {
 
     const contractNumber = await this.generateContractNumber(user.tenantId);
     const contractId = randomUUID();
-    let blockchain_data: any = null;
+    let blockchainData: any = null;
+    let blockchainTxHash: string | null = null;
+    
     const bcTx = await this.blockchainService.recordContract(
       contractId,
       createContractDto.loanId,
@@ -172,10 +174,14 @@ export class ContractsService {
       createContractDto.termMonths,
       Math.round(totalAmountDue * 100),
     );
+    
     if (bcTx) {
-      blockchain_data = {
+      blockchainTxHash = bcTx.txHash;
+      blockchainData = {
         txHash: bcTx.txHash,
         blockNumber: bcTx.blockNumber,
+        gasUsed: bcTx.gasUsed,
+        gasPriceGwei: bcTx.gasPriceGwei,
         gasFeeGwei: bcTx.gasFeeGwei,
         explorerUrl: bcTx.explorerUrl,
       };
@@ -210,7 +216,8 @@ export class ContractsService {
         totalAmountPaid: 0,
         outstandingBalance: totalAmountDue,
         termsAndConditions: createContractDto.termsAndConditions,
-        blockchain_data,
+        blockchainTxHash,
+        blockchainData,
       } as any,
       include: {
         tenant: {
@@ -331,7 +338,7 @@ export class ContractsService {
       throw new ForbiddenException('You can only update your own contracts');
     }
 
-    return this.prisma.contract.update({
+    const updated = await this.prisma.contract.update({
       where: { id },
       data: updateContractDto,
       include: {
@@ -353,6 +360,20 @@ export class ContractsService {
         },
       },
     }) as unknown as Contract;
+
+    if (updateContractDto.status) {
+      const bcTx = await this.blockchainService.updateContract(id, updateContractDto.status);
+      if (bcTx && bcTx.txHash) {
+        await this.prisma.contract.update({
+          where: { id },
+          data: { blockchainTxHash: bcTx.txHash },
+        });
+      } else if (this.blockchainService.isEnabled()) {
+        throw new InternalServerErrorException('Failed to record contract update on blockchain');
+      }
+    }
+
+    return updated;
   }
 
   async signContract(
@@ -469,7 +490,7 @@ export class ContractsService {
         await this.prisma.contract.update({
           where: { id },
           data: {
-            blockchain_data: { ...existingBlockchainData, ...signData },
+            blockchainData: { ...existingBlockchainData, ...signData },
           },
         });
       }
@@ -655,6 +676,14 @@ export class ContractsService {
 
     if (contract.status !== ContractStatus.DRAFT) {
       throw new BadRequestException('Only draft contracts can be deleted');
+    }
+
+    const bcTx = await this.blockchainService.deleteContract(id);
+
+    if (!bcTx && this.blockchainService.isEnabled()) {
+      throw new InternalServerErrorException(
+        'Failed to record contract deletion on blockchain',
+      );
     }
 
     await this.prisma.contract.delete({ where: { id } });

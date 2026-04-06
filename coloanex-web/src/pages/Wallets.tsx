@@ -17,11 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { FormSheet } from "@/components/shared/FormSheet";
-import {
-  LineChart,
-  Line,
-  ResponsiveContainer,
-} from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import {
   useGetMyWalletQuery,
   useCreateWalletMutation,
@@ -49,7 +45,7 @@ export default function Wallets() {
     amount: "",
     description: "",
   });
-    useState<any>(null);
+  useState<any>(null);
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
   const { data: transactions = [] } = useGetTransactionsByWalletQuery(
@@ -62,16 +58,29 @@ export default function Wallets() {
   const [createTransaction, { isLoading: isCreatingTransaction }] =
     useCreateTransactionMutation();
 
-  const WalletCard = ({ title, value, color, isCurrency = false, trend }: any) => (
+  const WalletCard = ({
+    title,
+    value,
+    color,
+    isCurrency = false,
+    trend,
+  }: any) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">{title}</p>
+            <p className="text-sm font-semibold text-muted-foreground mb-2">
+              {title}
+            </p>
             <div className="flex items-center gap-1">
-              {isCurrency && <IconCurrencyRupeeNepalese className="h-5 w-5" style={{ color }} />}
+              {isCurrency && (
+                <IconCurrencyRupeeNepalese
+                  className="h-5 w-5"
+                  style={{ color }}
+                />
+              )}
               <h3 className="text-xl font-bold" style={{ color }}>
-                {typeof value === 'number' ? value.toLocaleString() : value}
+                {typeof value === "number" ? value.toLocaleString() : value}
               </h3>
             </div>
           </div>
@@ -90,7 +99,16 @@ export default function Wallets() {
               </ResponsiveContainer>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={[{value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}, {value: 0}]}>
+                <LineChart
+                  data={[
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                  ]}
+                >
                   <Line
                     type="monotone"
                     dataKey="value"
@@ -108,12 +126,20 @@ export default function Wallets() {
   );
 
   // Generate trend data for wallet cards
-  const generateWalletTrend = (baseValue: number, isPositive: boolean = true) => {
+  const generateWalletTrend = (
+    baseValue: number,
+    isPositive: boolean = true,
+  ) => {
     const trend = [];
     for (let i = 0; i < 6; i++) {
       const variation = isPositive
-        ? Math.floor(baseValue * (0.7 + (i * 0.05))) + Math.random() * baseValue * 0.1
-        : Math.max(0, Math.floor(baseValue * (1 - (i * 0.05))) - Math.random() * baseValue * 0.1);
+        ? Math.floor(baseValue * (0.7 + i * 0.05)) +
+          Math.random() * baseValue * 0.1
+        : Math.max(
+            0,
+            Math.floor(baseValue * (1 - i * 0.05)) -
+              Math.random() * baseValue * 0.1,
+          );
       trend.push({ value: Math.floor(variation) });
     }
     return trend;
@@ -197,7 +223,7 @@ export default function Wallets() {
           <IconCurrencyRupeeNepalese
             className="inline h-4 w-4 mx-0.5"
             style={{
-              color: transaction.type === "DEPOSIT" ? "#16A34A" : "#DC2626"
+              color: transaction.type === "DEPOSIT" ? "#16A34A" : "#DC2626",
             }}
           />
           {Number(transaction.amount || 0).toLocaleString()}
@@ -231,7 +257,38 @@ export default function Wallets() {
         );
       },
     },
-
+    {
+      key: "blockchainTxHash",
+      label: "Blockchain",
+      sortable: false,
+      render: (transaction) => {
+        const hasBlockchainTx = !!(transaction as any)?.blockchainTxHash;
+        return (
+          <button
+            onClick={() => {
+              if (hasBlockchainTx) {
+                window.open(
+                  `https://sepolia.etherscan.io/tx/${(transaction as any).blockchainTxHash}`,
+                  "_blank",
+                );
+              } else {
+                toast({
+                  title: "Info",
+                  description: "This record is stored off-chain only.",
+                });
+              }
+            }}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+              hasBlockchainTx
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-600 cursor-default"
+            }`}
+          >
+            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+          </button>
+        );
+      },
+    },
     {
       key: "paymentDetails",
       label: "Description",
@@ -292,7 +349,6 @@ export default function Wallets() {
       });
     }
   };
-
 
   if (isLoading) {
     return (
@@ -506,8 +562,6 @@ export default function Wallets() {
           cancelText="Cancel"
           isSubmitting={isCreatingTransaction}
         />
-
-
       </div>
     </DashboardLayout>
   );

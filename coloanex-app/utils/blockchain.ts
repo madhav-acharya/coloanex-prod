@@ -1,32 +1,72 @@
-export const recordLoanOnBlockchain = async (
-  loanId: string,
-  amountPaisa: number,
-  interestRateBps: number,
-  termMonths: number,
-): Promise<string> => {
-  throw new Error("MetaMask integration not available on mobile. Use WalletConnect or disable blockchain.");
+import { Linking, Alert } from "react-native";
+import { getBlockchainEnabled } from "../api/configApi";
+
+let blockchainEnabled: boolean | null = null;
+
+const getBlockchainStatus = async (): Promise<boolean> => {
+  if (blockchainEnabled === null) {
+    try {
+      const config = await getBlockchainEnabled();
+      blockchainEnabled = config.enabled;
+    } catch (error) {
+      console.error("Failed to get blockchain status:", error);
+      blockchainEnabled = false;
+    }
+  }
+  return blockchainEnabled;
 };
 
-export const recordContractOnBlockchain = async (
-  contractId: string,
-  loanId: string,
-  borrowerAddress: string,
-  lenderAddress: string,
-): Promise<string> => {
-  throw new Error("MetaMask integration not available on mobile. Use WalletConnect or disable blockchain.");
+export const checkMetaMaskInstalled = async (): Promise<boolean> => {
+  return await getBlockchainStatus();
 };
 
-export const signContractOnBlockchain = async (
-  contractId: string,
-  signerRole: number,
-): Promise<string> => {
-  throw new Error("MetaMask integration not available on mobile. Use WalletConnect or disable blockchain.");
+export const openMetaMask = async (): Promise<void> => {
+  const enabled = await getBlockchainStatus();
+  if (!enabled) {
+    Alert.alert(
+      "Info",
+      "Blockchain is disabled. Operations will proceed without blockchain records."
+    );
+  }
 };
 
-export const recordPaymentOnBlockchain = async (
-  paymentId: string,
-  loanId: string,
-  amountPaisa: number,
-): Promise<string> => {
-  throw new Error("MetaMask integration not available on mobile. Use WalletConnect or disable blockchain.");
+export const connectWallet = async (): Promise<boolean> => {
+  return await getBlockchainStatus();
+};
+
+export const getBlockchainConfig = () => {
+  return {
+    contracts: {
+      loanRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_LOAN_REGISTRY,
+      contractRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_CONTRACT_REGISTRY,
+      paymentRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_PAYMENT_REGISTRY,
+      kycRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_KYC_REGISTRY,
+    }
+  };
+};
+
+export const showBlockchainInfo = (txHash?: string) => {
+  if (!txHash) {
+    Alert.alert("Info", "This record is stored off-chain only.");
+    return;
+  }
+  
+  Alert.alert(
+    "Blockchain Record",
+    "This record is stored on the blockchain.",
+    [
+      { text: "OK", style: "cancel" },
+      {
+        text: "View on Explorer",
+        onPress: () => {
+          const explorerURL = `https://sepolia.etherscan.io/tx/${txHash}`;
+          Linking.openURL(explorerURL);
+        }
+      }
+    ]
+  );
+};
+
+export const disconnectWallet = () => {
+  console.log("Wallet disconnected");
 };

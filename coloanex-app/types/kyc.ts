@@ -40,6 +40,8 @@ export interface Kyc {
   verifiedBy?: string;
   verifiedAt?: string;
   notes?: string;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   files?: KycFile[];

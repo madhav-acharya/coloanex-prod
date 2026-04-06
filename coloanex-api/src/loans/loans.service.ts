@@ -206,10 +206,11 @@ export class LoansService {
     }
 
     const loanId = randomUUID();
-    let blockchain_tx_hash: string | undefined =
+    let blockchainTxHash: string | undefined =
       createLoanDto.blockchain_tx_hash;
+    let blockchainData: any = null;
 
-    if (!blockchain_tx_hash && this.blockchainService.isEnabled()) {
+    if (!blockchainTxHash && this.blockchainService.isEnabled()) {
       const bcTx = await this.blockchainService.recordLoan(
         loanId,
         Math.round(Number(createLoanDto.requestedAmount) * 100),
@@ -220,7 +221,15 @@ export class LoansService {
       );
 
       if (bcTx) {
-        blockchain_tx_hash = bcTx.txHash;
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = {
+          txHash: bcTx.txHash,
+          blockNumber: bcTx.blockNumber,
+          gasUsed: bcTx.gasUsed,
+          gasPriceGwei: bcTx.gasPriceGwei,
+          gasFeeGwei: bcTx.gasFeeGwei,
+          explorerUrl: bcTx.explorerUrl,
+        };
         this.logger.log(
           `Loan ${loanId} recorded on blockchain: tx=${bcTx.txHash} block=${bcTx.blockNumber} gas=${bcTx.gasFeeGwei} GWEI`,
         );
@@ -229,9 +238,9 @@ export class LoansService {
           'Blockchain is enabled but unavailable. Cannot create loan without blockchain record.',
         );
       }
-    } else if (blockchain_tx_hash) {
+    } else if (blockchainTxHash) {
       this.logger.log(
-        `Loan ${loanId} — using client-signed blockchain tx: ${blockchain_tx_hash}`,
+        `Loan ${loanId} — using client-signed blockchain tx: ${blockchainTxHash}`,
       );
     } else {
       this.logger.warn(
@@ -248,7 +257,8 @@ export class LoansService {
       requestedTermMonths: createLoanDto.requestedTermMonths,
       collateralDetails: createLoanDto.collateralDetails,
       status: LoanStatus.DRAFT,
-      blockchain_tx_hash,
+      blockchainTxHash,
+      blockchainData,
     };
 
     const loan = await this.prisma.loan.create({
@@ -562,6 +572,44 @@ export class LoansService {
       },
     });
 
+    let blockchainTxHash: string | null = null;
+    let blockchainData: any = null;
+
+    if (this.blockchainService.isEnabled()) {
+      const bcTx = await this.blockchainService.updateLoanStatus(
+        id,
+        existing.status,
+      );
+
+      if (bcTx) {
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = {
+          txHash: bcTx.txHash,
+          blockNumber: bcTx.blockNumber,
+          gasUsed: bcTx.gasUsed,
+          gasPriceGwei: bcTx.gasPriceGwei,
+          gasFeeGwei: bcTx.gasFeeGwei,
+          explorerUrl: bcTx.explorerUrl,
+        };
+
+        await this.prisma.loan.update({
+          where: { id },
+          data: {
+            blockchainTxHash,
+            blockchainData,
+          },
+        });
+
+        this.logger.log(
+          `Loan ${id} update recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+        );
+      } else {
+        this.logger.warn(
+          `Loan ${id} update — blockchain unavailable, proceeding without chain record`,
+        );
+      }
+    }
+
     await this.activityLogsService.logUserActivity(
       user.sub,
       ActivityAction.UPDATE,
@@ -805,6 +853,20 @@ export class LoansService {
     userAgent?: string,
   ): Promise<void> {
     const loan = await this.findOne(id);
+
+    if (this.blockchainService.isEnabled()) {
+      const bcTx = await this.blockchainService.deleteLoan(id);
+      
+      if (bcTx) {
+        this.logger.log(
+          `Loan ${id} deletion recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+        );
+      } else {
+        this.logger.warn(
+          `Loan ${id} deletion — blockchain unavailable, proceeding without chain record`,
+        );
+      }
+    }
 
     await this.prisma.loan.delete({
       where: { id },

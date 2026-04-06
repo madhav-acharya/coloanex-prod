@@ -30,6 +30,12 @@ contract ContractRegistry {
         uint256 timestamp
     );
 
+    event ContractStatusUpdated(
+        string indexed contractId,
+        string status,
+        uint256 timestamp
+    );
+
     function createContract(
         string calldata contractId,
         string calldata loanId,
@@ -60,6 +66,11 @@ contract ContractRegistry {
         contracts[contractId].signed = true;
         contracts[contractId].signedAt = block.timestamp;
         emit ContractSigned(contractId, block.timestamp);
+    }
+
+    function updateContractStatus(string calldata contractId, string calldata status) external {
+        require(exists[contractId], "Contract does not exist");
+        emit ContractStatusUpdated(contractId, status, block.timestamp);
     }
 
     function getContract(string calldata contractId) external view returns (LoanContract memory) {

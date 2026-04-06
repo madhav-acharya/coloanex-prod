@@ -114,19 +114,48 @@ function getStatusConfig(
 function StatusBadge({
   status,
   colors,
+  blockchainTxHash,
+  styles,
 }: {
   status: string;
   colors: Record<string, string>;
+  blockchainTxHash?: string;
+  styles: any;
 }) {
   const config = getStatusConfig(status, colors);
   return (
-    <View
-      style={[statusBadgeStyles.badge, { backgroundColor: config.bgColor }]}
-    >
-      <Ionicons name={config.icon} size={12} color={config.textColor} />
-      <Text style={[statusBadgeStyles.label, { color: config.textColor }]}>
-        {config.label}
-      </Text>
+    <View style={styles.badgeContainer}>
+      <View
+        style={[statusBadgeStyles.badge, { backgroundColor: config.bgColor }]}
+      >
+        <Ionicons name={config.icon} size={12} color={config.textColor} />
+        <Text style={[statusBadgeStyles.label, { color: config.textColor }]}>
+          {config.label}
+        </Text>
+      </View>
+      
+      <TouchableOpacity
+        style={[
+          statusBadgeStyles.blockchainBadge,
+          {
+            backgroundColor: blockchainTxHash ? '#10B981' : '#64748B',
+            opacity: 0.9,
+          }
+        ]}
+        onPress={() => {
+          const { showBlockchainInfo } = require("@/utils/blockchain");
+          showBlockchainInfo(blockchainTxHash);
+        }}
+      >
+        <Ionicons 
+          name={blockchainTxHash ? "link" : "link-outline"} 
+          size={10} 
+          color="white" 
+        />
+        <Text style={statusBadgeStyles.blockchainText}>
+          {blockchainTxHash ? "On-Chain" : "Off-Chain"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -144,6 +173,20 @@ const statusBadgeStyles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.2,
+  },
+  blockchainBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 2,
+    marginTop: 2,
+  },
+  blockchainText: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: "white",
   },
 });
 
@@ -259,7 +302,12 @@ export default function MyLoansScreen() {
                 </Text>
               </View>
             </View>
-            <StatusBadge status={loan.status} colors={colors} />
+            <StatusBadge
+              status={loan.status}
+              colors={colors}
+              blockchainTxHash={loan.blockchain_tx_hash}
+              styles={styles}
+            />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -534,6 +582,9 @@ const createStyles = (colors: Record<string, string>) =>
     lenderText: { flex: 1 },
     lenderName: { fontSize: 15, fontWeight: "700", marginBottom: 2 },
     purpose: { fontSize: 12, fontWeight: "500" },
+    badgeContainer: {
+      alignItems: "flex-end",
+    },
     divider: { height: 1, marginBottom: spacing.md },
     cardBody: {
       flexDirection: "row",

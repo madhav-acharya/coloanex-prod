@@ -5,6 +5,7 @@ import {
   Inject,
   forwardRef,
   Logger,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -14,6 +15,7 @@ import {
   TransactionType,
 } from './entities/transaction.entity';
 import { WalletsService } from '../wallets/wallets.service';
+import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
 export class TransactionsService {
@@ -23,6 +25,7 @@ export class TransactionsService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => WalletsService))
     private walletsService: WalletsService,
+    private readonly blockchainService: BlockchainService,
   ) {}
 
   async create(
@@ -84,16 +87,43 @@ export class TransactionsService {
       }
     }
 
-    await this.prisma.transaction.update({
-      where: { id: transaction.id },
-      data: { status: TransactionStatus.COMPLETED as any },
-    });
+    const bcTx = await this.blockchainService.recordPayment(
+      transaction.id,
+      createTransactionDto.contractId ?? 'no-contract',
+      Math.round(Number(createTransactionDto.amount) * 100),
+      'system',
+      transaction.id,
+    );
+
+    let updatedTransaction = transaction;
+
+    if (bcTx && bcTx.txHash) {
+      await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: { 
+          status: TransactionStatus.COMPLETED as any,
+          blockchainTxHash: bcTx.txHash,
+          blockchainData: bcTx as any,
+        },
+      });
+    } else {
+      await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: { status: TransactionStatus.COMPLETED as any },
+      });
+
+      if (this.blockchainService.isEnabled()) {
+        throw new InternalServerErrorException(
+          'Failed to record transaction on blockchain',
+        );
+      }
+    }
 
     return transaction as unknown as Transaction;
   }
 
   async findByContract(contractId: string): Promise<Transaction[]> {
-    return await this.prisma.transaction.findMany({
+    return (await this.prisma.transaction.findMany({
       where: { contractId },
       include: {
         contract: {
@@ -104,11 +134,11 @@ export class TransactionsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-    }) as unknown as Transaction[];
+    })) as unknown as Transaction[];
   }
 
   async findByWallet(walletId: string): Promise<Transaction[]> {
-    return await this.prisma.transaction.findMany({
+    return (await this.prisma.transaction.findMany({
       where: { walletId },
       include: {
         wallet: {
@@ -119,7 +149,7 @@ export class TransactionsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-    }) as unknown as Transaction[];
+    })) as unknown as Transaction[];
   }
 
   async findOne(id: string): Promise<Transaction> {
@@ -160,9 +190,25 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
+    const bcTx = await this.blockchainService.updateTransaction(id, status);
+
+    let updateData: any = { status: status as any };
+
+    if (bcTx && bcTx.txHash) {
+      updateData = {
+        ...updateData,
+        blockchainTxHash: bcTx.txHash,
+        blockchainData: bcTx as any,
+      };
+    } else if (this.blockchainService.isEnabled()) {
+      throw new InternalServerErrorException(
+        'Failed to record transaction status update on blockchain',
+      );
+    }
+
     return this.prisma.transaction.update({
       where: { id },
-      data: { status: status as any },
+      data: updateData,
       include: {
         contract: {
           select: {

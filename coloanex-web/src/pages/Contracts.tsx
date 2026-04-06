@@ -132,7 +132,7 @@ export default function Contracts() {
   const [contractToDelete, setContractToDelete] = useState<Contract | null>(
     null,
   );
-    useState<any>(null);
+  useState<any>(null);
   const [disburseData, setDisburseData] = useState<DisburseContractDto>({
     method: "WALLET",
     accountNumber: "",
@@ -218,7 +218,38 @@ export default function Contracts() {
         <ContractStatusBadge status={c.status as ContractStatus} />
       ),
     },
-
+    {
+      key: "blockchainTxHash",
+      label: "Blockchain",
+      sortable: false,
+      render: (c) => {
+        const hasBlockchainTx = !!(c as any)?.blockchainTxHash;
+        return (
+          <button
+            onClick={() => {
+              if (hasBlockchainTx) {
+                window.open(
+                  `https://sepolia.etherscan.io/tx/${(c as any).blockchainTxHash}`,
+                  "_blank",
+                );
+              } else {
+                toast({
+                  title: "Info",
+                  description: "This record is stored off-chain only.",
+                });
+              }
+            }}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+              hasBlockchainTx
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-600 cursor-default"
+            }`}
+          >
+            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+          </button>
+        );
+      },
+    },
     {
       key: "borrower",
       label: "Borrower",
@@ -296,7 +327,7 @@ export default function Contracts() {
       toast({
         title: "Success",
         description: "Contract deleted successfully",
-        variant: "success"
+        variant: "success",
       });
       setDeleteDialogOpen(false);
       setContractToDelete(null);
@@ -308,7 +339,6 @@ export default function Contracts() {
       });
     }
   };
-
 
   useEffect(() => {
     const raw = window.location.search;
@@ -475,16 +505,20 @@ export default function Contracts() {
       const now = Date.now();
       const keys = Object.keys(sessionStorage);
 
-      keys.forEach(key => {
-        if (key.startsWith('khalti_test_processed_') || key.startsWith('last_khalti_attempt_')) {
+      keys.forEach((key) => {
+        if (
+          key.startsWith("khalti_test_processed_") ||
+          key.startsWith("last_khalti_attempt_")
+        ) {
           try {
             const value = sessionStorage.getItem(key);
             if (value && !isNaN(Number(value))) {
               const timestamp = parseInt(value);
-              if (now - timestamp > 3600000) { // 1 hour
+              if (now - timestamp > 3600000) {
+                // 1 hour
                 sessionStorage.removeItem(key);
               }
-            } else if (key.startsWith('khalti_test_processed_')) {
+            } else if (key.startsWith("khalti_test_processed_")) {
               sessionStorage.removeItem(key);
             }
           } catch (error) {
@@ -605,7 +639,8 @@ export default function Contracts() {
     const lastAttempt = sessionStorage.getItem(lastAttemptKey);
     const now = Date.now();
 
-    if (lastAttempt && (now - parseInt(lastAttempt)) < 5000) { // 5 second cooldown
+    if (lastAttempt && now - parseInt(lastAttempt) < 5000) {
+      // 5 second cooldown
       toast({
         title: "Please Wait",
         description: "Please wait a moment before trying again",
@@ -660,7 +695,7 @@ export default function Contracts() {
       toast({
         title: "Success",
         description: "Loan disbursed successfully",
-        variant: "success"
+        variant: "success",
       });
       setDisburseDialogOpen(false);
       setContractToDisburse(null);
@@ -1183,8 +1218,6 @@ export default function Contracts() {
         description={`Are you sure you want to delete contract "${contractToDelete?.contractNumber}"? This cannot be undone.`}
         isLoading={isDeleting}
       />
-
-
     </DashboardLayout>
   );
 }
