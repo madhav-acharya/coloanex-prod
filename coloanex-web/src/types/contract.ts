@@ -79,6 +79,8 @@ export interface Contract {
   signatures?: Signature[];
   termsAndConditions: string;
   disbursementInfo?: DisbursementInfo;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   tenant?: {
@@ -143,6 +145,8 @@ export interface Transaction {
   amount: number;
   status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
   paymentDetails?: PaymentDetails;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
