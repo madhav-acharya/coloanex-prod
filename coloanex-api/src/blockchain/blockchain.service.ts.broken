@@ -1,0 +1,411 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ethers } from 'ethers';
+import { LOAN_REGISTRY_ABI } from './abi/loan-registry.abi';
+import { CONTRACT_REGISTRY_ABI } from './abi/contract-registry.abi';
+import { PAYMENT_REGISTRY_ABI } from './abi/payment-registry.abi';
+import { KYC_REGISTRY_ABI } from './abi/kyc-registry.abi';
+
+export interface BlockchainTxResult {
+  txHash: string;
+  blockNumber: number;
+  gasUsed: string;
+  gasPriceGwei: string;
+  gasFeeWei: string;
+  gasFeeGwei: string;
+  explorerUrl: string;
+}
+
+export interface GasEstimate {
+  estimatedGasUnits: string;
+  gasPriceGwei: string;
+  estimatedFeeGwei: string;
+  estimatedFeeWei: string;
+}
+
+@Injectable()
+export class BlockchainService {
+  private readonly logger = new Logger(BlockchainService.name);
+  private provider: ethers.JsonRpcProvider | null = null;
+  private signer: ethers.Wallet | null = null;
+  private loanRegistry: ethers.Contract | null = null;
+  private contractRegistry: ethers.Contract | null = null;
+  private paymentRegistry: ethers.Contract | null = null;
+  private kycRegistry: ethers.Contract | null = null;
+  private readonly explorerBase: string;
+  private initialized = false;
+  private readonly blockchainEnabled: boolean;
+
+  constructor() {
+    this.explorerBase =
+      process.env.EVM_EXPLORER_URL || 'https://amoy.polygonscan.com/tx';
+    this.blockchainEnabled = process.env.BLOCKCHAIN_ENABLED === 'true';
+    this.init();
+  }
+
+  private init(): void {
+    if (!this.blockchainEnabled) {
+      this.logger.log(
+        'BlockchainService: BLOCKCHAIN_ENABLED=false — blockchain integration disabled',
+      );
+      return;
+    }
+
+    const rpcUrl = process.env.EVM_RPC_URL;
+    const privateKey = process.env.EVM_PRIVATE_KEY;
+    const loanAddress = process.env.EVM_LOAN_REGISTRY_ADDRESS;
+    const contractAddress = process.env.EVM_CONTRACT_REGISTRY_ADDRESS;
+    const paymentAddress = process.env.EVM_PAYMENT_REGISTRY_ADDRESS;
+    const kycAddress = process.env.EVM_KYC_REGISTRY_ADDRESS;
+
+    if (
+      !rpcUrl ||
+      !privateKey ||
+      !loanAddress ||
+      !contractAddress ||
+      !paymentAddress ||
+      !kycAddress
+    ) {
+      this.logger.warn(
+        'BlockchainService: Missing EVM env vars — blockchain calls will be skipped. ' +
+          'Set EVM_RPC_URL, EVM_PRIVATE_KEY, EVM_LOAN_REGISTRY_ADDRESS, ' +
+          'EVM_CONTRACT_REGISTRY_ADDRESS, EVM_PAYMENT_REGISTRY_ADDRESS, EVM_KYC_REGISTRY_ADDRESS.',
+      );
+      return;
+    }
+
+    try {
+      this.provider = new ethers.JsonRpcProvider(rpcUrl);
+      this.signer = new ethers.Wallet(privateKey, this.provider);
+
+      this.loanRegistry = new ethers.Contract(
+        loanAddress,
+        LOAN_REGISTRY_ABI,
+        this.signer,
+      );
+      this.contractRegistry = new ethers.Contract(
+        contractAddress,
+        CONTRACT_REGISTRY_ABI,
+        this.signer,
+      );
+      this.paymentRegistry = new ethers.Contract(
+        paymentAddress,
+        PAYMENT_REGISTRY_ABI,
+        this.signer,
+      );
+      this.kycRegistry = new ethers.Contract(
+        kycAddress,
+        KYC_REGISTRY_ABI,
+        this.signer,
+      );
+
+      this.initialized = true;
+      this.logger.log(
+        `BlockchainService initialized — wallet: ${this.signer.address} | chain: ${process.env.EVM_CHAIN_ID || 'auto'}`,
+      );
+    } catch (err) {
+      this.logger.error(
+        'BlockchainService init failed',
+        (err as Error).message,
+      );
+    }
+  }
+
+  isReady(): boolean {
+    return this.initialized;
+  }
+
+  isEnabled(): boolean {
+    return this.blockchainEnabled;
+  }
+
+  getWalletAddress(): string | null {
+    return this.signer?.address ?? null;
+  }
+
+  private buildExplorerUrl(txHash: string): string {
+    return `${this.explorerBase}/${txHash}`;
+  }
+
+  private async extractTxResult(
+    receipt: ethers.TransactionReceipt,
+  ): Promise<BlockchainTxResult> {
+    const gasUsed = receipt.gasUsed.toString();
+    const gasPrice = receipt.gasPrice ?? 0n;
+    const gasFeeWei = (receipt.gasUsed * gasPrice).toString();
+    const gasPriceGwei = ethers.formatUnits(gasPrice, 'gwei');
+    const gasFeeGwei = ethers.formatUnits(receipt.gasUsed * gasPrice, 'gwei');
+
+    return {
+      txHash: receipt.hash,
+      blockNumber: receipt.blockNumber,
+      gasUsed,
+      gasPriceGwei,
+      gasFeeWei,
+      gasFeeGwei,
+      explorerUrl: this.buildExplorerUrl(receipt.hash),
+    };
+  }
+
+  async estimateGas(
+    contract: ethers.Contract,
+    method: string,
+    args: unknown[],
+  ): Promise<GasEstimate | null> {
+    if (!this.provider) return null;
+    try {
+      const estimatedGasUnits = await contract[method].estimateGas(...args);
+      const feeData = await this.provider.getFeeData();
+      const gasPrice = feeData.gasPrice ?? 0n;
+      const estimatedFeeWei = (estimatedGasUnits * gasPrice).toString();
+      return {
+        estimatedGasUnits: estimatedGasUnits.toString(),
+        gasPriceGwei: ethers.formatUnits(gasPrice, 'gwei'),
+        estimatedFeeGwei: ethers.formatUnits(
+          estimatedGasUnits * gasPrice,
+          'gwei',
+        ),
+        estimatedFeeWei,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async recordLoan(
+    loanId: string,
+    amountPaisa: number,
+    interestRateBps: number,
+    termMonths: number,
+    borrowerAddress: string,
+    lenderAddress: string,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.loanRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping recordLoan',
+      );
+      return null;
+    }
+    try {
+      const zeroAddress = '0x0000000000000000000000000000000000000000';
+      const resolvedBorrower = ethers.isAddress(borrowerAddress)
+        ? borrowerAddress
+        : zeroAddress;
+      const resolvedLender = ethers.isAddress(lenderAddress)
+        ? lenderAddress
+        : zeroAddress;
+
+      const tx: ethers.TransactionResponse = await this.loanRegistry[
+        'createLoan'
+      ](
+        loanId,
+        BigInt(amountPaisa),
+        BigInt(interestRateBps),
+        BigInt(termMonths),
+        resolvedBorrower,
+        resolvedLender,
+      );
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[recordLoan] loan=${loanId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[recordLoan] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async updateLoanStatus(
+    loanId: string,
+    status: string,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.loanRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping updateLoanStatus',
+      );
+      return null;
+    }
+    try {
+      const tx: ethers.TransactionResponse = await this.loanRegistry[
+        'updateLoanStatus'
+      ](loanId, status);
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[updateLoanStatus] loan=${loanId} status=${status} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[updateLoanStatus] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async recordContract(
+    contractId: string,
+    loanId: string,
+    loanAmountPaisa: number,
+    interestRateBps: number,
+    termMonths: number,
+    totalAmountDuePaisa: number,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.contractRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping recordContract',
+      );
+      return null;
+    }
+    try {
+      const tx: ethers.TransactionResponse = await this.contractRegistry[
+        'createContract'
+      ](
+        contractId,
+        loanId,
+        BigInt(loanAmountPaisa),
+        BigInt(interestRateBps),
+        BigInt(termMonths),
+        BigInt(totalAmountDuePaisa),
+      );
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[recordContract] contract=${contractId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[recordContract] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async signContract(contractId: string): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.contractRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping signContract',
+      );
+      return null;
+    }
+    try {
+      const tx: ethers.TransactionResponse =
+        await this.contractRegistry['signContract'](contractId);
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[signContract] contract=${contractId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[signContract] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async recordPayment(
+    paymentId: string,
+    contractId: string,
+    amountPaisa: number,
+    paymentMethod: string,
+    gatewayRef: string,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.paymentRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping recordPayment',
+      );
+      return null;
+    }
+    try {
+      const tx: ethers.TransactionResponse = await this.paymentRegistry[
+        'recordPayment'
+      ](paymentId, contractId, BigInt(amountPaisa), paymentMethod, gatewayRef);
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[recordPayment] payment=${paymentId} contract=${contractId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[recordPayment] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async verifyKYC(
+    userId: string,
+    kycType: string,
+    documentHash: string,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.isReady() || !this.kycRegistry) return null;
+
+    try {
+      this.logger.log(`[verifyKYC] userId=${userId}, type=${kycType}`);
+      const tx = await this.kycRegistry.verifyKYC(userId, kycType, documentHash);
+      const receipt = await tx.wait();
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[verifyKYC] user=${userId} type=${kycType} txHash=${result.txHash}`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[verifyKYC] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async deleteLoan(loanId: string): Promise<BlockchainTxResult | null> {
+    if (!this.isReady() || !this.loanRegistry) return null;
+
+    try {
+      this.logger.log(`[deleteLoan] loanId=${loanId}`);
+      const tx = await this.loanRegistry.updateLoanStatus(loanId, 'DELETED');
+      const receipt = await tx.wait();
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(`[deleteLoan] loan=${loanId} txHash=${result.txHash}`);
+      return result;
+    } catch (err) {
+      this.logger.error('[deleteLoan] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async deleteContract(contractId: string): Promise<BlockchainTxResult | null> {
+    if (!this.isReady() || !this.contractRegistry) return null;
+
+    try {
+      this.logger.log(`[deleteContract] contractId=${contractId}`);
+      const tx = await this.contractRegistry.updateContractStatus(contractId, 'DELETED');
+      const receipt = await tx.wait();
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(`[deleteContract] contract=${contractId} txHash=${result.txHash}`);
+      return result;
+    } catch (err) {
+      this.logger.error('[deleteContract] failed', (err as Error).message);
+      return null;
+    }
+  }
+}
