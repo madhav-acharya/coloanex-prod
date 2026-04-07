@@ -138,31 +138,40 @@ export class PaymentsService {
     let gasFeeGwei: string | null = null;
     let blockchainExplorerUrl: string | null = null;
 
-    const bcTx = await this.blockchainService.recordPayment(
-      paymentId,
-      contractId ?? 'no-contract',
-      Math.round(Number(totalAmount) * 100),
-      gateway,
-      verifyResult.gatewayTransactionId ?? transactionUuid,
-    );
-
-    if (bcTx) {
-      blockchain_tx_hash = bcTx.txHash;
-      gasFeeGwei = bcTx.gasFeeGwei;
-      blockchainExplorerUrl = bcTx.explorerUrl;
+    if (this.blockchainService.isEnabled()) {
       this.logger.log(
-        `Payment ${paymentId} recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+        `[Payment ${paymentId}] Processing blockchain transaction...`,
       );
-    } else if (this.blockchainService.isEnabled()) {
-      throw new BadRequestException(
-        'Blockchain is enabled but unavailable. Cannot record payment without blockchain record.',
+      const bcTx = await this.blockchainService.recordPayment(
+        paymentId,
+        contractId ?? 'no-contract',
+        Math.round(Number(totalAmount) * 100),
+        gateway,
+        verifyResult.gatewayTransactionId ?? transactionUuid,
       );
+
+      if (bcTx) {
+        blockchain_tx_hash = bcTx.txHash;
+        gasFeeGwei = bcTx.gasFeeGwei;
+        blockchainExplorerUrl = bcTx.explorerUrl;
+        this.logger.log(
+          `[Payment ${paymentId}] Blockchain transaction successful: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+        );
+      } else {
+        this.logger.error(
+          `[Payment ${paymentId}] Blockchain transaction failed`,
+        );
+        throw new BadRequestException(
+          'Blockchain transaction failed. Cannot record payment without blockchain record.',
+        );
+      }
     } else {
       this.logger.warn(
-        `Payment ${paymentId} — blockchain disabled, proceeding without chain record`,
+        `[Payment ${paymentId}] Blockchain disabled, proceeding without chain record`,
       );
     }
 
+    this.logger.log(`[Payment ${paymentId}] Creating database record...`);
     const transaction = await this.prisma.transaction.create({
       data: {
         id: paymentId,
