@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { PaymentsService } from './payments.service';
 import { InitiatePaymentDto } from './dto/initiate-payment.dto';
 import { VerifyPaymentDto } from './dto/verify-payment.dto';
+import { LookupPaymentDto } from './dto/lookup-payment.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -59,14 +60,15 @@ export class PaymentsController {
       const parsed = JSON.parse(Buffer.from(data, 'base64').toString('utf-8'));
       paymentUrl = parsed.paymentUrl;
       formData = parsed.formData;
-    } catch {
+    } catch (error) {
+      console.error('eSewa form parsing error:', error);
       res.status(400).send('Invalid data');
       return;
     }
     const fields = Object.entries(formData)
       .map(([k, v]) => `<input type="hidden" name="${k}" value="${v}">`)
       .join('');
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{background:#1a1a2e;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#fff}p{font-size:16px;opacity:.7}</style></head><body onload="document.forms[0].submit()"><form method="POST" action="${paymentUrl}">${fields}</form><p>Redirecting to eSewa...</p></body></html>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Processing Payment</title><style>body{background:#1a1a2e;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;color:#fff}p{font-size:16px;opacity:.7}</style></head><body onload="document.forms[0].submit()"><form method="POST" action="${paymentUrl}">${fields}</form><p>Redirecting to eSewa...</p></body></html>`;
     res.send(html);
   }
 
@@ -80,5 +82,11 @@ export class PaymentsController {
   @Post('verify')
   verifyPayment(@Body() dto: VerifyPaymentDto, @Req() req: any) {
     return this.paymentsService.verifyPayment(dto, req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('lookup')
+  lookupPayment(@Body() dto: LookupPaymentDto, @Req() req: any) {
+    return this.paymentsService.lookupPayment(dto, req.user.sub);
   }
 }
