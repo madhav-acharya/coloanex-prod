@@ -25,7 +25,10 @@ import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
-import { updateLoanStatusOnBlockchain, recordLoanOnBlockchain } from "@/utils/blockchain";
+import {
+  updateLoanStatusOnBlockchain,
+  recordLoanOnBlockchain,
+} from "@/utils/blockchain";
 
 export default function LoanRequests() {
   const { toast } = useToast();
@@ -39,7 +42,9 @@ export default function LoanRequests() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
   const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
 
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
@@ -272,6 +277,9 @@ export default function LoanRequests() {
     if (!loanToDelete) return;
 
     setIsDeletingLoan(true);
+    setIsProcessingBlockchain(true);
+    setBlockchainStep("blockchain");
+    
     try {
       let blockchainTxHash: string | undefined;
 
@@ -279,6 +287,7 @@ export default function LoanRequests() {
         const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
         blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
       } catch (blockchainError: any) {
+        setIsProcessingBlockchain(false);
         if (blockchainError.code === "ACTION_REJECTED") {
           toast({
             title: "Transaction Rejected",
@@ -298,7 +307,18 @@ export default function LoanRequests() {
         }
       }
 
+      setBlockchainStep("database");
+
       await deleteLoan(loanToDelete.id).unwrap();
+      
+      setTimeout(() => {
+        setBlockchainStep("complete");
+        setTimeout(() => {
+          setBlockchainStep("blockchain");
+          setIsProcessingBlockchain(false);
+        }, 1000);
+      }, 500);
+
       toast({
         title: "Success",
         description: "Loan request deleted successfully",
@@ -306,6 +326,7 @@ export default function LoanRequests() {
       setDeleteDialogOpen(false);
       setLoanToDelete(null);
     } catch {
+      setIsProcessingBlockchain(false);
       toast({
         title: "Error",
         description: "Failed to delete loan request",
@@ -341,19 +362,24 @@ export default function LoanRequests() {
 
     setIsProcessingBlockchain(true);
     setBlockchainStep("blockchain");
-    
+
     try {
       let blockchainTxHash: string | undefined;
 
       try {
-        console.log('Starting blockchain update for loan:', selectedLoan.id, 'status:', status);
+        console.log(
+          "Starting blockchain update for loan:",
+          selectedLoan.id,
+          "status:",
+          status,
+        );
         blockchainTxHash = await updateLoanStatusOnBlockchain(
           selectedLoan.id,
           status,
         );
-        console.log('Blockchain update successful, hash:', blockchainTxHash);
+        console.log("Blockchain update successful, hash:", blockchainTxHash);
       } catch (blockchainError: any) {
-        console.error('Blockchain error details:', blockchainError);
+        console.error("Blockchain error details:", blockchainError);
         if (blockchainError.code === "ACTION_REJECTED") {
           toast({
             title: "Transaction Cancelled",
@@ -377,7 +403,10 @@ export default function LoanRequests() {
           setBlockchainStep("blockchain");
           toast({
             title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to process blockchain transaction",
             variant: "destructive",
           });
           return;
@@ -394,12 +423,12 @@ export default function LoanRequests() {
           approvedAmount: approvedAmount || undefined,
           ruleId: ruleId || undefined,
           approvedTermMonths: approvedTermMonths || undefined,
-          blockchain_tx_hash: blockchainTxHash || undefined,
+          blockchainTxHash: blockchainTxHash || undefined,
         },
       }).unwrap();
 
       setBlockchainStep("database");
-      
+
       setTimeout(() => {
         setBlockchainStep("complete");
         setTimeout(() => {
@@ -540,8 +569,9 @@ export default function LoanRequests() {
     try {
       setIsProcessingBlockchain(true);
       setBlockchainStep("blockchain");
-      
+
       let blockchainTxHash: string | undefined;
+      let loanId: string | undefined;
 
       try {
         if (editingLoan) {
@@ -552,7 +582,7 @@ export default function LoanRequests() {
             loanData.requestedTermMonths,
           );
         } else {
-          const loanId = `loan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          loanId = crypto.randomUUID();
           blockchainTxHash = await recordLoanOnBlockchain(
             loanId,
             loanData.requestedAmount * 100,
@@ -600,7 +630,7 @@ export default function LoanRequests() {
 
       if (editingLoan) {
         const payload = blockchainTxHash
-          ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
+          ? { ...loanData, blockchainTxHash: blockchainTxHash }
           : loanData;
         await updateLoan({ id: editingLoan.id, data: payload }).unwrap();
         toast({
@@ -608,8 +638,8 @@ export default function LoanRequests() {
           description: "Loan request updated successfully",
         });
       } else {
-        const payload = blockchainTxHash
-          ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
+        const payload = blockchainTxHash && loanId
+          ? { ...loanData, blockchainTxHash: blockchainTxHash, id: loanId }
           : loanData;
         await createLoan(payload).unwrap();
         toast({
@@ -839,17 +869,17 @@ export default function LoanRequests() {
       render: (loan) => (loan?.status ? getStatusBadge(loan.status) : "N/A"),
     },
     {
-      key: "blockchain_tx_hash",
+      key: "blockchainTxHash",
       label: "Blockchain",
       sortable: false,
       render: (loan) => {
-        const hasBlockchainTx = !!loan?.blockchain_tx_hash || !!(loan as any)?.blockchainTxHash;
+        const hasBlockchainTx = !!loan?.blockchainTxHash;
         return (
           <button
             onClick={() => {
               if (hasBlockchainTx) {
                 window.open(
-                  `https://sepolia.etherscan.io/tx/${loan.blockchain_tx_hash || (loan as any)?.blockchainTxHash}`,
+                  `https://sepolia.etherscan.io/tx/${loan.blockchainTxHash}`,
                   "_blank",
                 );
               } else {
