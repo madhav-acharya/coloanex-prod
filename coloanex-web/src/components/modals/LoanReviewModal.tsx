@@ -114,6 +114,8 @@ export function LoanReviewModal({
 
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
+    setConfirmDialogOpen(false);
+    onOpenChange(false);
     try {
       const approvedAmountNumber =
         status === LoanStatus.APPROVED && approvedAmount
@@ -133,7 +135,6 @@ export function LoanReviewModal({
       setRejectionReason("");
       setStatus(LoanStatus.UNDER_REVIEW);
       setSelectedRuleId("");
-      setConfirmDialogOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -142,27 +143,27 @@ export function LoanReviewModal({
   const getStatusColor = (status: LoanStatus) => {
     switch (status) {
       case LoanStatus.DRAFT:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800";
       case LoanStatus.SUBMITTED:
-        return "bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400";
+        return "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800";
       case LoanStatus.UNDER_REVIEW:
-        return "bg-yellow-500/10 text-yellow-600 dark:bg-yellow-500/20 dark:text-yellow-400";
+        return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800";
       case LoanStatus.APPROVED:
-        return "bg-primary/10 text-primary dark:bg-primary/20";
+        return "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800";
       case LoanStatus.REJECTED:
-        return "bg-destructive/10 text-destructive dark:bg-destructive/20";
+        return "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800";
       case LoanStatus.CONTRACT_GENERATED:
-        return "bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400";
+        return "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800";
       case LoanStatus.CONTRACT_SIGNED:
-        return "bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400";
+        return "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800";
       case LoanStatus.LOAN_PROVIDED:
-        return "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400";
+        return "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800";
       case LoanStatus.PARTIALLY_PAID:
-        return "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400";
+        return "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800";
       case LoanStatus.PAID:
-        return "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400";
+        return "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800";
     }
   };
 
