@@ -12,6 +12,10 @@ import {
 export class CreateLoanDto {
   @IsOptional()
   @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
   borrowerId?: string;
 
   @IsOptional()
@@ -39,5 +43,5 @@ export class CreateLoanDto {
 
   @IsOptional()
   @IsString()
-  blockchain_tx_hash?: string;
+  blockchainTxHash?: string;
 }
