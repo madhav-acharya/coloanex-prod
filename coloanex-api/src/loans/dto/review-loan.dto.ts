@@ -30,5 +30,5 @@ export class ReviewLoanDto {
 
   @IsOptional()
   @IsString()
-  blockchain_tx_hash?: string;
+  blockchainTxHash?: string;
 }
