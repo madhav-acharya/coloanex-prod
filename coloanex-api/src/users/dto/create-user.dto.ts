@@ -42,7 +42,7 @@ export class CreateUserDto {
 
   @IsArray()
   @IsOptional()
-  roleIds?: bigint[];
+  roleIds?: (bigint | string)[];
 
   @IsArray()
   @IsOptional()

@@ -196,16 +196,6 @@ const Dashboard = () => {
       description="Overview of your account and recent activities."
     >
       <div className="space-y-6">
-        <Card className="bg-gradient-to-r from-green-600 to-green-500 text-white border-0">
-          <CardContent className="p-6">
-            <h2 className="text-2xl font-bold mb-2">
-              Welcome back, {user?.fullName || "User"}!
-            </h2>
-            <p className="text-white/90">
-              Here's what's happening with your account today.
-            </p>
-          </CardContent>
-        </Card>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4 flex-wrap">

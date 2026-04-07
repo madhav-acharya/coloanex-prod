@@ -184,6 +184,13 @@ export class PaymentsService {
         completedAt: new Date(),
         description: `${gateway} payment verified`,
         blockchainTxHash: blockchain_tx_hash,
+        blockchainData: blockchain_tx_hash ? {
+          txHash: blockchain_tx_hash,
+          gasFeeGwei,
+          explorerUrl: blockchainExplorerUrl,
+          timestamp: new Date().toISOString(),
+          source: 'payment_verification'
+        } as any : undefined,
         gatewayDetails: {
           gateway,
           transactionUuid,
@@ -229,23 +236,8 @@ export class PaymentsService {
               data: { balance: { increment: amount } },
             });
 
-            await this.prisma.transaction.create({
-              data: {
-                walletId: lenderWallet.id,
-                contractId: contractId ?? null,
-                paymentScheduleId: paymentScheduleId ?? null,
-                type: 'DEPOSIT' as never,
-                amount: totalAmount,
-                status: 'COMPLETED' as never,
-                completedAt: new Date(),
-                description: `Repayment received from borrower via ${gateway}`,
-                gatewayDetails: {
-                  gateway,
-                  transactionUuid,
-                  gatewayTransactionId: verifyResult.gatewayTransactionId,
-                } as never,
-              },
-            });
+            // Note: Lender balance updated but no DEPOSIT transaction created per business requirement
+            // Only INSTALLMENT_PAYMENT transaction is stored for the borrower
           }
         }
 
@@ -258,11 +250,16 @@ export class PaymentsService {
         });
 
         if (paymentScheduleId) {
-          const schedule = await this.prisma.paymentSchedule.findUnique({
-            where: { id: paymentScheduleId },
+          const scheduleIds = paymentScheduleId.split(',').map(id => id.trim());
+          const schedules = await this.prisma.paymentSchedule.findMany({
+            where: { id: { in: scheduleIds } },
           });
-          if (schedule) {
-            const newAmountPaid = Number(schedule.amountPaid) + amount;
+
+          const totalScheduleAmount = schedules.reduce((sum, schedule) => sum + Number(schedule.totalAmount), 0);
+          const amountPerSchedule = amount / schedules.length;
+
+          for (const schedule of schedules) {
+            const newAmountPaid = Number(schedule.amountPaid) + amountPerSchedule;
             const scheduleTotal = Number(schedule.totalAmount);
             const newStatus =
               newAmountPaid >= scheduleTotal
@@ -271,7 +268,7 @@ export class PaymentsService {
                   ? 'PARTIALLY_PAID'
                   : schedule.status;
             await this.prisma.paymentSchedule.update({
-              where: { id: paymentScheduleId },
+              where: { id: schedule.id },
               data: {
                 amountPaid: newAmountPaid,
                 status: newStatus as never,

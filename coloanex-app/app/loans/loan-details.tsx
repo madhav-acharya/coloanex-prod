@@ -226,6 +226,9 @@ export default function LoanDetailsScreen() {
   const [loan, setLoan] = useState<Loan | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
   const [schedule, setSchedule] = useState<PaymentSchedule[]>([]);
+  const [selectedSchedules, setSelectedSchedules] = useState<Set<string>>(
+    new Set(),
+  );
   const [loading, setLoading] = useState(true);
 
   const formatCurrencyWithIcon = (
@@ -796,6 +799,7 @@ export default function LoanDetailsScreen() {
               const isPartial = item.status === "PARTIALLY_PAID";
               const amtPaid = Number(item.amountPaid ?? 0);
               const canRepay = canMakePayment && !isPaid;
+              const isSelected = selectedSchedules.has(item.id);
               return (
                 <View
                   key={item.id}
@@ -805,8 +809,35 @@ export default function LoanDetailsScreen() {
                       borderBottomWidth: 1,
                       borderBottomColor: colors.border,
                     },
+                    isSelected && { backgroundColor: colors.primary + '15' },
                   ]}
                 >
+                  {canRepay && (
+                    <TouchableOpacity
+                      style={styles.checkboxContainer}
+                      onPress={() => {
+                        const newSelected = new Set(selectedSchedules);
+                        if (isSelected) {
+                          newSelected.delete(item.id);
+                        } else {
+                          newSelected.add(item.id);
+                        }
+                        setSelectedSchedules(newSelected);
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.checkbox,
+                          { borderColor: colors.border },
+                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+                        ]}
+                      >
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={16} color="#fff" />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  )}
                   <View
                     style={[
                       styles.scheduleInstNum,
@@ -910,7 +941,9 @@ export default function LoanDetailsScreen() {
                               contractId: contract.id,
                               scheduleId: item.id,
                               amount: String(Number(item.totalAmount) || 0),
-                              outstandingBalance: String(Number(contract.outstandingBalance) || 0),
+                              outstandingBalance: String(
+                                Number(contract.outstandingBalance) || 0,
+                              ),
                               gateway: "ESEWA",
                             },
                           });
@@ -959,29 +992,55 @@ export default function LoanDetailsScreen() {
                 );
                 return;
               }
-              const unpaid = schedule.find((s) => s.status !== "PAID");
-              const scheduleItem: any = unpaid ?? {
-                id: "",
-                installmentNumber: 0,
-                totalAmount: contract.installmentAmount,
-                status: "PENDING",
-              };
-              router.push({
-                pathname: "/repayment/make-repayment",
-                params: {
-                  loanId: loan.id,
-                  contractId: contract.id,
-                  scheduleId: scheduleItem.id,
-                  amount: String(Number(scheduleItem.totalAmount) || 0),
-                  outstandingBalance: String(Number(contract.outstandingBalance) || 0),
-                  gateway: "ESEWA",
-                },
-              });
+              
+              if (selectedSchedules.size > 0) {
+                const selectedItems = schedule.filter(s => selectedSchedules.has(s.id));
+                const totalAmount = selectedItems.reduce((sum, s) => sum + (Number(s.totalAmount) - Number(s.amountPaid ?? 0)), 0);
+                const scheduleIds = Array.from(selectedSchedules).join(',');
+                
+                router.push({
+                  pathname: "/repayment/make-repayment",
+                  params: {
+                    loanId: loan.id,
+                    contractId: contract.id,
+                    scheduleId: scheduleIds,
+                    amount: String(totalAmount),
+                    outstandingBalance: String(
+                      Number(contract.outstandingBalance) || 0,
+                    ),
+                    gateway: "ESEWA",
+                  },
+                });
+              } else {
+                const unpaid = schedule.find((s) => s.status !== "PAID");
+                const scheduleItem: any = unpaid ?? {
+                  id: "",
+                  installmentNumber: 0,
+                  totalAmount: contract.installmentAmount,
+                  status: "PENDING",
+                };
+                router.push({
+                  pathname: "/repayment/make-repayment",
+                  params: {
+                    loanId: loan.id,
+                    contractId: contract.id,
+                    scheduleId: scheduleItem.id,
+                    amount: String(Number(scheduleItem.totalAmount) || 0),
+                    outstandingBalance: String(
+                      Number(contract.outstandingBalance) || 0,
+                    ),
+                    gateway: "ESEWA",
+                  },
+                });
+              }
             }}
           >
             <Ionicons name="card-outline" size={20} color={colors.buttonText} />
             <Text style={[styles.payBtnText, { color: colors.buttonText }]}>
-              Make Payment
+              {selectedSchedules.size > 0 
+                ? `Pay Selected (${selectedSchedules.size})` 
+                : "Make Payment"
+              }
             </Text>
           </TouchableOpacity>
         </View>
@@ -1105,6 +1164,17 @@ const createStyles = (colors: Record<string, string>) =>
       alignItems: "center",
       paddingVertical: 12,
       gap: spacing.sm,
+    },
+    checkboxContainer: {
+      marginRight: spacing.sm,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderRadius: 4,
+      alignItems: "center",
+      justifyContent: "center",
     },
     scheduleInstNum: {
       width: 28,

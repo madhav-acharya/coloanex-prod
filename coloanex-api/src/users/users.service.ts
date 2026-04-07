@@ -75,16 +75,44 @@ export class UsersService {
     }
 
     if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
+      // Convert role IDs to BigInt array, handling both numeric IDs and role names
+      const resolvedRoleIds: bigint[] = [];
+
+      for (const roleId of createUserDto.roleIds) {
+        if (typeof roleId === 'string' && isNaN(Number(roleId))) {
+          // If it's a string that's not numeric, treat it as a role name
+          const roleByName = await this.prisma.role.findFirst({
+            where: { name: { equals: roleId, mode: 'insensitive' } },
+            select: { id: true, name: true },
+          });
+
+          if (roleByName) {
+            resolvedRoleIds.push(roleByName.id);
+          } else {
+            throw new BadRequestException(
+              `Role with name "${roleId}" not found`,
+            );
+          }
+        } else {
+          // It's a numeric ID (string or bigint)
+          resolvedRoleIds.push(BigInt(roleId));
+        }
+      }
+
+      // Verify all resolved role IDs exist
       const roles = await this.prisma.role.findMany({
         where: {
-          id: { in: createUserDto.roleIds },
+          id: { in: resolvedRoleIds },
         },
         select: { id: true, name: true },
       });
 
-      if (roles.length !== createUserDto.roleIds.length) {
+      if (roles.length !== resolvedRoleIds.length) {
         throw new BadRequestException('Some roles not found or not accessible');
       }
+
+      // Update the DTO with resolved numeric IDs
+      (createUserDto as any).roleIds = resolvedRoleIds;
     }
 
     if (createUserDto.permissionIds && createUserDto.permissionIds.length > 0) {
@@ -119,8 +147,9 @@ export class UsersService {
       createUserDto.roleIds &&
       createUserDto.roleIds.length > 0
     ) {
+      const resolvedRoleIds = (createUserDto as any).roleIds as bigint[];
       const roleNames = await this.prisma.role.findMany({
-        where: { id: { in: createUserDto.roleIds } },
+        where: { id: { in: resolvedRoleIds } },
         select: { name: true },
       });
 
@@ -169,15 +198,16 @@ export class UsersService {
     });
 
     if (createUserDto.roleIds && createUserDto.roleIds.length > 0) {
+      const resolvedRoleIds = (createUserDto as any).roleIds as bigint[];
       await this.prisma.userRole.createMany({
-        data: createUserDto.roleIds.map((roleId) => ({
+        data: resolvedRoleIds.map((roleId) => ({
           userId: user.id,
           roleId,
         })),
       });
 
       const roles = await this.prisma.role.findMany({
-        where: { id: { in: createUserDto.roleIds } },
+        where: { id: { in: resolvedRoleIds } },
         select: { name: true },
       });
       const roleNames = roles.map((r) => r.name);
@@ -834,24 +864,46 @@ export class UsersService {
       }
     }
 
+    // Declare resolvedRoleIds outside so it's accessible later
+    let resolvedRoleIds: bigint[] = [];
+    
     if (updateUserDto.roleIds !== undefined) {
       if (updateUserDto.roleIds.length > 0) {
-        const validRoleIds = updateUserDto.roleIds
-          .filter((id) => id !== null && id !== undefined)
-          .map((id) => BigInt(id));
+        // Convert role IDs to BigInt array, handling both numeric IDs and role names
+        
+        for (const roleId of updateUserDto.roleIds) {
+          if (roleId !== null && roleId !== undefined) {
+            if (typeof roleId === 'string' && isNaN(Number(roleId))) {
+              // If it's a string that's not numeric, treat it as a role name
+              const roleByName = await this.prisma.role.findFirst({
+                where: { name: { equals: roleId, mode: 'insensitive' } },
+                select: { id: true, name: true },
+              });
+              
+              if (roleByName) {
+                resolvedRoleIds.push(roleByName.id);
+              } else {
+                throw new BadRequestException(`Role with name "${roleId}" not found`);
+              }
+            } else {
+              // It's a numeric ID (string or bigint)
+              resolvedRoleIds.push(BigInt(roleId));
+            }
+          }
+        }
 
-        if (validRoleIds.length === 0) {
+        if (resolvedRoleIds.length === 0) {
           throw new BadRequestException('No valid role IDs provided');
         }
 
         const roles = await this.prisma.role.findMany({
           where: {
-            id: { in: validRoleIds },
+            id: { in: resolvedRoleIds },
           },
           select: { id: true, name: true },
         });
 
-        if (roles.length !== validRoleIds.length) {
+        if (roles.length !== resolvedRoleIds.length) {
           throw new BadRequestException(
             'Some roles not found or not accessible',
           );
@@ -934,20 +986,17 @@ export class UsersService {
       });
 
       if (updateUserDto.roleIds.length > 0) {
-        const validRoleIds = updateUserDto.roleIds
-          .filter((id) => id !== null && id !== undefined)
-          .map((id) => BigInt(id));
-
-        if (validRoleIds.length > 0) {
+        // Note: resolvedRoleIds was already computed and validated above
+        if (resolvedRoleIds.length > 0) {
           await this.prisma.userRole.createMany({
-            data: validRoleIds.map((roleId) => ({
+            data: resolvedRoleIds.map((roleId) => ({
               userId: id,
               roleId,
             })),
           });
 
           const roles = await this.prisma.role.findMany({
-            where: { id: { in: validRoleIds } },
+            where: { id: { in: resolvedRoleIds } },
             select: { name: true },
           });
           const roleNames = roles.map((r) => r.name);

@@ -38,7 +38,7 @@ export class TransactionsService {
     }
 
     const { blockchain_tx_hash, ...transactionData } = createTransactionDto;
-    
+
     const transaction = await this.prisma.transaction.create({
       data: {
         ...transactionData,
@@ -173,6 +173,85 @@ export class TransactionsService {
   }
 
   async findByWallet(walletId: string): Promise<Transaction[]> {
+    const wallet = await this.prisma.wallet.findUnique({
+      where: { id: walletId },
+      include: {
+        user: {
+          include: {
+            borrowers: true,
+            ownedTenants: true,
+          },
+        },
+      },
+    });
+
+    if (!wallet) {
+      return [];
+    }
+
+    const userId = wallet.userId;
+    const borrowers = wallet.user.borrowers;
+    const ownedTenants = wallet.user.ownedTenants;
+
+    if (ownedTenants.length > 0) {
+      const tenantIds = ownedTenants.map(t => t.id);
+      return (await this.prisma.transaction.findMany({
+        where: {
+          contract: {
+            tenantId: { in: tenantIds },
+          },
+        },
+        include: {
+          wallet: {
+            select: {
+              id: true,
+              userId: true,
+            },
+          },
+          contract: {
+            select: {
+              id: true,
+              contractNumber: true,
+              tenantId: true,
+              borrowerId: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })) as unknown as Transaction[];
+    } else if (borrowers.length > 0) {
+      const borrowerIds = borrowers.map(b => b.id);
+      return (await this.prisma.transaction.findMany({
+        where: {
+          OR: [
+            { walletId },
+            {
+              contract: {
+                borrowerId: { in: borrowerIds },
+              },
+            },
+          ],
+        },
+        include: {
+          wallet: {
+            select: {
+              id: true,
+              userId: true,
+            },
+          },
+          contract: {
+            select: {
+              id: true,
+              contractNumber: true,
+              tenantId: true,
+              borrowerId: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })) as unknown as Transaction[];
+    }
+
     return (await this.prisma.transaction.findMany({
       where: { walletId },
       include: {
@@ -180,6 +259,14 @@ export class TransactionsService {
           select: {
             id: true,
             userId: true,
+          },
+        },
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            tenantId: true,
+            borrowerId: true,
           },
         },
       },

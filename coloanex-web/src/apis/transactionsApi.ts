@@ -34,6 +34,8 @@ export interface Transaction {
   contract?: {
     id: string;
     contractNumber: string;
+    tenantId: string;
+    borrowerId: string;
   };
   wallet?: {
     id: string;
@@ -88,8 +90,6 @@ export const transactionsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Transactions"],
     }),
-
-
   }),
 });
 
