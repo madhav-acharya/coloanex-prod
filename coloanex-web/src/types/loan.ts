@@ -24,8 +24,7 @@ export interface Loan {
   approvedTermMonths?: number;
   status: LoanStatus;
   rejectionReason?: string;
-  blockchain_tx_hash?: string;
-  blockchain_data?: Record<string, unknown>;
+  blockchainTxHash?: string;
   createdAt: string;
   updatedAt: string;
   borrower?: {
@@ -68,7 +67,7 @@ export interface ReviewLoanDto {
   approvedAmount?: number;
   ruleId?: string;
   approvedTermMonths?: number;
-  blockchain_tx_hash?: string;
+  blockchainTxHash?: string;
 }
 
 export interface LoanQuery {
