@@ -50,7 +50,9 @@ export default function Wallets() {
   useState<any>(null);
 
   const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database"
+  >("blockchain");
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
   const { data: transactions = [] } = useGetTransactionsByWalletQuery(
@@ -267,7 +269,9 @@ export default function Wallets() {
       label: "Blockchain",
       sortable: false,
       render: (transaction) => {
-        const hasBlockchainTx = !!(transaction as any)?.blockchainTxHash || !!(transaction as any)?.blockchain_tx_hash;
+        const hasBlockchainTx =
+          !!(transaction as any)?.blockchainTxHash ||
+          !!(transaction as any)?.blockchain_tx_hash;
         return (
           <button
             onClick={() => {
@@ -297,7 +301,16 @@ export default function Wallets() {
     {
       key: "paymentDetails",
       label: "Description",
-      render: (transaction) => transaction.paymentDetails?.remarks || "-",
+      render: (transaction) => {
+        if (transaction.contract?.contractNumber) {
+          return `Contract: ${transaction.contract.contractNumber}`;
+        }
+        return (
+          transaction.paymentDetails?.remarks ||
+          (transaction as any).description ||
+          "-"
+        );
+      },
     },
     {
       key: "createdAt",
@@ -364,8 +377,11 @@ export default function Wallets() {
         } else {
           setIsProcessingBlockchain(false);
           toast({
-            title: "Blockchain Error", 
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
+            title: "Blockchain Error",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to process blockchain transaction",
             variant: "destructive",
           });
           return;

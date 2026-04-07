@@ -23,7 +23,6 @@ import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,7 +57,6 @@ import {
   useVerifyPaymentMutation,
 } from "@/apis/paymentsApi";
 import { useGetMyWalletQuery } from "@/apis/walletsApi";
-import { updateContractStatusOnBlockchain, deleteContractOnBlockchain, signContractOnBlockchain } from "@/utils/blockchain";
 
 type ContractStatus =
   | "DRAFT"
@@ -176,15 +174,15 @@ export default function Contracts() {
     useDeleteContractMutation();
   const [generateContractPdf, { isLoading: isGenerating }] =
     useGenerateContractPdfMutation();
-  const [updateContract, { isLoading: isUpdatingContract }] = 
+  const [updateContract, { isLoading: isUpdatingContract }] =
     useUpdateContractMutation();
   const [initiatePayment, { isLoading: isInitiatingPayment }] =
     useInitiatePaymentMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
 
-  const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database">("blockchain");
-  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(
+    null,
+  );
   const [statusUpdateDialogOpen, setStatusUpdateDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState<ContractStatus>("DRAFT");
 
@@ -242,7 +240,8 @@ export default function Contracts() {
       label: "Blockchain",
       sortable: false,
       render: (c) => {
-        const hasBlockchainTx = !!(c as any)?.blockchainTxHash || !!(c as any)?.blockchain_tx_hash;
+        const hasBlockchainTx =
+          !!(c as any)?.blockchainTxHash || !!(c as any)?.blockchain_tx_hash;
         return (
           <button
             onClick={() => {
@@ -317,114 +316,33 @@ export default function Contracts() {
   ];
 
   const handleGenerateContract = async (contract: Contract) => {
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+    const toastId = sonnerToast.loading("Generating contract PDF…", {
+      description: `Preparing ${contract.contractNumber}`,
+      duration: Infinity,
+    });
+
     try {
-      let blockchainTxHash: string | undefined;
-
-      try {
-        blockchainTxHash = await updateContractStatusOnBlockchain(
-          contract.id,
-          "GENERATED",
-        );
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
-      const toastId = sonnerToast.loading("Generating contract PDF…", {
-        description: `Preparing ${contract.contractNumber}`,
-        duration: Infinity,
+      await generateContractPdf(contract.id).unwrap();
+      sonnerToast.dismiss(toastId);
+      toast({
+        title: "Success",
+        description: "Contract PDF generated successfully",
+        variant: "success",
       });
-      
-      try {
-        await generateContractPdf(contract.id).unwrap();
-        sonnerToast.dismiss(toastId);
-        toast({
-          title: "Success",
-          description: "Contract PDF generated successfully",
-          variant: "success",
-        });
-      } catch (err: any) {
-        sonnerToast.dismiss(toastId);
-        toast({
-          title: "Error",
-          description: err?.data?.message || "Failed to generate contract PDF",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsProcessingBlockchain(false);
+    } catch (err: any) {
+      sonnerToast.dismiss(toastId);
+      toast({
+        title: "Error",
+        description: err?.data?.message || "Failed to generate contract PDF",
+        variant: "destructive",
+      });
     }
   };
 
   const confirmDelete = async () => {
     if (!contractToDelete) return;
-    
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+
     try {
-      let blockchainTxHash: string | undefined;
-
-      try {
-        blockchainTxHash = await deleteContractOnBlockchain(contractToDelete.id);
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
       await deleteContract(contractToDelete.id).unwrap();
       toast({
         title: "Success",
@@ -439,8 +357,6 @@ export default function Contracts() {
         description: err?.data?.message || "Failed to delete contract",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessingBlockchain(false);
     }
   };
 
@@ -647,45 +563,8 @@ export default function Contracts() {
 
   const confirmSignAndDisburse = async () => {
     if (!contractToSd) return;
-    
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+
     try {
-      let blockchainTxHash: string | undefined;
-
-      try {
-        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
       await signAndDisburseContract({
         id: contractToSd.id,
         data: {
@@ -709,8 +588,6 @@ export default function Contracts() {
         description: err?.data?.message || "Failed to sign & disburse",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessingBlockchain(false);
     }
   };
 
@@ -831,48 +708,8 @@ export default function Contracts() {
 
   const confirmDisburse = async () => {
     if (!contractToDisburse) return;
-    
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+
     try {
-      let blockchainTxHash: string | undefined;
-
-      try {
-        blockchainTxHash = await updateContractStatusOnBlockchain(
-          contractToDisburse.id,
-          "ACTIVE",
-        );
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
       await disburseContract({
         id: contractToDisburse.id,
         data: disburseData,
@@ -896,68 +733,16 @@ export default function Contracts() {
         description: err?.data?.message || "Failed to disburse",
         variant: "destructive",
       });
-    } finally {
-      setIsProcessingBlockchain(false);
     }
   };
 
   const handleStatusUpdate = async () => {
     if (!selectedContract) return;
 
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
     try {
-      let blockchainTxHash: string | undefined;
-
-      try {
-        console.log('Starting blockchain update for contract:', selectedContract.id, 'status:', newStatus);
-        blockchainTxHash = await updateContractStatusOnBlockchain(
-          selectedContract.id,
-          newStatus,
-        );
-        console.log('Blockchain update successful, hash:', blockchainTxHash);
-      } catch (blockchainError: any) {
-        console.error('Blockchain error details:', blockchainError);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
       const updateData: UpdateContractDto = {
         status: newStatus,
       };
-
-      if (blockchainTxHash) {
-        (updateData as any).blockchain_tx_hash = blockchainTxHash;
-      }
 
       await updateContract({
         id: selectedContract.id,
@@ -972,10 +757,8 @@ export default function Contracts() {
 
       setStatusUpdateDialogOpen(false);
       setSelectedContract(null);
-      setIsProcessingBlockchain(false);
     } catch (error: any) {
       console.error("Status update error:", error);
-      setIsProcessingBlockchain(false);
       toast({
         title: "Error",
         description: error?.data?.message || "Failed to update contract status",
@@ -1500,7 +1283,10 @@ export default function Contracts() {
       />
 
       {/* Status Update Dialog */}
-      <Dialog open={statusUpdateDialogOpen} onOpenChange={setStatusUpdateDialogOpen}>
+      <Dialog
+        open={statusUpdateDialogOpen}
+        onOpenChange={setStatusUpdateDialogOpen}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Update Contract Status</DialogTitle>
@@ -1508,7 +1294,10 @@ export default function Contracts() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="status">New Status</Label>
-              <Select value={newStatus} onValueChange={(value) => setNewStatus(value as ContractStatus)}>
+              <Select
+                value={newStatus}
+                onValueChange={(value) => setNewStatus(value as ContractStatus)}
+              >
                 <SelectTrigger className="w-full mt-1">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -1526,27 +1315,21 @@ export default function Contracts() {
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setStatusUpdateDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleStatusUpdate}
-              disabled={isUpdatingContract || isProcessingBlockchain}
+              disabled={isUpdatingContract}
             >
-              {isUpdatingContract || isProcessingBlockchain ? "Updating..." : "Update Status"}
+              {isUpdatingContract ? "Updating..." : "Update Status"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <BlockchainProcessingModal
-        open={isProcessingBlockchain}
-        currentStep={blockchainStep}
-        message="Recording contract operation on the blockchain and updating the database. Please wait..."
-      />
     </DashboardLayout>
   );
 }
