@@ -56,4 +56,8 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  blockchain_tx_hash?: string;
 }
