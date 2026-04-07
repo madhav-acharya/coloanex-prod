@@ -25,7 +25,7 @@ export const openMetaMask = async (): Promise<void> => {
   if (!enabled) {
     Alert.alert(
       "Info",
-      "Blockchain is disabled. Operations will proceed without blockchain records."
+      "Blockchain is disabled. Operations will proceed without blockchain records.",
     );
   }
 };
@@ -41,7 +41,7 @@ export const getBlockchainConfig = () => {
       contractRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_CONTRACT_REGISTRY,
       paymentRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_PAYMENT_REGISTRY,
       kycRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_KYC_REGISTRY,
-    }
+    },
   };
 };
 
@@ -50,21 +50,17 @@ export const showBlockchainInfo = (txHash?: string) => {
     Alert.alert("Info", "This record is stored off-chain only.");
     return;
   }
-  
-  Alert.alert(
-    "Blockchain Record",
-    "This record is stored on the blockchain.",
-    [
-      { text: "OK", style: "cancel" },
-      {
-        text: "View on Explorer",
-        onPress: () => {
-          const explorerURL = `https://sepolia.etherscan.io/tx/${txHash}`;
-          Linking.openURL(explorerURL);
-        }
-      }
-    ]
-  );
+
+  Alert.alert("Blockchain Record", "This record is stored on the blockchain.", [
+    { text: "OK", style: "cancel" },
+    {
+      text: "View on Explorer",
+      onPress: () => {
+        const explorerURL = `https://sepolia.etherscan.io/tx/${txHash}`;
+        Linking.openURL(explorerURL);
+      },
+    },
+  ]);
 };
 
 export const disconnectWallet = () => {
