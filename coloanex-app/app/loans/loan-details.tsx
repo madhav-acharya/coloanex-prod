@@ -909,10 +909,8 @@ export default function LoanDetailsScreen() {
                               loanId: loan.id,
                               contractId: contract.id,
                               scheduleId: item.id,
-                              amount: String(item.totalAmount),
-                              outstandingBalance: String(
-                                contract.outstandingBalance ?? 0,
-                              ),
+                              amount: String(Number(item.totalAmount) || 0),
+                              outstandingBalance: String(Number(contract.outstandingBalance) || 0),
                               gateway: "ESEWA",
                             },
                           });
@@ -974,8 +972,8 @@ export default function LoanDetailsScreen() {
                   loanId: loan.id,
                   contractId: contract.id,
                   scheduleId: scheduleItem.id,
-                  amount: String(scheduleItem.totalAmount),
-                  outstandingBalance: String(contract.outstandingBalance ?? 0),
+                  amount: String(Number(scheduleItem.totalAmount) || 0),
+                  outstandingBalance: String(Number(contract.outstandingBalance) || 0),
                   gateway: "ESEWA",
                 },
               });
