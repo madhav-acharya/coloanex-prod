@@ -1545,10 +1545,6 @@ export default function Contracts() {
       <BlockchainProcessingModal
         open={isProcessingBlockchain}
         currentStep={blockchainStep}
-      />
-
-      <BlockchainProcessingModal
-        open={isSd || isDisbursing || isGenerating}
         message="Recording contract operation on the blockchain and updating the database. Please wait..."
       />
     </DashboardLayout>

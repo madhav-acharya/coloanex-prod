@@ -44,6 +44,20 @@ export interface VerifyPaymentResult {
   status: "COMPLETED" | "FAILED";
 }
 
+export interface LookupPaymentPayload {
+  transactionUuid: string;
+  totalAmount?: number;
+  gateway: PaymentGateway;
+}
+
+export interface LookupPaymentResult {
+  status: "COMPLETED" | "PENDING" | "FAILED" | "REFUNDED" | "EXPIRED";
+  gatewayTransactionId?: string;
+  gatewayResponse?: Record<string, unknown>;
+  alreadyProcessed: boolean;
+  transactionId: string | null;
+}
+
 export const paymentsApi = {
   initiatePayment: async (
     payload: InitiatePaymentPayload,
@@ -56,6 +70,13 @@ export const paymentsApi = {
     payload: VerifyPaymentPayload,
   ): Promise<VerifyPaymentResult> => {
     const { data } = await client.post("/payments/verify", payload);
+    return data;
+  },
+
+  lookupPayment: async (
+    payload: LookupPaymentPayload,
+  ): Promise<LookupPaymentResult> => {
+    const { data } = await client.post("/payments/lookup", payload);
     return data;
   },
 };

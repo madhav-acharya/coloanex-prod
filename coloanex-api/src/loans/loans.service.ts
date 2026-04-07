@@ -205,8 +205,8 @@ export class LoansService {
       );
     }
 
-    const loanId = randomUUID();
-    let blockchainTxHash: string | undefined = createLoanDto.blockchain_tx_hash;
+    const loanId = createLoanDto.id || randomUUID();
+    let blockchainTxHash: string | undefined = createLoanDto.blockchainTxHash;
     let blockchainData: any = null;
 
     if (!blockchainTxHash && this.blockchainService.isEnabled()) {
@@ -234,7 +234,9 @@ export class LoansService {
           `[Loan ${loanId}] Blockchain successful: tx=${bcTx.txHash} block=${bcTx.blockNumber} gas=${bcTx.gasFeeGwei} GWEI`,
         );
       } else {
-        this.logger.warn(`[Loan ${loanId}] Blockchain transaction failed, continuing without blockchain record`);
+        this.logger.warn(
+          `[Loan ${loanId}] Blockchain transaction failed, continuing without blockchain record`,
+        );
       }
     } else if (blockchainTxHash) {
       this.logger.log(
@@ -683,8 +685,8 @@ export class LoansService {
       }
     }
 
-    if (reviewLoanDto.blockchain_tx_hash) {
-      updateData.blockchainTxHash = reviewLoanDto.blockchain_tx_hash;
+    if (reviewLoanDto.blockchainTxHash) {
+      updateData.blockchainTxHash = reviewLoanDto.blockchainTxHash;
     }
 
     this.logger.log(`[Loan ${id}] Updating database record...`);
@@ -861,9 +863,21 @@ export class LoansService {
       }
     }
 
-    await this.prisma.loan.delete({
-      where: { id },
-    });
+    // Delete related records to resolve foreign key constraints
+    await this.prisma.$transaction([
+      this.prisma.paymentSchedule.deleteMany({
+        where: { contract: { loanId: id } },
+      }),
+      this.prisma.transaction.deleteMany({
+        where: { contract: { loanId: id } },
+      }),
+      this.prisma.contract.deleteMany({
+        where: { loanId: id },
+      }),
+      this.prisma.loan.delete({
+        where: { id },
+      }),
+    ]);
 
     await this.activityLogsService.logUserActivity(
       user.sub,

@@ -7,14 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
+import { Buffer } from "buffer";
 import AppHeader from "@/components/ui/AppHeader";
-import * as WebBrowser from "expo-web-browser";
+import { PaymentWebView } from "@/components/payments";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
-import { loansApi, walletsApi, paymentsApi, contractsApi } from "@/api";
+import { useKhaltiPayment, useEsewaPayment } from "@/hooks/payments";
+import { loansApi, walletsApi, contractsApi, paymentSchedulesApi } from "@/api";
 import { useToast, BlockchainProcessingModal } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Wallet } from "@/api/walletsApi";
@@ -22,8 +25,8 @@ import type { Contract } from "@/api/contractsApi";
 import type { PaymentGateway } from "@/api/paymentsApi";
 import { formatCurrency } from "@/utils/currency";
 
-const SUCCESS_URL = "http://localhost:8081/payment/success";
-const FAILURE_URL = "http://localhost:8081/payment/failure";
+const SUCCESS_URL_PATTERN = "/payment/success";
+const FAILURE_URL_PATTERN = "/payment/failure";
 
 type GatewayOption = {
   id: PaymentGateway;
@@ -53,10 +56,13 @@ export default function MakeRepaymentScreen() {
     gateway?: string;
   }>();
   const { showToast } = useToast();
+  const khaltiPayment = useKhaltiPayment();
+  const esewaPayment = useEsewaPayment();
 
   const [loan, setLoan] = useState<Loan | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
+  const [alreadyPaid, setAlreadyPaid] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
     (params.gateway as PaymentGateway) ?? null,
   );
@@ -64,13 +70,34 @@ export default function MakeRepaymentScreen() {
     "installment",
   );
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
+  const [initiating, setInitiating] = useState(false);
+  const [blockchainProcessing, setBlockchainProcessing] = useState(false);
+  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [showPaymentWebView, setShowPaymentWebView] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [currentPaymentData, setCurrentPaymentData] = useState<{
+    transactionUuid: string;
+    amount: number;
+    walletId: string;
+    gateway: PaymentGateway;
+  } | null>(null);
 
-  const installmentAmount = parseFloat(params.amount ?? "0");
+  const safeNum = (val: any) => {
+    if (val === undefined || val === null) return 0;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') {
+      if (val === '[object Object]') return 0;
+      return parseFloat(val) || 0;
+    }
+    return 0; // if it's an object, we just gracefully fallback to 0 in case frontend got messed up
+  };
+
+  const installmentAmount = safeNum(params.amount);
   const outstandingBalance = contract
-    ? Number(contract.outstandingBalance) ||
-      Number(contract.totalAmountDue) - Number(contract.totalAmountPaid)
-    : parseFloat(params.outstandingBalance ?? "0");
+    ? safeNum(contract.outstandingBalance) ||
+      safeNum(contract.totalAmountDue) - safeNum(contract.totalAmountPaid)
+    : safeNum(params.outstandingBalance);
+
   const amount =
     paymentMode === "full" && outstandingBalance > 0
       ? outstandingBalance
@@ -88,17 +115,182 @@ export default function MakeRepaymentScreen() {
       setLoan(loanData);
       setWallet(walletData);
       setContract(contractData);
+
+      if (params.scheduleId) {
+        try {
+          const schedule = await paymentSchedulesApi.getById(params.scheduleId);
+          if (schedule?.status === "PAID") {
+            setAlreadyPaid(true);
+          }
+        } catch {
+        }
+      }
     } catch {
       showToast("Failed to load payment details. Please try again.", "error");
       router.back();
     } finally {
       setLoading(false);
     }
-  }, [params.loanId, params.contractId]);
+  }, [params.loanId, params.contractId, params.scheduleId]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const handlePaymentSuccess = async (url: string) => {
+    if (!currentPaymentData) return;
+
+    setShowPaymentWebView(false);
+    setBlockchainProcessing(true);
+    setBlockchainStep("blockchain");
+
+    try {
+      const paymentHook =
+        currentPaymentData.gateway === "KHALTI" ? khaltiPayment : esewaPayment;
+
+      const success = await paymentHook.verify({
+        transactionUuid: currentPaymentData.transactionUuid,
+        totalAmount: currentPaymentData.amount,
+        walletId: currentPaymentData.walletId,
+        type: "INSTALLMENT_PAYMENT",
+        contractId: params.contractId || undefined,
+        paymentScheduleId:
+          paymentMode === "installment"
+            ? params.scheduleId || undefined
+            : undefined,
+      });
+
+      setBlockchainStep("database");
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setBlockchainStep("complete");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      if (success) {
+        setBlockchainProcessing(false);
+        router.replace({
+          pathname: "/payment/success",
+          params: {
+            amount: String(currentPaymentData.amount),
+            gateway: currentPaymentData.gateway,
+          },
+        });
+      } else {
+        await handlePaymentLookup();
+      }
+    } catch {
+      await handlePaymentLookup();
+    }
+  };
+
+  const handlePaymentFailure = async (url: string) => {
+    if (!currentPaymentData) return;
+
+    setShowPaymentWebView(false);
+    setBlockchainProcessing(true);
+    setBlockchainStep("blockchain");
+
+    try {
+      await handlePaymentLookup();
+    } catch {
+      setBlockchainProcessing(false);
+      router.replace({
+        pathname: "/payment/failure",
+        params: {
+          amount: String(currentPaymentData.amount),
+          gateway: currentPaymentData.gateway,
+        },
+      });
+    }
+  };
+
+  const handlePaymentLookup = async () => {
+    if (!currentPaymentData) return;
+
+    const paymentHook =
+      currentPaymentData.gateway === "KHALTI" ? khaltiPayment : esewaPayment;
+
+    const maxAttempts = 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const lookupResult = await paymentHook.lookup(
+          currentPaymentData.transactionUuid,
+          currentPaymentData.amount,
+        );
+
+        if (lookupResult.status === "COMPLETED") {
+          if (lookupResult.alreadyProcessed) {
+            setBlockchainProcessing(false);
+            router.replace({
+              pathname: "/payment/success",
+              params: {
+                amount: String(currentPaymentData.amount),
+                gateway: currentPaymentData.gateway,
+              },
+            });
+            return;
+          }
+
+          const success = await paymentHook.verify({
+            transactionUuid: currentPaymentData.transactionUuid,
+            totalAmount: currentPaymentData.amount,
+            walletId: currentPaymentData.walletId,
+            type: "INSTALLMENT_PAYMENT",
+            contractId: params.contractId || undefined,
+            paymentScheduleId:
+              paymentMode === "installment"
+                ? params.scheduleId || undefined
+                : undefined,
+          });
+
+          if (success) {
+            setBlockchainStep("database");
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            setBlockchainStep("complete");
+            await new Promise((resolve) => setTimeout(resolve, 400));
+            setBlockchainProcessing(false);
+            router.replace({
+              pathname: "/payment/success",
+              params: {
+                amount: String(currentPaymentData.amount),
+                gateway: currentPaymentData.gateway,
+              },
+            });
+            return;
+          }
+        } else if (
+          lookupResult.status === "FAILED" ||
+          lookupResult.status === "EXPIRED"
+        ) {
+          setBlockchainProcessing(false);
+          router.replace({
+            pathname: "/payment/failure",
+            params: {
+              amount: String(currentPaymentData.amount),
+              gateway: currentPaymentData.gateway,
+            },
+          });
+          return;
+        }
+
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (error) {
+        if (attempt === maxAttempts - 1) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    }
+
+    throw new Error("Payment verification timed out");
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentWebView(false);
+    setBlockchainProcessing(false);
+    showToast("Payment was cancelled.", "warning");
+  };
 
   const handlePay = async () => {
     if (!selectedGateway) {
@@ -110,19 +302,25 @@ export default function MakeRepaymentScreen() {
       return;
     }
 
-    setPaying(true);
+    setInitiating(true);
     try {
       const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
-      const resolvedSuccessUrl =
-        selectedGateway === "KHALTI"
-          ? `${apiBase}/payments/khalti/success?target=${encodeURIComponent(SUCCESS_URL)}`
-          : `${apiBase}/payments/esewa/success?target=${encodeURIComponent(SUCCESS_URL)}`;
-      const resolvedFailureUrl =
-        selectedGateway === "KHALTI"
-          ? `${apiBase}/payments/khalti/failure?target=${encodeURIComponent(FAILURE_URL)}`
-          : `${apiBase}/payments/esewa/failure?target=${encodeURIComponent(FAILURE_URL)}`;
+      const apiUrl = Platform.OS === 'web' && apiBase.includes('192.168.')
+        ? 'http://localhost:3000/api'
+        : `${apiBase}/api`;
 
-      const result = await paymentsApi.initiatePayment({
+      const resolvedSuccessUrl = Platform.OS === 'web'
+        ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
+        : `https://coloanex-intercept.app/payment/success`;
+
+      const resolvedFailureUrl = Platform.OS === 'web'
+        ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
+        : `https://coloanex-intercept.app/payment/failure`;
+
+      const paymentHook =
+        selectedGateway === "KHALTI" ? khaltiPayment : esewaPayment;
+
+      const result = await paymentHook.initiate({
         walletId: wallet?.id,
         contractId: params.contractId || undefined,
         paymentScheduleId:
@@ -131,91 +329,61 @@ export default function MakeRepaymentScreen() {
             : undefined,
         amount,
         type: "INSTALLMENT_PAYMENT",
-        gateway: selectedGateway,
         successUrl: resolvedSuccessUrl,
         failureUrl: resolvedFailureUrl,
       });
 
-      let paymentUrl = result.paymentUrl;
+      let finalPaymentUrl = result.paymentUrl;
 
-      if (
-        selectedGateway === "ESEWA" &&
-        result.formData &&
-        Object.keys(result.formData).length > 0
-      ) {
-        const encoded = btoa(
-          unescape(
-            encodeURIComponent(
-              JSON.stringify({
-                paymentUrl: result.paymentUrl,
-                formData: result.formData,
-              }),
-            ),
-          ),
-        );
-        paymentUrl = `${process.env.EXPO_PUBLIC_API_BASE_URL}/payments/esewa-form?data=${encoded}`;
+      if (selectedGateway === "ESEWA") {
+        if (result.formData && Object.keys(result.formData).length > 0) {
+          const encoded = Buffer.from(
+            JSON.stringify({
+              paymentUrl: result.paymentUrl,
+              formData: result.formData,
+            }),
+          ).toString("base64");
+          finalPaymentUrl = `${apiUrl}/payments/esewa-form?data=${encoded}`;
+        }
       }
 
-      const browserResult = await WebBrowser.openAuthSessionAsync(
-        paymentUrl,
-        "http://localhost:8081",
-      );
+      const paymentData = {
+        transactionUuid:
+          selectedGateway === "KHALTI"
+            ? (result.formData?.pidx ?? result.transactionUuid)
+            : result.transactionUuid,
+        amount,
+        walletId: result.walletId,
+        gateway: selectedGateway,
+      };
 
-      if (browserResult.type === "success") {
-        const url = browserResult.url ?? "";
-        if (url.includes("success")) {
-          const verifyUuid =
-            selectedGateway === "KHALTI"
-              ? (result.formData?.pidx ?? result.transactionUuid)
-              : result.transactionUuid;
-          const verifyResult = await paymentsApi.verifyPayment({
-            transactionUuid: verifyUuid,
-            totalAmount: amount,
-            gateway: selectedGateway,
-            walletId: result.walletId ?? wallet?.id ?? "",
+      setCurrentPaymentData(paymentData);
+
+      if (Platform.OS === "web") {
+        sessionStorage.setItem(
+          "app_pending_payment",
+          JSON.stringify({
+            ...paymentData,
             type: "INSTALLMENT_PAYMENT",
             contractId: params.contractId || undefined,
             paymentScheduleId:
               paymentMode === "installment"
                 ? params.scheduleId || undefined
                 : undefined,
-          });
-          if (verifyResult.success) {
-            router.replace({
-              pathname: "/payment/success",
-              params: {
-                amount: String(amount),
-                gateway: selectedGateway,
-              },
-            });
-          } else {
-            router.replace({
-              pathname: "/payment/failure",
-              params: {
-                amount: String(amount),
-                gateway: selectedGateway,
-              },
-            });
-          }
-        } else {
-          router.replace({
-            pathname: "/payment/failure",
-            params: {
-              amount: String(amount),
-              gateway: selectedGateway,
-            },
-          });
-        }
-      } else if (browserResult.type === "cancel") {
-        showToast("Payment was cancelled.", "warning");
+          }),
+        );
       }
-    } catch {
-      showToast(
-        "An error occurred while processing your payment. Please try again.",
-        "error",
-      );
-    } finally {
-      setPaying(false);
+
+      setPaymentUrl(finalPaymentUrl);
+      setInitiating(false);
+      setShowPaymentWebView(true);
+    } catch (error: any) {
+      setInitiating(false);
+      const errorMessage =
+        error?.message ||
+        error?.data?.message ||
+        "An error occurred while processing your payment. Please try again.";
+      showToast(errorMessage, "error");
     }
   };
 
@@ -233,6 +401,47 @@ export default function MakeRepaymentScreen() {
   }
 
   if (!loan) return null;
+
+  if (alreadyPaid) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <AppHeader title="Make Payment" showThemeToggle={false} />
+        <View style={styles.alreadyPaidContainer}>
+          <View
+            style={[
+              styles.alreadyPaidIconWrap,
+              { backgroundColor: `${colors.success}20` },
+            ]}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={64}
+              color={colors.success}
+            />
+          </View>
+          <Text style={[styles.alreadyPaidTitle, { color: colors.text }]}>
+            Installment Already Paid
+          </Text>
+          <Text
+            style={[styles.alreadyPaidSub, { color: colors.textSecondary }]}
+          >
+            This installment has already been paid successfully. No further
+            action is required.
+          </Text>
+          <TouchableOpacity
+            style={[styles.backBtn, { backgroundColor: colors.primary }]}
+            activeOpacity={0.85}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.buttonText} />
+            <Text style={[styles.backBtnText, { color: colors.buttonText }]}>
+              Go Back
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const lenderName = loan.borrower?.tenant?.name ?? "Lender";
 
@@ -494,7 +703,8 @@ export default function MakeRepaymentScreen() {
             color={colors.primary}
           />
           <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-            Your payment is secured with 256-bit SSL encryption.
+            Your payment is secured with 256-bit SSL encryption and recorded on
+            the blockchain for immutable proof.
           </Text>
         </View>
 
@@ -517,14 +727,14 @@ export default function MakeRepaymentScreen() {
                   : selectedGateway === "KHALTI"
                     ? "#5C2D91"
                     : colors.border,
-              opacity: paying ? 0.7 : 1,
+              opacity: initiating ? 0.7 : 1,
             },
           ]}
           activeOpacity={0.85}
           onPress={handlePay}
-          disabled={!selectedGateway || paying}
+          disabled={!selectedGateway || initiating}
         >
-          {paying ? (
+          {initiating ? (
             <ActivityIndicator size="small" color={colors.buttonText} />
           ) : (
             <>
@@ -564,8 +774,26 @@ export default function MakeRepaymentScreen() {
       </View>
 
       <BlockchainProcessingModal
-        visible={paying}
-        message="Processing payment on the blockchain and updating the database. Please wait..."
+        visible={initiating}
+        message="Preparing your secure payment... This will only take a moment."
+        currentStep="blockchain"
+      />
+
+      <BlockchainProcessingModal
+        visible={blockchainProcessing}
+        message="Recording payment on the blockchain and updating your account. Please wait..."
+        currentStep={blockchainStep}
+      />
+
+      <PaymentWebView
+        visible={showPaymentWebView}
+        paymentUrl={paymentUrl}
+        successUrlPattern={SUCCESS_URL_PATTERN}
+        failureUrlPattern={FAILURE_URL_PATTERN}
+        onSuccess={handlePaymentSuccess}
+        onFailure={handlePaymentFailure}
+        onCancel={handlePaymentCancel}
+        gateway={selectedGateway ?? "KHALTI"}
       />
     </View>
   );
@@ -579,6 +807,41 @@ const createStyles = (colors: Record<string, string>) =>
       alignItems: "center",
       justifyContent: "center",
     },
+    alreadyPaidContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: spacing.xl,
+    },
+    alreadyPaidIconWrap: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.lg,
+    },
+    alreadyPaidTitle: {
+      fontSize: 22,
+      fontWeight: "800",
+      marginBottom: spacing.sm,
+      textAlign: "center",
+    },
+    alreadyPaidSub: {
+      fontSize: 14,
+      textAlign: "center",
+      lineHeight: 22,
+      marginBottom: spacing.xl,
+    },
+    backBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: 14,
+      paddingHorizontal: spacing.xl,
+      borderRadius: borderRadius.lg,
+    },
+    backBtnText: { fontSize: 15, fontWeight: "700" },
     scroll: { flex: 1 },
     scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md },
     summaryCard: {
@@ -679,7 +942,6 @@ const createStyles = (colors: Record<string, string>) =>
       backgroundColor: "transparent",
     },
     gatewayName: { fontSize: 15, fontWeight: "700" },
-    gatewayTagline: { fontSize: 11, fontWeight: "500", textAlign: "center" },
     gatewayCheckmark: {
       position: "absolute",
       top: -6,

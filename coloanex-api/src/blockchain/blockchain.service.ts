@@ -564,8 +564,14 @@ export class BlockchainService {
       const result = await this.extractTxResult(receipt);
       this.logger.log(`[deleteLoan] loan=${loanId} txHash=${result.txHash}`);
       return result;
-    } catch (err) {
-      this.logger.error('[deleteLoan] failed', (err as Error).message);
+    } catch (err: any) {
+      this.logger.warn(
+        `[deleteLoan] failed: ${
+          err.code === 'CALL_EXCEPTION'
+            ? 'Loan does not exist on blockchain'
+            : err.message
+        }`,
+      );
       return null;
     }
   }

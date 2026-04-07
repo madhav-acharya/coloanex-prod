@@ -6,6 +6,8 @@ import type {
   InitiatePaymentResult,
   VerifyPaymentParams,
   VerifyPaymentResult,
+  LookupPaymentParams,
+  LookupPaymentResult,
 } from '../payment-gateway.interface';
 
 @Injectable()
@@ -84,5 +86,61 @@ export class EsewaGateway implements IPaymentGateway {
       gatewayTransactionId: data['ref_id'] as string | undefined,
       gatewayResponse: data,
     };
+  }
+
+  async lookupPayment(
+    params: LookupPaymentParams,
+  ): Promise<LookupPaymentResult> {
+    const { transactionUuid, totalAmount } = params;
+
+    if (!totalAmount) {
+      throw new InternalServerErrorException(
+        'totalAmount is required for eSewa lookup',
+      );
+    }
+
+    const url =
+      `${this.statusCheckUrl}?product_code=${encodeURIComponent(this.merchantId)}` +
+      `&total_amount=${totalAmount}` +
+      `&transaction_uuid=${encodeURIComponent(transactionUuid)}`;
+
+    let data: Record<string, unknown>;
+
+    try {
+      const response = await fetch(url);
+      data = (await response.json()) as Record<string, unknown>;
+
+      const esewaStatus = data['status'] as string;
+      let mappedStatus: LookupPaymentResult['status'];
+
+      switch (esewaStatus) {
+        case 'COMPLETE':
+          mappedStatus = 'COMPLETED';
+          break;
+        case 'PENDING':
+        case 'INITIATED':
+          mappedStatus = 'PENDING';
+          break;
+        case 'REFUNDED':
+          mappedStatus = 'REFUNDED';
+          break;
+        case 'EXPIRED':
+        case 'CANCELED':
+          mappedStatus = 'EXPIRED';
+          break;
+        default:
+          mappedStatus = 'FAILED';
+      }
+
+      return {
+        status: mappedStatus,
+        gatewayTransactionId: data['ref_id'] as string | undefined,
+        gatewayResponse: data,
+      };
+    } catch {
+      throw new InternalServerErrorException(
+        'Failed to reach eSewa lookup service',
+      );
+    }
   }
 }

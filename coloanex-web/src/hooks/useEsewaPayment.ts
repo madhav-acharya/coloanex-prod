@@ -1,6 +1,7 @@
 import {
   useInitiatePaymentMutation,
   useVerifyPaymentMutation,
+  useLookupPaymentMutation,
 } from "@/apis/paymentsApi";
 import type { TransactionType } from "@/apis/paymentsApi";
 
@@ -73,11 +74,69 @@ export function parseEsewaCallbackParams(): EsewaCallbackParams | null {
   return { transactionUuid, status };
 }
 
+async function pollLookup(
+  lookupPayment: any,
+  transactionUuid: string,
+  amount: number,
+  pending: PendingPayment,
+  verifyPayment: any,
+  maxAttempts = 10,
+): Promise<any> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const lookupResult = await lookupPayment({
+        transactionUuid,
+        totalAmount: amount,
+        gateway: "ESEWA",
+      }).unwrap();
+
+      if (lookupResult.status === "COMPLETED") {
+        if (lookupResult.alreadyProcessed) {
+          return {
+            success: true,
+            transactionId: lookupResult.transactionId,
+            status: "COMPLETED",
+          };
+        }
+
+        return verifyPayment({
+          transactionUuid,
+          totalAmount: amount,
+          gateway: "ESEWA",
+          walletId: pending.walletId,
+          type: pending.type as any,
+          contractId: pending.contractId,
+          paymentScheduleId: pending.paymentScheduleId,
+        }).unwrap();
+      } else if (
+        lookupResult.status === "FAILED" ||
+        lookupResult.status === "EXPIRED"
+      ) {
+        return { success: false, transactionId: null, status: "FAILED" };
+      }
+
+      // PENDING or REFUNDED - wait and retry
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      if (attempt === maxAttempts - 1) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+
+  return { success: false, transactionId: null, status: "FAILED" };
+}
+
 export function useEsewaPayment() {
   const [initiatePayment, { isLoading: isInitiating }] =
     useInitiatePaymentMutation();
   const [verifyPayment, { isLoading: isVerifying }] =
     useVerifyPaymentMutation();
+  const [lookupPayment, { isLoading: isLookingUp }] =
+    useLookupPaymentMutation();
 
   const pay = async (options: PayOptions): Promise<void> => {
     const {
@@ -124,34 +183,44 @@ export function useEsewaPayment() {
       return { success: false, transactionId: null, status: "FAILED" };
     }
 
-    if (callbackParams.status !== "COMPLETE") {
-      await verifyPayment({
-        transactionUuid: pending.transactionUuid,
-        totalAmount: pending.amount,
-        gateway: "ESEWA",
-        walletId: pending.walletId,
-        type: pending.type as any,
-        contractId: pending.contractId,
-        paymentScheduleId: pending.paymentScheduleId,
-      }).unwrap();
-      return { success: false, transactionId: null, status: "FAILED" };
+    // Try direct verification first
+    if (callbackParams.status === "COMPLETE") {
+      try {
+        return await verifyPayment({
+          transactionUuid: pending.transactionUuid,
+          totalAmount: pending.amount,
+          gateway: "ESEWA",
+          walletId: pending.walletId,
+          type: pending.type as any,
+          contractId: pending.contractId,
+          paymentScheduleId: pending.paymentScheduleId,
+        }).unwrap();
+      } catch (error) {
+        // If verification fails, try lookup as fallback
+        return pollLookup(
+          lookupPayment,
+          pending.transactionUuid,
+          pending.amount,
+          pending,
+          verifyPayment,
+        );
+      }
     }
 
-    return verifyPayment({
-      transactionUuid: callbackParams.transactionUuid,
-      totalAmount: pending.amount,
-      gateway: "ESEWA",
-      walletId: pending.walletId,
-      type: pending.type as any,
-      contractId: pending.contractId,
-      paymentScheduleId: pending.paymentScheduleId,
-    }).unwrap();
+    // If status is not COMPLETE, use lookup to check actual status
+    return pollLookup(
+      lookupPayment,
+      pending.transactionUuid,
+      pending.amount,
+      pending,
+      verifyPayment,
+    );
   };
 
   return {
     pay,
     verifyFromCallback,
     isInitiating,
-    isVerifying,
+    isVerifying: isVerifying || isLookingUp,
   };
 }

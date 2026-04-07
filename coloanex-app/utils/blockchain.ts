@@ -51,16 +51,12 @@ export const showBlockchainInfo = (txHash?: string) => {
     return;
   }
 
-  Alert.alert("Blockchain Record", "This record is stored on the blockchain.", [
-    { text: "OK", style: "cancel" },
-    {
-      text: "View on Explorer",
-      onPress: () => {
-        const explorerURL = `https://sepolia.etherscan.io/tx/${txHash}`;
-        Linking.openURL(explorerURL);
-      },
-    },
-  ]);
+  // Direct redirect to explorer
+  const explorerURL = `https://sepolia.etherscan.io/tx/${txHash}`;
+  Linking.openURL(explorerURL).catch((error) => {
+    console.error("Failed to open explorer URL:", error);
+    Alert.alert("Error", "Could not open blockchain explorer");
+  });
 };
 
 export const disconnectWallet = () => {

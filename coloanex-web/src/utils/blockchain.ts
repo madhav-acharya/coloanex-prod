@@ -245,7 +245,7 @@ export const deleteLoanOnBlockchain = async (
     signer,
   );
 
-  const tx = await contract.deleteLoan(loanId);
+  const tx = await contract.updateLoanStatus(loanId, "DELETED");
   const receipt = await tx.wait();
   return receipt.hash;
 };

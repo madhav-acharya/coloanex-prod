@@ -21,12 +21,24 @@ export interface VerifyPaymentResult {
   gatewayResponse: Record<string, unknown>;
 }
 
+export interface LookupPaymentParams {
+  transactionUuid: string;
+  totalAmount?: number;
+}
+
+export interface LookupPaymentResult {
+  status: 'COMPLETED' | 'PENDING' | 'FAILED' | 'REFUNDED' | 'EXPIRED';
+  gatewayTransactionId?: string;
+  gatewayResponse?: Record<string, unknown>;
+}
+
 export interface IPaymentGateway {
   readonly key: string;
   initiatePayment(
     params: InitiatePaymentParams,
   ): Promise<InitiatePaymentResult>;
   verifyPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResult>;
+  lookupPayment(params: LookupPaymentParams): Promise<LookupPaymentResult>;
 }
 
 export const PAYMENT_GATEWAY_REGISTRY = 'PAYMENT_GATEWAY_REGISTRY';

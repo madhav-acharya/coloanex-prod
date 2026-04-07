@@ -1,14 +1,14 @@
-export const formatCurrency = (amount: number | null | undefined): string => {
-  if (amount === null || amount === undefined || isNaN(amount)) {
+export const formatCurrency = (amount: any): string => {
+  const num = Number(amount);
+  if (amount === null || amount === undefined || isNaN(num)) {
     return "₨ 0";
   }
-  return `₨ ${amount.toLocaleString("en-NP")}`;
+  return `₨ ${num.toLocaleString("en-NP")}`;
 };
 
-export const formatCurrencyShort = (
-  amount: number | null | undefined,
-): string => {
-  if (amount === null || amount === undefined || isNaN(amount)) {
+export const formatCurrencyShort = (amount: any): string => {
+  const num = Number(amount);
+  if (amount === null || amount === undefined || isNaN(num)) {
     return "₨ 0";
   }
   if (amount >= 10000000) {

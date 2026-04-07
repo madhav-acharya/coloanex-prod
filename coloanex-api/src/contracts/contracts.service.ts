@@ -95,6 +95,74 @@ export class ContractsService {
     };
   }
 
+  private async createPaymentSchedules(
+    contractId: string,
+    loanAmount: number,
+    interestRate: number,
+    termMonths: number,
+    paymentFrequency: string,
+    startDate: Date,
+  ): Promise<void> {
+    const { installmentAmount, totalInstallments, totalAmountDue } =
+      this.calculateInstallments(
+        loanAmount,
+        interestRate,
+        termMonths,
+        paymentFrequency,
+      );
+
+    const totalInterest =
+      (loanAmount * interestRate * termMonths) / (12 * 100);
+    const principalPerInstallment =
+      Math.round((loanAmount / totalInstallments) * 100) / 100;
+    const interestPerInstallment =
+      Math.round((totalInterest / totalInstallments) * 100) / 100;
+
+    let totalPrincipalAllocated = 0;
+    let totalInterestAllocated = 0;
+    let totalAmountAllocated = 0;
+
+    const schedules: any[] = [];
+
+    for (let i = 1; i <= totalInstallments; i++) {
+      let isLast = i === totalInstallments;
+      let pAmt = isLast ? Math.max(0, loanAmount - totalPrincipalAllocated) : principalPerInstallment;
+      let iAmt = isLast ? Math.max(0, totalInterest - totalInterestAllocated) : interestPerInstallment;
+      let tAmt = isLast ? Math.max(0, totalAmountDue - totalAmountAllocated) : installmentAmount;
+
+      pAmt = Math.round(pAmt * 100) / 100;
+      iAmt = Math.round(iAmt * 100) / 100;
+      tAmt = Math.round(tAmt * 100) / 100;
+
+      let dueDate = new Date(startDate);
+      if (paymentFrequency === 'WEEKLY') {
+        dueDate.setDate(dueDate.getDate() + 7 * i);
+      } else if (paymentFrequency === 'QUARTERLY') {
+        dueDate.setMonth(dueDate.getMonth() + 3 * i);
+      } else {
+        dueDate.setMonth(dueDate.getMonth() + i);
+      }
+
+      schedules.push({
+        contractId,
+        installmentNumber: i,
+        dueDate,
+        principalAmount: pAmt,
+        interestAmount: iAmt,
+        totalAmount: tAmt,
+        status: 'PENDING' as any,
+      });
+
+      totalPrincipalAllocated += pAmt;
+      totalInterestAllocated += iAmt;
+      totalAmountAllocated += tAmt;
+    }
+
+    await this.prisma.paymentSchedule.createMany({
+      data: schedules,
+    });
+  }
+
   async create(
     createContractDto: CreateContractDto,
     user: JwtPayload,
@@ -613,6 +681,15 @@ export class ContractsService {
       data: { status: 'LOAN_PROVIDED' as any },
     });
 
+    await this.createPaymentSchedules(
+      id,
+      Number(contract.loanAmount),
+      Number(contract.interestRate),
+      contract.termMonths,
+      contract.paymentFrequency,
+      new Date(contract.startDate)
+    );
+
     return updatedContract as unknown as Contract;
   }
 
@@ -682,6 +759,15 @@ export class ContractsService {
         status: 'LOAN_PROVIDED' as any,
       },
     });
+
+    await this.createPaymentSchedules(
+      id,
+      Number(contract.loanAmount),
+      Number(contract.interestRate),
+      contract.termMonths,
+      contract.paymentFrequency,
+      new Date(contract.startDate)
+    );
 
     return updatedContract as unknown as Contract;
   }

@@ -1,9 +1,21 @@
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import { Platform } from "react-native";
 
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_BASE_URL!;
+// Use localhost for web/development, network IP for mobile
+const getApiBaseUrl = () => {
+  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  
+  if (Platform.OS === 'web' && envUrl?.includes('192.168.')) {
+    // For web development, use localhost instead of network IP
+    return 'http://localhost:3000/api';
+  }
+  
+  return `${envUrl}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
