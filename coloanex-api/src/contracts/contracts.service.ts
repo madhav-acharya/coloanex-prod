@@ -165,36 +165,48 @@ export class ContractsService {
     const contractId = randomUUID();
     let blockchainData: any = null;
     let blockchainTxHash: string | null = null;
-    
-    const bcTx = await this.blockchainService.recordContract(
-      contractId,
-      createContractDto.loanId,
-      Math.round(loanAmount * 100),
-      Math.round(interestRate * 100),
-      createContractDto.termMonths,
-      Math.round(totalAmountDue * 100),
-    );
-    
-    if (bcTx) {
-      blockchainTxHash = bcTx.txHash;
-      blockchainData = {
-        txHash: bcTx.txHash,
-        blockNumber: bcTx.blockNumber,
-        gasUsed: bcTx.gasUsed,
-        gasPriceGwei: bcTx.gasPriceGwei,
-        gasFeeGwei: bcTx.gasFeeGwei,
-        explorerUrl: bcTx.explorerUrl,
-      };
-    } else if (this.blockchainService.isEnabled()) {
-      throw new BadRequestException(
-        'Blockchain is enabled but unavailable. Cannot create contract without blockchain record.',
+
+    if (this.blockchainService.isEnabled()) {
+      this.logger.log(
+        `[Contract ${contractId}] Processing blockchain transaction...`,
       );
+      const bcTx = await this.blockchainService.recordContract(
+        contractId,
+        createContractDto.loanId,
+        Math.round(loanAmount * 100),
+        Math.round(interestRate * 100),
+        createContractDto.termMonths,
+        Math.round(totalAmountDue * 100),
+      );
+
+      if (bcTx) {
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = {
+          txHash: bcTx.txHash,
+          blockNumber: bcTx.blockNumber,
+          gasUsed: bcTx.gasUsed,
+          gasPriceGwei: bcTx.gasPriceGwei,
+          gasFeeGwei: bcTx.gasFeeGwei,
+          explorerUrl: bcTx.explorerUrl,
+        };
+        this.logger.log(
+          `[Contract ${contractId}] Blockchain successful: tx=${bcTx.txHash}`,
+        );
+      } else {
+        this.logger.error(
+          `[Contract ${contractId}] Blockchain transaction failed`,
+        );
+        throw new BadRequestException(
+          'Blockchain transaction failed. Cannot create contract without blockchain record.',
+        );
+      }
     } else {
       this.logger.warn(
-        `[create] blockchain disabled — contract ${contractId} saved without chain record`,
+        `[Contract ${contractId}] Blockchain disabled, saving without chain record`,
       );
     }
 
+    this.logger.log(`[Contract ${contractId}] Creating database record...`);
     const contract = await this.prisma.contract.create({
       data: {
         id: contractId,
@@ -338,9 +350,15 @@ export class ContractsService {
       throw new ForbiddenException('You can only update your own contracts');
     }
 
-    const updated = await this.prisma.contract.update({
+    const updateData: any = { ...updateContractDto };
+    if (updateContractDto.blockchain_tx_hash) {
+      updateData.blockchainTxHash = updateContractDto.blockchain_tx_hash;
+      delete updateData.blockchain_tx_hash;
+    }
+
+    const updated = (await this.prisma.contract.update({
       where: { id },
-      data: updateContractDto,
+      data: updateData,
       include: {
         tenant: {
           select: { id: true, name: true, logo: true },
@@ -359,17 +377,25 @@ export class ContractsService {
           select: { id: true, name: true, ruleType: true },
         },
       },
-    }) as unknown as Contract;
+    })) as unknown as Contract;
 
-    if (updateContractDto.status) {
-      const bcTx = await this.blockchainService.updateContract(id, updateContractDto.status);
+    if (updateContractDto.status && this.blockchainService.isEnabled()) {
+      this.logger.log(`[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`);
+      const bcTx = await this.blockchainService.updateContract(
+        id,
+        updateContractDto.status,
+      );
       if (bcTx && bcTx.txHash) {
+        this.logger.log(`[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`);
         await this.prisma.contract.update({
           where: { id },
           data: { blockchainTxHash: bcTx.txHash },
         });
-      } else if (this.blockchainService.isEnabled()) {
-        throw new InternalServerErrorException('Failed to record contract update on blockchain');
+      } else {
+        this.logger.error(`[Contract ${id}] Blockchain update failed`);
+        throw new InternalServerErrorException(
+          'Blockchain update failed. Cannot update contract status.',
+        );
       }
     }
 
@@ -472,36 +498,34 @@ export class ContractsService {
           status: 'CONTRACT_SIGNED' as any,
         },
       });
-      const signBcTx = await this.blockchainService.signContract(id);
-      const anyContract = updatedContract as any;
-      const existingBlockchainData = anyContract.blockchain_data ?? {};
-      const signData = signBcTx
-        ? {
+      
+      if (this.blockchainService.isEnabled()) {
+        this.logger.log(`[Contract ${id}] Processing blockchain contract signing...`);
+        const signBcTx = await this.blockchainService.signContract(id);
+        
+        if (signBcTx) {
+          this.logger.log(`[Contract ${id}] Blockchain signing successful: ${signBcTx.txHash}`);
+          const anyContract = updatedContract as any;
+          const existingBlockchainData = anyContract.blockchainData ?? {};
+          const signData = {
             signTxHash: signBcTx.txHash,
             signBlockNumber: signBcTx.blockNumber,
             signGasFeeGwei: signBcTx.gasFeeGwei,
             signExplorerUrl: signBcTx.explorerUrl,
-          }
-        : {};
-      if (
-        Object.keys(signData).length > 0 ||
-        Object.keys(existingBlockchainData).length > 0
-      ) {
-        await this.prisma.contract.update({
-          where: { id },
-          data: {
-            blockchainData: { ...existingBlockchainData, ...signData },
-          },
-        });
-      }
-      if (!signBcTx && this.blockchainService.isEnabled()) {
-        throw new BadRequestException(
-          'Blockchain is enabled but unavailable. Cannot sign contract without blockchain record.',
-        );
-      } else if (!signBcTx) {
-        this.logger.warn(
-          `[signContract] blockchain disabled — signature for contract ${id} saved without chain record`,
-        );
+          };
+          
+          await this.prisma.contract.update({
+            where: { id },
+            data: {
+              blockchainData: { ...existingBlockchainData, ...signData },
+            },
+          });
+        } else {
+          this.logger.error(`[Contract ${id}] Blockchain signing failed`);
+          throw new BadRequestException(
+            'Blockchain signing failed. Cannot complete contract signing without blockchain record.',
+          );
+        }
       }
     }
 
@@ -798,7 +822,8 @@ export class ContractsService {
         totalAmountPaid: 0,
         outstandingBalance: totalAmountDue,
         termsAndConditions,
-        blockchain_data,
+        blockchainData: blockchain_data,
+        blockchainTxHash: bcTx?.txHash || null,
       } as any,
       include: {
         tenant: {
@@ -900,11 +925,24 @@ export class ContractsService {
       },
     );
 
+    let blockchainTxHash: string | null = null;
+    if (this.blockchainService.isEnabled()) {
+      this.logger.log(`[Contract ${id}] Updating blockchain status to GENERATED...`);
+      const bcTx = await this.blockchainService.updateContract(id, 'GENERATED');
+      if (bcTx?.txHash) {
+        blockchainTxHash = bcTx.txHash;
+        this.logger.log(`[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`);
+      } else {
+        this.logger.warn(`[Contract ${id}] Blockchain update failed, continuing without blockchain record`);
+      }
+    }
+
     const updatedContract = await this.prisma.contract.update({
       where: { id },
       data: {
         contractPdfUrl: uploadResult.secure_url,
         status: ContractStatus.GENERATED,
+        blockchainTxHash,
       },
       include: {
         tenant: {
