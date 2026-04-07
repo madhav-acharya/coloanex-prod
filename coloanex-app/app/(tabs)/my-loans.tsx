@@ -305,7 +305,7 @@ export default function MyLoansScreen() {
             <StatusBadge
               status={loan.status}
               colors={colors}
-              blockchainTxHash={loan.blockchain_tx_hash}
+              blockchainTxHash={loan.blockchainTxHash}
               styles={styles}
             />
           </View>
