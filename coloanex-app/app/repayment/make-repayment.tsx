@@ -15,7 +15,7 @@ import * as WebBrowser from "expo-web-browser";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, walletsApi, paymentsApi, contractsApi } from "@/api";
-import { useToast } from "@/components/ui";
+import { useToast, BlockchainProcessingModal } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Wallet } from "@/api/walletsApi";
 import type { Contract } from "@/api/contractsApi";
@@ -562,6 +562,11 @@ export default function MakeRepaymentScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <BlockchainProcessingModal
+        visible={paying}
+        message="Processing payment on the blockchain and updating the database. Please wait..."
+      />
     </View>
   );
 }
