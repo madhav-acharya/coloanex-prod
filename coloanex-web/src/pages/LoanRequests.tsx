@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
+import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
 import type { UploadedFile } from "@/types/upload";
 import {
   useGetLoansQuery,
@@ -24,6 +25,7 @@ import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
+import { updateLoanStatusOnBlockchain, recordLoanOnBlockchain } from "@/utils/blockchain";
 
 export default function LoanRequests() {
   const { toast } = useToast();
@@ -37,6 +39,8 @@ export default function LoanRequests() {
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
 
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
@@ -270,7 +274,7 @@ export default function LoanRequests() {
     setIsDeletingLoan(true);
     try {
       let blockchainTxHash: string | undefined;
-      
+
       try {
         const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
         blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
@@ -335,41 +339,103 @@ export default function LoanRequests() {
   ) => {
     if (!selectedLoan) return;
 
-    await reviewLoan({
-      id: selectedLoan.id,
-      data: {
-        status,
-        rejectionReason: rejectionReason?.trim() || undefined,
-        approvedAmount: approvedAmount || undefined,
-        ruleId: ruleId || undefined,
-        approvedTermMonths: approvedTermMonths || undefined,
-      },
-    }).unwrap();
+    setIsProcessingBlockchain(true);
+    setBlockchainStep("blockchain");
+    
+    try {
+      let blockchainTxHash: string | undefined;
 
-    toast({
-      title: "Success",
-      description: `Loan request ${status === LoanStatus.APPROVED ? "approved. Generate contract now" : status.toLowerCase()}`,
-    });
-
-    const selectedArray = Array.from(selectedRows);
-    const currentIndex = selectedArray.indexOf(selectedLoan.id);
-
-    if (currentIndex < selectedArray.length - 1) {
-      const nextLoanId = selectedArray[currentIndex + 1];
-      const nextLoan = loans.find((loan) => loan.id === nextLoanId);
-      if (nextLoan) {
-        setSelectedLoan(nextLoan);
-        return;
+      try {
+        console.log('Starting blockchain update for loan:', selectedLoan.id, 'status:', status);
+        blockchainTxHash = await updateLoanStatusOnBlockchain(
+          selectedLoan.id,
+          status,
+        );
+        console.log('Blockchain update successful, hash:', blockchainTxHash);
+      } catch (blockchainError: any) {
+        console.error('Blockchain error details:', blockchainError);
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Cancelled",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+          return;
+        } else if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Required",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+          return;
+        } else {
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+          toast({
+            title: "Blockchain Error",
+            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
       }
-    }
 
-    setReviewModalOpen(false);
-    setSelectedLoan(null);
-    setSelectedRows(new Set());
+      setBlockchainStep("database");
+
+      await reviewLoan({
+        id: selectedLoan.id,
+        data: {
+          status,
+          rejectionReason: rejectionReason?.trim() || undefined,
+          approvedAmount: approvedAmount || undefined,
+          ruleId: ruleId || undefined,
+          approvedTermMonths: approvedTermMonths || undefined,
+          blockchain_tx_hash: blockchainTxHash || undefined,
+        },
+      }).unwrap();
+
+      setBlockchainStep("database");
+      
+      setTimeout(() => {
+        setBlockchainStep("complete");
+        setTimeout(() => {
+          setBlockchainStep("blockchain");
+          setIsProcessingBlockchain(false);
+        }, 1000);
+      }, 500);
+
+      toast({
+        title: "Success",
+        description: `Loan request ${status === LoanStatus.APPROVED ? "approved. Generate contract now" : status.toLowerCase()}`,
+      });
+
+      const selectedArray = Array.from(selectedRows);
+      const currentIndex = selectedArray.indexOf(selectedLoan.id);
+
+      if (currentIndex < selectedArray.length - 1) {
+        const nextLoanId = selectedArray[currentIndex + 1];
+        const nextLoan = loans.find((loan) => loan.id === nextLoanId);
+        if (nextLoan) {
+          setSelectedLoan(nextLoan);
+          return;
+        }
+      }
+
+      setReviewModalOpen(false);
+      setSelectedLoan(null);
+      setSelectedRows(new Set());
+    } catch (error) {
+      setIsProcessingBlockchain(false);
+      setBlockchainStep("blockchain");
+      throw error;
+    }
   };
 
   const handleLoanSubmit = async () => {
-    console.log("Submitting loan with form data:", formData);
     if (
       isSuperAdmin &&
       (!formData.tenantId || formData.tenantId.trim() === "")
@@ -472,6 +538,9 @@ export default function LoanRequests() {
     };
 
     try {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      
       let blockchainTxHash: string | undefined;
 
       try {
@@ -483,15 +552,16 @@ export default function LoanRequests() {
             loanData.requestedTermMonths,
           );
         } else {
-          const { recordLoanOnBlockchain } = await import("@/utils/blockchain");
+          const loanId = `loan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           blockchainTxHash = await recordLoanOnBlockchain(
-            loanData.borrowerId || "temp-" + Date.now(),
+            loanId,
             loanData.requestedAmount * 100,
-            0,
+            1200,
             loanData.requestedTermMonths,
           );
         }
       } catch (blockchainError: any) {
+        setIsProcessingBlockchain(false);
         if (blockchainError.code === "ACTION_REJECTED") {
           toast({
             title: "Transaction Rejected",
@@ -526,6 +596,8 @@ export default function LoanRequests() {
         }
       }
 
+      setBlockchainStep("database");
+
       if (editingLoan) {
         const payload = blockchainTxHash
           ? { ...loanData, blockchain_tx_hash: blockchainTxHash }
@@ -556,6 +628,8 @@ export default function LoanRequests() {
         description: err.data?.message || "Failed to submit loan",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessingBlockchain(false);
     }
   };
 
@@ -628,52 +702,52 @@ export default function LoanRequests() {
     > = {
       [LoanStatus.DRAFT]: {
         className:
-          "bg-gray-100 dark:bg-gray-800/60 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700",
+          "bg-gray-100 dark:bg-gray-900/40 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-800",
         label: "Draft",
       },
       [LoanStatus.SUBMITTED]: {
         className:
-          "bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border-blue-200 dark:border-blue-800",
+          "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
         label: "Submitted",
       },
       [LoanStatus.UNDER_REVIEW]: {
         className:
-          "bg-amber-100 dark:bg-amber-600 text-white dark:text-amber-300 border-amber-200 dark:border-amber-800",
+          "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
         label: "Under Review",
       },
       [LoanStatus.APPROVED]: {
         className:
-          "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
+          "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800",
         label: "Approved",
       },
       [LoanStatus.REJECTED]: {
         className:
-          "bg-red-100 dark:bg-red-600 text-white dark:text-red-300 border-red-200 dark:border-red-800",
+          "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
         label: "Rejected",
       },
       [LoanStatus.CONTRACT_GENERATED]: {
         className:
-          "bg-purple-100 dark:bg-purple-600 text-white dark:text-purple-300 border-purple-200 dark:border-purple-800",
+          "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800",
         label: "Contract Generated",
       },
       [LoanStatus.CONTRACT_SIGNED]: {
         className:
-          "bg-indigo-100 dark:bg-indigo-600 text-white dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
+          "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800",
         label: "Contract Signed",
       },
       [LoanStatus.LOAN_PROVIDED]: {
         className:
-          "bg-emerald-100 dark:bg-emerald-600 text-white dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+          "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
         label: "Loan Provided",
       },
       [LoanStatus.PARTIALLY_PAID]: {
         className:
-          "bg-amber-100 dark:bg-amber-600 text-white dark:text-amber-300 border-amber-200 dark:border-amber-800",
+          "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800",
         label: "Partially Paid",
       },
       [LoanStatus.PAID]: {
         className:
-          "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border-green-200 dark:border-green-800",
+          "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800",
         label: "Paid",
       },
     };
@@ -769,12 +843,15 @@ export default function LoanRequests() {
       label: "Blockchain",
       sortable: false,
       render: (loan) => {
-        const hasBlockchainTx = !!loan?.blockchain_tx_hash;
+        const hasBlockchainTx = !!loan?.blockchain_tx_hash || !!(loan as any)?.blockchainTxHash;
         return (
           <button
             onClick={() => {
               if (hasBlockchainTx) {
-                window.open(`https://sepolia.etherscan.io/tx/${loan.blockchain_tx_hash}`, '_blank');
+                window.open(
+                  `https://sepolia.etherscan.io/tx/${loan.blockchain_tx_hash || (loan as any)?.blockchainTxHash}`,
+                  "_blank",
+                );
               } else {
                 toast({
                   title: "Info",
@@ -784,11 +861,11 @@ export default function LoanRequests() {
             }}
             className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
               hasBlockchainTx
-                ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
-                : 'bg-gray-100 text-gray-600 cursor-default'
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-600 cursor-default"
             }`}
           >
-            {hasBlockchainTx ? 'On-Chain' : 'Off-Chain'}
+            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
           </button>
         );
       },
@@ -1252,6 +1329,12 @@ export default function LoanRequests() {
         title="Delete Loan Request"
         description={`Are you sure you want to delete this loan request? This action cannot be undone.`}
         isLoading={isDeletingLoan}
+      />
+
+      <BlockchainProcessingModal
+        open={isCreating || isUpdating || isReviewing || isProcessingBlockchain}
+        currentStep={blockchainStep}
+        message="Recording loan operation on the blockchain and updating the database. Please wait..."
       />
     </DashboardLayout>
   );

@@ -20,6 +20,7 @@ import {
   useToast,
   AppHeader,
   CurrencyIcon,
+  BlockchainProcessingModal,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
@@ -826,12 +827,29 @@ export default function KYCVerificationScreen() {
               placeholder="Your occupation"
             />
 
-            <View style={[styles.label, { flexDirection: "row", alignItems: "center" }]}>
-              <Text style={[{ fontSize: 14, fontWeight: "600" }, { color: colors.text }]}>
+            <View
+              style={[
+                styles.label,
+                { flexDirection: "row", alignItems: "center" },
+              ]}
+            >
+              <Text
+                style={[
+                  { fontSize: 14, fontWeight: "600" },
+                  { color: colors.text },
+                ]}
+              >
                 Monthly Income{" "}
               </Text>
               <CurrencyIcon size={16} color={colors.text} />
-              <Text style={[styles.required, { color: colors.error, marginLeft: 4 }]}>*</Text>
+              <Text
+                style={[
+                  styles.required,
+                  { color: colors.error, marginLeft: 4 },
+                ]}
+              >
+                *
+              </Text>
             </View>
             <Input
               value={financialInfo.monthlyIncome}
@@ -1261,6 +1279,11 @@ export default function KYCVerificationScreen() {
           </View>
         </View>
       </Modal>
+
+      <BlockchainProcessingModal
+        visible={loading}
+        message="Recording your KYC verification on the blockchain and updating the database. Please wait..."
+      />
     </View>
   );
 }

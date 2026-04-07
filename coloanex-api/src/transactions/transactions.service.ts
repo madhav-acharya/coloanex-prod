@@ -37,11 +37,14 @@ export class TransactionsService {
       );
     }
 
+    const { blockchain_tx_hash, ...transactionData } = createTransactionDto;
+    
     const transaction = await this.prisma.transaction.create({
       data: {
-        ...createTransactionDto,
+        ...transactionData,
         status: TransactionStatus.PENDING as any,
         gatewayDetails: createTransactionDto.paymentDetails as any,
+        ...(blockchain_tx_hash && { blockchainTxHash: blockchain_tx_hash }),
       },
       include: {
         contract: {
@@ -87,36 +90,68 @@ export class TransactionsService {
       }
     }
 
-    const bcTx = await this.blockchainService.recordPayment(
-      transaction.id,
-      createTransactionDto.contractId ?? 'no-contract',
-      Math.round(Number(createTransactionDto.amount) * 100),
-      'system',
-      transaction.id,
-    );
+    let blockchainTxHash: string | undefined = blockchain_tx_hash;
+    let blockchainData: any = null;
 
-    let updatedTransaction = transaction;
+    if (blockchainTxHash) {
+      this.logger.log(
+        `[Transaction ${transaction.id}] Using frontend blockchain hash: ${blockchainTxHash}`,
+      );
+      blockchainData = {
+        txHash: blockchainTxHash,
+        timestamp: new Date().toISOString(),
+        source: 'frontend',
+        explorerUrl: `https://sepolia.etherscan.io/tx/${blockchainTxHash}`,
+      };
+    } else if (this.blockchainService.isEnabled()) {
+      this.logger.log(
+        `[Transaction ${transaction.id}] Processing blockchain transaction...`,
+      );
+      const bcTx = await this.blockchainService.recordPayment(
+        transaction.id,
+        createTransactionDto.contractId ?? 'no-contract',
+        Math.round(Number(createTransactionDto.amount) * 100),
+        'system',
+        transaction.id,
+      );
 
-    if (bcTx && bcTx.txHash) {
+      if (bcTx && bcTx.txHash) {
+        this.logger.log(
+          `[Transaction ${transaction.id}] Backend blockchain successful: ${bcTx.txHash}`,
+        );
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = bcTx;
+      }
+    }
+
+    if (blockchainTxHash && blockchainData) {
       await this.prisma.transaction.update({
         where: { id: transaction.id },
-        data: { 
+        data: {
           status: TransactionStatus.COMPLETED as any,
-          blockchainTxHash: bcTx.txHash,
-          blockchainData: bcTx as any,
+          blockchainTxHash,
+          blockchainData,
+          completedAt: new Date(),
         },
       });
+    } else if (this.blockchainService.isEnabled()) {
+      this.logger.error(
+        `[Transaction ${transaction.id}] Blockchain transaction failed`,
+      );
+      throw new InternalServerErrorException(
+        'Blockchain transaction failed. Cannot complete transaction.',
+      );
     } else {
+      this.logger.log(
+        `[Transaction ${transaction.id}] Blockchain disabled, completing without chain record`,
+      );
       await this.prisma.transaction.update({
         where: { id: transaction.id },
-        data: { status: TransactionStatus.COMPLETED as any },
+        data: {
+          status: TransactionStatus.COMPLETED as any,
+          completedAt: new Date(),
+        },
       });
-
-      if (this.blockchainService.isEnabled()) {
-        throw new InternalServerErrorException(
-          'Failed to record transaction on blockchain',
-        );
-      }
     }
 
     return transaction as unknown as Transaction;
@@ -190,25 +225,60 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
-    const bcTx = await this.blockchainService.updateTransaction(id, status);
-
-    let updateData: any = { status: status as any };
-
-    if (bcTx && bcTx.txHash) {
-      updateData = {
-        ...updateData,
-        blockchainTxHash: bcTx.txHash,
-        blockchainData: bcTx as any,
-      };
-    } else if (this.blockchainService.isEnabled()) {
-      throw new InternalServerErrorException(
-        'Failed to record transaction status update on blockchain',
+    if (this.blockchainService.isEnabled()) {
+      this.logger.log(
+        `[Transaction ${id}] Updating blockchain status to ${status}...`,
       );
+      const bcTx = await this.blockchainService.updateTransaction(id, status);
+
+      if (bcTx && bcTx.txHash) {
+        this.logger.log(
+          `[Transaction ${id}] Blockchain update successful: ${bcTx.txHash}`,
+        );
+        return this.prisma.transaction.update({
+          where: { id },
+          data: {
+            status: status as any,
+            blockchainTxHash: bcTx.txHash,
+            blockchainData: bcTx as any,
+            ...(status === TransactionStatus.COMPLETED
+              ? { completedAt: new Date() }
+              : {}),
+          },
+          include: {
+            contract: {
+              select: {
+                id: true,
+                contractNumber: true,
+              },
+            },
+            wallet: {
+              select: {
+                id: true,
+                userId: true,
+              },
+            },
+          },
+        }) as unknown as Transaction;
+      } else {
+        this.logger.error(`[Transaction ${id}] Blockchain update failed`);
+        throw new InternalServerErrorException(
+          'Blockchain transaction update failed.',
+        );
+      }
     }
 
+    this.logger.log(
+      `[Transaction ${id}] Blockchain disabled, updating status without chain record`,
+    );
     return this.prisma.transaction.update({
       where: { id },
-      data: updateData,
+      data: {
+        status: status as any,
+        ...(status === TransactionStatus.COMPLETED
+          ? { completedAt: new Date() }
+          : {}),
+      },
       include: {
         contract: {
           select: {

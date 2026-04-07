@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dialog";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
+import { recordTransactionOnBlockchain } from "@/utils/blockchain";
 import {
   useGetMyWalletQuery,
   useCreateWalletMutation,
@@ -46,6 +48,9 @@ export default function Wallets() {
     description: "",
   });
   useState<any>(null);
+
+  const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
+  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database">("blockchain");
 
   const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
   const { data: transactions = [] } = useGetTransactionsByWalletQuery(
@@ -262,13 +267,13 @@ export default function Wallets() {
       label: "Blockchain",
       sortable: false,
       render: (transaction) => {
-        const hasBlockchainTx = !!(transaction as any)?.blockchainTxHash;
+        const hasBlockchainTx = !!(transaction as any)?.blockchainTxHash || !!(transaction as any)?.blockchain_tx_hash;
         return (
           <button
             onClick={() => {
               if (hasBlockchainTx) {
                 window.open(
-                  `https://sepolia.etherscan.io/tx/${(transaction as any).blockchainTxHash}`,
+                  `https://sepolia.etherscan.io/tx/${(transaction as any).blockchainTxHash || (transaction as any).blockchain_tx_hash}`,
                   "_blank",
                 );
               } else {
@@ -323,12 +328,61 @@ export default function Wallets() {
   const handleCreateTransaction = async () => {
     if (!wallet) return;
 
+    setIsProcessingBlockchain(true);
+    setBlockchainStep("blockchain");
+
     try {
+      let blockchainTxHash: string | undefined;
+
+      const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const amount = parseFloat(transactionData.amount);
+
+      try {
+        blockchainTxHash = await recordTransactionOnBlockchain(
+          transactionId,
+          wallet.id,
+          amount,
+          transactionData.type,
+        );
+      } catch (blockchainError: any) {
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Cancelled",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          setIsProcessingBlockchain(false);
+          return;
+        } else if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Required",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          setIsProcessingBlockchain(false);
+          return;
+        } else {
+          setIsProcessingBlockchain(false);
+          toast({
+            title: "Blockchain Error", 
+            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      setBlockchainStep("database");
+
       const data: CreateTransactionDto = {
         walletId: wallet.id,
         type: transactionData.type,
-        amount: parseFloat(transactionData.amount),
+        amount,
       };
+
+      if (blockchainTxHash) {
+        (data as any).blockchain_tx_hash = blockchainTxHash;
+      }
 
       await createTransaction(data).unwrap();
       toast({
@@ -347,6 +401,8 @@ export default function Wallets() {
         description: error?.data?.message || "Failed to create transaction",
         variant: "destructive",
       });
+    } finally {
+      setIsProcessingBlockchain(false);
     }
   };
 
@@ -563,6 +619,11 @@ export default function Wallets() {
           isSubmitting={isCreatingTransaction}
         />
       </div>
+
+      <BlockchainProcessingModal
+        open={isProcessingBlockchain}
+        currentStep={blockchainStep}
+      />
     </DashboardLayout>
   );
 }

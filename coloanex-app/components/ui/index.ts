@@ -9,3 +9,4 @@ export { default as AppHeader } from "./AppHeader";
 export { default as SearchBar } from "./SearchBar";
 export { ToastProvider, useToast } from "./Toast";
 export { CurrencyIcon } from "./CurrencyIcon";
+export { BlockchainProcessingModal } from "./BlockchainProcessingModal";

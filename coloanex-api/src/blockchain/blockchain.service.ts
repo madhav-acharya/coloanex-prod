@@ -221,7 +221,6 @@ export class BlockchainService {
     }
   }
 
-
   async updateLoanStatus(
     loanId: string,
     status: string,
@@ -405,9 +404,9 @@ export class BlockchainService {
     }
     try {
       const userAddress = ethers.getAddress(
-        '0x' + ethers.keccak256(ethers.toUtf8Bytes(userId)).slice(2, 42)
+        '0x' + ethers.keccak256(ethers.toUtf8Bytes(userId)).slice(2, 42),
       );
-      
+
       const tx: ethers.TransactionResponse = await this.kycRegistry[
         'verifyKYC'
       ](kycId, userAddress, 'PENDING', 'System');
@@ -441,11 +440,13 @@ export class BlockchainService {
     }
     try {
       const userAddress = ethers.getAddress(
-        '0x' + ethers.keccak256(ethers.toUtf8Bytes(userId)).slice(2, 42)
+        '0x' + ethers.keccak256(ethers.toUtf8Bytes(userId)).slice(2, 42),
       );
-      
-      this.logger.log(`[verifyKYC] Attempting to verify kycId=${kycId} with status=${status} for user=${userAddress}`);
-      
+
+      this.logger.log(
+        `[verifyKYC] Attempting to verify kycId=${kycId} with status=${status} for user=${userAddress}`,
+      );
+
       const tx: ethers.TransactionResponse = await this.kycRegistry[
         'verifyKYC'
       ](kycId, userAddress, status, 'System');
@@ -458,7 +459,27 @@ export class BlockchainService {
       );
       return result;
     } catch (err) {
-      this.logger.error(`[verifyKYC] failed for kycId=${kycId}, status=${status}`, (err as Error).message);
+      this.logger.error(
+        `[verifyKYC] failed for kycId=${kycId}, status=${status}`,
+        (err as Error).message,
+      );
+      return null;
+    }
+  }
+
+  async getKYC(kycId: string): Promise<any | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.kycRegistry) {
+      this.logger.warn('BlockchainService not initialized — skipping getKYC');
+      return null;
+    }
+    try {
+      const kycRecord = await this.kycRegistry['getKYC'](kycId);
+      return kycRecord;
+    } catch (err) {
+      this.logger.error(`[getKYC] failed for kycId=${kycId}`, (err as Error).message);
       return null;
     }
   }
@@ -477,8 +498,10 @@ export class BlockchainService {
       return null;
     }
     try {
-      this.logger.log(`[updateKYC] Attempting to update kycId=${kycId} to status=${status}`);
-      
+      this.logger.log(
+        `[updateKYC] Attempting to update kycId=${kycId} to status=${status}`,
+      );
+
       const tx: ethers.TransactionResponse = await this.kycRegistry[
         'updateKYCStatus'
       ](kycId, status);
@@ -491,8 +514,13 @@ export class BlockchainService {
       );
       return result;
     } catch (err) {
-      this.logger.error(`[updateKYC] failed for kycId=${kycId}, status=${status}`, (err as Error).message);
-      this.logger.warn(`[updateKYC] This KYC may not exist on blockchain. It might have been created before blockchain integration was enabled.`);
+      this.logger.error(
+        `[updateKYC] failed for kycId=${kycId}, status=${status}`,
+        (err as Error).message,
+      );
+      this.logger.warn(
+        `[updateKYC] This KYC may not exist on blockchain. It might have been created before blockchain integration was enabled.`,
+      );
       return null;
     }
   }
@@ -508,9 +536,8 @@ export class BlockchainService {
       return null;
     }
     try {
-      const tx: ethers.TransactionResponse = await this.kycRegistry[
-        'deleteKYC'
-      ](kycId);
+      const tx: ethers.TransactionResponse =
+        await this.kycRegistry['deleteKYC'](kycId);
       const receipt = await tx.wait();
       if (!receipt) return null;
 
@@ -524,7 +551,6 @@ export class BlockchainService {
       return null;
     }
   }
-
 
   async deleteLoan(loanId: string): Promise<BlockchainTxResult | null> {
     if (!this.isReady() || !this.loanRegistry) return null;
@@ -549,12 +575,17 @@ export class BlockchainService {
 
     try {
       this.logger.log(`[deleteContract] contractId=${contractId}`);
-      const tx = await this.contractRegistry.updateContractStatus(contractId, 'DELETED');
+      const tx = await this.contractRegistry.updateContractStatus(
+        contractId,
+        'DELETED',
+      );
       const receipt = await tx.wait();
       if (!receipt) return null;
 
       const result = await this.extractTxResult(receipt);
-      this.logger.log(`[deleteContract] contract=${contractId} txHash=${result.txHash}`);
+      this.logger.log(
+        `[deleteContract] contract=${contractId} txHash=${result.txHash}`,
+      );
       return result;
     } catch (err) {
       this.logger.error('[deleteContract] failed', (err as Error).message);
@@ -562,17 +593,27 @@ export class BlockchainService {
     }
   }
 
-  async updateContract(contractId: string, status: string): Promise<BlockchainTxResult | null> {
+  async updateContract(
+    contractId: string,
+    status: string,
+  ): Promise<BlockchainTxResult | null> {
     if (!this.isReady() || !this.contractRegistry) return null;
 
     try {
-      this.logger.log(`[updateContract] contractId=${contractId} status=${status}`);
-      const tx = await this.contractRegistry.updateContractStatus(contractId, status);
+      this.logger.log(
+        `[updateContract] contractId=${contractId} status=${status}`,
+      );
+      const tx = await this.contractRegistry.updateContractStatus(
+        contractId,
+        status,
+      );
       const receipt = await tx.wait();
       if (!receipt) return null;
 
       const result = await this.extractTxResult(receipt);
-      this.logger.log(`[updateContract] contract=${contractId} txHash=${result.txHash}`);
+      this.logger.log(
+        `[updateContract] contract=${contractId} txHash=${result.txHash}`,
+      );
       return result;
     } catch (err) {
       this.logger.error('[updateContract] failed', (err as Error).message);

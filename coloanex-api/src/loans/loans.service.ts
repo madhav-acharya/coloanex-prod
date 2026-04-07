@@ -206,11 +206,11 @@ export class LoansService {
     }
 
     const loanId = randomUUID();
-    let blockchainTxHash: string | undefined =
-      createLoanDto.blockchain_tx_hash;
+    let blockchainTxHash: string | undefined = createLoanDto.blockchain_tx_hash;
     let blockchainData: any = null;
 
     if (!blockchainTxHash && this.blockchainService.isEnabled()) {
+      this.logger.log(`[Loan ${loanId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordLoan(
         loanId,
         Math.round(Number(createLoanDto.requestedAmount) * 100),
@@ -231,23 +231,22 @@ export class LoansService {
           explorerUrl: bcTx.explorerUrl,
         };
         this.logger.log(
-          `Loan ${loanId} recorded on blockchain: tx=${bcTx.txHash} block=${bcTx.blockNumber} gas=${bcTx.gasFeeGwei} GWEI`,
+          `[Loan ${loanId}] Blockchain successful: tx=${bcTx.txHash} block=${bcTx.blockNumber} gas=${bcTx.gasFeeGwei} GWEI`,
         );
       } else {
-        throw new BadRequestException(
-          'Blockchain is enabled but unavailable. Cannot create loan without blockchain record.',
-        );
+        this.logger.warn(`[Loan ${loanId}] Blockchain transaction failed, continuing without blockchain record`);
       }
     } else if (blockchainTxHash) {
       this.logger.log(
-        `Loan ${loanId} — using client-signed blockchain tx: ${blockchainTxHash}`,
+        `[Loan ${loanId}] Using client-signed blockchain tx: ${blockchainTxHash}`,
       );
     } else {
       this.logger.warn(
-        `Loan ${loanId} — blockchain disabled, proceeding without chain record`,
+        `[Loan ${loanId}] Blockchain disabled, proceeding without chain record`,
       );
     }
 
+    this.logger.log(`[Loan ${loanId}] Creating database record...`);
     const loanData = {
       id: loanId,
       tenantId,
@@ -576,6 +575,7 @@ export class LoansService {
     let blockchainData: any = null;
 
     if (this.blockchainService.isEnabled()) {
+      this.logger.log(`[Loan ${id}] Updating blockchain status...`);
       const bcTx = await this.blockchainService.updateLoanStatus(
         id,
         existing.status,
@@ -601,11 +601,12 @@ export class LoansService {
         });
 
         this.logger.log(
-          `Loan ${id} update recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+          `[Loan ${id}] Blockchain update successful: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
         );
       } else {
-        this.logger.warn(
-          `Loan ${id} update — blockchain unavailable, proceeding without chain record`,
+        this.logger.error(`[Loan ${id}] Blockchain update failed`);
+        throw new BadRequestException(
+          'Blockchain update failed. Cannot update loan without blockchain record.',
         );
       }
     }
@@ -677,24 +678,16 @@ export class LoansService {
     if (reviewLoanDto.status === LoanStatus.APPROVED) {
       updateData.approvedAmount = reviewLoanDto.approvedAmount;
       updateData.approvedTermMonths = reviewLoanDto.approvedTermMonths;
-      updateData.ruleId = reviewLoanDto.ruleId;
+      if (reviewLoanDto.ruleId) {
+        updateData.rule = { connect: { id: reviewLoanDto.ruleId } };
+      }
     }
 
-    const bcStatusTx = await this.blockchainService.updateLoanStatus(
-      id,
-      reviewLoanDto.status,
-    );
-    if (bcStatusTx) {
-      updateData.blockchain_tx_hash = bcStatusTx.txHash;
-      this.logger.log(
-        `Loan ${id} status updated on blockchain: tx=${bcStatusTx.txHash} gas=${bcStatusTx.gasFeeGwei} GWEI`,
-      );
-    } else {
-      this.logger.warn(
-        `Loan ${id} status update — blockchain unavailable, proceeding without chain record`,
-      );
+    if (reviewLoanDto.blockchain_tx_hash) {
+      updateData.blockchainTxHash = reviewLoanDto.blockchain_tx_hash;
     }
 
+    this.logger.log(`[Loan ${id}] Updating database record...`);
     const updated = await this.prisma.loan.update({
       where: { id },
       data: updateData,
@@ -856,7 +849,7 @@ export class LoansService {
 
     if (this.blockchainService.isEnabled()) {
       const bcTx = await this.blockchainService.deleteLoan(id);
-      
+
       if (bcTx) {
         this.logger.log(
           `Loan ${id} deletion recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,

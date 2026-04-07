@@ -44,9 +44,7 @@ export const KYC_REGISTRY_ABI = [
   {
     inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
     name: 'getUserKYCs',
-    outputs: [
-      { internalType: 'string[]', name: '', type: 'string[]' },
-    ],
+    outputs: [{ internalType: 'string[]', name: '', type: 'string[]' }],
     stateMutability: 'view',
     type: 'function',
   },

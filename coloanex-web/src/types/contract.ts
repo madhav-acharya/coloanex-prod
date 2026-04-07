@@ -45,8 +45,6 @@ export interface Signature {
   ipAddress?: string;
 }
 
-
-
 export interface DisbursementInfo {
   method: "ESEWA" | "FONEPAY" | "KHALTI" | "WALLET" | "BANK_TRANSFER";
   accountNumber?: string;

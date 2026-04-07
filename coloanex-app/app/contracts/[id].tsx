@@ -14,7 +14,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, AppHeader, CurrencyIcon } from "@/components/ui";
+import {
+  Button,
+  AppHeader,
+  CurrencyIcon,
+  BlockchainProcessingModal,
+} from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/api/contractsApi";
@@ -603,6 +608,15 @@ export default function ContractDetailsScreen() {
           </View>
         </View>
       </Modal>
+
+      <BlockchainProcessingModal
+        visible={submitting}
+        message={
+          signModalVisible
+            ? "Recording contract signature on the blockchain and updating the database. Please wait..."
+            : "Recording contract report on the blockchain and updating the database. Please wait..."
+        }
+      />
     </View>
   );
 }

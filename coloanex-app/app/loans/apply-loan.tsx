@@ -19,6 +19,7 @@ import {
   PickerInput,
   useToast,
   AppHeader,
+  BlockchainProcessingModal,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
@@ -210,9 +211,9 @@ export default function LoanApplicationScreen() {
       };
 
       await loansApi.applyForLoan(loanData);
-      
+
       showToast("Loan application submitted successfully", "success");
-      
+
       router.replace(`/lenders/lender-details?id=${lenderId}` as any);
     } catch (error: any) {
       showToast(error.message || "Failed to submit loan application", "error");
@@ -723,6 +724,11 @@ export default function LoanApplicationScreen() {
           </View>
         </View>
       </Modal>
+
+      <BlockchainProcessingModal
+        visible={loading}
+        message="Recording your loan application on the blockchain and updating the database. Please wait..."
+      />
     </View>
   );
 }

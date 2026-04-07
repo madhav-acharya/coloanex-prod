@@ -27,4 +27,8 @@ export class ReviewLoanDto {
   @ValidateIf((o) => o.status === LoanStatus.APPROVED)
   @IsNumber()
   approvedTermMonths?: number;
+
+  @IsOptional()
+  @IsString()
+  blockchain_tx_hash?: string;
 }

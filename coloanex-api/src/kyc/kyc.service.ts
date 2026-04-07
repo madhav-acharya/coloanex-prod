@@ -24,7 +24,7 @@ import {
 @Injectable()
 export class KycService {
   private readonly logger = new Logger(KycService.name);
-  
+
   constructor(
     private prisma: PrismaService,
     private activityLogsService: ActivityLogsService,
@@ -153,6 +153,7 @@ export class KycService {
     let blockchainData: any = null;
 
     if (this.blockchainService.isEnabled()) {
+      this.logger.log(`[KYC ${kycId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordKyc(
         kycId,
         targetUserId,
@@ -171,12 +172,16 @@ export class KycService {
           gasFeeGwei: bcTx.gasFeeGwei,
           explorerUrl: bcTx.explorerUrl,
         };
+        this.logger.log(`[KYC ${kycId}] Blockchain successful: ${bcTx.txHash}`);
       } else {
+        this.logger.error(`[KYC ${kycId}] Blockchain transaction failed`);
         throw new BadRequestException(
-          'Blockchain is enabled but transaction failed. Cannot create KYC without blockchain record.',
+          'Blockchain transaction failed. Cannot create KYC without blockchain record.',
         );
       }
     }
+
+    this.logger.log(`[KYC ${kycId}] Updating database with blockchain data...`);
 
     const kyc = await this.prisma.kyc.update({
       where: { id: kycId },
@@ -530,30 +535,42 @@ export class KycService {
       user.tenantId,
     );
 
-    const bcTx = await this.blockchainService.updateKYC(id, updated.status);
-    let blockchainTxHash: string | null = null;
-    let blockchainData: any = null;
-    
-    if (bcTx) {
-      blockchainTxHash = bcTx.txHash;
-      blockchainData = {
-        txHash: bcTx.txHash,
-        blockNumber: bcTx.blockNumber,
-        gasUsed: bcTx.gasUsed,
-        gasPriceGwei: bcTx.gasPriceGwei,
-        gasFeeGwei: bcTx.gasFeeGwei,
-        explorerUrl: bcTx.explorerUrl,
-      };
-      
-      await this.prisma.kyc.update({
-        where: { id },
-        data: { 
-          blockchainTxHash,
-          blockchainData,
-        },
-      });
-    } else if (this.blockchainService.isEnabled()) {
-      throw new BadRequestException('Failed to record KYC update on blockchain');
+    let blockchainTxHash: string;
+    let blockchainData: any;
+
+    if (this.blockchainService.isEnabled()) {
+      this.logger.log(
+        `[KYC ${id}] Updating blockchain status to ${updated.status}...`,
+      );
+      const bcTx = await this.blockchainService.updateKYC(id, updated.status);
+
+      if (bcTx) {
+        blockchainTxHash = bcTx.txHash;
+        blockchainData = {
+          txHash: bcTx.txHash,
+          blockNumber: bcTx.blockNumber,
+          gasUsed: bcTx.gasUsed,
+          gasPriceGwei: bcTx.gasPriceGwei,
+          gasFeeGwei: bcTx.gasFeeGwei,
+          explorerUrl: bcTx.explorerUrl,
+        };
+
+        this.logger.log(
+          `[KYC ${id}] Blockchain update successful: ${bcTx.txHash}`,
+        );
+        await this.prisma.kyc.update({
+          where: { id },
+          data: {
+            blockchainTxHash,
+            blockchainData,
+          },
+        });
+      } else {
+        this.logger.error(`[KYC ${id}] Blockchain update failed`);
+        throw new BadRequestException(
+          'Blockchain update failed. Cannot update KYC without blockchain record.',
+        );
+      }
     }
 
     return this.findOne(id);
@@ -589,35 +606,36 @@ export class KycService {
     let blockchainTxHash: string | undefined;
     let blockchainData: any = null;
 
-    if (this.blockchainService.isEnabled() && verifyKycDto.status === KycStatus.VERIFIED) {
+    if (
+      this.blockchainService.isEnabled() &&
+      (verifyKycDto.status === KycStatus.VERIFIED || verifyKycDto.status === KycStatus.REJECTED)
+    ) {
+      this.logger.log(`[KYC ${id}] Processing blockchain verification with status: ${verifyKycDto.status}...`);
       let blockchainResult = await this.blockchainService.verifyKYC(
         kyc.id,
         kyc.borrowerId,
         verifyKycDto.status,
       );
-      
+
       if (!blockchainResult) {
-        this.logger.log(`[verifyKyc] KYC ${kyc.id} direct verification failed, attempting to create and update instead`);
-        
-        const createResult = await this.blockchainService.recordKyc(
+        this.logger.log(
+          `[KYC ${kyc.id}] Direct verification failed, creating KYC directly with VERIFIED status`,
+        );
+
+        blockchainResult = await this.blockchainService.verifyKYC(
           kyc.id,
           kyc.borrowerId,
-          kyc.fullName,
-          kyc.occupation,
-          kyc.monthlyIncome,
+          verifyKycDto.status,
         );
-        
-        if (createResult) {
-          this.logger.log(`[verifyKyc] KYC ${kyc.id} created on blockchain, updating status to verified`);
-          blockchainResult = await this.blockchainService.updateKYC(
-            kyc.id,
-            verifyKycDto.status,
+
+        if (!blockchainResult) {
+          this.logger.error(`[KYC ${kyc.id}] Failed to create KYC on blockchain with VERIFIED status`);
+          throw new BadRequestException(
+            'Blockchain verification failed. Cannot create KYC record on blockchain.',
           );
-        } else {
-          this.logger.warn(`[verifyKyc] Failed to create KYC ${kyc.id} on blockchain`);
         }
       }
-      
+
       if (blockchainResult) {
         blockchainTxHash = blockchainResult.txHash;
         blockchainData = {
@@ -628,11 +646,20 @@ export class KycService {
           gasFeeGwei: blockchainResult.gasFeeGwei,
           explorerUrl: blockchainResult.explorerUrl,
         };
+        this.logger.log(
+          `[KYC ${id}] Blockchain verification successful: ${blockchainResult.txHash}`,
+        );
       } else {
-        throw new BadRequestException('Blockchain recording failed - verification aborted');
+        this.logger.error(`[KYC ${id}] Blockchain verification failed`);
+        throw new BadRequestException(
+          'Blockchain verification failed. Cannot verify KYC without blockchain record.',
+        );
       }
     }
 
+    this.logger.log(
+      `[KYC ${id}] Updating database with verification status...`,
+    );
     const updated = await this.prisma.kyc.update({
       where: { id },
       data: {
@@ -748,7 +775,9 @@ export class KycService {
 
     const bcTx = await this.blockchainService.deleteKYC(id);
     if (!bcTx && this.blockchainService.isEnabled()) {
-      throw new BadRequestException('Failed to record KYC deletion on blockchain');
+      throw new BadRequestException(
+        'Failed to record KYC deletion on blockchain',
+      );
     }
 
     await this.prisma.kyc.delete({

@@ -68,6 +68,7 @@ export interface ReviewLoanDto {
   approvedAmount?: number;
   ruleId?: string;
   approvedTermMonths?: number;
+  blockchain_tx_hash?: string;
 }
 
 export interface LoanQuery {
