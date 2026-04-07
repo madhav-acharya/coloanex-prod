@@ -133,24 +133,24 @@ function StatusBadge({
           {config.label}
         </Text>
       </View>
-      
+
       <TouchableOpacity
         style={[
           statusBadgeStyles.blockchainBadge,
           {
-            backgroundColor: blockchainTxHash ? '#10B981' : '#64748B',
+            backgroundColor: blockchainTxHash ? "#10B981" : "#64748B",
             opacity: 0.9,
-          }
+          },
         ]}
         onPress={() => {
           const { showBlockchainInfo } = require("@/utils/blockchain");
           showBlockchainInfo(blockchainTxHash);
         }}
       >
-        <Ionicons 
-          name={blockchainTxHash ? "link" : "link-outline"} 
-          size={10} 
-          color="white" 
+        <Ionicons
+          name={blockchainTxHash ? "link" : "link-outline"}
+          size={10}
+          color="white"
         />
         <Text style={statusBadgeStyles.blockchainText}>
           {blockchainTxHash ? "On-Chain" : "Off-Chain"}
