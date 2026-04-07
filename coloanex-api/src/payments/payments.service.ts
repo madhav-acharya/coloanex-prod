@@ -234,7 +234,7 @@ export class PaymentsService {
                 walletId: lenderWallet.id,
                 contractId: contractId ?? null,
                 paymentScheduleId: paymentScheduleId ?? null,
-                type: 'DISBURSEMENT' as never,
+                type: 'DEPOSIT' as never,
                 amount: totalAmount,
                 status: 'COMPLETED' as never,
                 completedAt: new Date(),
@@ -297,6 +297,37 @@ export class PaymentsService {
       blockchain_tx_hash,
       gasFeeGwei,
       blockchainExplorerUrl,
+    };
+  }
+
+  async lookupPayment(
+    dto: { transactionUuid: string; totalAmount?: number; gateway: string },
+    userId: string,
+  ) {
+    const { transactionUuid, totalAmount, gateway } = dto;
+
+    const paymentGateway = this.resolveGateway(gateway);
+
+    const lookupResult = await paymentGateway.lookupPayment({
+      transactionUuid,
+      totalAmount,
+    });
+
+    const existingTransaction = await this.prisma.transaction.findFirst({
+      where: {
+        gatewayDetails: {
+          path: ['transactionUuid'],
+          equals: transactionUuid,
+        },
+      },
+    });
+
+    return {
+      status: lookupResult.status,
+      gatewayTransactionId: lookupResult.gatewayTransactionId,
+      gatewayResponse: lookupResult.gatewayResponse,
+      alreadyProcessed: !!existingTransaction,
+      transactionId: existingTransaction?.id ?? null,
     };
   }
 }
