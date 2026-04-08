@@ -14,7 +14,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, contractsApi, paymentSchedulesApi } from "@/api";
-import { useToast, AppHeader, CurrencyIcon } from "@/components/ui";
+import { useToast, AppHeader } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentSchedule } from "@/api/paymentSchedulesApi";
@@ -51,26 +51,36 @@ function CurrencyDetailRow({
   amount: number | null | undefined;
   colors: Record<string, string>;
 }) {
-  const safeAmount = amount ?? 0;
+  const getNumericAmount = (value: unknown): number => {
+    if (value === null || value === undefined) return 0;
+    if (typeof value === "number") return value;
+    if (typeof value === "string") {
+      const cleaned = value.replace(/[^\d.-]/g, "");
+      const parsed = Number(cleaned);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    if (typeof value === "object") {
+      const primitive =
+        (value as { toNumber?: () => number }).toNumber?.() ??
+        (value as { toString?: () => string }).toString?.() ??
+        "";
+      const parsed = Number(String(primitive).replace(/[^\d.-]/g, ""));
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    const parsed = Number(value);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const numericAmount = getNumericAmount(amount);
 
   return (
     <View style={[detailRowStyle.row, { borderBottomColor: colors.border }]}>
       <Text style={[detailRowStyle.label, { color: colors.textSecondary }]}>
         {label}
       </Text>
-      <View style={{ alignItems: "flex-end" }}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <CurrencyIcon size={14} color="#16A34A" />
-          <Text
-            style={[
-              detailRowStyle.value,
-              { color: colors.text, marginLeft: 4 },
-            ]}
-          >
-            {safeAmount.toLocaleString("en-NP")}
-          </Text>
-        </View>
-      </View>
+      <Text style={[detailRowStyle.value, { color: colors.text }]}>
+        {formatCurrency(numericAmount)}
+      </Text>
     </View>
   );
 }
@@ -85,7 +95,7 @@ const detailRowStyle = StyleSheet.create({
     gap: spacing.md,
   },
   label: { fontSize: 13, fontWeight: "500", flex: 1 },
-  value: { fontSize: 13, fontWeight: "600", flex: 1, textAlign: "right" },
+  value: { fontSize: 13, fontWeight: "600", textAlign: "right" },
 });
 
 function SectionCard({
@@ -231,33 +241,13 @@ export default function LoanDetailsScreen() {
   );
   const [loading, setLoading] = useState(true);
 
-  const formatCurrencyWithIcon = (
-    value: number | null | undefined,
-    isPositive: boolean = true,
-    size: number = 16,
-  ) => {
-    const safeValue = value ?? 0;
-    const color = isPositive ? "#16A34A" : "#DC2626";
-    // Format number without currency symbol
-    const formattedValue = safeValue.toLocaleString("en-NP");
-    return (
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <CurrencyIcon size={size} color={color} />
-        <Text
-          style={[
-            { fontSize: size, fontWeight: "700" },
-            { color, marginLeft: 4 },
-          ]}
-        >
-          {formattedValue}
-        </Text>
-      </View>
-    );
-  };
-
   const formatCurrencyInline = (value: number | null | undefined) => {
     const safeValue = value ?? 0;
-    return safeValue.toLocaleString("en-NP");
+    const numericValue = typeof safeValue === "string" ? parseFloat(safeValue) : safeValue;
+    if (isNaN(numericValue)) return "0.00";
+    const parts = numericValue.toFixed(2).split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return parts.join('.');
   };
 
   const loadData = useCallback(async () => {
@@ -482,9 +472,9 @@ export default function LoanDetailsScreen() {
           >
             {loan.approvedAmount ? "Approved Amount" : "Requested Amount"}
           </Text>
-          <View style={{ alignItems: "center" }}>
-            {formatCurrencyWithIcon(amount, true)}
-          </View>
+          <Text style={[styles.heroAmountValue, { color: colors.success }]}>
+            {formatCurrency(amount)}
+          </Text>
 
           <View style={styles.heroStats}>
             <View
@@ -535,9 +525,9 @@ export default function LoanDetailsScreen() {
                   size={16}
                   color={colors.success}
                 />
-                <View style={{ alignItems: "center" }}>
-                  {formatCurrencyWithIcon(loan.approvedAmount ?? 0, true)}
-                </View>
+                <Text style={[styles.heroStatVal, { color: colors.success }]}>
+                  {formatCurrency(loan.approvedAmount ?? 0)}
+                </Text>
                 <Text
                   style={[styles.heroStatLbl, { color: colors.textSecondary }]}
                 >
@@ -809,7 +799,7 @@ export default function LoanDetailsScreen() {
                       borderBottomWidth: 1,
                       borderBottomColor: colors.border,
                     },
-                    isSelected && { backgroundColor: colors.primary + '15' },
+                    isSelected && { backgroundColor: colors.primary + "15" },
                   ]}
                 >
                   {canRepay && (
@@ -829,7 +819,10 @@ export default function LoanDetailsScreen() {
                         style={[
                           styles.checkbox,
                           { borderColor: colors.border },
-                          isSelected && { backgroundColor: colors.primary, borderColor: colors.primary }
+                          isSelected && {
+                            backgroundColor: colors.primary,
+                            borderColor: colors.primary,
+                          },
                         ]}
                       >
                         {isSelected && (
@@ -992,12 +985,18 @@ export default function LoanDetailsScreen() {
                 );
                 return;
               }
-              
+
               if (selectedSchedules.size > 0) {
-                const selectedItems = schedule.filter(s => selectedSchedules.has(s.id));
-                const totalAmount = selectedItems.reduce((sum, s) => sum + (Number(s.totalAmount) - Number(s.amountPaid ?? 0)), 0);
-                const scheduleIds = Array.from(selectedSchedules).join(',');
-                
+                const selectedItems = schedule.filter((s) =>
+                  selectedSchedules.has(s.id),
+                );
+                const totalAmount = selectedItems.reduce(
+                  (sum, s) =>
+                    sum + (Number(s.totalAmount) - Number(s.amountPaid ?? 0)),
+                  0,
+                );
+                const scheduleIds = Array.from(selectedSchedules).join(",");
+
                 router.push({
                   pathname: "/repayment/make-repayment",
                   params: {
@@ -1037,10 +1036,9 @@ export default function LoanDetailsScreen() {
           >
             <Ionicons name="card-outline" size={20} color={colors.buttonText} />
             <Text style={[styles.payBtnText, { color: colors.buttonText }]}>
-              {selectedSchedules.size > 0 
-                ? `Pay Selected (${selectedSchedules.size})` 
-                : "Make Payment"
-              }
+              {selectedSchedules.size > 0
+                ? `Pay Selected (${selectedSchedules.size})`
+                : "Make Payment"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1136,6 +1134,12 @@ const createStyles = (colors: Record<string, string>) =>
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: 4,
+    },
+    heroAmountValue: {
+      fontSize: 30,
+      fontWeight: "800",
+      marginBottom: spacing.md,
+      textAlign: "center",
     },
     heroAmount: { fontSize: 34, fontWeight: "800", marginBottom: spacing.md },
     heroStats: { flexDirection: "row", gap: spacing.sm },
