@@ -165,12 +165,13 @@ export class ActivityLogsService {
     offset: number = 0,
   ) {
     const isSuperAdmin = userRoles.includes('Super Admin');
+    const isLender = userRoles.includes('Lender');
 
-    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
-      ? {}
-      : tenantId
-        ? { tenantId }
-        : { actorUserId: userId };
+    const whereClause = await this.getNotificationWhereClause(
+      userId,
+      userRoles,
+      tenantId,
+    );
 
     const notifications = await this.prisma.activityLog.findMany({
       where: whereClause,
@@ -209,11 +210,11 @@ export class ActivityLogsService {
   ): Promise<number> {
     const isSuperAdmin = userRoles.includes('Super Admin');
 
-    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
-      ? {}
-      : tenantId
-        ? { tenantId }
-        : { actorUserId: userId };
+    const whereClause = await this.getNotificationWhereClause(
+      userId,
+      userRoles,
+      tenantId,
+    );
 
     return this.prisma.activityLog.count({
       where: {
@@ -244,11 +245,11 @@ export class ActivityLogsService {
   async markAllAsRead(userId: string, userRoles: string[], tenantId?: string) {
     const isSuperAdmin = userRoles.includes('Super Admin');
 
-    const whereClause: Prisma.ActivityLogWhereInput = isSuperAdmin
-      ? {}
-      : tenantId
-        ? { tenantId }
-        : { actorUserId: userId };
+    const whereClause = await this.getNotificationWhereClause(
+      userId,
+      userRoles,
+      tenantId,
+    );
 
     const unreadActivities = await this.prisma.activityLog.findMany({
       where: {
@@ -278,5 +279,47 @@ export class ActivityLogsService {
       },
       orderBy: { createdAt: 'desc' },
     }) as Promise<ActivityLog | null>;
+  }
+
+  private async getNotificationWhereClause(
+    userId: string,
+    userRoles: string[],
+    tenantId?: string,
+  ): Promise<Prisma.ActivityLogWhereInput> {
+    const isSuperAdmin = userRoles.includes('Super Admin');
+
+    if (isSuperAdmin) {
+      return {};
+    }
+
+    if (tenantId) {
+      return { tenantId };
+    }
+
+    // For borrowers or users without a specific tenant context in their profile,
+    // show activities where they are the actor, the entity, or related to their loans/contracts.
+    const borrower = await this.prisma.borrower.findFirst({
+      where: { userId },
+      include: {
+        contracts: { select: { id: true } },
+        loans: { select: { id: true } },
+      },
+    });
+
+    const contractIds = borrower?.contracts.map((c) => c.id) || [];
+    const loanIds = borrower?.loans.map((l) => l.id) || [];
+
+    return {
+      OR: [
+        { actorUserId: userId },
+        { AND: [{ entityId: userId }, { entityType: 'USER' }] },
+        {
+          AND: [{ entityId: { in: contractIds } }, { entityType: 'CONTRACT' }],
+        },
+        {
+          AND: [{ entityId: { in: loanIds } }, { entityType: 'LOAN' }],
+        },
+      ],
+    };
   }
 }
