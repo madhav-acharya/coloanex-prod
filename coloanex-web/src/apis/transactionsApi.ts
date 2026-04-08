@@ -17,7 +17,18 @@ export interface GatewayDetails {
 export interface Transaction {
   id: string;
   contractId?: string;
-  walletId?: string;
+  sentBy: string;
+  receivedBy: string;
+  sentByUser?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+  receivedByUser?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
   type:
     | "DEPOSIT"
     | "WITHDRAW"
@@ -37,15 +48,12 @@ export interface Transaction {
     tenantId: string;
     borrowerId: string;
   };
-  wallet?: {
-    id: string;
-    userId: string;
-  };
 }
 
 export interface CreateTransactionDto {
   contractId?: string;
-  walletId?: string;
+  sentBy: string;
+  receivedBy: string;
   type:
     | "DEPOSIT"
     | "WITHDRAW"
@@ -65,14 +73,18 @@ export const transactionsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Transactions", "Wallets"],
+      invalidatesTags: ["Transactions"],
+    }),
+    getAllTransactions: builder.query<Transaction[], void>({
+      query: () => "/transactions",
+      providesTags: ["Transactions"],
     }),
     getTransactionsByContract: builder.query<Transaction[], string>({
       query: (contractId) => `/transactions/contract/${contractId}`,
       providesTags: ["Transactions"],
     }),
-    getTransactionsByWallet: builder.query<Transaction[], string>({
-      query: (walletId) => `/transactions/wallet/${walletId}`,
+    getTransactionsByEntity: builder.query<Transaction[], string>({
+      query: (id) => `/transactions/entity/${id}`,
       providesTags: ["Transactions"],
     }),
     getTransaction: builder.query<Transaction, string>({
@@ -95,8 +107,9 @@ export const transactionsApi = baseApi.injectEndpoints({
 
 export const {
   useCreateTransactionMutation,
+  useGetAllTransactionsQuery,
   useGetTransactionsByContractQuery,
-  useGetTransactionsByWalletQuery,
+  useGetTransactionsByEntityQuery,
   useGetTransactionQuery,
   useUpdateTransactionStatusMutation,
 } = transactionsApi;
