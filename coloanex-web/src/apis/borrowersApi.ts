@@ -22,7 +22,19 @@ export const borrowersApi = baseApi.injectEndpoints({
             ]
           : [{ type: "Borrowers", id: "LIST" }],
     }),
+    getBorrowersByTenant: builder.query<Borrower[], string>({
+      query: (tenantId) => ({
+        url: `/borrowers/by-tenant/${tenantId}`,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ id }) => ({ type: "Borrowers" as const, id })),
+              { type: "Borrowers", id: "LIST" },
+            ]
+          : [{ type: "Borrowers", id: "LIST" }],
+    }),
   }),
 });
 
-export const { useGetBorrowersQuery } = borrowersApi;
+export const { useGetBorrowersQuery, useGetBorrowersByTenantQuery } = borrowersApi;
