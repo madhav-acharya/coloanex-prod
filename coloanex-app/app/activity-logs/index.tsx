@@ -31,6 +31,7 @@ const getActivityIcon = (action: ActivityAction) => {
     case "LOGIN":
       return "log-in";
     case "LOGOUT":
+    case "LEAVE":
       return "log-out";
     case "VISIT":
       return "eye";
