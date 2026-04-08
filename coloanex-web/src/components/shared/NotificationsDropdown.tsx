@@ -50,6 +50,8 @@ const getActivityIcon = (action: string) => {
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "VISIT":
       return <Eye className="h-5 w-5 text-purple-600" />;
+    case "LEAVE":
+      return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "LOAN_APPROVE":
       return <BadgeCheck className="h-5 w-5 text-green-600" />;
     case "LOAN_REJECT":
@@ -106,7 +108,7 @@ export const NotificationsDropdown = () => {
   const { data: unreadCountData } = useGetUnreadCountQuery();
 
   const {
-    data: notifications = [],
+    data: rawNotifications,
     isFetching: isFetchingNotifications,
     refetch: refetchNotifications,
   } = useGetNotificationsQuery(
@@ -129,15 +131,28 @@ export const NotificationsDropdown = () => {
   }, [isOpen, offset, refetchNotifications]);
 
   useEffect(() => {
-    if (notifications.length > 0) {
+    if (!rawNotifications) return;
+
+    if (rawNotifications.length > 0) {
       if (offset === 0) {
-        setAllNotifications(notifications);
+        setAllNotifications(rawNotifications);
       } else {
-        setAllNotifications((prev) => [...prev, ...notifications]);
+        setAllNotifications((prev) => {
+          // Prevent duplicate additions if the same page is refetched
+          const existingIds = new Set(prev.map((n) => n.id));
+          const newItems = rawNotifications.filter(
+            (n) => !existingIds.has(n.id),
+          );
+          if (newItems.length === 0) return prev;
+          return [...prev, ...newItems];
+        });
       }
-      setHasMore(notifications.length === LIMIT);
+      setHasMore(rawNotifications.length === LIMIT);
+    } else if (offset === 0) {
+      setAllNotifications((prev) => (prev.length === 0 ? prev : []));
+      setHasMore(false);
     }
-  }, [notifications, offset]);
+  }, [rawNotifications, offset]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -179,7 +194,6 @@ export const NotificationsDropdown = () => {
   const handleOpen = () => {
     if (!isOpen) {
       setOffset(0);
-      setAllNotifications([]);
       setHasMore(true);
     }
     setIsOpen(!isOpen);
