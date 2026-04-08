@@ -60,8 +60,7 @@ export default function PaymentCallbackScreen() {
         const verifyResult = await paymentsApi.verifyPayment({
           transactionUuid,
           totalAmount,
-          gateway,
-          walletId,
+           gateway,
           type: "INSTALLMENT_PAYMENT",
           contractId,
           paymentScheduleId,
@@ -89,7 +88,7 @@ export default function PaymentCallbackScreen() {
               return;
             }
             const retry = await paymentsApi.verifyPayment({
-              transactionUuid, totalAmount, gateway, walletId, type: "INSTALLMENT_PAYMENT", contractId, paymentScheduleId,
+              transactionUuid, totalAmount, gateway, type: "INSTALLMENT_PAYMENT", contractId, paymentScheduleId,
             });
             if (retry.success) {
               setBlockchainStep("database");
