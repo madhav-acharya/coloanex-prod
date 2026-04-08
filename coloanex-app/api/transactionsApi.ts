@@ -2,7 +2,8 @@ import client from "./client";
 
 export interface Transaction {
   id: string;
-  walletId: string;
+  sentBy: string;
+  receivedBy: string;
   contractId?: string;
   paymentScheduleId?: string;
   type:
@@ -18,10 +19,6 @@ export interface Transaction {
   description?: string;
   createdAt: string;
   completedAt?: string;
-  wallet?: {
-    id: string;
-    userId: string;
-  };
   contract?: {
     id: string;
     contractNumber: string;
@@ -29,7 +26,8 @@ export interface Transaction {
 }
 
 export interface CreateTransactionDto {
-  walletId: string;
+  sentBy: string;
+  receivedBy: string;
   contractId?: string;
   paymentScheduleId?: string;
   type:
@@ -55,8 +53,8 @@ export const transactionsApi = {
     return response.data;
   },
 
-  getByWallet: async (walletId: string): Promise<Transaction[]> => {
-    const response = await client.get(`/transactions/wallet/${walletId}`);
+  getByEntity: async (entityId: string): Promise<Transaction[]> => {
+    const response = await client.get(`/transactions/entity/${entityId}`);
     return response.data;
   },
 
