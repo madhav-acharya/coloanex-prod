@@ -111,8 +111,7 @@ export class ContractsService {
         paymentFrequency,
       );
 
-    const totalInterest =
-      (loanAmount * interestRate * termMonths) / (12 * 100);
+    const totalInterest = (loanAmount * interestRate * termMonths) / (12 * 100);
     const principalPerInstallment =
       Math.round((loanAmount / totalInstallments) * 100) / 100;
     const interestPerInstallment =
@@ -126,9 +125,15 @@ export class ContractsService {
 
     for (let i = 1; i <= totalInstallments; i++) {
       let isLast = i === totalInstallments;
-      let pAmt = isLast ? Math.max(0, loanAmount - totalPrincipalAllocated) : principalPerInstallment;
-      let iAmt = isLast ? Math.max(0, totalInterest - totalInterestAllocated) : interestPerInstallment;
-      let tAmt = isLast ? Math.max(0, totalAmountDue - totalAmountAllocated) : installmentAmount;
+      let pAmt = isLast
+        ? Math.max(0, loanAmount - totalPrincipalAllocated)
+        : principalPerInstallment;
+      let iAmt = isLast
+        ? Math.max(0, totalInterest - totalInterestAllocated)
+        : interestPerInstallment;
+      let tAmt = isLast
+        ? Math.max(0, totalAmountDue - totalAmountAllocated)
+        : installmentAmount;
 
       pAmt = Math.round(pAmt * 100) / 100;
       iAmt = Math.round(iAmt * 100) / 100;
@@ -261,11 +266,8 @@ export class ContractsService {
           `[Contract ${contractId}] Blockchain successful: tx=${bcTx.txHash}`,
         );
       } else {
-        this.logger.error(
-          `[Contract ${contractId}] Blockchain transaction failed`,
-        );
-        throw new BadRequestException(
-          'Blockchain transaction failed. Cannot create contract without blockchain record.',
+        this.logger.warn(
+          `[Contract ${contractId}] Blockchain transaction failed, continuing without blockchain record`,
         );
       }
     } else {
@@ -448,13 +450,17 @@ export class ContractsService {
     })) as unknown as Contract;
 
     if (updateContractDto.status && this.blockchainService.isEnabled()) {
-      this.logger.log(`[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`);
+      this.logger.log(
+        `[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`,
+      );
       const bcTx = await this.blockchainService.updateContract(
         id,
         updateContractDto.status,
       );
       if (bcTx && bcTx.txHash) {
-        this.logger.log(`[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`);
+        this.logger.log(
+          `[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`,
+        );
         await this.prisma.contract.update({
           where: { id },
           data: { blockchainTxHash: bcTx.txHash },
@@ -566,13 +572,17 @@ export class ContractsService {
           status: 'CONTRACT_SIGNED' as any,
         },
       });
-      
+
       if (this.blockchainService.isEnabled()) {
-        this.logger.log(`[Contract ${id}] Processing blockchain contract signing...`);
+        this.logger.log(
+          `[Contract ${id}] Processing blockchain contract signing...`,
+        );
         const signBcTx = await this.blockchainService.signContract(id);
-        
+
         if (signBcTx) {
-          this.logger.log(`[Contract ${id}] Blockchain signing successful: ${signBcTx.txHash}`);
+          this.logger.log(
+            `[Contract ${id}] Blockchain signing successful: ${signBcTx.txHash}`,
+          );
           const anyContract = updatedContract as any;
           const existingBlockchainData = anyContract.blockchainData ?? {};
           const signData = {
@@ -581,7 +591,7 @@ export class ContractsService {
             signGasFeeGwei: signBcTx.gasFeeGwei,
             signExplorerUrl: signBcTx.explorerUrl,
           };
-          
+
           await this.prisma.contract.update({
             where: { id },
             data: {
@@ -687,7 +697,7 @@ export class ContractsService {
       Number(contract.interestRate),
       contract.termMonths,
       contract.paymentFrequency,
-      new Date(contract.startDate)
+      new Date(contract.startDate),
     );
 
     return updatedContract as unknown as Contract;
@@ -766,7 +776,7 @@ export class ContractsService {
       Number(contract.interestRate),
       contract.termMonths,
       contract.paymentFrequency,
-      new Date(contract.startDate)
+      new Date(contract.startDate),
     );
 
     return updatedContract as unknown as Contract;
@@ -1013,13 +1023,19 @@ export class ContractsService {
 
     let blockchainTxHash: string | null = null;
     if (this.blockchainService.isEnabled()) {
-      this.logger.log(`[Contract ${id}] Updating blockchain status to GENERATED...`);
+      this.logger.log(
+        `[Contract ${id}] Updating blockchain status to GENERATED...`,
+      );
       const bcTx = await this.blockchainService.updateContract(id, 'GENERATED');
       if (bcTx?.txHash) {
         blockchainTxHash = bcTx.txHash;
-        this.logger.log(`[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`);
+        this.logger.log(
+          `[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`,
+        );
       } else {
-        this.logger.warn(`[Contract ${id}] Blockchain update failed, continuing without blockchain record`);
+        this.logger.warn(
+          `[Contract ${id}] Blockchain update failed, continuing without blockchain record`,
+        );
       }
     }
 
