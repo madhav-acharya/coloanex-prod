@@ -20,7 +20,6 @@ import { useKhaltiPayment, useEsewaPayment } from "@/hooks/payments";
 import { loansApi, walletsApi, contractsApi, paymentSchedulesApi } from "@/api";
 import { useToast, BlockchainProcessingModal } from "@/components/ui";
 import type { Loan } from "@/types";
-import type { Wallet } from "@/api/walletsApi";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentGateway } from "@/api/paymentsApi";
 import { formatCurrency } from "@/utils/currency";
@@ -60,7 +59,6 @@ export default function MakeRepaymentScreen() {
   const esewaPayment = useEsewaPayment();
 
   const [loan, setLoan] = useState<Loan | null>(null);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
   const [alreadyPaid, setAlreadyPaid] = useState(false);
   const [selectedGateway, setSelectedGateway] = useState<PaymentGateway | null>(
@@ -78,7 +76,6 @@ export default function MakeRepaymentScreen() {
   const [currentPaymentData, setCurrentPaymentData] = useState<{
     transactionUuid: string;
     amount: number;
-    walletId: string;
     gateway: PaymentGateway;
   } | null>(null);
 
@@ -105,15 +102,13 @@ export default function MakeRepaymentScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [loanData, walletData, contractData] = await Promise.all([
+      const [loanData, contractData] = await Promise.all([
         loansApi.getById(params.loanId),
-        walletsApi.getMyWallet(),
         params.contractId
           ? contractsApi.getById(params.contractId)
           : Promise.resolve(null),
       ]);
       setLoan(loanData);
-      setWallet(walletData);
       setContract(contractData);
 
       if (params.scheduleId) {
@@ -151,7 +146,6 @@ export default function MakeRepaymentScreen() {
       const success = await paymentHook.verify({
         transactionUuid: currentPaymentData.transactionUuid,
         totalAmount: currentPaymentData.amount,
-        walletId: currentPaymentData.walletId,
         type: "INSTALLMENT_PAYMENT",
         contractId: params.contractId || undefined,
         paymentScheduleId:
@@ -233,7 +227,6 @@ export default function MakeRepaymentScreen() {
           const success = await paymentHook.verify({
             transactionUuid: currentPaymentData.transactionUuid,
             totalAmount: currentPaymentData.amount,
-            walletId: currentPaymentData.walletId,
             type: "INSTALLMENT_PAYMENT",
             contractId: params.contractId || undefined,
             paymentScheduleId:
@@ -321,7 +314,6 @@ export default function MakeRepaymentScreen() {
         selectedGateway === "KHALTI" ? khaltiPayment : esewaPayment;
 
       const result = await paymentHook.initiate({
-        walletId: wallet?.id,
         contractId: params.contractId || undefined,
         paymentScheduleId:
           paymentMode === "installment"
@@ -353,7 +345,6 @@ export default function MakeRepaymentScreen() {
             ? (result.formData?.pidx ?? result.transactionUuid)
             : result.transactionUuid,
         amount,
-        walletId: result.walletId,
         gateway: selectedGateway,
       };
 
@@ -599,38 +590,7 @@ export default function MakeRepaymentScreen() {
             </Text>
           </View>
 
-          {wallet && (
-            <View
-              style={[
-                styles.walletRow,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.walletLeft}>
-                <Ionicons
-                  name="wallet-outline"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-                <Text
-                  style={[styles.walletLabel, { color: colors.textSecondary }]}
-                >
-                  Wallet Balance
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.walletBalance,
-                  {
-                    color:
-                      wallet.balance >= amount ? colors.success : colors.error,
-                  },
-                ]}
-              >
-                {formatCurrency(wallet.balance)}
-              </Text>
-            </View>
-          )}
+
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
@@ -772,12 +732,6 @@ export default function MakeRepaymentScreen() {
           )}
         </TouchableOpacity>
       </View>
-
-      <BlockchainProcessingModal
-        visible={initiating}
-        message="Preparing your secure payment... This will only take a moment."
-        currentStep="blockchain"
-      />
 
       <BlockchainProcessingModal
         visible={blockchainProcessing}
