@@ -203,8 +203,18 @@ export default function MyLoansScreen() {
   ) => {
     const safeValue = value ?? 0;
     const color = isPositive ? "#16A34A" : "#DC2626";
-    // Format number without currency symbol
-    const formattedValue = safeValue.toLocaleString("en-NP");
+
+    // Use our custom formatting function for consistency
+    const numericValue =
+      typeof safeValue === "string" ? parseFloat(safeValue) : safeValue;
+    const formattedValue = isNaN(numericValue)
+      ? "0.00"
+      : (() => {
+          const parts = numericValue.toFixed(2).split(".");
+          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+          return parts.join(".");
+        })();
+
     return (
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <CurrencyIcon size={16} color={color} />

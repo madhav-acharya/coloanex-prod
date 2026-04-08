@@ -40,8 +40,8 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     icon: "wallet-outline",
-    label: "Wallet",
-    route: "/wallet",
+    label: "Transactions",
+    route: "/transactions",
     color: "#F59E0B",
   },
   {
