@@ -10,7 +10,6 @@ export type TransactionType =
   | "FEE";
 
 export interface InitiatePaymentPayload {
-  walletId: string;
   contractId?: string;
   paymentScheduleId?: string;
   amount: number;
@@ -24,14 +23,12 @@ export interface InitiatePaymentResult {
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
-  walletId: string;
 }
 
 export interface VerifyPaymentPayload {
   transactionUuid: string;
   totalAmount: number;
   gateway: PaymentGateway;
-  walletId: string;
   type: TransactionType;
   contractId?: string;
   paymentScheduleId?: string;
@@ -75,7 +72,7 @@ export const paymentsApi = baseApi.injectEndpoints({
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Transactions", "Wallets"],
+      invalidatesTags: ["Transactions"],
     }),
     lookupPayment: builder.mutation<LookupPaymentResult, LookupPaymentPayload>({
       query: (data) => ({

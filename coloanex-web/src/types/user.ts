@@ -9,6 +9,7 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   tenantId?: string;
+  borrowerCount?: number;
   roles?: Array<{
     role?: {
       id: string;

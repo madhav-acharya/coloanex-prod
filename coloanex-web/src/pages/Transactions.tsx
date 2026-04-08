@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
@@ -8,33 +8,19 @@ import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { FormSheet } from "@/components/shared/FormSheet";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
-import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
-import { recordTransactionOnBlockchain } from "@/utils/blockchain";
 import {
-  useGetMyWalletQuery,
-  useCreateWalletMutation,
-} from "@/apis/walletsApi";
-import {
-  useGetTransactionsByWalletQuery,
-  useCreateTransactionMutation,
+  useGetAllTransactionsQuery,
+  useGetTransactionsByEntityQuery,
   Transaction,
-  CreateTransactionDto,
 } from "@/apis/transactionsApi";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
-export default function Wallets() {
+export default function Transactions() {
   const { toast } = useToast();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const { user } = useSelector((state: RootState) => state.auth);
+
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -42,30 +28,82 @@ export default function Wallets() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [transactionData, setTransactionData] = useState({
-    type: "DEPOSIT" as const,
-    amount: "",
-    description: "",
-  });
-  useState<any>(null);
 
-  const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<
-    "blockchain" | "database"
-  >("blockchain");
-
-  const { data: wallet, isLoading, refetch } = useGetMyWalletQuery();
-  const { data: transactions = [] } = useGetTransactionsByWalletQuery(
-    wallet?.id || "",
-    {
-      skip: !wallet,
-    },
+  const isSuperAdmin = user?.roles?.some(
+    (ur: any) => ur.role?.name === "Super Admin",
   );
-  const [createWallet, { isLoading: isCreating }] = useCreateWalletMutation();
-  const [createTransaction, { isLoading: isCreatingTransaction }] =
-    useCreateTransactionMutation();
 
-  const WalletCard = ({
+  const entityId = user?.tenantId || user?.id || "";
+
+  const {
+    data: allTransactions,
+    isLoading: isLoadingAll,
+    refetch: refetchAll,
+  } = useGetAllTransactionsQuery(undefined, {
+    skip: !isSuperAdmin,
+  });
+
+  const {
+    data: entityTransactions,
+    isLoading: isLoadingEntity,
+    refetch: refetchEntity,
+  } = useGetTransactionsByEntityQuery(entityId, {
+    skip: isSuperAdmin || !entityId,
+  });
+
+  const transactions = isSuperAdmin
+    ? allTransactions || []
+    : entityTransactions || [];
+  const isLoading = isSuperAdmin ? isLoadingAll : isLoadingEntity;
+  const refetch = isSuperAdmin ? refetchAll : refetchEntity;
+
+  // Calculate To Give and To Receive based on transaction flow
+  const { toGive, toReceive } = useMemo(() => {
+    let give = 0;
+    let receive = 0;
+
+    if (isSuperAdmin) {
+      // Super admin sees total system aggregates, maybe Total Volume instead of Give/Receive
+      // But if we must compute To Give / To Receive, let's keep it 0 or neutral for super admin
+      // since super admin doesn't "give" or "receive" loans unless they are part of a tenant.
+      return { toGive: 0, toReceive: 0 };
+    }
+
+    transactions.forEach((tx) => {
+      if (tx.status !== "COMPLETED") return;
+      const amount = Number(tx.amount) || 0;
+
+      const iSent = tx.sentBy === entityId;
+      const iReceived = tx.receivedBy === entityId;
+
+      if (iReceived && tx.type === "DISBURSEMENT") {
+        give += amount;
+      }
+      if (
+        iSent &&
+        (tx.type === "INSTALLMENT_PAYMENT" || tx.type === "PENALTY_PAYMENT")
+      ) {
+        give -= amount;
+      }
+
+      if (iSent && tx.type === "DISBURSEMENT") {
+        receive += amount;
+      }
+      if (
+        iReceived &&
+        (tx.type === "INSTALLMENT_PAYMENT" || tx.type === "PENALTY_PAYMENT")
+      ) {
+        receive -= amount;
+      }
+    });
+
+    return {
+      toGive: Math.max(0, give),
+      toReceive: Math.max(0, receive),
+    };
+  }, [transactions, isSuperAdmin, entityId]);
+
+  const MetricCard = ({
     title,
     value,
     color,
@@ -93,7 +131,7 @@ export default function Wallets() {
           </div>
           <div className="w-20 h-10">
             {trend && trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={40}>
                 <LineChart data={trend}>
                   <Line
                     type="monotone"
@@ -105,7 +143,7 @@ export default function Wallets() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={40}>
                 <LineChart
                   data={[
                     { value: 0 },
@@ -132,12 +170,9 @@ export default function Wallets() {
     </Card>
   );
 
-  // Generate trend data for wallet cards
-  const generateWalletTrend = (
-    baseValue: number,
-    isPositive: boolean = true,
-  ) => {
+  const generateTrend = (baseValue: number, isPositive: boolean = true) => {
     const trend = [];
+    if (baseValue <= 0) return trend;
     for (let i = 0; i < 6; i++) {
       const variation = isPositive
         ? Math.floor(baseValue * (0.7 + i * 0.05)) +
@@ -153,7 +188,7 @@ export default function Wallets() {
   };
 
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions.filter((transaction) => {
+    let filtered = transactions.filter((transaction: Transaction) => {
       const matchesSearch =
         searchValue === "" ||
         transaction.type?.toLowerCase().includes(searchValue.toLowerCase());
@@ -164,10 +199,9 @@ export default function Wallets() {
       return matchesSearch && matchesStatus && matchesType;
     });
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const aValue = a[sortBy as keyof Transaction];
-      const bValue = b[sortBy as keyof Transaction];
+    filtered.sort((a: Transaction, b: Transaction) => {
+      const aValue = a[sortBy as keyof Transaction] ?? "";
+      const bValue = b[sortBy as keyof Transaction] ?? "";
 
       if (aValue === bValue) return 0;
       const comparison = aValue > bValue ? 1 : -1;
@@ -185,15 +219,6 @@ export default function Wallets() {
 
   const totalPages = Math.ceil(filteredTransactions.length / pageSize);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
-  };
-
   const handleSort = (key: string) => {
     if (sortBy === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -210,7 +235,12 @@ export default function Wallets() {
       sortable: true,
       render: (transaction) => (
         <Badge
-          variant={transaction.type === "DEPOSIT" ? "default" : "secondary"}
+          variant={
+            transaction.type === "DEPOSIT" ||
+            transaction.type === "INSTALLMENT_PAYMENT"
+              ? "default"
+              : "secondary"
+          }
         >
           {transaction?.type?.replace(/_/g, " ")}
         </Badge>
@@ -220,21 +250,68 @@ export default function Wallets() {
       key: "amount",
       label: "Amount",
       sortable: true,
-      render: (transaction) => (
-        <span
-          className={
-            transaction.type === "DEPOSIT" ? "text-green-600" : "text-red-600"
-          }
-        >
-          {transaction.type === "DEPOSIT" ? "+" : "-"}
-          <IconCurrencyRupeeNepalese
-            className="inline h-4 w-4 mx-0.5"
-            style={{
-              color: transaction.type === "DEPOSIT" ? "#16A34A" : "#DC2626",
-            }}
-          />
-          {Number(transaction.amount || 0).toLocaleString()}
-        </span>
+      render: (transaction) => {
+        const isReceived = transaction.receivedBy === entityId;
+        const color = isReceived ? "#16A34A" : "#DC2626";
+        const sign = isReceived ? "+" : "-";
+
+        if (isSuperAdmin) {
+          return (
+            <span>
+              <IconCurrencyRupeeNepalese className="inline h-4 w-4 mx-0.5" />
+              {Number(transaction.amount || 0).toLocaleString()}
+            </span>
+          );
+        }
+
+        return (
+          <span className={isReceived ? "text-green-600" : "text-red-600"}>
+            {sign}
+            <IconCurrencyRupeeNepalese
+              className="inline h-4 w-4 mx-0.5"
+              style={{ color }}
+            />
+            {Number(transaction.amount || 0).toLocaleString()}
+          </span>
+        );
+      },
+    },
+    {
+      key: "sentBy",
+      label: "Sent By",
+      render: (tx) => (
+        <div className="text-xs">
+          {tx.sentByUser ? (
+            <div className="space-y-0.5">
+              <div className="font-medium">{tx.sentByUser.fullName}</div>
+              <div className="text-muted-foreground">{tx.sentByUser.email}</div>
+            </div>
+          ) : (
+            <span className="break-all truncate max-w-[100px] text-muted-foreground">
+              {tx.sentBy}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "receivedBy",
+      label: "Received By",
+      render: (tx) => (
+        <div className="text-xs">
+          {tx.receivedByUser ? (
+            <div className="space-y-0.5">
+              <div className="font-medium">{tx.receivedByUser.fullName}</div>
+              <div className="text-muted-foreground">
+                {tx.receivedByUser.email}
+              </div>
+            </div>
+          ) : (
+            <span className="break-all truncate max-w-[100px] text-muted-foreground">
+              {tx.receivedBy}
+            </span>
+          )}
+        </div>
       ),
     },
     {
@@ -320,163 +397,14 @@ export default function Wallets() {
     },
   ];
 
-  const handleCreateWallet = async () => {
-    try {
-      await createWallet({}).unwrap();
-      toast({
-        title: "Success",
-        description: "Wallet created successfully",
-      });
-      setCreateDialogOpen(false);
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.data?.message || "Failed to create wallet",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreateTransaction = async () => {
-    if (!wallet) return;
-
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-
-    try {
-      let blockchainTxHash: string | undefined;
-
-      const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const amount = parseFloat(transactionData.amount);
-
-      try {
-        blockchainTxHash = await recordTransactionOnBlockchain(
-          transactionId,
-          wallet.id,
-          amount,
-          transactionData.type,
-        );
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.reason ||
-              blockchainError.message ||
-              "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      setBlockchainStep("database");
-
-      const data: CreateTransactionDto = {
-        walletId: wallet.id,
-        type: transactionData.type,
-        amount,
-      };
-
-      if (blockchainTxHash) {
-        (data as any).blockchain_tx_hash = blockchainTxHash;
-      }
-
-      await createTransaction(data).unwrap();
-      toast({
-        title: "Success",
-        description: "Transaction created successfully",
-      });
-      setTransactionDialogOpen(false);
-      setTransactionData({
-        type: "DEPOSIT",
-        amount: "",
-        description: "",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error?.data?.message || "Failed to create transaction",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessingBlockchain(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <DashboardLayout
-        title="Wallet"
-        description="Manage your wallet and transactions"
+        title="Transactions"
+        description="View your system transactions"
       >
         <div className="flex items-center justify-center h-64">
-          <p>Loading wallet...</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (!wallet) {
-    return (
-      <DashboardLayout
-        title="Wallet"
-        description="Manage your wallet and transactions"
-      >
-        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <p className="text-lg text-muted-foreground">
-            You don't have a wallet yet
-          </p>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Wallet
-          </Button>
-
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Wallet</DialogTitle>
-              </DialogHeader>
-              <p className="text-sm text-muted-foreground">
-                Create a new wallet to manage your transactions.
-              </p>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateDialogOpen(false)}
-                  disabled={isCreating}
-                  className="cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateWallet}
-                  disabled={isCreating}
-                  className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                >
-                  {isCreating ? "Creating..." : "Create Wallet"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <p>Loading transactions...</p>
         </div>
       </DashboardLayout>
     );
@@ -484,17 +412,12 @@ export default function Wallets() {
 
   return (
     <DashboardLayout
-      title="My Wallet"
-      description="Manage your wallet and transactions"
+      title="Transactions"
+      description="View and manage your transactions"
       searchPlaceholder="Search transactions..."
       searchValue={searchValue}
       onSearchChange={setSearchValue}
       actions={[
-        {
-          label: "Load Wallet",
-          onClick: () => setTransactionDialogOpen(true),
-          variant: "default",
-        },
         {
           label: "Refresh",
           onClick: () => refetch(),
@@ -524,6 +447,8 @@ export default function Wallets() {
             { value: "WITHDRAW", label: "Withdraw" },
             { value: "TRANSFER", label: "Transfer" },
             { value: "REFUND", label: "Refund" },
+            { value: "DISBURSEMENT", label: "Disbursement" },
+            { value: "INSTALLMENT_PAYMENT", label: "Installment" },
           ],
         },
       ]}
@@ -535,25 +460,33 @@ export default function Wallets() {
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
-          <WalletCard
-            title="Balance"
-            value={wallet.balance}
+          <MetricCard
+            title={isSuperAdmin ? "Total Volume" : "To Give"}
+            value={
+              isSuperAdmin
+                ? transactions.reduce(
+                    (acc, tx) =>
+                      acc + (tx.status === "COMPLETED" ? Number(tx.amount) : 0),
+                    0,
+                  )
+                : toGive
+            }
+            color="#DC2626"
+            isCurrency={true}
+            trend={generateTrend(isSuperAdmin ? 100 : toGive, false)}
+          />
+          <MetricCard
+            title="To Receive"
+            value={toReceive}
             color="#16A34A"
             isCurrency={true}
-            trend={generateWalletTrend(wallet.balance, true)}
+            trend={generateTrend(toReceive, true)}
           />
-          <WalletCard
-            title="Pending Balance"
-            value={wallet.pendingBalance || 0}
-            color="#F59E0B"
-            isCurrency={true}
-            trend={generateWalletTrend(wallet.pendingBalance || 0, false)}
-          />
-          <WalletCard
+          <MetricCard
             title="Total Transactions"
             value={transactions.length}
             color="#059669"
-            trend={generateWalletTrend(transactions.length, true)}
+            trend={generateTrend(transactions.length, true)}
           />
         </div>
 
@@ -574,72 +507,20 @@ export default function Wallets() {
           <div className="mt-6">
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={totalPages || 1}
               hasNextPage={currentPage < totalPages}
               hasPreviousPage={currentPage > 1}
               total={filteredTransactions.length}
               limit={pageSize}
-              onPageChange={handlePageChange}
-              onPageSizeChange={handlePageSizeChange}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
             />
           </div>
         </div>
-
-        <FormSheet
-          open={transactionDialogOpen}
-          onOpenChange={setTransactionDialogOpen}
-          title="Load Wallet"
-          description="Add funds to your wallet"
-          sections={[
-            {
-              fields: [
-                {
-                  id: "type",
-                  label: "Transaction Type",
-                  value: transactionData.type,
-                  type: "select",
-                  options: [
-                    { value: "DEPOSIT", label: "Deposit" },
-                    { value: "WITHDRAW", label: "Withdraw" },
-                  ],
-                  required: true,
-                },
-                {
-                  id: "amount",
-                  label: "Amount",
-                  value: transactionData.amount,
-                  type: "number",
-                  placeholder: "Enter amount",
-                  required: true,
-                },
-                {
-                  id: "description",
-                  label: "Description (Optional)",
-                  value: transactionData.description,
-                  type: "text",
-                  placeholder: "Enter description",
-                  required: false,
-                },
-              ],
-            },
-          ]}
-          onFieldChange={(fieldId, value) => {
-            setTransactionData({
-              ...transactionData,
-              [fieldId]: value,
-            });
-          }}
-          onSubmit={handleCreateTransaction}
-          submitText="Load Wallet"
-          cancelText="Cancel"
-          isSubmitting={isCreatingTransaction}
-        />
       </div>
-
-      <BlockchainProcessingModal
-        open={isProcessingBlockchain}
-        currentStep={blockchainStep}
-      />
     </DashboardLayout>
   );
 }

@@ -190,9 +190,9 @@ export default function DashboardLayout({
       permission: "Read Loans",
     },
     {
-      title: "Wallets",
+      title: "Transactions",
       icon: <Wallet className="w-4 h-4" />,
-      href: "/wallets",
+      href: "/transactions",
       permission: "Read Payments",
     },
   ];

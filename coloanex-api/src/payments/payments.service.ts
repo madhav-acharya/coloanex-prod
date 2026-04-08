@@ -36,25 +36,6 @@ export class PaymentsService {
   async initiatePayment(dto: InitiatePaymentDto, userId: string) {
     const { amount, gateway, successUrl, failureUrl, walletId } = dto;
 
-    let resolvedWalletId = walletId;
-    const wallet = walletId
-      ? await this.prisma.wallet.findUnique({ where: { id: walletId } })
-      : null;
-
-    if (!wallet) {
-      const existing = await this.prisma.wallet.findFirst({
-        where: { userId },
-      });
-      if (existing) {
-        resolvedWalletId = existing.id;
-      } else {
-        const created = await this.prisma.wallet.create({
-          data: { userId, balance: 0, paymentGatewayLinks: {} },
-        });
-        resolvedWalletId = created.id;
-      }
-    }
-
     const paymentGateway = this.resolveGateway(gateway);
     const transactionUuid = randomUUID();
 
@@ -69,7 +50,6 @@ export class PaymentsService {
       transactionUuid,
       paymentUrl: result.paymentUrl,
       formData: result.formData,
-      walletId: resolvedWalletId,
     };
   }
 
@@ -78,30 +58,10 @@ export class PaymentsService {
       transactionUuid,
       totalAmount,
       gateway,
-      walletId,
       type,
       contractId,
       paymentScheduleId,
     } = dto;
-
-    let resolvedWalletId = walletId;
-    const wallet = walletId
-      ? await this.prisma.wallet.findUnique({ where: { id: walletId } })
-      : null;
-
-    if (!wallet) {
-      const existing = await this.prisma.wallet.findFirst({
-        where: { userId },
-      });
-      if (existing) {
-        resolvedWalletId = existing.id;
-      } else {
-        const created = await this.prisma.wallet.create({
-          data: { userId, balance: 0, paymentGatewayLinks: {} },
-        });
-        resolvedWalletId = created.id;
-      }
-    }
 
     const paymentGateway = this.resolveGateway(gateway);
 
@@ -171,11 +131,32 @@ export class PaymentsService {
       );
     }
 
+    let sentBy = userId;
+    let receivedBy = 'system';
+    
+    if (contractId) {
+      const contractContext = await this.prisma.contract.findUnique({
+        where: { id: contractId },
+        select: { tenantId: true, borrowerId: true }
+      });
+      
+      if (contractContext) {
+        if (type === 'DISBURSEMENT') {
+          sentBy = contractContext.tenantId;
+          receivedBy = contractContext.borrowerId;
+        } else {
+          sentBy = userId;
+          receivedBy = contractContext.tenantId;
+        }
+      }
+    }
+
     this.logger.log(`[Payment ${paymentId}] Creating database record...`);
     const transaction = await this.prisma.transaction.create({
       data: {
         id: paymentId,
-        walletId: resolvedWalletId as string,
+        sentBy,
+        receivedBy,
         contractId: contractId ?? null,
         paymentScheduleId: paymentScheduleId ?? null,
         type: type as never,
@@ -210,11 +191,6 @@ export class PaymentsService {
     const isCredit = ['DEPOSIT', 'DISBURSEMENT'].includes(type as string);
 
     if (isDebit) {
-      await this.prisma.wallet.update({
-        where: { id: resolvedWalletId },
-        data: { balance: { decrement: amount } },
-      });
-
       if (
         (String(type) === 'INSTALLMENT_PAYMENT' ||
           String(type) === 'PENALTY_PAYMENT') &&
@@ -226,19 +202,7 @@ export class PaymentsService {
         });
 
         if (contract?.tenant?.ownerUserId) {
-          const lenderWallet = await this.prisma.wallet.findFirst({
-            where: { userId: contract.tenant.ownerUserId },
-          });
-
-          if (lenderWallet) {
-            await this.prisma.wallet.update({
-              where: { id: lenderWallet.id },
-              data: { balance: { increment: amount } },
-            });
-
-            // Note: Lender balance updated but no DEPOSIT transaction created per business requirement
-            // Only INSTALLMENT_PAYMENT transaction is stored for the borrower
-          }
+          // Transaction recorded correctly.
         }
 
         await this.prisma.contract.update({
@@ -280,11 +244,6 @@ export class PaymentsService {
           }
         }
       }
-    } else if (isCredit) {
-      await this.prisma.wallet.update({
-        where: { id: resolvedWalletId },
-        data: { balance: { increment: amount } },
-      });
     }
 
     return {

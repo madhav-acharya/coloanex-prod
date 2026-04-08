@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Shield, Database, Users, Mail, Phone } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
@@ -132,6 +133,9 @@ export default function Landing() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Sign in to Coloanex</DialogTitle>
+            <DialogDescription>
+              Choose your preferred sign-in method
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-4">

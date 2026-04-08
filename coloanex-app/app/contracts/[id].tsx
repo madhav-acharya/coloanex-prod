@@ -494,7 +494,14 @@ export default function ContractDetailsScreen() {
                   <Text style={styles.signSummaryLabel}>Loan Amount: </Text>
                   <CurrencyIcon size={16} color="#000" />
                   <Text style={{ marginLeft: 4 }}>
-                    {contract.loanAmount.toLocaleString()}
+                    {(() => {
+                      const amount = contract.loanAmount;
+                      const numericValue = typeof amount === "string" ? parseFloat(amount) : amount;
+                      if (isNaN(numericValue)) return "0.00";
+                      const parts = numericValue.toFixed(2).split('.');
+                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                      return parts.join('.');
+                    })()}
                   </Text>
                 </View>
                 <Text style={styles.signSummaryRow}>
@@ -510,7 +517,14 @@ export default function ContractDetailsScreen() {
                   <Text style={styles.signSummaryLabel}>Total Due: </Text>
                   <CurrencyIcon size={16} color="#000" />
                   <Text style={{ marginLeft: 4 }}>
-                    {contract.totalAmountDue.toLocaleString()}
+                    {(() => {
+                      const amount = contract.totalAmountDue;
+                      const numericValue = typeof amount === "string" ? parseFloat(amount) : amount;
+                      if (isNaN(numericValue)) return "0.00";
+                      const parts = numericValue.toFixed(2).split('.');
+                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                      return parts.join('.');
+                    })()}
                   </Text>
                 </View>
               </View>

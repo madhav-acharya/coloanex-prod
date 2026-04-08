@@ -151,7 +151,7 @@ const Dashboard = () => {
           </div>
           <div className="w-20 h-10">
             {trend && trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={40}>
                 <LineChart data={trend}>
                   <Line
                     type="monotone"
@@ -163,7 +163,7 @@ const Dashboard = () => {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={40}>
                 <LineChart
                   data={[
                     { value: 0 },

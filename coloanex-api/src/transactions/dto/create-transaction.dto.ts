@@ -31,7 +31,10 @@ class PaymentDetailsDto {
 
 export class CreateTransactionDto {
   @IsString()
-  walletId: string;
+  sentBy: string;
+
+  @IsString()
+  receivedBy: string;
 
   @IsOptional()
   @IsString()

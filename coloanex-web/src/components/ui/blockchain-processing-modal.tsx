@@ -24,6 +24,16 @@ export function BlockchainProcessingModal({
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
+          <DialogPrimitive.Title className="sr-only">
+            {currentStep === "error"
+              ? "Transaction Failed"
+              : "Processing Transaction"}
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">
+            {currentStep === "error"
+              ? error || "An error occurred during blockchain processing"
+              : message}
+          </DialogPrimitive.Description>
           <div className="flex flex-col items-center justify-center space-y-6 py-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center justify-center">
@@ -43,10 +53,14 @@ export function BlockchainProcessingModal({
 
             <div className="space-y-4 text-center">
               <h3 className="text-xl font-semibold">
-                {currentStep === "error" ? "Transaction Failed" : "Processing Transaction"}
+                {currentStep === "error"
+                  ? "Transaction Failed"
+                  : "Processing Transaction"}
               </h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                {currentStep === "error" ? error || "An error occurred during blockchain processing" : message}
+                {currentStep === "error"
+                  ? error || "An error occurred during blockchain processing"
+                  : message}
               </p>
             </div>
 

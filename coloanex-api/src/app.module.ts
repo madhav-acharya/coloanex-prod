@@ -16,7 +16,7 @@ import { RulesModule } from './rules/rules.module';
 import { ContractsModule } from './contracts/contracts.module';
 import { PaymentSchedulesModule } from './payment-schedules/payment-schedules.module';
 import { TransactionsModule } from './transactions/transactions.module';
-import { WalletsModule } from './wallets/wallets.module';
+
 import { CloudinaryUploadsModule } from './cloudinary-uploads/cloudinary-uploads.module';
 import { MailModule } from './mail/mail.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -40,7 +40,7 @@ import { IsUniqueConstraint } from './common/validators/is-unique.validator';
     ContractsModule,
     PaymentSchedulesModule,
     TransactionsModule,
-    WalletsModule,
+
     CloudinaryUploadsModule,
     MailModule,
     AnalyticsModule,

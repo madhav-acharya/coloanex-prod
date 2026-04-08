@@ -22,14 +22,19 @@ export class TransactionsController {
     return this.transactionsService.create(createTransactionDto);
   }
 
+  @Get()
+  findAll() {
+    return this.transactionsService.findAll();
+  }
+
   @Get('contract/:contractId')
   findByContract(@Param('contractId') contractId: string) {
     return this.transactionsService.findByContract(contractId);
   }
 
-  @Get('wallet/:walletId')
-  findByWallet(@Param('walletId') walletId: string) {
-    return this.transactionsService.findByWallet(walletId);
+  @Get('entity/:id')
+  findByEntity(@Param('id') id: string) {
+    return this.transactionsService.findByEntity(id);
   }
 
   @Get(':id')

@@ -698,8 +698,13 @@ export default function KycRequests() {
     } as CreateKycDto;
 
     try {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("database");
+
       if (editingKyc) {
         await updateKyc({ id: editingKyc.id, data: kycData }).unwrap();
+        setBlockchainStep("complete");
+        setTimeout(() => setIsProcessingBlockchain(false), 1000);
         toast({
           title: "Success",
           description: "KYC request updated successfully",
@@ -707,6 +712,7 @@ export default function KycRequests() {
       } else {
         const kycResponse = await createKyc(kycData).unwrap();
 
+        setBlockchainStep("blockchain");
         try {
           const userAddress = ethers.getAddress(
             "0x" +
@@ -715,30 +721,36 @@ export default function KycRequests() {
 
           await recordKYCOnBlockchain(kycResponse.id, userAddress);
 
+          setBlockchainStep("complete");
+          setTimeout(() => setIsProcessingBlockchain(false), 1000);
           toast({
             title: "Success",
             description:
               "KYC request submitted and recorded on blockchain successfully",
           });
         } catch (blockchainError) {
+          setIsProcessingBlockchain(false);
           const error = blockchainError as Error;
           if (error.message.includes("MetaMask")) {
             toast({
               title: "KYC Submitted",
               description:
                 "KYC request submitted successfully. MetaMask is required for blockchain verification.",
+              variant: "destructive",
             });
-          } else if (error.message.includes("User rejected")) {
+          } else if (error.message.includes("User rejected") || error.message.includes("ACTION_REJECTED")) {
             toast({
               title: "KYC Submitted",
               description:
                 "KYC request submitted successfully. Blockchain recording was cancelled.",
+              variant: "destructive",
             });
           } else {
             toast({
               title: "KYC Submitted",
               description:
-                "KYC request submitted successfully. Blockchain recording failed.",
+                "KYC request submitted, but failed to record on blockchain.",
+              variant: "destructive",
             });
           }
         }

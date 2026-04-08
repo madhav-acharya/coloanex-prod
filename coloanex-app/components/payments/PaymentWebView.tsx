@@ -80,22 +80,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
     }
   };
 
-  const handleShouldStartLoadWithRequest = (request: { url: string }) => {
-    const { url } = request;
-
-    if (url.includes(successUrlPattern)) {
-      onSuccess(url);
-      return false;
-    }
-
-    if (url.includes(failureUrlPattern)) {
-      onFailure(url);
-      return false;
-    }
-
-    return true;
-  };
-
   const handleClose = () => {
     setLoading(true);
     setCurrentUrl("");
@@ -187,7 +171,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
           ref={webViewRef}
           source={{ uri: paymentUrl }}
           onNavigationStateChange={handleNavigationStateChange}
-          onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
           onLoadStart={() => setLoading(true)}
           onLoadEnd={handleWebViewLoad}
           onError={handleWebViewError}

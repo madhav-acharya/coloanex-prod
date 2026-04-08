@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Users as UsersIcon, Eye, Edit, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
@@ -28,6 +28,7 @@ import {
   type UsersQueryParams,
 } from "@/apis/usersApi";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
+import { useGetBorrowersByTenantQuery } from "@/apis/borrowersApi";
 import { useAuth } from "@/hooks/useAuth";
 import {
   extractUserRoleIds,
@@ -432,25 +433,25 @@ export default function Users() {
       key: "fullName",
       label: "Full Name",
       sortable: true,
-      width: "25%",
+      width: "22%",
     },
     {
       key: "email",
       label: "Email",
       sortable: true,
-      width: "20%",
+      width: "18%",
       render: (user) => user.email || "-",
     },
     {
       key: "phone",
       label: "Phone",
-      width: "12%",
+      width: "10%",
       render: (user) => user.phone || "-",
     },
     {
       key: "roles",
       label: "Roles",
-      width: "18%",
+      width: "15%",
       render: (user) => {
         const maxVisible = 2;
         const roles = (user.roles || [])
@@ -484,9 +485,36 @@ export default function Users() {
       },
     },
     {
+      key: "borrowerCount",
+      label: "Borrowers",
+      width: "10%",
+      render: (user) => {
+        const userRoles = (user.roles || [])
+          .map((r) => (typeof r === "object" && "role" in r ? r.role : r))
+          .filter((r) => r && typeof r === "object" && "name" in r)
+          .map((role: { name: string }) => role.name);
+
+        const isLender = userRoles.some((role) =>
+          ["Lender", "Admin", "Super Admin"].includes(role),
+        );
+
+        if (!isLender) {
+          return <span className="text-muted-foreground text-sm">-</span>;
+        }
+
+        const count = user.borrowerCount || 0;
+        
+        if (count === 0) {
+          return <span className="text-sm text-muted-foreground">0</span>;
+        }
+
+        return <span className="text-sm">{count}</span>;
+      },
+    },
+    {
       key: "permissions",
       label: "Permissions",
-      width: "18%",
+      width: "15%",
       render: (user) => {
         const maxVisible = 2;
         const permissions = (user.permissions || [])
@@ -531,7 +559,7 @@ export default function Users() {
       key: "createdAt",
       label: "Created",
       sortable: true,
-      width: "12%",
+      width: "10%",
       render: (user) => new Date(user.createdAt).toLocaleDateString(),
     },
   ];
@@ -567,12 +595,10 @@ export default function Users() {
       actionLabel="Add User"
       onActionClick={handleCreateClick}
     >
-      <DataTable
-        data={users}
+      <ExpandableUsersTable
+        users={users}
         columns={columns}
         isLoading={isLoading}
-        emptyMessage="No users found"
-        emptyIcon={<UsersIcon className="w-12 h-12 text-muted-foreground" />}
         sortBy={filters.sortBy}
         sortOrder={filters.sortOrder}
         onSort={handleSort}
@@ -993,5 +1019,196 @@ export default function Users() {
         isLoading={isDeletingUser}
       />
     </DashboardLayout>
+  );
+}
+
+// Expandable Users Table Component
+function ExpandableUsersTable({ 
+  users, 
+  columns, 
+  isLoading, 
+  sortBy, 
+  sortOrder, 
+  onSort, 
+  actions 
+}: {
+  users: User[];
+  columns: Column<User>[];
+  isLoading: boolean;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+  onSort: (key: string) => void;
+  actions: any[];
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <UsersIcon className="w-12 h-12 text-muted-foreground" />
+        <div className="text-muted-foreground">No users found</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                  style={{ width: column.width }}
+                >
+                  {column.sortable ? (
+                    <button
+                      onClick={() => onSort(column.key)}
+                      className="flex items-center gap-2 hover:text-foreground"
+                    >
+                      {column.label}
+                      {sortBy === column.key && (
+                        <span className="text-xs">
+                          {sortOrder === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    column.label
+                  )}
+                </th>
+              ))}
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <React.Fragment key={user.id}>
+                {/* Main user row */}
+                <tr className="border-b hover:bg-muted/50">
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-4 py-3 text-sm">
+                      {column.render 
+                        ? column.render(user) 
+                        : (user as any)[column.key]
+                      }
+                    </td>
+                  ))}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {actions.map((action, index) => (
+                        <button
+                          key={index}
+                          onClick={() => action.onClick(user)}
+                          className={`p-1 rounded hover:bg-accent ${
+                            action.variant === "destructive" 
+                              ? "hover:bg-destructive/20 text-destructive" 
+                              : "hover:bg-accent"
+                          }`}
+                          title={action.label}
+                        >
+                          {action.icon}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+                <BorrowerRowsInline
+                  lender={user}
+                  columns={columns}
+                />
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function BorrowerRowsInline({
+  lender,
+  columns,
+}: {
+  lender: User;
+  columns: Column<User>[];
+}) {
+  const lenderRoles = (lender.roles || [])
+    .map((r: any) => (r && typeof r === "object" && "role" in r ? r.role : r))
+    .filter((r: any) => r && typeof r === "object" && "name" in r)
+    .map((role: { name: string }) => role.name);
+  const isLender = lenderRoles.some((role) =>
+    ["Lender", "Admin", "Super Admin"].includes(role),
+  );
+
+  const {
+    data: borrowers = [],
+    isLoading,
+    error,
+  } = useGetBorrowersByTenantQuery(lender.tenantId as string, {
+    skip: !lender.tenantId || !isLender,
+  });
+
+  if (!lender.tenantId || !isLender) return null;
+
+  if (isLoading) {
+    return (
+      <tr className="border-b bg-muted/20">
+        <td colSpan={columns.length + 1} className="px-4 py-2 text-sm text-muted-foreground">
+          Loading borrowers for {lender.fullName}...
+        </td>
+      </tr>
+    );
+  }
+
+  if (error) {
+    return null;
+  }
+
+  return (
+    <>
+      {borrowers.map((borrower: any) => {
+        const borrowerAsUser: User = {
+          id: borrower.user?.id || borrower.id,
+          fullName: borrower.user?.fullName || "Unknown Borrower",
+          email: borrower.user?.email || "",
+          phone: borrower.user?.phone || "",
+          isActive: true,
+          createdAt: borrower.createdAt,
+          updatedAt: borrower.updatedAt,
+          tenantId: lender.tenantId,
+          roles: [{ name: "Borrower", id: "borrower" }],
+          permissions: [],
+          borrowerCount: undefined,
+        };
+
+        return (
+          <tr key={`${lender.id}-${borrower.id}`} className="border-b bg-muted/20">
+            {columns.map((column) => (
+              <td key={column.key} className="px-4 py-3 text-sm">
+                {column.key === "borrowerCount" ? (
+                  <span className="text-muted-foreground text-sm">-</span>
+                ) : column.render ? (
+                  column.render(borrowerAsUser)
+                ) : (
+                  (borrowerAsUser as any)[column.key]
+                )}
+              </td>
+            ))}
+            <td className="px-4 py-3 text-xs text-muted-foreground">Borrower</td>
+          </tr>
+        );
+      })}
+    </>
   );
 }

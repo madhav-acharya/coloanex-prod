@@ -364,10 +364,6 @@ export class UsersService {
       });
     }
 
-    await this.prisma.wallet.create({
-      data: { userId: user.id, balance: 0, paymentGatewayLinks: {} },
-    });
-
     return user;
   }
 
@@ -461,10 +457,6 @@ export class UsersService {
         tenantId,
       });
     }
-
-    await this.prisma.wallet.create({
-      data: { userId: user.id, balance: 0, paymentGatewayLinks: {} },
-    });
 
     return user;
   }
@@ -715,25 +707,43 @@ export class UsersService {
     const hasNextPage = +page < totalPages;
     const hasPreviousPage = +page > 1;
 
-    const transformedUsers = users.map((user) => {
-      return {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        tenantId: user.tenantId,
-        isActive: user.isActive,
-        isBanned: user.isBanned,
-        isEmailVerified: user.isEmailVerified,
-        lastActiveAt: user.lastActiveAt,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        tenant: user.tenant,
-        roles: (user.roles || []).map((ur) => ur.role),
-        permissions: (user.permissions || []).map((up) => up.permission),
-        _count: user._count,
-      };
-    });
+    const transformedUsers = await Promise.all(
+      users.map(async (user) => {
+        // Get borrower count for lenders in the same tenant
+        let borrowerCount = 0;
+        const userRoles = (user.roles || []).map((ur) => ur.role?.name).filter(Boolean);
+        const isLender = userRoles.some(role => 
+          ['Lender', 'Admin', 'Super Admin'].includes(role)
+        );
+        
+        if (isLender && user.tenantId) {
+          borrowerCount = await this.prisma.borrower.count({
+            where: {
+              tenantId: user.tenantId,
+            },
+          });
+        }
+
+        return {
+          id: user.id,
+          fullName: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          tenantId: user.tenantId,
+          isActive: user.isActive,
+          isBanned: user.isBanned,
+          isEmailVerified: user.isEmailVerified,
+          lastActiveAt: user.lastActiveAt,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+          tenant: user.tenant,
+          roles: (user.roles || []).map((ur) => ur.role),
+          permissions: (user.permissions || []).map((up) => up.permission),
+          _count: user._count,
+          borrowerCount,
+        };
+      })
+    );
 
     return {
       data: transformedUsers,
@@ -866,11 +876,11 @@ export class UsersService {
 
     // Declare resolvedRoleIds outside so it's accessible later
     let resolvedRoleIds: bigint[] = [];
-    
+
     if (updateUserDto.roleIds !== undefined) {
       if (updateUserDto.roleIds.length > 0) {
         // Convert role IDs to BigInt array, handling both numeric IDs and role names
-        
+
         for (const roleId of updateUserDto.roleIds) {
           if (roleId !== null && roleId !== undefined) {
             if (typeof roleId === 'string' && isNaN(Number(roleId))) {
@@ -879,11 +889,13 @@ export class UsersService {
                 where: { name: { equals: roleId, mode: 'insensitive' } },
                 select: { id: true, name: true },
               });
-              
+
               if (roleByName) {
                 resolvedRoleIds.push(roleByName.id);
               } else {
-                throw new BadRequestException(`Role with name "${roleId}" not found`);
+                throw new BadRequestException(
+                  `Role with name "${roleId}" not found`,
+                );
               }
             } else {
               // It's a numeric ID (string or bigint)

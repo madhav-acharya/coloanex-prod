@@ -204,9 +204,9 @@ export default function PaymentSuccess() {
         </div>
 
         <div className="w-full flex flex-col gap-3">
-          <Button className="w-full" onClick={() => navigate("/wallets")}>
+          <Button className="w-full" onClick={() => navigate("/transactions")}>
             <Wallet className="mr-2 h-4 w-4" />
-            View Wallet
+            View Transactions
           </Button>
           <Button
             variant="outline"

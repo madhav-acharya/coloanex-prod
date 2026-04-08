@@ -10,62 +10,58 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { Card, AppHeader } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
-import { walletsApi, transactionsApi } from "@/api";
-import type { Wallet } from "@/api/walletsApi";
+import { spacing, borderRadius } from "@/constants/theme";
+import { transactionsApi } from "@/api";
 import type { Transaction } from "@/api/transactionsApi";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
+import { useAppSelector } from "@/store/hooks";
 
-export default function WalletScreen() {
+export default function TransactionsScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
+  
+  const user = useAppSelector((state) => state.auth.user);
+  const currentIdentifier = user?.id;
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadWallet = useCallback(async () => {
+  const loadTransactions = useCallback(async () => {
+    if (!currentIdentifier) return;
     try {
-      const walletData = await walletsApi.getMyWallet();
-      setWallet(walletData);
-
-      if (walletData) {
-        const transactionsData = await transactionsApi.getByWallet(
-          walletData.id,
-        );
-        setTransactions(transactionsData);
-      }
+      const transactionsData = await transactionsApi.getByEntity(
+        currentIdentifier,
+      );
+      setTransactions(transactionsData);
     } catch (error) {
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [currentIdentifier]);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      loadWallet();
-    }, [loadWallet]),
+      loadTransactions();
+    }, [loadTransactions]),
   );
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadWallet();
+    loadTransactions();
   };
 
   const getTransactionIcon = (type: string) => {
     const icons: Record<string, string> = {
       DEPOSIT: "arrow-down-circle",
       WITHDRAW: "arrow-up-circle",
-      LOAN_DISBURSEMENT: "cash",
-      LOAN_REPAYMENT: "return-up-back",
-      TRANSFER_IN: "swap-horizontal",
-      TRANSFER_OUT: "swap-horizontal",
+      DISBURSEMENT: "cash",
+      INSTALLMENT_PAYMENT: "return-up-back",
+      PENALTY_PAYMENT: "alert-circle",
       FEE: "remove-circle",
-      PENALTY: "alert-circle",
-      REFUND: "return-down-forward",
     };
     return icons[type] || "cash";
   };
@@ -73,9 +69,8 @@ export default function WalletScreen() {
   const getTransactionColor = (type: string) => {
     const depositTypes = [
       "DEPOSIT",
-      "LOAN_DISBURSEMENT",
-      "TRANSFER_IN",
-      "REFUND",
+      "DISBURSEMENT",
+      "INSTALLMENT_PAYMENT",
     ];
     return depositTypes.includes(type) ? colors.success : colors.error;
   };
@@ -90,21 +85,17 @@ export default function WalletScreen() {
     return colors_map[status] || colors.textLight;
   };
 
-  if (!wallet && !loading) {
-    return (
-      <View style={styles.container}>
-        <AppHeader title="Wallet" showThemeToggle={false} />
-        <View style={styles.emptyState}>
-          <Ionicons name="wallet-outline" size={64} color={colors.textLight} />
-          <Text style={styles.emptyText}>Wallet not available</Text>
-        </View>
-      </View>
-    );
-  }
+  const toGive = transactions
+    .filter((t) => t.sentBy === currentIdentifier && t.type !== "DEPOSIT")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const toReceive = transactions
+    .filter((t) => t.receivedBy === currentIdentifier && t.type !== "WITHDRAW")
+    .reduce((sum, t) => sum + t.amount, 0);
 
   return (
     <View style={styles.container}>
-      <AppHeader title="My Wallet" showThemeToggle={false} />
+      <AppHeader title="Transactions" showThemeToggle={false} />
 
       <ScrollView
         style={styles.content}
@@ -113,31 +104,28 @@ export default function WalletScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {wallet && (
-          <>
-            <Card style={styles.balanceCard}>
-              <View style={styles.balanceHeader}>
-                <Ionicons name="wallet" size={32} color={colors.primary} />
-                <Text style={styles.balanceLabel}>Available Balance</Text>
-              </View>
-              <Text style={styles.balanceValue}>
-                {formatCurrency(wallet.balance)}
-              </Text>
-              {wallet.pendingBalance > 0 && (
-                <View style={styles.pendingBalance}>
-                  <Ionicons
-                    name="time-outline"
-                    size={16}
-                    color={colors.warning}
-                  />
-                  <Text style={styles.pendingText}>
-                    Pending: {formatCurrency(wallet.pendingBalance)}
-                  </Text>
-                </View>
-              )}
-            </Card>
+        <Card style={styles.balanceCard}>
+          <View style={styles.balanceHeader}>
+            <Ionicons name="swap-horizontal" size={32} color={colors.primary} />
+            <Text style={styles.balanceLabel}>Total Transactions</Text>
+          </View>
+          <Text style={styles.balanceValue}>
+            {transactions.length}
+          </Text>
+          
+          <View style={{ flexDirection: "row", gap: spacing.md, marginTop: spacing.sm }}>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>To Give</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.error }}>{formatCurrency(toGive)}</Text>
+            </View>
+            <View style={{ alignItems: "center" }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>To Receive</Text>
+              <Text style={{ fontSize: 14, fontWeight: "600", color: colors.success }}>{formatCurrency(toReceive)}</Text>
+            </View>
+          </View>
+        </Card>
 
-            <View style={styles.actionsRow}>
+        <View style={styles.actionsRow}>
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => router.push("/activity-logs" as any)}
@@ -258,9 +246,7 @@ export default function WalletScreen() {
                     >
                       {[
                         "DEPOSIT",
-                        "LOAN_DISBURSEMENT",
-                        "TRANSFER_IN",
-                        "REFUND",
+                        "DISBURSEMENT",
                       ].includes(transaction.type)
                         ? "+"
                         : "-"}
@@ -297,8 +283,6 @@ export default function WalletScreen() {
                 </TouchableOpacity>
               )}
             </View>
-          </>
-        )}
       </ScrollView>
     </View>
   );

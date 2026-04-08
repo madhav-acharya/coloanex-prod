@@ -26,7 +26,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import Rules from "./pages/Rules";
 import Contracts from "./pages/Contracts";
-import Wallets from "./pages/Wallets";
+import Transactions from "./pages/Transactions";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
 import { hasPermission } from "./lib/permissions";
@@ -287,10 +287,10 @@ function App() {
       />
 
       <Route
-        path="/wallets"
+        path="/transactions"
         element={
           <ProtectedRoute requiredPermission="Read Payments">
-            <Wallets />
+            <Transactions />
           </ProtectedRoute>
         }
       />

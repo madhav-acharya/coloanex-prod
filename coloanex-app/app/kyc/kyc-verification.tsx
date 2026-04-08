@@ -77,6 +77,8 @@ export default function KYCVerificationScreen() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [prefillModal, setPrefillModal] = useState(false);
   const [checkingKyc, setCheckingKyc] = useState(true);
+  const [blockchainProcessing, setBlockchainProcessing] = useState(false);
+  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
 
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
@@ -462,10 +464,11 @@ export default function KYCVerificationScreen() {
     }
 
     setLoading(true);
+    setBlockchainProcessing(true);
+    setBlockchainStep("blockchain");
     try {
       const files: any[] = [];
 
-      // Passport photo as SELFIE
       files.push({
         fileType: "SELFIE",
         fileUrl: selfie,
@@ -516,7 +519,6 @@ export default function KYCVerificationScreen() {
         }
       });
 
-      // Build fullName from firstName, middleName, lastName
       const fullName = [
         personalInfo.firstName,
         personalInfo.middleName,
@@ -557,13 +559,20 @@ export default function KYCVerificationScreen() {
         files,
       };
 
+      setBlockchainStep("database");
       await kycApi.submit(kycData);
+
+      setBlockchainStep("complete");
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      setBlockchainProcessing(false);
       showToast(
         "KYC verification submitted successfully. We will review your information and notify you soon.",
         "success",
       );
       router.replace(`/lenders/lender-details?id=${tenantId}` as any);
     } catch (error: any) {
+      setBlockchainProcessing(false);
       showToast(
         error.response?.data?.message ||
           error.message ||
@@ -1281,7 +1290,8 @@ export default function KYCVerificationScreen() {
       </Modal>
 
       <BlockchainProcessingModal
-        visible={loading}
+        visible={blockchainProcessing}
+        currentStep={blockchainStep}
         message="Recording your KYC verification on the blockchain and updating the database. Please wait..."
       />
     </View>
