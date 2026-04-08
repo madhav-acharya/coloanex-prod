@@ -14,7 +14,6 @@ import {
   TransactionStatus,
   TransactionType,
 } from './entities/transaction.entity';
-import { WalletsService } from '../wallets/wallets.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
 
 @Injectable()
@@ -23,20 +22,98 @@ export class TransactionsService {
 
   constructor(
     private prisma: PrismaService,
-    @Inject(forwardRef(() => WalletsService))
-    private walletsService: WalletsService,
     private readonly blockchainService: BlockchainService,
   ) {}
+
+  private async attachActorDetails<T extends { sentBy: string; receivedBy: string }>(
+    transactions: T[],
+  ): Promise<
+    Array<
+      T & {
+        sentByUser?: { id: string; fullName: string; email: string };
+        receivedByUser?: { id: string; fullName: string; email: string };
+      }
+    >
+  > {
+    const actorIds = [
+      ...new Set(transactions.flatMap((t) => [t.sentBy, t.receivedBy])),
+    ].filter((id): id is string => Boolean(id));
+
+    if (!actorIds.length) {
+      return transactions.map((t) => ({
+        ...t,
+        sentByUser: undefined,
+        receivedByUser: undefined,
+      }));
+    }
+
+    const actorMap = new Map<string, { id: string; fullName: string; email: string }>();
+
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: actorIds } },
+      select: { id: true, fullName: true, email: true },
+    });
+
+    users.forEach((user) => {
+      actorMap.set(user.id, {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+      });
+    });
+
+    const unresolvedAfterUsers = actorIds.filter((id) => !actorMap.has(id));
+    if (unresolvedAfterUsers.length) {
+      const borrowers = await this.prisma.borrower.findMany({
+        where: { id: { in: unresolvedAfterUsers } },
+        select: {
+          id: true,
+          user: { select: { fullName: true, email: true } },
+        },
+      });
+
+      borrowers.forEach((borrower) => {
+        actorMap.set(borrower.id, {
+          id: borrower.id,
+          fullName: borrower.user.fullName,
+          email: borrower.user.email,
+        });
+      });
+    }
+
+    const unresolvedAfterBorrowers = actorIds.filter((id) => !actorMap.has(id));
+    if (unresolvedAfterBorrowers.length) {
+      const tenants = await this.prisma.tenant.findMany({
+        where: { id: { in: unresolvedAfterBorrowers } },
+        select: {
+          id: true,
+          name: true,
+          contactEmail: true,
+          ownerUser: { select: { fullName: true, email: true } },
+        },
+      });
+
+      tenants.forEach((tenant) => {
+        actorMap.set(tenant.id, {
+          id: tenant.id,
+          fullName: tenant.ownerUser
+            ? `${tenant.ownerUser.fullName} (${tenant.name})`
+            : tenant.name,
+          email: tenant.ownerUser?.email ?? tenant.contactEmail ?? tenant.id,
+        });
+      });
+    }
+
+    return transactions.map((transaction) => ({
+      ...transaction,
+      sentByUser: actorMap.get(transaction.sentBy),
+      receivedByUser: actorMap.get(transaction.receivedBy),
+    }));
+  }
 
   async create(
     createTransactionDto: CreateTransactionDto,
   ): Promise<Transaction> {
-    if (!createTransactionDto.contractId && !createTransactionDto.walletId) {
-      throw new BadRequestException(
-        'Either contractId or walletId must be provided',
-      );
-    }
-
     const { blockchain_tx_hash, ...transactionData } = createTransactionDto;
 
     const transaction = await this.prisma.transaction.create({
@@ -53,42 +130,8 @@ export class TransactionsService {
             contractNumber: true,
           },
         },
-        wallet: {
-          select: {
-            id: true,
-            userId: true,
-          },
-        },
       },
     });
-
-    if (createTransactionDto.walletId) {
-      const amount = Number(createTransactionDto.amount);
-      let walletUpdateAmount: number;
-
-      if (
-        createTransactionDto.type === TransactionType.DEPOSIT ||
-        createTransactionDto.type === TransactionType.DISBURSEMENT
-      ) {
-        walletUpdateAmount = amount;
-      } else if (
-        createTransactionDto.type === TransactionType.WITHDRAW ||
-        createTransactionDto.type === TransactionType.INSTALLMENT_PAYMENT ||
-        createTransactionDto.type === TransactionType.PENALTY_PAYMENT ||
-        createTransactionDto.type === TransactionType.FEE
-      ) {
-        walletUpdateAmount = -amount;
-      } else {
-        walletUpdateAmount = 0;
-      }
-
-      if (walletUpdateAmount !== 0) {
-        await this.walletsService.updateBalance(
-          createTransactionDto.walletId,
-          walletUpdateAmount,
-        );
-      }
-    }
 
     let blockchainTxHash: string | undefined = blockchain_tx_hash;
     let blockchainData: any = null;
@@ -157,110 +200,9 @@ export class TransactionsService {
     return transaction as unknown as Transaction;
   }
 
-  async findByContract(contractId: string): Promise<Transaction[]> {
-    return (await this.prisma.transaction.findMany({
-      where: { contractId },
+  async findAll(): Promise<Transaction[]> {
+    const transactions = await this.prisma.transaction.findMany({
       include: {
-        contract: {
-          select: {
-            id: true,
-            contractNumber: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    })) as unknown as Transaction[];
-  }
-
-  async findByWallet(walletId: string): Promise<Transaction[]> {
-    const wallet = await this.prisma.wallet.findUnique({
-      where: { id: walletId },
-      include: {
-        user: {
-          include: {
-            borrowers: true,
-            ownedTenants: true,
-          },
-        },
-      },
-    });
-
-    if (!wallet) {
-      return [];
-    }
-
-    const userId = wallet.userId;
-    const borrowers = wallet.user.borrowers;
-    const ownedTenants = wallet.user.ownedTenants;
-
-    if (ownedTenants.length > 0) {
-      const tenantIds = ownedTenants.map(t => t.id);
-      return (await this.prisma.transaction.findMany({
-        where: {
-          contract: {
-            tenantId: { in: tenantIds },
-          },
-        },
-        include: {
-          wallet: {
-            select: {
-              id: true,
-              userId: true,
-            },
-          },
-          contract: {
-            select: {
-              id: true,
-              contractNumber: true,
-              tenantId: true,
-              borrowerId: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      })) as unknown as Transaction[];
-    } else if (borrowers.length > 0) {
-      const borrowerIds = borrowers.map(b => b.id);
-      return (await this.prisma.transaction.findMany({
-        where: {
-          OR: [
-            { walletId },
-            {
-              contract: {
-                borrowerId: { in: borrowerIds },
-              },
-            },
-          ],
-        },
-        include: {
-          wallet: {
-            select: {
-              id: true,
-              userId: true,
-            },
-          },
-          contract: {
-            select: {
-              id: true,
-              contractNumber: true,
-              tenantId: true,
-              borrowerId: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      })) as unknown as Transaction[];
-    }
-
-    return (await this.prisma.transaction.findMany({
-      where: { walletId },
-      include: {
-        wallet: {
-          select: {
-            id: true,
-            userId: true,
-          },
-        },
         contract: {
           select: {
             id: true,
@@ -271,7 +213,46 @@ export class TransactionsService {
         },
       },
       orderBy: { createdAt: 'desc' },
-    })) as unknown as Transaction[];
+    });
+    return (await this.attachActorDetails(transactions as any[])) as unknown as Transaction[];
+  }
+
+  async findByContract(contractId: string): Promise<Transaction[]> {
+    const transactions = await this.prisma.transaction.findMany({
+      where: { contractId },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return (await this.attachActorDetails(transactions as any[])) as unknown as Transaction[];
+  }
+
+  async findByEntity(entityId: string): Promise<Transaction[]> {
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        OR: [{ sentBy: entityId }, { receivedBy: entityId }],
+      },
+      include: {
+        contract: {
+          select: {
+            id: true,
+            contractNumber: true,
+            tenantId: true,
+            borrowerId: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return (await this.attachActorDetails(transactions as any[])) as unknown as Transaction[];
   }
 
   async findOne(id: string): Promise<Transaction> {
@@ -284,12 +265,6 @@ export class TransactionsService {
             contractNumber: true,
           },
         },
-        wallet: {
-          select: {
-            id: true,
-            userId: true,
-          },
-        },
       },
     });
 
@@ -297,7 +272,8 @@ export class TransactionsService {
       throw new NotFoundException('Transaction not found');
     }
 
-    return transaction as unknown as Transaction;
+    const [enriched] = await this.attachActorDetails([transaction as any]);
+    return enriched as unknown as Transaction;
   }
 
   async updateStatus(
@@ -339,12 +315,6 @@ export class TransactionsService {
                 contractNumber: true,
               },
             },
-            wallet: {
-              select: {
-                id: true,
-                userId: true,
-              },
-            },
           },
         }) as unknown as Transaction;
       } else {
@@ -371,12 +341,6 @@ export class TransactionsService {
           select: {
             id: true,
             contractNumber: true,
-          },
-        },
-        wallet: {
-          select: {
-            id: true,
-            userId: true,
           },
         },
       },
