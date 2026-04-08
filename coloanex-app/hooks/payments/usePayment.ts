@@ -13,7 +13,6 @@ export interface UsePaymentResult {
 }
 
 export interface InitiateOptions {
-  walletId?: string;
   contractId?: string;
   paymentScheduleId?: string;
   amount: number;
@@ -26,13 +25,11 @@ export interface InitiateResult {
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
-  walletId: string;
 }
 
 export interface VerifyOptions {
   transactionUuid: string;
   totalAmount: number;
-  walletId: string;
   type: TransactionType;
   contractId?: string;
   paymentScheduleId?: string;
