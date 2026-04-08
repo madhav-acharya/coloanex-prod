@@ -48,6 +48,18 @@ export interface Transaction {
   description?: string;
   createdAt: Date;
   completedAt?: Date;
+  sentBy: string;
+  receivedBy: string;
+  sentByUser?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+  receivedByUser?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
   contract?: {
     id: string;
     contractNumber: string;
