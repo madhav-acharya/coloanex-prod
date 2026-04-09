@@ -35,8 +35,7 @@ export default function ProfileScreen() {
     try {
       const userData = await usersApi.getCurrentUser();
       dispatch(setUser(userData));
-    } catch (error) {
-    }
+    } catch (error) {}
   };
 
   const handleLogout = async () => {
@@ -182,14 +181,10 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     header: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     title: {
       ...typography.h2,
@@ -198,7 +193,7 @@ const createStyles = (colors: any) =>
     },
     content: {
       flex: 1,
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
     },
     profileCard: {
@@ -227,7 +222,7 @@ const createStyles = (colors: any) =>
     },
     profileInfo: {
       flex: 1,
-      marginLeft: spacing.lg,
+      marginLeft: spacing.md,
     },
     userName: {
       ...typography.h3,

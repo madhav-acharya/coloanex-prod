@@ -4,6 +4,8 @@ export interface BorrowerAnalytics {
   totalLoans: number;
   activeLoans: number;
   totalBorrowed: number;
+  totalInterest: number;
+  totalAmountDue: number;
   totalPaid: number;
   pendingAmount: number;
   overduePayments: number;

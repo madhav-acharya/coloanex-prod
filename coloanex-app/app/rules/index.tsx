@@ -133,6 +133,76 @@ export default function RulesScreen() {
               </Text>
             )}
 
+            <View style={styles.detailRow}>
+              <Ionicons
+                name="link-outline"
+                size={16}
+                color={colors.textLight}
+              />
+              <Text
+                style={[styles.detailLabel, { color: colors.textSecondary }]}
+              >
+                Chain Status
+              </Text>
+              <Text
+                style={[
+                  styles.detailValue,
+                  {
+                    color:
+                      rule.isOnChain || rule.blockchainTxHash
+                        ? colors.success
+                        : colors.textSecondary,
+                  },
+                ]}
+              >
+                {rule.isOnChain || rule.blockchainTxHash
+                  ? "On-Chain"
+                  : "Off-Chain"}
+              </Text>
+            </View>
+
+            {rule.blockchainTxHash ? (
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="git-network"
+                  size={16}
+                  color={colors.textLight}
+                />
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Tx Hash
+                </Text>
+                <Text
+                  style={[styles.evmValue, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  {rule.blockchainTxHash}
+                </Text>
+              </View>
+            ) : null}
+
+            {rule.blockchainData ? (
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="layers-outline"
+                  size={16}
+                  color={colors.textLight}
+                />
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Blockchain Data
+                </Text>
+                <Text
+                  style={[styles.evmValue, { color: colors.textSecondary }]}
+                  numberOfLines={1}
+                >
+                  Available
+                </Text>
+              </View>
+            ) : null}
+
             <View style={styles.ruleDetails}>
               <View style={styles.detailRow}>
                 <Ionicons
@@ -159,8 +229,14 @@ export default function RulesScreen() {
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <CurrencyIcon size={16} color={colors.text} />
-                  <Text style={[styles.detailValue, { color: colors.text, marginLeft: 4 }]}>
-                    {rule.loanLimits.minAmount.toLocaleString()} - {rule.loanLimits.maxAmount.toLocaleString()}
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: colors.text, marginLeft: 4 },
+                    ]}
+                  >
+                    {rule.loanLimits.minAmount.toLocaleString()} -{" "}
+                    {rule.loanLimits.maxAmount.toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -193,7 +269,12 @@ export default function RulesScreen() {
                   ) : (
                     <>
                       <CurrencyIcon size={16} color={colors.text} />
-                      <Text style={[styles.detailValue, { color: colors.text, marginLeft: 4 }]}>
+                      <Text
+                        style={[
+                          styles.detailValue,
+                          { color: colors.text, marginLeft: 4 },
+                        ]}
+                      >
                         {rule.penaltyConfig.penaltyAmount.toLocaleString()}
                       </Text>
                     </>
@@ -348,6 +429,12 @@ const createStyles = (colors: any) =>
     detailValue: {
       fontSize: 14,
       fontWeight: "500" as any,
+    },
+    evmValue: {
+      fontSize: 11,
+      fontWeight: "500" as any,
+      maxWidth: "55%",
+      textAlign: "right",
     },
     earlyPaymentInfo: {
       flexDirection: "row",

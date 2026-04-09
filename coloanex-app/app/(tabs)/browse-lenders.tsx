@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import {
   View,
   Text,
@@ -9,6 +15,8 @@ import {
   Image,
   TextInput,
   ActivityIndicator,
+  Animated,
+  Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -32,17 +40,36 @@ export default function BrowseScreen() {
   const [selectedFilter, setSelectedFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<TextInput | null>(null);
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const searchScale = useRef(new Animated.Value(0.98)).current;
+  const searchTranslate = useRef(new Animated.Value(-8)).current;
+
+  const suggestions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    const seen = new Set<string>();
+    return lenders
+      .filter((item) => item.name.toLowerCase().includes(query))
+      .filter((item) => {
+        if (seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      })
+      .slice(0, 6);
+  }, [lenders, searchQuery]);
 
   const fetchLenders = useCallback(
-    async (reset: boolean, query: string, filter: string) => {
-      if (loading && !reset) return;
+    async (query: string, filter: string, page: number = 1) => {
+      if (loading) return;
       setLoading(true);
       try {
-        const currentOffset = reset ? 0 : offset;
+        const currentOffset = (page - 1) * LIMIT;
         const params: {
           limit: number;
           offset: number;
@@ -53,36 +80,101 @@ export default function BrowseScreen() {
         if (filter === "Active") params.isActive = true;
         if (filter === "Inactive") params.isActive = false;
         const result = await lendersApi.getAll(params);
-        setLenders((prev) => (reset ? result.data : [...prev, ...result.data]));
-        setOffset(reset ? LIMIT : currentOffset + LIMIT);
-        setHasMore(result.hasMore);
+        setLenders(result.data);
         if (result.total !== undefined) setTotalCount(result.total);
       } catch {
       } finally {
         setLoading(false);
       }
     },
-    [loading, offset],
+    [loading],
   );
 
   useEffect(() => {
-    setOffset(0);
-    setLenders([]);
-    fetchLenders(true, searchQuery, selectedFilter);
+    setCurrentPage(1);
+    fetchLenders(searchQuery, selectedFilter, 1);
   }, [selectedFilter]);
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    };
+  }, []);
+
+  const openSearchOverlay = () => {
+    setSearchActive(true);
+    setShowSuggestions(searchQuery.trim().length > 0);
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchScale, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchTranslate, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      searchInputRef.current?.focus();
+    });
+  };
+
+  const closeSearchOverlay = () => {
+    setShowSuggestions(false);
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchScale, {
+        toValue: 0.98,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchTranslate, {
+        toValue: -8,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setSearchActive(false));
+  };
+
+  const executeSearch = (value = searchQuery, shouldClose = false) => {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    const query = value.trim();
+    setSearchQuery(value);
+    setShowSuggestions(false);
+    setCurrentPage(1);
+    fetchLenders(query, selectedFilter, 1);
+    if (shouldClose) closeSearchOverlay();
+  };
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
+    setShowSuggestions(text.trim().length > 0);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
-      setOffset(0);
-      setLenders([]);
-      fetchLenders(true, text, selectedFilter);
-    }, 400);
+      executeSearch(text, false);
+    }, 2000);
   };
 
-  const handleLoadMore = () => {
-    if (!loading && hasMore) fetchLenders(false, searchQuery, selectedFilter);
+  const handleSuggestionPress = (name: string) => {
+    executeSearch(name, true);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / LIMIT));
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    setCurrentPage(page);
+    fetchLenders(searchQuery, selectedFilter, page);
   };
 
   const renderLenderCard = ({ item }: { item: Lender }) => (
@@ -188,10 +280,16 @@ export default function BrowseScreen() {
       )}
 
       <View
-        style={[styles.cardFooter, { backgroundColor: colors.primaryLight }]}
+        style={[
+          styles.cardFooter,
+          {
+            backgroundColor: colors.primaryLight,
+            borderTopColor: colors.border,
+          },
+        ]}
       >
         <Text style={[styles.cardFooterText, { color: colors.primary }]}>
-          View Details & Apply
+          View Details
         </Text>
         <Ionicons name="arrow-forward" size={14} color={colors.primary} />
       </View>
@@ -199,39 +297,49 @@ export default function BrowseScreen() {
   );
 
   const renderFooter = () => {
-    if (!hasMore && lenders.length > 0) {
-      return (
-        <View style={styles.endRow}>
-          <Text style={[styles.endText, { color: colors.textLight }]}>
-            All {lenders.length} lenders loaded
-          </Text>
-        </View>
-      );
-    }
-    if (hasMore && lenders.length > 0) {
-      return (
+    if (lenders.length === 0) return null;
+
+    return (
+      <View style={styles.paginationRow}>
         <TouchableOpacity
           style={[
-            styles.loadMoreBtn,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            styles.pageButton,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: currentPage === 1 ? 0.5 : 1,
+            },
           ]}
-          onPress={handleLoadMore}
-          disabled={loading}
+          disabled={currentPage === 1}
+          onPress={() => handlePageChange(currentPage - 1)}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <>
-              <Text style={[styles.loadMoreText, { color: colors.primary }]}>
-                Load More
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={colors.primary} />
-            </>
-          )}
+          <Text style={[styles.pageButtonText, { color: colors.text }]}>
+            Previous
+          </Text>
         </TouchableOpacity>
-      );
-    }
-    return null;
+
+        <Text style={[styles.pageInfo, { color: colors.textSecondary }]}>
+          Page {currentPage} / {totalPages}
+        </Text>
+
+        <TouchableOpacity
+          style={[
+            styles.pageButton,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: currentPage === totalPages ? 0.5 : 1,
+            },
+          ]}
+          disabled={currentPage === totalPages}
+          onPress={() => handlePageChange(currentPage + 1)}
+        >
+          <Text style={[styles.pageButtonText, { color: colors.text }]}>
+            Next
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderEmpty = () => {
@@ -283,31 +391,26 @@ export default function BrowseScreen() {
           </View>
         </View>
 
-        <View
+        <TouchableOpacity
+          activeOpacity={0.9}
           style={[
-            styles.searchBox,
+            styles.searchTrigger,
             { backgroundColor: colors.card, borderColor: colors.border },
           ]}
+          onPress={openSearchOverlay}
         >
           <Ionicons name="search" size={16} color={colors.textSecondary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search by name..."
-            placeholderTextColor={colors.textLight}
-            value={searchQuery}
-            onChangeText={handleSearchChange}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearchChange("")}>
-              <Ionicons
-                name="close-circle"
-                size={16}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
+          <Text
+            style={[
+              styles.searchTriggerText,
+              { color: searchQuery ? colors.text : colors.textLight },
+            ]}
+            numberOfLines={1}
+          >
+            {searchQuery || "Search tenants by name"}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textLight} />
+        </TouchableOpacity>
 
         <View style={styles.filtersRow}>
           {FILTERS.map((f) => (
@@ -350,9 +453,114 @@ export default function BrowseScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={renderEmpty}
           ListFooterComponent={renderFooter}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.3}
         />
+      )}
+
+      {searchActive && (
+        <Animated.View
+          pointerEvents="box-none"
+          style={[styles.searchOverlay, { opacity: overlayOpacity }]}
+        >
+          <Pressable
+            style={styles.backdropPressArea}
+            onPress={closeSearchOverlay}
+          />
+          <Animated.View
+            style={[
+              styles.searchFloatingCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                transform: [
+                  { translateY: searchTranslate },
+                  { scale: searchScale },
+                ],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.searchBox,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <TextInput
+                ref={searchInputRef}
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Search tenants"
+                placeholderTextColor={colors.textLight}
+                value={searchQuery}
+                onChangeText={handleSearchChange}
+                onFocus={() =>
+                  setShowSuggestions(searchQuery.trim().length > 0)
+                }
+                returnKeyType="search"
+                onSubmitEditing={() => executeSearch(searchQuery, true)}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (searchTimeout.current)
+                      clearTimeout(searchTimeout.current);
+                    setSearchQuery("");
+                    executeSearch("", false);
+                  }}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[
+                  styles.searchActionBtn,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => executeSearch(searchQuery, true)}
+              >
+                <Ionicons name="search" size={16} color={colors.buttonText} />
+              </TouchableOpacity>
+            </View>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <View
+                style={[
+                  styles.suggestionsCard,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                {suggestions.map((item, idx) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.suggestionItem,
+                      idx < suggestions.length - 1 && {
+                        borderBottomColor: colors.border,
+                      },
+                    ]}
+                    onPress={() => handleSuggestionPress(item.name)}
+                  >
+                    <Ionicons
+                      name="business-outline"
+                      size={14}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={[styles.suggestionText, { color: colors.text }]}
+                    >
+                      {item.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </Animated.View>
+        </Animated.View>
       )}
     </SafeAreaView>
   );
@@ -378,9 +586,41 @@ const createStyles = (colors: Record<string, string>) =>
       paddingHorizontal: spacing.md,
       paddingVertical: 10,
       borderWidth: 1,
-      marginBottom: spacing.sm,
     },
+    searchTrigger: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: borderRadius.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 11,
+      borderWidth: 1,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    searchTriggerText: { flex: 1, fontSize: 14, fontWeight: "500" },
     searchInput: { flex: 1, fontSize: 14, fontWeight: "500", padding: 0 },
+    searchActionBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    suggestionsCard: {
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      marginTop: spacing.sm,
+      overflow: "hidden",
+    },
+    suggestionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+    },
+    suggestionText: { fontSize: 13, fontWeight: "500" },
     filtersRow: { flexDirection: "row", gap: spacing.xs, paddingBottom: 4 },
     filterChip: {
       paddingHorizontal: spacing.md,
@@ -450,10 +690,62 @@ const createStyles = (colors: Record<string, string>) =>
       paddingVertical: 10,
     },
     cardFooterText: { fontSize: 13, fontWeight: "700" },
+    searchOverlay: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 100,
+      justifyContent: "flex-start",
+      paddingHorizontal: spacing.md,
+      paddingTop: 86,
+      backgroundColor: "rgba(2, 6, 23, 0.58)",
+    },
+    backdropPressArea: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    searchFloatingCard: {
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      padding: spacing.sm,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.18,
+      shadowRadius: 14,
+      elevation: 8,
+    },
     loadingContainer: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
+    },
+    paginationRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+      marginTop: spacing.sm,
+      gap: spacing.sm,
+    },
+    pageButton: {
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    pageButtonText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    pageInfo: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     loadMoreBtn: {
       flexDirection: "row",

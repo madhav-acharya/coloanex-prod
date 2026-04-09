@@ -38,6 +38,10 @@ export interface Rule {
     name: string;
     logo?: string;
   };
+  evmAddress?: string | null;
+  isOnChain?: boolean;
+  blockchainTxHash?: string | null;
+  blockchainData?: Record<string, unknown> | null;
 }
 
 export const rulesApi = {

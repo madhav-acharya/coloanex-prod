@@ -157,6 +157,8 @@ export class AnalyticsService {
         totalLoans: 0,
         activeLoans: 0,
         totalBorrowed: 0,
+        totalInterest: 0,
+        totalAmountDue: 0,
         totalPaid: 0,
         pendingAmount: 0,
         overduePayments: 0,
@@ -177,11 +179,14 @@ export class AnalyticsService {
         where: { borrowerId: { in: borrowerIds } },
       }),
       this.prisma.loan.count({
-        where: { borrowerId: { in: borrowerIds }, status: 'APPROVED' },
+        where: {
+          borrowerId: { in: borrowerIds },
+          status: { in: ['CONTRACT_SIGNED', 'LOAN_PROVIDED'] },
+        },
       }),
       this.prisma.contract.findMany({
         where: { loan: { borrowerId: { in: borrowerIds } } },
-        select: { loanAmount: true },
+        select: { loanAmount: true, totalAmountDue: true },
       }),
       this.prisma.transaction.aggregate({
         where: {
@@ -211,13 +216,22 @@ export class AnalyticsService {
       (sum, contract) => sum + Number(contract.loanAmount),
       0,
     );
+    const totalAmountDue = contracts.reduce(
+      (sum, contract) => sum + Number(contract.totalAmountDue),
+      0,
+    );
+    const totalInterest = Math.max(totalAmountDue - totalBorrowed, 0);
+    const totalPaidAmount = Number(totalPaid._sum.amount || 0);
+    const pendingWithInterest = Math.max(totalAmountDue - totalPaidAmount, 0);
 
     return {
       totalLoans,
       activeLoans,
       totalBorrowed,
-      totalPaid: totalPaid._sum.amount || 0,
-      pendingAmount: pendingSchedules._sum?.totalAmount || 0,
+      totalInterest,
+      totalAmountDue,
+      totalPaid: totalPaidAmount,
+      pendingAmount: pendingWithInterest,
       overduePayments: overdueSchedules,
     };
   }
@@ -257,9 +271,15 @@ export class AnalyticsService {
       createdAt: { gte: startDate },
     };
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
+    const normalizedRoles = (user.roles || []).map((role: string) =>
+      role.toLowerCase(),
+    );
+    const isSuperAdmin = normalizedRoles.includes('super admin');
+    const isBorrower = normalizedRoles.includes('borrower');
 
-    if (!isSuperAdmin) {
+    if (isBorrower) {
+      whereClause.borrower = { userId: user.id };
+    } else if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
     }
 
@@ -279,9 +299,15 @@ export class AnalyticsService {
   async getLoansByStatus(user: any) {
     const whereClause: any = {};
 
-    const isSuperAdmin = user.roles?.includes('Super Admin');
+    const normalizedRoles = (user.roles || []).map((role: string) =>
+      role.toLowerCase(),
+    );
+    const isSuperAdmin = normalizedRoles.includes('super admin');
+    const isBorrower = normalizedRoles.includes('borrower');
 
-    if (!isSuperAdmin) {
+    if (isBorrower) {
+      whereClause.borrower = { userId: user.id };
+    } else if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
     }
 

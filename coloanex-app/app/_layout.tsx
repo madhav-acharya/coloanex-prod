@@ -21,6 +21,8 @@ function AppContent() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/signup" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="kyc/index" />
+        <Stack.Screen name="kyc/[id]" />
         <Stack.Screen name="kyc/kyc-verification" />
         <Stack.Screen name="lenders/lender-details" />
         <Stack.Screen name="loans/apply-loan" />

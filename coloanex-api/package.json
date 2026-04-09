@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "seed": "ts-node prisma/seed.ts",
     "seed2": "ts-node prisma/seed2.ts",
-    "blockchain:deploy": "ts-node blockchain/compile-and-deploy.ts",
+    "blockchain:deploy": "ts-node blockchain/scripts/compile-and-deploy.ts",
     "start": "nest start",
     "start:dev": "NODE_OPTIONS=--max-old-space-size=4096 nest start --watch",
     "start:debug": "nest start --debug --watch",

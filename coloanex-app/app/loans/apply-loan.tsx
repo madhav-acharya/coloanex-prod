@@ -12,7 +12,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import Slider from "@react-native-community/slider";
 import {
   Input,
   Button,
@@ -67,9 +66,16 @@ export default function LoanApplicationScreen() {
   const [prefillModal, setPrefillModal] = useState(false);
 
   const isStepValid = useMemo(() => {
+    const minAmount = Number(lender?.minAmount || 10000);
+    const maxAmount = Number(lender?.maxAmount || 500000);
     switch (currentStep) {
       case 1:
-        return loanAmount > 0;
+        return (
+          loanAmount >= minAmount &&
+          loanAmount <= maxAmount &&
+          termMonths >= 6 &&
+          termMonths <= 60
+        );
       case 2:
         return loanPurpose !== "";
       case 3:
@@ -237,6 +243,14 @@ export default function LoanApplicationScreen() {
   }
 
   const interestRate = lender?.interestRate || 12;
+  const minAmount = Number(lender?.minAmount || 10000);
+  const maxAmount = Number(lender?.maxAmount || 500000);
+  const quickAmountOptions = [
+    minAmount,
+    Math.round((minAmount + maxAmount) / 2),
+    maxAmount,
+  ];
+  const quickTermOptions = [6, 12, 24, 36, 48, 60];
   const monthlyPayment =
     (((loanAmount * interestRate) / 100 / 12) *
       Math.pow(1 + interestRate / 100 / 12, termMonths)) /
@@ -315,28 +329,58 @@ export default function LoanApplicationScreen() {
               <Text style={[styles.amount, { color: colors.primary }]}>
                 {formatCurrency(loanAmount)}
               </Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={10000}
-                maximumValue={500000}
-                step={5000}
-                value={loanAmount}
-                onValueChange={setLoanAmount}
-                minimumTrackTintColor={colors.primary}
-                maximumTrackTintColor={colors.border}
-                thumbTintColor={colors.primary}
+              <Input
+                value={String(loanAmount || "")}
+                onChangeText={(value) => {
+                  const numeric = Number(value.replace(/[^0-9]/g, ""));
+                  setLoanAmount(Number.isNaN(numeric) ? 0 : numeric);
+                }}
+                placeholder="Enter loan amount"
+                keyboardType="numeric"
               />
-              <View style={styles.range}>
+              <View style={styles.rangeHintRow}>
                 <Text
-                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                  style={[
+                    styles.rangeHintText,
+                    { color: colors.textSecondary },
+                  ]}
                 >
-                  {formatCurrency(10000)}
+                  Allowed: {formatCurrency(minAmount)} -{" "}
+                  {formatCurrency(maxAmount)}
                 </Text>
-                <Text
-                  style={[styles.rangeText, { color: colors.textSecondary }]}
-                >
-                  {formatCurrency(500000)}
-                </Text>
+              </View>
+              <View style={styles.quickOptionsRow}>
+                {quickAmountOptions.map((value) => (
+                  <TouchableOpacity
+                    key={`amt-${value}`}
+                    style={[
+                      styles.quickOptionChip,
+                      {
+                        backgroundColor:
+                          loanAmount === value
+                            ? colors.primary
+                            : colors.surface,
+                        borderColor:
+                          loanAmount === value ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setLoanAmount(value)}
+                  >
+                    <Text
+                      style={[
+                        styles.quickOptionText,
+                        {
+                          color:
+                            loanAmount === value
+                              ? colors.buttonText
+                              : colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      {formatCurrency(value)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
@@ -347,28 +391,57 @@ export default function LoanApplicationScreen() {
               <Text style={[styles.amount, { color: colors.primary }]}>
                 {termMonths} months
               </Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={6}
-                maximumValue={60}
-                step={6}
-                value={termMonths}
-                onValueChange={setTermMonths}
-                minimumTrackTintColor={colors.primary}
-                maximumTrackTintColor={colors.border}
-                thumbTintColor={colors.primary}
+              <Input
+                value={String(termMonths || "")}
+                onChangeText={(value) => {
+                  const numeric = Number(value.replace(/[^0-9]/g, ""));
+                  setTermMonths(Number.isNaN(numeric) ? 0 : numeric);
+                }}
+                placeholder="Enter term in months"
+                keyboardType="numeric"
               />
-              <View style={styles.range}>
+              <View style={styles.rangeHintRow}>
                 <Text
-                  style={[styles.rangeText, { color: colors.textSecondary }]}
+                  style={[
+                    styles.rangeHintText,
+                    { color: colors.textSecondary },
+                  ]}
                 >
-                  6 months
+                  Allowed: 6 - 60 months
                 </Text>
-                <Text
-                  style={[styles.rangeText, { color: colors.textSecondary }]}
-                >
-                  60 months
-                </Text>
+              </View>
+              <View style={styles.quickOptionsRow}>
+                {quickTermOptions.map((value) => (
+                  <TouchableOpacity
+                    key={`term-${value}`}
+                    style={[
+                      styles.quickOptionChip,
+                      {
+                        backgroundColor:
+                          termMonths === value
+                            ? colors.primary
+                            : colors.surface,
+                        borderColor:
+                          termMonths === value ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => setTermMonths(value)}
+                  >
+                    <Text
+                      style={[
+                        styles.quickOptionText,
+                        {
+                          color:
+                            termMonths === value
+                              ? colors.buttonText
+                              : colors.textSecondary,
+                        },
+                      ]}
+                    >
+                      {value} mo
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
           </>
@@ -881,17 +954,28 @@ const createStyles = (colors: any) =>
       marginBottom: 16,
       textAlign: "center",
     },
-    slider: {
-      width: "100%",
-      height: 40,
-    },
-    range: {
-      flexDirection: "row",
-      justifyContent: "space-between",
+    rangeHintRow: {
       marginTop: 8,
+      marginBottom: 10,
     },
-    rangeText: {
+    rangeHintText: {
       fontSize: 12,
+      fontWeight: "500",
+    },
+    quickOptionsRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    quickOptionChip: {
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+    quickOptionText: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     uploadButton: {
       borderWidth: 2,

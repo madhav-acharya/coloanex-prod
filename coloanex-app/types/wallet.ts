@@ -25,6 +25,10 @@ export interface Rule {
   tenantId: string;
   createdAt: string;
   updatedAt: string;
+  evmAddress?: string | null;
+  isOnChain?: boolean;
+  blockchainTxHash?: string | null;
+  blockchainData?: Record<string, unknown> | null;
 }
 
 export interface Contract {

@@ -4,7 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 interface CompiledContract {
   abi: any[];
@@ -12,13 +12,23 @@ interface CompiledContract {
 }
 
 function compileSolidity(contractName: string): CompiledContract {
-  const contractPath = path.resolve(__dirname, `${contractName}.sol`);
+  const contractPath = path.resolve(
+    __dirname,
+    `../contracts/${contractName}.sol`,
+  );
   const source = fs.readFileSync(contractPath, 'utf-8');
 
   const input = {
     language: 'Solidity',
     sources: { [`${contractName}.sol`]: { content: source } },
-    settings: { outputSelection: { '*': { '*': ['abi', 'evm.bytecode'] } } },
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+      viaIR: true,
+      outputSelection: { '*': { '*': ['abi', 'evm.bytecode'] } },
+    },
   };
 
   const output = JSON.parse(solc.compile(JSON.stringify(input)));
@@ -79,6 +89,7 @@ async function main() {
   const existingContract = process.env.EVM_CONTRACT_REGISTRY_ADDRESS || '';
   const existingPayment = process.env.EVM_PAYMENT_REGISTRY_ADDRESS || '';
   const existingKYC = process.env.EVM_KYC_REGISTRY_ADDRESS || '';
+  const existingRule = process.env.EVM_RULE_REGISTRY_ADDRESS || '';
 
   console.log('🔍 Checking existing deployments...\n');
 
@@ -86,20 +97,32 @@ async function main() {
   const contractExists = await checkContractExists(provider, existingContract);
   const paymentExists = await checkContractExists(provider, existingPayment);
   const kycExists = await checkContractExists(provider, existingKYC);
+  const ruleExists = await checkContractExists(provider, existingRule);
 
   if (loanExists) console.log(`   ✅ LoanRegistry: ${existingLoan}`);
   if (contractExists)
     console.log(`   ✅ ContractRegistry: ${existingContract}`);
   if (paymentExists) console.log(`   ✅ PaymentRegistry: ${existingPayment}`);
   if (kycExists) console.log(`   ✅ KYCRegistry: ${existingKYC}`);
+  if (ruleExists) console.log(`   ✅ RuleRegistry: ${existingRule}`);
 
-  if (loanExists && contractExists && paymentExists && kycExists) {
+  if (
+    loanExists &&
+    contractExists &&
+    paymentExists &&
+    kycExists &&
+    ruleExists
+  ) {
     console.log('\n🎉 All contracts already deployed!\n');
     return;
   }
 
   const needsDeploy =
-    !loanExists || !contractExists || !paymentExists || !kycExists;
+    !loanExists ||
+    !contractExists ||
+    !paymentExists ||
+    !kycExists ||
+    !ruleExists;
 
   if (needsDeploy && balance < ethers.parseEther('0.005')) {
     console.error('❌ Need more test MATIC!\n');
@@ -113,6 +136,7 @@ async function main() {
   let contractAddr = existingContract;
   let paymentAddr = existingPayment;
   let kycAddr = existingKYC;
+  let ruleAddr = existingRule;
 
   if (!loanExists) {
     console.log('\n⏳ Deploying LoanRegistry...');
@@ -170,13 +194,31 @@ async function main() {
     console.log(`   ✅ ${kycAddr}`);
   }
 
+  if (!ruleExists) {
+    console.log('\n⏳ Deploying RuleRegistry...');
+    const compiled = compileSolidity('RuleRegistry');
+    const factory = new ethers.ContractFactory(
+      compiled.abi,
+      compiled.bytecode,
+      signer,
+    );
+    const contract = await factory.deploy();
+    await contract.waitForDeployment();
+    ruleAddr = await contract.getAddress();
+    console.log(`   ✅ ${ruleAddr}`);
+  }
+
   if (needsDeploy) {
     console.log('\n✅ Deployment complete!\n');
-    const envPath = path.resolve(__dirname, '../.env');
+    const envPath = path.resolve(__dirname, '../../.env');
     let envContent = fs.readFileSync(envPath, 'utf-8');
 
     if (!envContent.includes('EVM_KYC_REGISTRY_ADDRESS=')) {
       envContent += `EVM_KYC_REGISTRY_ADDRESS=${kycAddr}\n`;
+    }
+
+    if (!envContent.includes('EVM_RULE_REGISTRY_ADDRESS=')) {
+      envContent += `EVM_RULE_REGISTRY_ADDRESS=${ruleAddr}\n`;
     }
 
     envContent = envContent
@@ -195,6 +237,10 @@ async function main() {
       .replace(
         /EVM_KYC_REGISTRY_ADDRESS=.*/,
         `EVM_KYC_REGISTRY_ADDRESS=${kycAddr}`,
+      )
+      .replace(
+        /EVM_RULE_REGISTRY_ADDRESS=.*/,
+        `EVM_RULE_REGISTRY_ADDRESS=${ruleAddr}`,
       );
     fs.writeFileSync(envPath, envContent);
     console.log('.env updated!\n');

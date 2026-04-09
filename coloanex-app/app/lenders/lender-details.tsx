@@ -136,7 +136,11 @@ export default function LenderDetailsScreen() {
         });
         break;
       case KycStatus.PENDING:
-        showToast("Your KYC verification is currently under review", "info");
+        if (kycId) {
+          router.push(`/kyc/${kycId}` as any);
+        } else {
+          router.push("/kyc" as any);
+        }
         break;
       case KycStatus.REJECTED:
         router.push(`/kyc/kyc-verification?tenantId=${lender?.id}` as any);
@@ -399,10 +403,7 @@ export default function LenderDetailsScreen() {
             {rules.map((rule) => (
               <View
                 key={rule.id}
-                style={[
-                  styles.ruleCard,
-                  { backgroundColor: colors.card, borderColor: colors.border },
-                ]}
+                style={[styles.ruleCard, { backgroundColor: colors.card }]}
               >
                 <View style={styles.ruleCardTop}>
                   <View style={styles.ruleCardMeta}>
@@ -434,6 +435,24 @@ export default function LenderDetailsScreen() {
                       >
                         {rule.description}
                       </Text>
+                    ) : null}
+                    {rule.evmAddress ? (
+                      <View style={styles.evmRow}>
+                        <Ionicons
+                          name="link-outline"
+                          size={12}
+                          color={colors.textSecondary}
+                        />
+                        <Text
+                          style={[
+                            styles.evmText,
+                            { color: colors.textSecondary },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          EVM: {rule.evmAddress}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                   <View
@@ -470,9 +489,16 @@ export default function LenderDetailsScreen() {
 
                 <View style={styles.ruleStatsRow}>
                   <View style={styles.ruleStat}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center" }}
+                    >
                       <CurrencyIcon size={16} color={colors.text} />
-                      <Text style={[styles.ruleStatVal, { color: colors.text, marginLeft: 4 }]}>
+                      <Text
+                        style={[
+                          styles.ruleStatVal,
+                          { color: colors.text, marginLeft: 4 },
+                        ]}
+                      >
                         {(rule.loanLimits.minAmount / 1000).toFixed(0)}K –{" "}
                         {(rule.loanLimits.maxAmount / 1000).toFixed(0)}K
                       </Text>
@@ -700,7 +726,6 @@ const createStyles = (colors: Record<string, string>) =>
     ruleCard: {
       borderRadius: borderRadius.lg,
       marginBottom: spacing.sm,
-      borderWidth: 1,
       overflow: "hidden",
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
@@ -730,6 +755,13 @@ const createStyles = (colors: Record<string, string>) =>
     },
     ruleName: { fontSize: 15, fontWeight: "700", marginBottom: 3 },
     ruleDesc: { fontSize: 12, fontWeight: "400", lineHeight: 17 },
+    evmRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginTop: 4,
+    },
+    evmText: { fontSize: 11, fontWeight: "500", flex: 1 },
     ruleInterestBadge: {
       borderRadius: borderRadius.md,
       paddingHorizontal: 12,

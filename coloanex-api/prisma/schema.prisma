@@ -278,6 +278,8 @@ model Rule {
   loanLimits        Json       @map("loan_limits")
   penaltyConfig     Json       @map("penalty_config")
   paymentConfig     Json       @map("payment_config")
+  blockchainTxHash  String?    @map("blockchain_tx_hash")
+  blockchainData    Json?      @map("blockchain_data")
   isActive          Boolean    @default(true) @map("is_active")
   isPubliclyVisible Boolean    @default(true) @map("is_publicly_visible")
   createdAt         DateTime   @default(now()) @map("created_at")
