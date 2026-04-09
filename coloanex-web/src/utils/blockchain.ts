@@ -13,6 +13,9 @@ const PAYMENT_REGISTRY_ADDRESS =
 const KYC_REGISTRY_ADDRESS =
   import.meta.env.VITE_BLOCKCHAIN_KYC_REGISTRY ||
   "0x66Fca2F2d7B5E7D6d7dF158AF7f4765920BC68F4";
+const RULE_REGISTRY_ADDRESS =
+  import.meta.env.VITE_BLOCKCHAIN_RULE_REGISTRY ||
+  "0x0000000000000000000000000000000000000000";
 
 const LOAN_REGISTRY_ABI = [
   "function createLoan(string loanId, uint256 amount, uint256 interestRate, uint256 termMonths, address borrower, address lender) external",
@@ -39,6 +42,12 @@ const KYC_REGISTRY_ABI = [
   "function getKYC(string kycId) external view returns (tuple(string kycId, address user, string status, uint256 timestamp, string verifiedBy))",
 ];
 
+const RULE_REGISTRY_ABI = [
+  "function createRule(string ruleId, string name, string ruleType, uint256 interestRateBps, uint256 minAmount, uint256 maxAmount, uint256 minTermMonths, uint256 maxTermMonths, bool isActive) external",
+  "function updateRule(string ruleId, uint256 interestRateBps, uint256 minAmount, uint256 maxAmount, uint256 minTermMonths, uint256 maxTermMonths, bool isActive) external",
+  "function deleteRule(string ruleId) external",
+];
+
 export const recordLoanOnBlockchain = async (
   loanId: string,
   amount: number,
@@ -48,7 +57,7 @@ export const recordLoanOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -77,36 +86,38 @@ export const recordLoanOnBlockchain = async (
   return receipt.hash;
 };
 
-export const createLoanOnBlockchain = async (loanId: string): Promise<string> => {
-  console.log('createLoanOnBlockchain called with loanId:', loanId);
-  
+export const createLoanOnBlockchain = async (
+  loanId: string,
+): Promise<string> => {
+  console.log("createLoanOnBlockchain called with loanId:", loanId);
+
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
-    console.error('MetaMask not found');
+    console.error("MetaMask not found");
     throw new Error("MetaMask is not installed");
   }
 
-  console.log('Creating provider...');
+  console.log("Creating provider...");
   const provider = new ethers.BrowserProvider(window.ethereum);
-  
-  console.log('Requesting accounts...');
+
+  console.log("Requesting accounts...");
   await provider.send("eth_requestAccounts", []);
-  
-  console.log('Getting signer...');
+
+  console.log("Getting signer...");
   const signer = await provider.getSigner();
   const userAddress = await signer.getAddress();
 
-  console.log('Creating contract with address:', LOAN_REGISTRY_ADDRESS);
+  console.log("Creating contract with address:", LOAN_REGISTRY_ADDRESS);
   const contract = new ethers.Contract(
     LOAN_REGISTRY_ADDRESS,
     LOAN_REGISTRY_ABI,
     signer,
   );
 
-  console.log('Calling createLoan...');
+  console.log("Calling createLoan...");
   const tx = await contract.createLoan(
     loanId,
     BigInt(100000),
@@ -115,12 +126,12 @@ export const createLoanOnBlockchain = async (loanId: string): Promise<string> =>
     userAddress,
     userAddress,
   );
-  console.log('Transaction sent:', tx.hash);
-  
-  console.log('Waiting for receipt...');
+  console.log("Transaction sent:", tx.hash);
+
+  console.log("Waiting for receipt...");
   const receipt = await tx.wait();
-  console.log('Transaction confirmed:', receipt.hash);
-  
+  console.log("Transaction confirmed:", receipt.hash);
+
   return receipt.hash;
 };
 
@@ -128,51 +139,54 @@ export const updateLoanStatusOnBlockchain = async (
   loanId: string,
   status: string,
 ): Promise<string> => {
-  console.log('updateLoanStatusOnBlockchain called with:', { loanId, status });
-  
+  console.log("updateLoanStatusOnBlockchain called with:", { loanId, status });
+
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
-    console.error('MetaMask not found');
+    console.error("MetaMask not found");
     throw new Error("MetaMask is not installed");
   }
 
-  console.log('Creating provider...');
+  console.log("Creating provider...");
   const provider = new ethers.BrowserProvider(window.ethereum);
-  
-  console.log('Requesting accounts...');
+
+  console.log("Requesting accounts...");
   await provider.send("eth_requestAccounts", []);
-  
-  console.log('Getting signer...');
+
+  console.log("Getting signer...");
   const signer = await provider.getSigner();
   const userAddress = await signer.getAddress();
 
-  console.log('Creating contract with address:', LOAN_REGISTRY_ADDRESS);
+  console.log("Creating contract with address:", LOAN_REGISTRY_ADDRESS);
   const contract = new ethers.Contract(
     LOAN_REGISTRY_ADDRESS,
     LOAN_REGISTRY_ABI,
     signer,
   );
 
-  console.log('Calling updateLoanStatus with string status:', status);
-  
+  console.log("Calling updateLoanStatus with string status:", status);
+
   try {
-    console.log('Calling updateLoanStatus on contract...');
+    console.log("Calling updateLoanStatus on contract...");
     const tx = await contract.updateLoanStatus(loanId, status);
-    console.log('Transaction sent:', tx.hash);
-    
-    console.log('Waiting for receipt...');
+    console.log("Transaction sent:", tx.hash);
+
+    console.log("Waiting for receipt...");
     const receipt = await tx.wait();
-    console.log('Transaction confirmed:', receipt.hash);
-    
+    console.log("Transaction confirmed:", receipt.hash);
+
     return receipt.hash;
   } catch (error: any) {
-    console.log('Update failed, trying to create loan first. Error:', error.message);
-    
+    console.log(
+      "Update failed, trying to create loan first. Error:",
+      error.message,
+    );
+
     if (error.code === "CALL_EXCEPTION") {
-      console.log('Creating loan on blockchain first...');
+      console.log("Creating loan on blockchain first...");
       const createTx = await contract.createLoan(
         loanId,
         BigInt(100000),
@@ -181,17 +195,17 @@ export const updateLoanStatusOnBlockchain = async (
         userAddress,
         userAddress,
       );
-      console.log('Create transaction sent:', createTx.hash);
+      console.log("Create transaction sent:", createTx.hash);
       await createTx.wait();
-      console.log('Loan created, now updating status...');
-      
+      console.log("Loan created, now updating status...");
+
       const updateTx = await contract.updateLoanStatus(loanId, status);
-      console.log('Update transaction sent:', updateTx.hash);
+      console.log("Update transaction sent:", updateTx.hash);
       const updateReceipt = await updateTx.wait();
-      console.log('Status update confirmed:', updateReceipt.hash);
+      console.log("Status update confirmed:", updateReceipt.hash);
       return updateReceipt.hash;
     }
-    
+
     throw error;
   }
 };
@@ -204,7 +218,7 @@ export const updateLoanOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -230,7 +244,7 @@ export const deleteLoanOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -261,7 +275,7 @@ export const recordContractOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -295,7 +309,7 @@ export const signContractOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -326,7 +340,7 @@ export const recordPaymentOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -362,7 +376,7 @@ export const recordKYCOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -390,7 +404,7 @@ export const updateKYCOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -411,13 +425,11 @@ export const updateKYCOnBlockchain = async (
   return receipt.hash;
 };
 
-export const deleteKYCOnBlockchain = async (
-  kycId: string,
-): Promise<string> => {
+export const deleteKYCOnBlockchain = async (kycId: string): Promise<string> => {
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -445,7 +457,7 @@ export const updatePaymentStatusOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -483,7 +495,7 @@ export const recordTransactionOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -517,7 +529,7 @@ export const updateContractStatusOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -544,7 +556,7 @@ export const deleteContractOnBlockchain = async (
   if (!isWebPlatform()) {
     return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   if (!window.ethereum) {
     throw new Error("MetaMask is not installed");
   }
@@ -561,6 +573,116 @@ export const deleteContractOnBlockchain = async (
 
   const tx = await contract.deleteContract(contractId);
 
+  const receipt = await tx.wait();
+  return receipt.hash;
+};
+
+export const createRuleOnBlockchain = async (
+  ruleId: string,
+  name: string,
+  ruleType: string,
+  interestRateBps: number,
+  minAmount: number,
+  maxAmount: number,
+  minTermMonths: number,
+  maxTermMonths: number,
+  isActive: boolean,
+): Promise<string> => {
+  if (!isWebPlatform()) {
+    return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  const signer = await provider.getSigner();
+
+  const contract = new ethers.Contract(
+    RULE_REGISTRY_ADDRESS,
+    RULE_REGISTRY_ABI,
+    signer,
+  );
+
+  const tx = await contract.createRule(
+    ruleId,
+    name,
+    ruleType,
+    BigInt(interestRateBps),
+    BigInt(minAmount),
+    BigInt(maxAmount),
+    BigInt(minTermMonths),
+    BigInt(maxTermMonths),
+    isActive,
+  );
+  const receipt = await tx.wait();
+  return receipt.hash;
+};
+
+export const updateRuleOnBlockchain = async (
+  ruleId: string,
+  interestRateBps: number,
+  minAmount: number,
+  maxAmount: number,
+  minTermMonths: number,
+  maxTermMonths: number,
+  isActive: boolean,
+): Promise<string> => {
+  if (!isWebPlatform()) {
+    return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  const signer = await provider.getSigner();
+
+  const contract = new ethers.Contract(
+    RULE_REGISTRY_ADDRESS,
+    RULE_REGISTRY_ABI,
+    signer,
+  );
+
+  const tx = await contract.updateRule(
+    ruleId,
+    BigInt(interestRateBps),
+    BigInt(minAmount),
+    BigInt(maxAmount),
+    BigInt(minTermMonths),
+    BigInt(maxTermMonths),
+    isActive,
+  );
+  const receipt = await tx.wait();
+  return receipt.hash;
+};
+
+export const deleteRuleOnBlockchain = async (
+  ruleId: string,
+): Promise<string> => {
+  if (!isWebPlatform()) {
+    return `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  if (!window.ethereum) {
+    throw new Error("MetaMask is not installed");
+  }
+
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  const signer = await provider.getSigner();
+
+  const contract = new ethers.Contract(
+    RULE_REGISTRY_ADDRESS,
+    RULE_REGISTRY_ABI,
+    signer,
+  );
+
+  const tx = await contract.deleteRule(ruleId);
   const receipt = await tx.wait();
   return receipt.hash;
 };
