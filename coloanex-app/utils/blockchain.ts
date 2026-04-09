@@ -41,6 +41,7 @@ export const getBlockchainConfig = () => {
       contractRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_CONTRACT_REGISTRY,
       paymentRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_PAYMENT_REGISTRY,
       kycRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_KYC_REGISTRY,
+      ruleRegistry: process.env.EXPO_PUBLIC_BLOCKCHAIN_RULE_REGISTRY,
     },
   };
 };
