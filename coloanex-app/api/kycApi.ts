@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { KycSubmission, KycStatus } from "@/types";
+import type { Kyc, KycSubmission, KycStatus } from "@/types";
 
 export const kycApi = {
   submit: async (kycData: any): Promise<any> => {
@@ -16,6 +16,27 @@ export const kycApi = {
   getMyLatest: async (tenantId?: string): Promise<any> => {
     const params = tenantId ? { tenantId } : {};
     const { data } = await apiClient.get("/kyc/my-latest", { params });
+    return data;
+  },
+
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
+    status?: string;
+  }): Promise<{ data: Kyc[]; total: number }> => {
+    const { data } = await apiClient.get("/kyc", { params });
+    return data;
+  },
+
+  getById: async (id: string): Promise<any> => {
+    const { data } = await apiClient.get(`/kyc/${id}`);
+    return data;
+  },
+
+  update: async (id: string, payload: any): Promise<any> => {
+    const { data } = await apiClient.patch(`/kyc/${id}`, payload);
     return data;
   },
 
