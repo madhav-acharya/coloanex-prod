@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Eye, Edit, Trash2, Plus, FileText } from "lucide-react";
+import { Eye, Edit, Trash2, FileText, Link as LinkIcon } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { FormSheet } from "@/components/shared/FormSheet";
-import { Button } from "@/components/ui/button";
 import {
   useGetRulesQuery,
   useCreateRuleMutation,
@@ -20,6 +19,12 @@ import {
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
+import {
+  createRuleOnBlockchain,
+  updateRuleOnBlockchain,
+  deleteRuleOnBlockchain,
+} from "@/utils/blockchain";
 
 export default function Rules() {
   const { toast } = useToast();
@@ -36,6 +41,11 @@ export default function Rules() {
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
+  const [blockchainMessage, setBlockchainMessage] = useState("");
 
   const isSuperAdmin = user?.roles?.some(
     (role) => role.role.name === "Super Admin",
@@ -149,6 +159,47 @@ export default function Rules() {
         }
       },
     },
+    {
+      key: "isOnChain",
+      label: "Chain",
+      render: (rule) => {
+        const isOnChain = !!(rule.isOnChain || rule.blockchainTxHash);
+        return (
+          <Badge
+            className={
+              isOnChain
+                ? "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border border-green-200 dark:border-green-800"
+                : "bg-gray-100 dark:bg-gray-600 text-white dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+            }
+          >
+            {isOnChain ? "On-Chain" : "Off-Chain"}
+          </Badge>
+        );
+      },
+    },
+    {
+      key: "blockchainTxHash",
+      label: "Tx Hash",
+      render: (rule) =>
+        rule.blockchainTxHash ? (
+          <span className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground">
+            <LinkIcon className="h-3 w-3" />
+            {`${rule.blockchainTxHash.slice(0, 10)}...${rule.blockchainTxHash.slice(-6)}`}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        ),
+    },
+    {
+      key: "blockchainData",
+      label: "Blockchain Data",
+      render: (rule) =>
+        rule.blockchainData ? (
+          <span className="text-xs text-muted-foreground">Available</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">-</span>
+        ),
+    },
   ];
 
   const handleView = (rule: Rule) => {
@@ -204,7 +255,56 @@ export default function Rules() {
     if (!ruleToDelete) return;
 
     try {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        "Deleting rule on blockchain. Please approve the MetaMask transaction...",
+      );
+
+      try {
+        await deleteRuleOnBlockchain(ruleToDelete.id);
+      } catch (blockchainError: any) {
+        setIsProcessingBlockchain(false);
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Rejected",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Required",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({
+          title: "Blockchain Error",
+          description:
+            blockchainError.reason ||
+            blockchainError.message ||
+            "Failed to delete rule on blockchain",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setBlockchainStep("database");
+      setBlockchainMessage("Deleting rule in database...");
+
       await deleteRule(ruleToDelete.id).unwrap();
+
+      setTimeout(() => {
+        setBlockchainStep("complete");
+        setTimeout(() => {
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+        }, 900);
+      }, 400);
+
       toast({
         title: "Success",
         description: "Rule deleted successfully",
@@ -212,6 +312,8 @@ export default function Rules() {
       setDeleteDialogOpen(false);
       setRuleToDelete(null);
     } catch (error: any) {
+      setIsProcessingBlockchain(false);
+      setBlockchainStep("blockchain");
       toast({
         title: "Error",
         description: error?.data?.message || "Failed to delete rule",
@@ -222,7 +324,7 @@ export default function Rules() {
 
   const handleFormSubmit = async () => {
     try {
-      const ruleData: CreateRuleDto = {
+      const baseRuleData: CreateRuleDto = {
         ...(isSuperAdmin && formData.tenantId
           ? { tenantId: formData.tenantId }
           : {}),
@@ -252,24 +354,152 @@ export default function Rules() {
         isPubliclyVisible: formData.isPubliclyVisible ?? true,
       };
 
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        `${editingRule ? "Updating" : "Creating"} rule on blockchain. Please approve the MetaMask transaction...`,
+      );
+
       if (editingRule) {
-        await updateRule({ id: editingRule.id, data: ruleData }).unwrap();
-        toast({
-          title: "Success",
-          description: "Rule updated successfully",
-        });
+        let blockchainTxHash: string | undefined;
+
+        try {
+          blockchainTxHash = await updateRuleOnBlockchain(
+            editingRule.id,
+            Math.round(Number(baseRuleData.interestRate) * 100),
+            Number(baseRuleData.loanLimits.minAmount),
+            Number(baseRuleData.loanLimits.maxAmount),
+            Number(baseRuleData.loanLimits.minTermMonths),
+            Number(baseRuleData.loanLimits.maxTermMonths),
+            !!baseRuleData.isActive,
+          );
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
+          if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          }
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to update rule on blockchain",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setBlockchainStep("database");
+        setBlockchainMessage("Updating rule in database...");
+
+        await updateRule({
+          id: editingRule.id,
+          data: {
+            ...baseRuleData,
+            blockchainTxHash,
+            blockchainData: blockchainTxHash
+              ? {
+                  source: "web-metamask",
+                  action: "updateRule",
+                  recordedAt: new Date().toISOString(),
+                }
+              : undefined,
+          },
+        }).unwrap();
       } else {
-        await createRule(ruleData).unwrap();
-        toast({
-          title: "Success",
-          description: "Rule created successfully",
-        });
+        const ruleId = crypto.randomUUID();
+        let blockchainTxHash: string | undefined;
+
+        try {
+          blockchainTxHash = await createRuleOnBlockchain(
+            ruleId,
+            baseRuleData.name,
+            baseRuleData.ruleType,
+            Math.round(Number(baseRuleData.interestRate) * 100),
+            Number(baseRuleData.loanLimits.minAmount),
+            Number(baseRuleData.loanLimits.maxAmount),
+            Number(baseRuleData.loanLimits.minTermMonths),
+            Number(baseRuleData.loanLimits.maxTermMonths),
+            !!baseRuleData.isActive,
+          );
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
+          if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          }
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to create rule on blockchain",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setBlockchainStep("database");
+        setBlockchainMessage("Creating rule in database...");
+
+        await createRule({
+          ...baseRuleData,
+          id: ruleId,
+          blockchainTxHash,
+          blockchainData: blockchainTxHash
+            ? {
+                source: "web-metamask",
+                action: "createRule",
+                recordedAt: new Date().toISOString(),
+              }
+            : undefined,
+        }).unwrap();
       }
+
+      setTimeout(() => {
+        setBlockchainStep("complete");
+        setTimeout(() => {
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+        }, 900);
+      }, 400);
+
+      toast({
+        title: "Success",
+        description: `Rule ${editingRule ? "updated" : "created"} successfully`,
+      });
 
       setRuleFormOpen(false);
       setEditingRule(null);
       setFormData({});
     } catch (error: any) {
+      setIsProcessingBlockchain(false);
+      setBlockchainStep("blockchain");
       toast({
         title: "Error",
         description:
@@ -528,6 +758,15 @@ export default function Rules() {
           title="Delete Rule"
           description={`Are you sure you want to delete the rule "${ruleToDelete?.name}"? This action cannot be undone.`}
           isLoading={isDeleting}
+        />
+
+        <BlockchainProcessingModal
+          open={isProcessingBlockchain}
+          currentStep={blockchainStep}
+          message={
+            blockchainMessage ||
+            "Recording on the blockchain and updating the database. Please wait..."
+          }
         />
       </div>
     </DashboardLayout>
