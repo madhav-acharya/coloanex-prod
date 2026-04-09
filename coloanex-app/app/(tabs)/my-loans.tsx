@@ -8,16 +8,18 @@ import {
   RefreshControl,
   SafeAreaView,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { spacing, typography, borderRadius } from "@/constants/theme";
-import { loansApi } from "@/api";
+import { loansApi, transactionsApi } from "@/api";
 import type { Loan } from "@/types";
 import { LoanStatus } from "@/types/loan";
-import { formatCurrency } from "@/utils/currency";
 import { CurrencyIcon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
+import type { Transaction } from "@/api/transactionsApi";
+import { useAppSelector } from "@/store/hooks";
 
 type StatusConfig = {
   label: string;
@@ -114,48 +116,21 @@ function getStatusConfig(
 function StatusBadge({
   status,
   colors,
-  blockchainTxHash,
   styles,
 }: {
   status: string;
   colors: Record<string, string>;
-  blockchainTxHash?: string;
   styles: any;
 }) {
   const config = getStatusConfig(status, colors);
   return (
-    <View style={styles.badgeContainer}>
-      <View
-        style={[statusBadgeStyles.badge, { backgroundColor: config.bgColor }]}
-      >
-        <Ionicons name={config.icon} size={12} color={config.textColor} />
-        <Text style={[statusBadgeStyles.label, { color: config.textColor }]}>
-          {config.label}
-        </Text>
-      </View>
-
-      <TouchableOpacity
-        style={[
-          statusBadgeStyles.blockchainBadge,
-          {
-            backgroundColor: blockchainTxHash ? "#10B981" : "#64748B",
-            opacity: 0.9,
-          },
-        ]}
-        onPress={() => {
-          const { showBlockchainInfo } = require("@/utils/blockchain");
-          showBlockchainInfo(blockchainTxHash);
-        }}
-      >
-        <Ionicons
-          name={blockchainTxHash ? "link" : "link-outline"}
-          size={10}
-          color="white"
-        />
-        <Text style={statusBadgeStyles.blockchainText}>
-          {blockchainTxHash ? "On-Chain" : "Off-Chain"}
-        </Text>
-      </TouchableOpacity>
+    <View
+      style={[statusBadgeStyles.badge, { backgroundColor: config.bgColor }]}
+    >
+      <Ionicons name={config.icon} size={12} color={config.textColor} />
+      <Text style={[statusBadgeStyles.label, { color: config.textColor }]}>
+        {config.label}
+      </Text>
     </View>
   );
 }
@@ -174,32 +149,26 @@ const statusBadgeStyles = StyleSheet.create({
     fontWeight: "600",
     letterSpacing: 0.2,
   },
-  blockchainBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 2,
-    marginTop: 2,
-  },
-  blockchainText: {
-    fontSize: 9,
-    fontWeight: "500",
-    color: "white",
-  },
 });
 
 export default function MyLoansScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
+  const { width } = useWindowDimensions();
+  const isCompactScreen = width < 390;
+  const user = useAppSelector((state) => state.auth.user);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    [],
+  );
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const formatCurrencyWithIcon = (
     value: number | null | undefined,
     isPositive: boolean = true,
+    compact: boolean = false,
   ) => {
     const safeValue = value ?? 0;
     const color = isPositive ? "#16A34A" : "#DC2626";
@@ -209,16 +178,29 @@ export default function MyLoansScreen() {
       typeof safeValue === "string" ? parseFloat(safeValue) : safeValue;
     const formattedValue = isNaN(numericValue)
       ? "0.00"
-      : (() => {
-          const parts = numericValue.toFixed(2).split(".");
-          parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-          return parts.join(".");
-        })();
+      : compact
+        ? numericValue.toLocaleString("en-IN", {
+            maximumFractionDigits: 0,
+          })
+        : (() => {
+            const parts = numericValue.toFixed(2).split(".");
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return parts.join(".");
+          })();
 
     return (
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <CurrencyIcon size={16} color={color} />
-        <Text style={[styles.currencyText, { color, marginLeft: 4 }]}>
+      <View style={styles.currencyRow}>
+        <CurrencyIcon size={compact ? 14 : 16} color={color} />
+        <Text
+          style={[
+            styles.currencyText,
+            compact && styles.currencyTextCompact,
+            { color },
+          ]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+        >
           {formattedValue}
         </Text>
       </View>
@@ -229,12 +211,63 @@ export default function MyLoansScreen() {
     try {
       const data = await loansApi.getMyLoans();
       setLoans(data);
+      const entityIds = Array.from(
+        new Set(
+          data
+            .flatMap((loan) => [loan.borrowerId, loan.tenantId])
+            .concat(user?.id ? [user.id] : []),
+        ),
+      ).filter((id): id is string => Boolean(id));
+      const contractIds = Array.from(
+        new Set(
+          data
+            .map((loan) => (loan as any)?.contract?.id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
+      if (entityIds.length > 0 || contractIds.length > 0) {
+        setLoadingTransactions(true);
+        const [entityBatches, contractBatches] = await Promise.all([
+          Promise.all(
+            entityIds.map((id) =>
+              transactionsApi.getByEntity(id).catch(() => []),
+            ),
+          ),
+          Promise.all(
+            contractIds.map((id) =>
+              transactionsApi.getByContract(id).catch(() => []),
+            ),
+          ),
+        ]);
+        const txMap = new Map<string, Transaction>();
+        [...entityBatches.flat(), ...contractBatches.flat()].forEach((tx) => {
+          txMap.set(tx.id, tx);
+        });
+        const merged = Array.from(txMap.values())
+          .filter((tx) => {
+            if (!tx.contractId) return true;
+            return contractIds.length > 0
+              ? contractIds.includes(tx.contractId)
+              : true;
+          })
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )
+          .slice(0, 5);
+        setRecentTransactions(merged);
+      } else {
+        setRecentTransactions([]);
+      }
     } catch {
+      setRecentTransactions([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingTransactions(false);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     loadLoans();
@@ -265,6 +298,42 @@ export default function MyLoansScreen() {
     (sum, l) => sum + Number(l.approvedAmount ?? l.requestedAmount ?? 0),
     0,
   );
+
+  const summaryStats = [
+    {
+      key: "total",
+      label: "Total",
+      value: String(loans.length),
+      color: colors.text,
+      icon: "albums-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.surface,
+    },
+    {
+      key: "active",
+      label: "Active",
+      value: String(activeCount),
+      color: colors.primary,
+      icon: "checkmark-circle-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.primaryLight,
+    },
+    {
+      key: "pending",
+      label: "Pending",
+      value: String(pendingCount),
+      color: colors.warning,
+      icon: "time-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.warningLight,
+    },
+    {
+      key: "value",
+      label: "Total Value",
+      value: totalAmount,
+      color: "#16A34A",
+      icon: "cash-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.successLight,
+      isCurrency: true,
+    },
+  ];
 
   const renderLoanCard = ({ item: loan }: { item: Loan }) => {
     const amount = loan.approvedAmount ?? loan.requestedAmount;
@@ -312,12 +381,7 @@ export default function MyLoansScreen() {
                 </Text>
               </View>
             </View>
-            <StatusBadge
-              status={loan.status}
-              colors={colors}
-              blockchainTxHash={loan.blockchainTxHash}
-              styles={styles}
-            />
+            <StatusBadge status={loan.status} colors={colors} styles={styles} />
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -345,20 +409,47 @@ export default function MyLoansScreen() {
           </View>
 
           <View style={styles.cardFooter}>
-            <View style={styles.dateRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={13}
-                color={colors.textLight}
-              />
-              <Text style={[styles.dateText, { color: colors.textLight }]}>
-                {new Date(loan.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
+            <View style={styles.cardFooterLeft}>
+              <View style={styles.dateRow}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={13}
+                  color={colors.textLight}
+                />
+                <Text style={[styles.dateText, { color: colors.textLight }]}>
+                  {new Date(loan.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.chainPill,
+                  {
+                    backgroundColor: loan.blockchainTxHash
+                      ? colors.success
+                      : colors.textLight,
+                  },
+                ]}
+                onPress={() => {
+                  const { showBlockchainInfo } = require("@/utils/blockchain");
+                  showBlockchainInfo(loan.blockchainTxHash);
+                }}
+              >
+                <Ionicons
+                  name={loan.blockchainTxHash ? "link" : "link-outline"}
+                  size={10}
+                  color="white"
+                />
+                <Text style={styles.chainPillText}>
+                  {loan.blockchainTxHash ? "On-Chain" : "Off-Chain"}
+                </Text>
+              </TouchableOpacity>
             </View>
+
             <Ionicons
               name="chevron-forward"
               size={16}
@@ -388,6 +479,86 @@ export default function MyLoansScreen() {
           )}
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const getTransactionTypeLabel = (type: Transaction["type"]) =>
+    type.replace(/_/g, " ");
+
+  const getTransactionStatusColor = (
+    status: Transaction["status"],
+    colorSet: Record<string, string>,
+  ) => {
+    switch (status) {
+      case "COMPLETED":
+        return colorSet.success;
+      case "FAILED":
+      case "CANCELLED":
+        return colorSet.error;
+      default:
+        return colorSet.warning;
+    }
+  };
+
+  const getTransactionDirection = (transaction: Transaction): "in" | "out" => {
+    const outflowTypes = [
+      "WITHDRAW",
+      "INSTALLMENT_PAYMENT",
+      "PENALTY_PAYMENT",
+      "FEE",
+    ];
+    const inflowTypes = ["DEPOSIT", "DISBURSEMENT"];
+
+    if (outflowTypes.includes(transaction.type)) {
+      return "out";
+    }
+
+    if (inflowTypes.includes(transaction.type)) {
+      return "in";
+    }
+
+    const relatedIds = Array.from(
+      new Set(
+        loans
+          .flatMap((loan) => [loan.borrowerId, loan.tenantId])
+          .concat(user?.id ? [user.id] : []),
+      ),
+    ).filter((id): id is string => Boolean(id));
+
+    if (
+      relatedIds.includes(transaction.receivedBy) &&
+      !relatedIds.includes(transaction.sentBy)
+    ) {
+      return "in";
+    }
+
+    if (
+      relatedIds.includes(transaction.sentBy) &&
+      !relatedIds.includes(transaction.receivedBy)
+    ) {
+      return "out";
+    }
+
+    return "out";
+  };
+
+  const renderRecentTxSignedAmount = (transaction: Transaction) => {
+    const isInflow = getTransactionDirection(transaction) === "in";
+    const color = isInflow ? colors.success : colors.error;
+
+    return (
+      <View style={styles.recentTxAmountRow}>
+        <Text style={[styles.recentTxAmountSign, { color }]}>
+          {isInflow ? "+" : "-"}
+        </Text>
+        <CurrencyIcon size={12} color={color} />
+        <Text style={[styles.recentTxAmountText, { color }]}>
+          {Number(transaction.amount || 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </Text>
+      </View>
     );
   };
 
@@ -461,47 +632,170 @@ export default function MyLoansScreen() {
             />
           }
           ListHeaderComponent={
-            <View style={[styles.summaryRow, { backgroundColor: colors.card }]}>
-              <View style={styles.statItem}>
-                <Text style={[styles.statNum, { color: colors.text }]}>
-                  {loans.length}
-                </Text>
-                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
-                  Total
-                </Text>
+            <View>
+              <View style={styles.summaryGrid}>
+                {summaryStats.map((stat) => (
+                  <View
+                    key={stat.key}
+                    style={[
+                      styles.summaryCard,
+                      { backgroundColor: colors.card },
+                    ]}
+                  >
+                    <View style={styles.summaryCardTop}>
+                      <View
+                        style={[
+                          styles.summaryIcon,
+                          { backgroundColor: stat.iconBg },
+                        ]}
+                      >
+                        <Ionicons
+                          name={stat.icon}
+                          size={16}
+                          color={stat.color}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.statLbl,
+                          { color: colors.textSecondary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {stat.label}
+                      </Text>
+                    </View>
+
+                    {stat.isCurrency ? (
+                      <View style={styles.summaryValueWrap}>
+                        {formatCurrencyWithIcon(
+                          stat.value as number,
+                          true,
+                          isCompactScreen,
+                        )}
+                      </View>
+                    ) : (
+                      <Text
+                        style={[styles.statNum, { color: stat.color }]}
+                        numberOfLines={1}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.75}
+                      >
+                        {stat.value as string}
+                      </Text>
+                    )}
+                  </View>
+                ))}
               </View>
+
               <View
-                style={[styles.statDivider, { backgroundColor: colors.border }]}
-              />
-              <View style={styles.statItem}>
-                <Text style={[styles.statNum, { color: colors.primary }]}>
-                  {activeCount}
-                </Text>
-                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
-                  Active
-                </Text>
-              </View>
-              <View
-                style={[styles.statDivider, { backgroundColor: colors.border }]}
-              />
-              <View style={styles.statItem}>
-                <Text style={[styles.statNum, { color: colors.warning }]}>
-                  {pendingCount}
-                </Text>
-                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
-                  Pending
-                </Text>
-              </View>
-              <View
-                style={[styles.statDivider, { backgroundColor: colors.border }]}
-              />
-              <View style={styles.statItem}>
-                <View style={{ alignItems: "center" }}>
-                  {formatCurrencyWithIcon(totalAmount, true)}
+                style={[
+                  styles.recentTxSection,
+                  { backgroundColor: colors.card },
+                ]}
+              >
+                <View style={styles.recentTxHeader}>
+                  <Text style={[styles.recentTxTitle, { color: colors.text }]}>
+                    Recent Transactions
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => router.push("/transactions")}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.recentTxViewAll,
+                        { color: colors.primary },
+                      ]}
+                    >
+                      View all
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <Text style={[styles.statLbl, { color: colors.textSecondary }]}>
-                  Total Value
-                </Text>
+
+                {loadingTransactions ? (
+                  <View style={styles.recentTxLoadingWrap}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  </View>
+                ) : recentTransactions.length === 0 ? (
+                  <Text
+                    style={[
+                      styles.recentTxEmpty,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    No transactions found yet
+                  </Text>
+                ) : (
+                  recentTransactions.map((tx, index) => (
+                    <View
+                      key={tx.id}
+                      style={[
+                        styles.recentTxRow,
+                        index < recentTransactions.length - 1 && {
+                          borderBottomColor: colors.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.recentTxLeft}>
+                        <View
+                          style={[
+                            styles.recentTxIcon,
+                            { backgroundColor: colors.primaryLight },
+                          ]}
+                        >
+                          <Ionicons
+                            name="swap-horizontal-outline"
+                            size={14}
+                            color={colors.primary}
+                          />
+                        </View>
+                        <View style={styles.recentTxInfo}>
+                          <Text
+                            style={[
+                              styles.recentTxType,
+                              { color: colors.text },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {getTransactionTypeLabel(tx.type)}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.recentTxDate,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            {new Date(tx.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                              },
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.recentTxRight}>
+                        {renderRecentTxSignedAmount(tx)}
+                        <Text
+                          style={[
+                            styles.recentTxStatus,
+                            {
+                              color: getTransactionStatusColor(
+                                tx.status,
+                                colors,
+                              ),
+                            },
+                          ]}
+                        >
+                          {tx.status}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
               </View>
             </View>
           }
@@ -518,7 +812,7 @@ const createStyles = (colors: Record<string, string>) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
       borderBottomWidth: 1,
     },
@@ -534,16 +828,23 @@ const createStyles = (colors: Record<string, string>) =>
     applyBtnText: { fontSize: 14, fontWeight: "600" },
     centered: { flex: 1, alignItems: "center", justifyContent: "center" },
     listContent: {
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.md,
       paddingBottom: spacing.xxl,
       gap: spacing.md,
       paddingTop: spacing.md,
     },
-    summaryRow: {
+    summaryGrid: {
       flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+      rowGap: spacing.sm,
+    },
+    summaryCard: {
+      width: "48.5%",
       borderRadius: borderRadius.lg,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
       marginBottom: spacing.sm,
       shadowColor: "#000",
       shadowOffset: { width: 0, height: 1 },
@@ -551,10 +852,21 @@ const createStyles = (colors: Record<string, string>) =>
       shadowRadius: 4,
       elevation: 2,
     },
-    statItem: { flex: 1, alignItems: "center" },
-    statNum: { ...typography.h3, fontWeight: "700", fontSize: 16 },
-    statLbl: { fontSize: 11, marginTop: 2, fontWeight: "500" },
-    statDivider: { width: 1, marginVertical: 4 },
+    summaryCardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    summaryIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+    },
+    statNum: { ...typography.h3, fontWeight: "800", fontSize: 22 },
+    statLbl: { fontSize: 12, fontWeight: "600", flexShrink: 1 },
     cardWrapper: {
       borderRadius: borderRadius.lg,
       shadowColor: "#000",
@@ -599,9 +911,11 @@ const createStyles = (colors: Record<string, string>) =>
     cardBody: {
       flexDirection: "row",
       justifyContent: "space-between",
+      alignItems: "flex-start",
       marginBottom: spacing.md,
+      gap: spacing.sm,
     },
-    amountBlock: { flex: 1 },
+    amountBlock: { flex: 1, minWidth: 0 },
     amountLabel: {
       fontSize: 11,
       fontWeight: "600",
@@ -610,7 +924,7 @@ const createStyles = (colors: Record<string, string>) =>
       marginBottom: 4,
     },
     amountValue: { fontSize: 20, fontWeight: "800" },
-    termBlock: { alignItems: "flex-end" },
+    termBlock: { alignItems: "flex-end", minWidth: 72 },
     termLabel: {
       fontSize: 11,
       fontWeight: "600",
@@ -624,8 +938,26 @@ const createStyles = (colors: Record<string, string>) =>
       alignItems: "center",
       justifyContent: "space-between",
     },
+    cardFooterLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+    },
     dateRow: { flexDirection: "row", alignItems: "center", gap: 4 },
     dateText: { fontSize: 12, fontWeight: "500" },
+    chainPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: borderRadius.full,
+    },
+    chainPillText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "white",
+    },
     rejectionBanner: {
       flexDirection: "row",
       alignItems: "flex-start",
@@ -667,8 +999,84 @@ const createStyles = (colors: Record<string, string>) =>
       borderRadius: borderRadius.full,
     },
     emptyButtonText: { fontSize: 15, fontWeight: "700" },
+    summaryValueWrap: {
+      width: "100%",
+      alignItems: "flex-start",
+      paddingHorizontal: 0,
+    },
+    currencyRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      minWidth: 0,
+      maxWidth: "100%",
+    },
     currencyText: {
       fontSize: 16,
       fontWeight: "700",
+      marginLeft: 4,
+      flexShrink: 1,
     },
+    currencyTextCompact: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    recentTxSection: {
+      borderRadius: borderRadius.lg,
+      padding: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    recentTxHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.xs,
+    },
+    recentTxTitle: { fontSize: 16, fontWeight: "700" },
+    recentTxViewAll: { fontSize: 12, fontWeight: "700" },
+    recentTxLoadingWrap: { paddingVertical: spacing.md, alignItems: "center" },
+    recentTxEmpty: {
+      fontSize: 12,
+      fontWeight: "500",
+      textAlign: "center",
+      paddingVertical: spacing.md,
+    },
+    recentTxRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+    },
+    recentTxLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      flex: 1,
+      minWidth: 0,
+    },
+    recentTxIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+    },
+    recentTxInfo: { flex: 1, minWidth: 0 },
+    recentTxType: { fontSize: 12, fontWeight: "600" },
+    recentTxDate: { fontSize: 11, fontWeight: "500", marginTop: 2 },
+    recentTxRight: { alignItems: "flex-end", marginLeft: spacing.sm },
+    recentTxAmountRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+    },
+    recentTxAmountSign: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    recentTxAmountText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    recentTxStatus: { fontSize: 10, fontWeight: "700", marginTop: 2 },
   });

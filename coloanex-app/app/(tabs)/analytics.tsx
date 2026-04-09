@@ -4,11 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
   RefreshControl,
   TouchableOpacity,
-  Platform,
   Modal,
+  useWindowDimensions,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { LineChart, PieChart } from "react-native-chart-kit";
@@ -22,11 +21,12 @@ import analyticsApi, {
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
 
-const screenWidth = Dimensions.get("window").width;
-
 export default function AnalyticsScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const styles = createStyles(colors);
+  const { width } = useWindowDimensions();
+  const chartWidth = Math.max(width - spacing.md * 4, 260);
+  const isCompactScreen = width < 360;
   const [analytics, setAnalytics] = useState<BorrowerAnalytics | null>(null);
   const [monthlyLoans, setMonthlyLoans] = useState<MonthlyData[]>([]);
   const [loansByStatus, setLoansByStatus] = useState<StatusData[]>([]);
@@ -107,10 +107,51 @@ export default function AnalyticsScreen() {
     legendFontSize: 14,
   }));
 
+  const totalBorrowed = Number(analytics?.totalBorrowed ?? 0) || 0;
+  const totalInterest = Number(analytics?.totalInterest ?? 0) || 0;
+  const totalAmountDue = Number(analytics?.totalAmountDue ?? 0) || 0;
+  const totalPaid = Number(analytics?.totalPaid ?? 0) || 0;
+  const outstandingAmount = Math.max(totalAmountDue - totalPaid, 0);
+  const repaymentRate =
+    totalAmountDue > 0 ? (totalPaid / totalAmountDue) * 100 : 0;
+  const averageLoanSize =
+    analytics && analytics.totalLoans > 0
+      ? totalBorrowed / analytics.totalLoans
+      : 0;
+  const closedLoans = loansByStatus
+    .filter((item) => ["PAID", "REJECTED"].includes(item.status))
+    .reduce((sum, item) => sum + item.count, 0);
+
+  const monthlyAmountData = {
+    labels: monthlyLoans.map((item) => item.month.split(" ")[0]),
+    datasets: [
+      {
+        data: monthlyLoans.map((item) => Number(item.amount || 0)),
+      },
+    ],
+  };
+
+  const repaymentSplitData = [
+    {
+      name: "Paid",
+      count: Number(totalPaid.toFixed(2)),
+      color: colors.success,
+      legendFontColor: colors.text,
+      legendFontSize: 14,
+    },
+    {
+      name: "Outstanding",
+      count: Number(outstandingAmount.toFixed(2)),
+      color: colors.warning,
+      legendFontColor: colors.text,
+      legendFontSize: 14,
+    },
+  ];
+
   const StatCard = ({ title, value, icon, color, subtitle }: any) => (
-    <Card style={styles.statCard}>
+    <Card style={[styles.statCard, isCompactScreen && styles.statCardCompact]}>
       <View style={styles.statContent}>
-        <View style={[styles.statIcon, { backgroundColor: `${color}20` }]}>
+        <View style={[styles.statIcon, { backgroundColor: `${color}1F` }]}>
           {icon === "rupee" ? (
             <CurrencyIcon size={24} color={color} />
           ) : (
@@ -121,7 +162,14 @@ export default function AnalyticsScreen() {
           <Text style={[styles.statTitle, { color: colors.textSecondary }]}>
             {title}
           </Text>
-          <Text style={[styles.statValue, { color }]}>{value}</Text>
+          <Text
+            style={[styles.statValue, { color }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.72}
+          >
+            {value}
+          </Text>
           {subtitle && (
             <Text style={[styles.statSubtitle, { color: colors.textLight }]}>
               {subtitle}
@@ -174,48 +222,64 @@ export default function AnalyticsScreen() {
       >
         {analytics && (
           <>
-            <StatCard
-              title="Total Loans"
-              value={analytics.totalLoans}
-              icon="document-text"
-              color={colors.primary}
-            />
-            <StatCard
-              title="Active Loans"
-              value={analytics.activeLoans}
-              icon="checkmark-circle"
-              color={colors.success}
-            />
-            <StatCard
-              title="Total Borrowed"
-              value={`${(analytics.totalBorrowed / 1000).toFixed(0)}K`}
-              icon="rupee"
-              color={colors.primary}
-              subtitle="Total loan amount"
-            />
-            <StatCard
-              title="Total Paid"
-              value={`${(analytics.totalPaid / 1000).toFixed(0)}K`}
-              icon="rupee"
-              color={colors.success}
-              subtitle="Payments made"
-            />
-            <StatCard
-              title="Pending Amount"
-              value={`${(analytics.pendingAmount / 1000).toFixed(0)}K`}
-              icon="rupee"
-              color={colors.warning}
-              subtitle="Outstanding balance"
-            />
-            <StatCard
-              title="Overdue"
-              value={analytics.overduePayments}
-              icon="alert-circle"
-              color={colors.error}
-              subtitle="Late payments"
-            />
+            <View style={styles.statsGrid}>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Active Loans"
+                  value={analytics.activeLoans}
+                  icon="checkmark-circle"
+                  color={colors.success}
+                  subtitle="Currently running"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Closed / Rejected"
+                  value={closedLoans}
+                  icon="flag"
+                  color={colors.primary}
+                  subtitle="Finished lifecycle"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Total Borrowed"
+                  value={totalBorrowed.toLocaleString("en-IN")}
+                  icon="rupee"
+                  color={colors.primary}
+                  subtitle="Principal"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Total Paid"
+                  value={totalPaid.toLocaleString("en-IN")}
+                  icon="rupee"
+                  color={colors.success}
+                  subtitle="Repaid till date"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Total Interest"
+                  value={totalInterest.toLocaleString("en-IN")}
+                  icon="rupee"
+                  color={colors.primaryDark}
+                  subtitle="Interest due"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Outstanding Balance"
+                  value={outstandingAmount.toLocaleString("en-IN")}
+                  icon="trending-down"
+                  color={colors.warning}
+                  subtitle="Includes interest"
+                />
+              </View>
+            </View>
 
-            {analytics.totalBorrowed > 0 && (
+            {totalAmountDue > 0 && (
               <Card style={styles.progressCard}>
                 <Text style={[styles.cardTitle, { color: colors.text }]}>
                   Repayment Progress
@@ -231,7 +295,7 @@ export default function AnalyticsScreen() {
                       style={[
                         styles.progressFill,
                         {
-                          width: `${(analytics.totalPaid / analytics.totalBorrowed) * 100}%`,
+                          width: `${Math.min((totalPaid / totalAmountDue) * 100, 100)}%`,
                           backgroundColor: colors.primary,
                         },
                       ]}
@@ -243,15 +307,52 @@ export default function AnalyticsScreen() {
                       { color: colors.textSecondary },
                     ]}
                   >
-                    {(
-                      (analytics.totalPaid / analytics.totalBorrowed) *
-                      100
-                    ).toFixed(1)}
-                    % Complete
+                    {((totalPaid / totalAmountDue) * 100).toFixed(1)}% Complete
                   </Text>
                 </View>
               </Card>
             )}
+
+            <View style={styles.statsGrid}>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Repayment Rate"
+                  value={`${repaymentRate.toFixed(1)}%`}
+                  icon="analytics"
+                  color={colors.primaryDark}
+                  subtitle="Paid vs total due"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Overdue"
+                  value={analytics.overduePayments}
+                  icon="alert-circle"
+                  color={colors.error}
+                  subtitle="Late payments"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Avg Loan Size"
+                  value={averageLoanSize.toLocaleString("en-IN", {
+                    maximumFractionDigits: 0,
+                  })}
+                  icon="calculator"
+                  color={colors.primary}
+                  subtitle="Per loan"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Total Amount Due"
+                  value={totalAmountDue.toLocaleString("en-IN")}
+                  icon="wallet"
+                  color={colors.warning}
+                  subtitle="Principal + interest"
+                />
+              </View>
+            </View>
           </>
         )}
 
@@ -405,7 +506,7 @@ export default function AnalyticsScreen() {
             <View style={styles.chartContainer}>
               <LineChart
                 data={lineChartData}
-                width={screenWidth - 64}
+                width={chartWidth}
                 height={200}
                 chartConfig={chartConfig}
                 bezier
@@ -422,6 +523,72 @@ export default function AnalyticsScreen() {
           </Card>
         )}
 
+        {monthlyLoans.length > 0 && (
+          <Card style={styles.chartCard}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              Borrowed Amount Trend
+            </Text>
+            <View style={styles.chartContainer}>
+              <LineChart
+                data={monthlyAmountData}
+                width={chartWidth}
+                height={200}
+                chartConfig={chartConfig}
+                bezier
+                style={styles.chart}
+                withInnerLines={false}
+                withOuterLines={true}
+                withVerticalLines={false}
+                withHorizontalLines={true}
+                withDots={true}
+                withShadow={false}
+                fromZero={true}
+                yAxisSuffix=""
+              />
+            </View>
+          </Card>
+        )}
+
+        {totalBorrowed > 0 && (
+          <Card style={styles.chartCard}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              Paid vs Outstanding
+            </Text>
+            <View style={styles.pieChartWrapper}>
+              <View style={styles.pieChartContainer}>
+                <PieChart
+                  data={repaymentSplitData}
+                  width={chartWidth}
+                  height={220}
+                  chartConfig={chartConfig}
+                  accessor="count"
+                  backgroundColor="transparent"
+                  paddingLeft="0"
+                  hasLegend={false}
+                  style={styles.chart}
+                  absolute
+                  center={[chartWidth / 4, 0]}
+                />
+              </View>
+              <View style={styles.legendContainer}>
+                {repaymentSplitData.map((item) => (
+                  <View key={item.name} style={styles.legendItem}>
+                    <View
+                      style={[
+                        styles.legendColor,
+                        { backgroundColor: item.color },
+                      ]}
+                    />
+                    <Text style={[styles.legendText, { color: colors.text }]}>
+                      {item.name}: {item.count.toLocaleString("en-IN")}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Card>
+        )}
+
         {loansByStatus.length > 0 && (
           <Card style={styles.chartCard}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
@@ -431,7 +598,7 @@ export default function AnalyticsScreen() {
               <View style={styles.pieChartContainer}>
                 <PieChart
                   data={pieChartData}
-                  width={screenWidth - 64}
+                  width={chartWidth}
                   height={220}
                   chartConfig={chartConfig}
                   accessor="count"
@@ -440,7 +607,7 @@ export default function AnalyticsScreen() {
                   hasLegend={false}
                   style={styles.chart}
                   absolute
-                  center={[(screenWidth - 64) / 4, 0]}
+                  center={[chartWidth / 4, 0]}
                 />
               </View>
               <View style={styles.legendContainer}>
@@ -483,15 +650,11 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     header: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg,
-      backgroundColor: colors.card,
-      borderBottomLeftRadius: 24,
-      borderBottomRightRadius: 24,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 12,
-      elevation: 4,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     headerTitle: {
       ...typography.h2,
@@ -506,7 +669,8 @@ const createStyles = (colors: any) =>
     content: {
       flex: 1,
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xxl,
     },
     loadingContainer: {
       flex: 1,
@@ -519,27 +683,39 @@ const createStyles = (colors: any) =>
     },
     statsGrid: {
       flexDirection: "row",
-      gap: spacing.md,
-      marginBottom: spacing.md,
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      rowGap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    statItemWrap: {
+      width: "48.5%",
     },
     statCard: {
-      padding: spacing.md,
-      marginBottom: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      marginBottom: 0,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: `${colors.border}B3`,
+    },
+    statCardCompact: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
     },
     statContent: {
-      flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
     },
     statIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: borderRadius.md,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
       justifyContent: "center",
       alignItems: "center",
-      marginRight: spacing.md,
+      marginBottom: spacing.sm,
     },
     statInfo: {
-      flex: 1,
+      width: "100%",
     },
     statTitle: {
       ...typography.caption,
@@ -550,6 +726,7 @@ const createStyles = (colors: any) =>
       ...typography.h3,
       color: colors.text,
       fontWeight: "700",
+      lineHeight: 32,
     },
     statSubtitle: {
       ...typography.caption,
@@ -557,8 +734,8 @@ const createStyles = (colors: any) =>
       marginTop: 2,
     },
     progressCard: {
-      padding: spacing.lg,
-      marginBottom: spacing.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
     },
     cardTitle: {
       ...typography.h3,
@@ -583,8 +760,8 @@ const createStyles = (colors: any) =>
       textAlign: "center",
     },
     filterCard: {
-      padding: spacing.lg,
-      marginBottom: spacing.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
     },
     filterLabel: {
       ...typography.bodySmall,
@@ -646,8 +823,8 @@ const createStyles = (colors: any) =>
       fontWeight: "600",
     },
     chartCard: {
-      padding: spacing.lg,
-      marginBottom: spacing.md,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
       overflow: "hidden",
     },
     chartContainer: {

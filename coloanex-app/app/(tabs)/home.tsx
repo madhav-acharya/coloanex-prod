@@ -60,6 +60,27 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const user = useAppSelector((state) => state.auth.user);
+  const activeLenders = lenders.filter((item) => item.isActive).length;
+  const homeStats = [
+    {
+      key: "total",
+      label: "Lenders",
+      value: String(lenders.length),
+      icon: "business-outline" as const,
+    },
+    {
+      key: "active",
+      label: "Active",
+      value: String(activeLenders),
+      icon: "pulse-outline" as const,
+    },
+    {
+      key: "alerts",
+      label: "Alerts",
+      value: String(unreadCount),
+      icon: "notifications-outline" as const,
+    },
+  ];
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -154,6 +175,68 @@ export default function HomeScreen() {
             >
               — Peer lending simplified
             </Text>
+          </View>
+        </View>
+
+        <View style={[styles.section, { marginTop: spacing.md }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Overview
+          </Text>
+          <View style={styles.statsRow}>
+            {homeStats.map((item) => (
+              <View
+                key={item.key}
+                style={[styles.statCard, { backgroundColor: colors.card }]}
+              >
+                <View
+                  style={[
+                    styles.statIcon,
+                    { backgroundColor: colors.primaryLight },
+                  ]}
+                >
+                  <Ionicons name={item.icon} size={15} color={colors.primary} />
+                </View>
+                <Text style={[styles.statValue, { color: colors.text }]}>
+                  {item.value}
+                </Text>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
+                  {item.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: colors.text, marginTop: spacing.md },
+            ]}
+          >
+            Quick Actions
+          </Text>
+          <View style={styles.quickActions}>
+            {QUICK_ACTIONS.map((action) => (
+              <TouchableOpacity
+                key={action.label}
+                style={[styles.quickBtn, { backgroundColor: colors.card }]}
+                onPress={() => router.push(action.route as any)}
+                activeOpacity={0.85}
+              >
+                <View
+                  style={[
+                    styles.quickIcon,
+                    { backgroundColor: `${action.color}1A` },
+                  ]}
+                >
+                  <Ionicons name={action.icon} size={18} color={action.color} />
+                </View>
+                <Text style={[styles.quickLabel, { color: colors.text }]}>
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -375,11 +458,11 @@ const createStyles = (colors: Record<string, string>) =>
     quickActions: {
       flexDirection: "row",
       gap: spacing.sm,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
+      flexWrap: "wrap",
+      marginTop: spacing.sm,
     },
     quickBtn: {
-      flex: 1,
+      width: "48.5%",
       alignItems: "center",
       paddingVertical: 12,
       borderRadius: borderRadius.lg,
@@ -399,6 +482,33 @@ const createStyles = (colors: Record<string, string>) =>
     },
     quickLabel: { fontSize: 11, fontWeight: "600" },
     section: { paddingHorizontal: spacing.md },
+    statsRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    statCard: {
+      flex: 1,
+      borderRadius: borderRadius.lg,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 1,
+    },
+    statIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    statValue: { fontSize: 18, fontWeight: "800" },
+    statLabel: { fontSize: 11, fontWeight: "600", marginTop: 2 },
     sectionHeader: {
       flexDirection: "row",
       alignItems: "center",
