@@ -4,6 +4,7 @@ import { LOAN_REGISTRY_ABI } from './abi/loan-registry.abi';
 import { CONTRACT_REGISTRY_ABI } from './abi/contract-registry.abi';
 import { PAYMENT_REGISTRY_ABI } from './abi/payment-registry.abi';
 import { KYC_REGISTRY_ABI } from './abi/kyc-registry.abi';
+import { RULE_REGISTRY_ABI } from './abi/rule-registry.abi';
 
 export interface BlockchainTxResult {
   txHash: string;
@@ -31,6 +32,7 @@ export class BlockchainService {
   private contractRegistry: ethers.Contract | null = null;
   private paymentRegistry: ethers.Contract | null = null;
   private kycRegistry: ethers.Contract | null = null;
+  private ruleRegistry: ethers.Contract | null = null;
   private readonly explorerBase: string;
   private initialized = false;
   private readonly blockchainEnabled: boolean;
@@ -56,6 +58,7 @@ export class BlockchainService {
     const contractAddress = process.env.EVM_CONTRACT_REGISTRY_ADDRESS;
     const paymentAddress = process.env.EVM_PAYMENT_REGISTRY_ADDRESS;
     const kycAddress = process.env.EVM_KYC_REGISTRY_ADDRESS;
+    const ruleAddress = process.env.EVM_RULE_REGISTRY_ADDRESS;
 
     if (
       !rpcUrl ||
@@ -97,6 +100,13 @@ export class BlockchainService {
         KYC_REGISTRY_ABI,
         this.signer,
       );
+      if (ruleAddress) {
+        this.ruleRegistry = new ethers.Contract(
+          ruleAddress,
+          RULE_REGISTRY_ABI,
+          this.signer,
+        );
+      }
 
       this.initialized = true;
       this.logger.log(
@@ -479,7 +489,10 @@ export class BlockchainService {
       const kycRecord = await this.kycRegistry['getKYC'](kycId);
       return kycRecord;
     } catch (err) {
-      this.logger.error(`[getKYC] failed for kycId=${kycId}`, (err as Error).message);
+      this.logger.error(
+        `[getKYC] failed for kycId=${kycId}`,
+        (err as Error).message,
+      );
       return null;
     }
   }
@@ -548,6 +561,128 @@ export class BlockchainService {
       return result;
     } catch (err) {
       this.logger.error('[deleteKYC] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async recordRule(
+    ruleId: string,
+    name: string,
+    ruleType: string,
+    interestRateBps: number,
+    minAmount: number,
+    maxAmount: number,
+    minTermMonths: number,
+    maxTermMonths: number,
+    isActive: boolean,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.ruleRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping recordRule',
+      );
+      return null;
+    }
+
+    try {
+      const tx: ethers.TransactionResponse = await this.ruleRegistry[
+        'createRule'
+      ](
+        ruleId,
+        name,
+        ruleType,
+        BigInt(interestRateBps),
+        BigInt(minAmount),
+        BigInt(maxAmount),
+        BigInt(minTermMonths),
+        BigInt(maxTermMonths),
+        isActive,
+      );
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[recordRule] rule=${ruleId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[recordRule] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async updateRule(
+    ruleId: string,
+    interestRateBps: number,
+    minAmount: number,
+    maxAmount: number,
+    minTermMonths: number,
+    maxTermMonths: number,
+    isActive: boolean,
+  ): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.ruleRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping updateRule',
+      );
+      return null;
+    }
+
+    try {
+      const tx: ethers.TransactionResponse = await this.ruleRegistry[
+        'updateRule'
+      ](
+        ruleId,
+        BigInt(interestRateBps),
+        BigInt(minAmount),
+        BigInt(maxAmount),
+        BigInt(minTermMonths),
+        BigInt(maxTermMonths),
+        isActive,
+      );
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[updateRule] rule=${ruleId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[updateRule] failed', (err as Error).message);
+      return null;
+    }
+  }
+
+  async deleteRule(ruleId: string): Promise<BlockchainTxResult | null> {
+    if (!this.blockchainEnabled) {
+      return null;
+    }
+    if (!this.ruleRegistry) {
+      this.logger.warn(
+        'BlockchainService not initialized — skipping deleteRule',
+      );
+      return null;
+    }
+
+    try {
+      const tx: ethers.TransactionResponse =
+        await this.ruleRegistry['deleteRule'](ruleId);
+      const receipt = await tx.wait();
+      if (!receipt) return null;
+
+      const result = await this.extractTxResult(receipt);
+      this.logger.log(
+        `[deleteRule] rule=${ruleId} txHash=${result.txHash} gas=${result.gasFeeGwei} GWEI`,
+      );
+      return result;
+    } catch (err) {
+      this.logger.error('[deleteRule] failed', (err as Error).message);
       return null;
     }
   }
