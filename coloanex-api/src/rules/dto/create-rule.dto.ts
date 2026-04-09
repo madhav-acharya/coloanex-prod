@@ -7,6 +7,7 @@ import {
   ValidateNested,
   Min,
   Max,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RuleType } from '../entities/rule.entity';
@@ -58,6 +59,10 @@ class PaymentConfigDto {
 export class CreateRuleDto {
   @IsOptional()
   @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
   tenantId?: string;
 
   @IsString()
@@ -94,4 +99,12 @@ export class CreateRuleDto {
   @IsOptional()
   @IsBoolean()
   isPubliclyVisible?: boolean;
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  @IsObject()
+  blockchainData?: Record<string, unknown>;
 }
