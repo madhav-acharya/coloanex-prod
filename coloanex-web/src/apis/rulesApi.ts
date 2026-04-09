@@ -38,9 +38,14 @@ export interface Rule {
     name: string;
     logo?: string;
   };
+  evmAddress?: string | null;
+  isOnChain?: boolean;
+  blockchainTxHash?: string | null;
+  blockchainData?: Record<string, unknown> | null;
 }
 
 export interface CreateRuleDto {
+  id?: string;
   tenantId?: string;
   name: string;
   description?: string;
@@ -51,6 +56,8 @@ export interface CreateRuleDto {
   paymentConfig: PaymentConfig;
   isActive?: boolean;
   isPubliclyVisible?: boolean;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
 }
 
 export interface UpdateRuleDto extends Partial<CreateRuleDto> {}
