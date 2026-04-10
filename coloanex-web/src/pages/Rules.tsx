@@ -148,6 +148,38 @@ export default function Rules() {
       ),
     },
     {
+      key: "blockchainTxHash",
+      label: "Blockchain",
+      sortable: false,
+      render: (rule) => {
+        const hasBlockchainTx = !!rule?.blockchainTxHash;
+        return (
+          <button
+            onClick={() => {
+              if (hasBlockchainTx) {
+                window.open(
+                  `https://sepolia.etherscan.io/tx/${rule.blockchainTxHash}`,
+                  "_blank",
+                );
+              } else {
+                toast({
+                  title: "Info",
+                  description: "This record is stored off-chain only.",
+                });
+              }
+            }}
+            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+              hasBlockchainTx
+                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
+                : "bg-gray-100 text-gray-600 cursor-default"
+            }`}
+          >
+            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+          </button>
+        );
+      },
+    },
+    {
       key: "createdAt",
       label: "Created At",
       sortable: true,
@@ -158,47 +190,6 @@ export default function Rules() {
           return "Invalid Date";
         }
       },
-    },
-    {
-      key: "isOnChain",
-      label: "Chain",
-      render: (rule) => {
-        const isOnChain = !!(rule.isOnChain || rule.blockchainTxHash);
-        return (
-          <Badge
-            className={
-              isOnChain
-                ? "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border border-green-200 dark:border-green-800"
-                : "bg-gray-100 dark:bg-gray-600 text-white dark:text-gray-400 border border-gray-200 dark:border-gray-700"
-            }
-          >
-            {isOnChain ? "On-Chain" : "Off-Chain"}
-          </Badge>
-        );
-      },
-    },
-    {
-      key: "blockchainTxHash",
-      label: "Tx Hash",
-      render: (rule) =>
-        rule.blockchainTxHash ? (
-          <span className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground">
-            <LinkIcon className="h-3 w-3" />
-            {`${rule.blockchainTxHash.slice(0, 10)}...${rule.blockchainTxHash.slice(-6)}`}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">-</span>
-        ),
-    },
-    {
-      key: "blockchainData",
-      label: "Blockchain Data",
-      render: (rule) =>
-        rule.blockchainData ? (
-          <span className="text-xs text-muted-foreground">Available</span>
-        ) : (
-          <span className="text-xs text-muted-foreground">-</span>
-        ),
     },
   ];
 
