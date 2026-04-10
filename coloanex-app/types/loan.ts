@@ -54,6 +54,14 @@ export interface Loan {
   nextPaymentDate?: string;
   paymentsMade?: number;
   totalPayments?: number;
+  contract?: {
+    id: string;
+    loanAmount?: number;
+    totalAmountDue?: number;
+    totalAmountPaid?: number;
+    outstandingBalance?: number;
+    status?: string;
+  };
 }
 
 export interface CreateLoanDto {
