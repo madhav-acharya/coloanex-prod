@@ -10,7 +10,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
-import { LineChart, PieChart } from "react-native-chart-kit";
+import { PieChart } from "react-native-chart-kit";
 import { Card, CurrencyIcon } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import analyticsApi, {
@@ -45,11 +45,15 @@ export default function AnalyticsScreen() {
       const monthsDiff = Math.round(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
       );
-      const months = monthsDiff > 0 ? monthsDiff : 1;
+      const months = monthsDiff > 0 ? monthsDiff + 1 : 1;
+      const rangeParams = {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      };
       const [analyticsData, monthlyData, statusData] = await Promise.all([
-        analyticsApi.getBorrowerAnalytics(),
-        analyticsApi.getMonthlyLoans(months),
-        analyticsApi.getLoansByStatus(),
+        analyticsApi.getBorrowerAnalytics(rangeParams),
+        analyticsApi.getMonthlyLoans(months, rangeParams),
+        analyticsApi.getLoansByStatus(rangeParams),
       ]);
 
       setAnalytics(analyticsData);
@@ -83,30 +87,6 @@ export default function AnalyticsScreen() {
     },
   };
 
-  const lineChartData = {
-    labels: monthlyLoans.map((item) => item.month.split(" ")[0]),
-    datasets: [
-      {
-        data: monthlyLoans.map((item) => item.count),
-      },
-    ],
-  };
-
-  const pieChartData = loansByStatus.map((item, index) => ({
-    name: item.status,
-    count: item.count,
-    color: [
-      colors.primary,
-      colors.primaryDark,
-      colors.success,
-      colors.warning,
-      colors.error,
-      "#86EFAC",
-    ][index % 6],
-    legendFontColor: colors.text,
-    legendFontSize: 14,
-  }));
-
   const totalBorrowed = Number(analytics?.totalBorrowed ?? 0) || 0;
   const totalInterest = Number(analytics?.totalInterest ?? 0) || 0;
   const totalAmountDue = Number(analytics?.totalAmountDue ?? 0) || 0;
@@ -121,15 +101,23 @@ export default function AnalyticsScreen() {
   const closedLoans = loansByStatus
     .filter((item) => ["PAID", "REJECTED"].includes(item.status))
     .reduce((sum, item) => sum + item.count, 0);
+  const maxStatusCount = Math.max(
+    ...loansByStatus.map((item) => item.count),
+    1,
+  );
+  const maxMonthlyAmount = Math.max(
+    ...monthlyLoans.map((item) => Number(item.amount || 0)),
+    1,
+  );
 
-  const monthlyAmountData = {
-    labels: monthlyLoans.map((item) => item.month.split(" ")[0]),
-    datasets: [
-      {
-        data: monthlyLoans.map((item) => Number(item.amount || 0)),
-      },
-    ],
-  };
+  const statusColors = [
+    colors.primary,
+    colors.primaryDark,
+    colors.success,
+    colors.warning,
+    colors.error,
+    "#86EFAC",
+  ];
 
   const repaymentSplitData = [
     {
@@ -150,33 +138,39 @@ export default function AnalyticsScreen() {
 
   const StatCard = ({ title, value, icon, color, subtitle }: any) => (
     <Card style={[styles.statCard, isCompactScreen && styles.statCardCompact]}>
-      <View style={styles.statContent}>
-        <View style={[styles.statIcon, { backgroundColor: `${color}1F` }]}>
+      <View style={styles.summaryCardTop}>
+        <View style={[styles.summaryIcon, { backgroundColor: `${color}1F` }]}>
           {icon === "rupee" ? (
-            <CurrencyIcon size={24} color={color} />
+            <CurrencyIcon size={16} color={color} />
           ) : (
-            <Ionicons name={icon} size={24} color={color} />
+            <Ionicons name={icon} size={16} color={color} />
           )}
         </View>
-        <View style={styles.statInfo}>
-          <Text style={[styles.statTitle, { color: colors.textSecondary }]}>
-            {title}
-          </Text>
-          <Text
-            style={[styles.statValue, { color }]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.72}
-          >
-            {value}
-          </Text>
-          {subtitle && (
-            <Text style={[styles.statSubtitle, { color: colors.textLight }]}>
-              {subtitle}
-            </Text>
-          )}
-        </View>
+        <Text
+          style={[styles.statLbl, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
       </View>
+
+      <Text
+        style={[styles.statNum, { color }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+      >
+        {value}
+      </Text>
+
+      {subtitle ? (
+        <Text
+          style={[styles.summarySubText, { color: colors.textLight }]}
+          numberOfLines={1}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
     </Card>
   );
 
@@ -220,142 +214,6 @@ export default function AnalyticsScreen() {
           />
         }
       >
-        {analytics && (
-          <>
-            <View style={styles.statsGrid}>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Active Loans"
-                  value={analytics.activeLoans}
-                  icon="checkmark-circle"
-                  color={colors.success}
-                  subtitle="Currently running"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Closed / Rejected"
-                  value={closedLoans}
-                  icon="flag"
-                  color={colors.primary}
-                  subtitle="Finished lifecycle"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Total Borrowed"
-                  value={totalBorrowed.toLocaleString("en-IN")}
-                  icon="rupee"
-                  color={colors.primary}
-                  subtitle="Principal"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Total Paid"
-                  value={totalPaid.toLocaleString("en-IN")}
-                  icon="rupee"
-                  color={colors.success}
-                  subtitle="Repaid till date"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Total Interest"
-                  value={totalInterest.toLocaleString("en-IN")}
-                  icon="rupee"
-                  color={colors.primaryDark}
-                  subtitle="Interest due"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Outstanding Balance"
-                  value={outstandingAmount.toLocaleString("en-IN")}
-                  icon="trending-down"
-                  color={colors.warning}
-                  subtitle="Includes interest"
-                />
-              </View>
-            </View>
-
-            {totalAmountDue > 0 && (
-              <Card style={styles.progressCard}>
-                <Text style={[styles.cardTitle, { color: colors.text }]}>
-                  Repayment Progress
-                </Text>
-                <View style={styles.progressContainer}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      { backgroundColor: colors.border },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${Math.min((totalPaid / totalAmountDue) * 100, 100)}%`,
-                          backgroundColor: colors.primary,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.progressText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {((totalPaid / totalAmountDue) * 100).toFixed(1)}% Complete
-                  </Text>
-                </View>
-              </Card>
-            )}
-
-            <View style={styles.statsGrid}>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Repayment Rate"
-                  value={`${repaymentRate.toFixed(1)}%`}
-                  icon="analytics"
-                  color={colors.primaryDark}
-                  subtitle="Paid vs total due"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Overdue"
-                  value={analytics.overduePayments}
-                  icon="alert-circle"
-                  color={colors.error}
-                  subtitle="Late payments"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Avg Loan Size"
-                  value={averageLoanSize.toLocaleString("en-IN", {
-                    maximumFractionDigits: 0,
-                  })}
-                  icon="calculator"
-                  color={colors.primary}
-                  subtitle="Per loan"
-                />
-              </View>
-              <View style={styles.statItemWrap}>
-                <StatCard
-                  title="Total Amount Due"
-                  value={totalAmountDue.toLocaleString("en-IN")}
-                  icon="wallet"
-                  color={colors.warning}
-                  subtitle="Principal + interest"
-                />
-              </View>
-            </View>
-          </>
-        )}
-
         <Card style={styles.filterCard}>
           <Text style={[styles.filterLabel, { color: colors.text }]}>
             Date Range
@@ -498,55 +356,104 @@ export default function AnalyticsScreen() {
           </Modal>
         </Card>
 
-        {monthlyLoans.length > 0 && (
-          <Card style={styles.chartCard}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Loan Applications Trend
-            </Text>
-            <View style={styles.chartContainer}>
-              <LineChart
-                data={lineChartData}
-                width={chartWidth}
-                height={200}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chart}
-                withInnerLines={false}
-                withOuterLines={true}
-                withVerticalLines={false}
-                withHorizontalLines={true}
-                withDots={true}
-                withShadow={false}
-                fromZero={true}
-              />
+        {analytics && (
+          <>
+            <View style={styles.statsGrid}>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Outstanding"
+                  value={outstandingAmount.toLocaleString("en-IN")}
+                  icon="wallet"
+                  color={colors.warning}
+                  subtitle="Remaining to pay"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Repayment Rate"
+                  value={`${repaymentRate.toFixed(1)}%`}
+                  icon="analytics"
+                  color={colors.primaryDark}
+                  subtitle="Paid vs amount due"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Overdue Payments"
+                  value={analytics.overduePayments}
+                  icon="alert-circle"
+                  color={colors.error}
+                  subtitle="Need action"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Avg Loan Size"
+                  value={averageLoanSize.toLocaleString("en-IN", {
+                    maximumFractionDigits: 0,
+                  })}
+                  icon="calculator"
+                  color={colors.primary}
+                  subtitle="Per loan"
+                />
+              </View>
             </View>
-          </Card>
-        )}
 
-        {monthlyLoans.length > 0 && (
-          <Card style={styles.chartCard}>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Borrowed Amount Trend
-            </Text>
-            <View style={styles.chartContainer}>
-              <LineChart
-                data={monthlyAmountData}
-                width={chartWidth}
-                height={200}
-                chartConfig={chartConfig}
-                bezier
-                style={styles.chart}
-                withInnerLines={false}
-                withOuterLines={true}
-                withVerticalLines={false}
-                withHorizontalLines={true}
-                withDots={true}
-                withShadow={false}
-                fromZero={true}
-                yAxisSuffix=""
-              />
+            <View style={styles.statsGrid}>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Loans Closed"
+                  value={closedLoans}
+                  icon="checkmark-done-circle"
+                  color={colors.success}
+                  subtitle="Paid or rejected"
+                />
+              </View>
+              <View style={styles.statItemWrap}>
+                <StatCard
+                  title="Total Interest"
+                  value={totalInterest.toLocaleString("en-IN")}
+                  icon="rupee"
+                  color={colors.primaryDark}
+                  subtitle="Interest due"
+                />
+              </View>
             </View>
-          </Card>
+
+            {totalAmountDue > 0 && (
+              <Card style={styles.progressCard}>
+                <Text style={[styles.cardTitle, { color: colors.text }]}>
+                  Repayment Progress
+                </Text>
+                <View style={styles.progressContainer}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      { backgroundColor: colors.border },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${Math.min((totalPaid / totalAmountDue) * 100, 100)}%`,
+                          backgroundColor: colors.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.progressText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {((totalPaid / totalAmountDue) * 100).toFixed(1)}% Complete
+                  </Text>
+                </View>
+              </Card>
+            )}
+          </>
         )}
 
         {totalBorrowed > 0 && (
@@ -592,48 +499,120 @@ export default function AnalyticsScreen() {
         {loansByStatus.length > 0 && (
           <Card style={styles.chartCard}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
-              Loans by Status
+              Status Breakdown
             </Text>
-            <View style={styles.pieChartWrapper}>
-              <View style={styles.pieChartContainer}>
-                <PieChart
-                  data={pieChartData}
-                  width={chartWidth}
-                  height={220}
-                  chartConfig={chartConfig}
-                  accessor="count"
-                  backgroundColor="transparent"
-                  paddingLeft="0"
-                  hasLegend={false}
-                  style={styles.chart}
-                  absolute
-                  center={[chartWidth / 4, 0]}
-                />
-              </View>
-              <View style={styles.legendContainer}>
-                {loansByStatus.map((item, index) => (
-                  <View key={item.status} style={styles.legendItem}>
+            <View style={styles.statusBreakdownList}>
+              {loansByStatus.map((item, index) => {
+                const widthPct = Math.max(
+                  8,
+                  (item.count / maxStatusCount) * 100,
+                );
+                return (
+                  <View key={item.status} style={styles.statusBreakdownRow}>
+                    <View style={styles.statusBreakdownHeader}>
+                      <Text
+                        style={[
+                          styles.statusBreakdownLabel,
+                          { color: colors.text },
+                        ]}
+                      >
+                        {item.status.replace(/_/g, " ")}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.statusBreakdownValue,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {item.count}
+                      </Text>
+                    </View>
                     <View
                       style={[
-                        styles.legendColor,
-                        {
-                          backgroundColor: [
-                            colors.primary,
-                            colors.primaryDark,
-                            colors.success,
-                            colors.warning,
-                            colors.error,
-                            "#86EFAC",
-                          ][index % 6],
-                        },
+                        styles.statusBreakdownTrack,
+                        { backgroundColor: colors.border },
                       ]}
-                    />
-                    <Text style={[styles.legendText, { color: colors.text }]}>
-                      {item.status}: {item.count}
-                    </Text>
+                    >
+                      <View
+                        style={[
+                          styles.statusBreakdownFill,
+                          {
+                            width: `${widthPct}%`,
+                            backgroundColor:
+                              statusColors[index % statusColors.length],
+                          },
+                        ]}
+                      />
+                    </View>
                   </View>
-                ))}
-              </View>
+                );
+              })}
+            </View>
+          </Card>
+        )}
+
+        {monthlyLoans.length > 0 && (
+          <Card style={styles.chartCard}>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>
+              Recent Monthly Activity
+            </Text>
+            <View style={styles.monthlySnapshotList}>
+              {monthlyLoans
+                .slice(-4)
+                .reverse()
+                .map((item) => {
+                  const amount = Number(item.amount || 0);
+                  const widthPct = Math.max(
+                    6,
+                    (amount / maxMonthlyAmount) * 100,
+                  );
+                  return (
+                    <View key={item.month} style={styles.monthlySnapshotRow}>
+                      <View style={styles.monthlySnapshotHeader}>
+                        <Text
+                          style={[
+                            styles.monthlySnapshotMonth,
+                            { color: colors.text },
+                          ]}
+                        >
+                          {item.month}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.monthlySnapshotMeta,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          {item.count} loans
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.monthlySnapshotTrack,
+                          { backgroundColor: colors.border },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.monthlySnapshotFill,
+                            {
+                              width: `${widthPct}%`,
+                              backgroundColor: colors.primary,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.monthlySnapshotAmount,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {amount.toLocaleString("en-IN")}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
           </Card>
         )}
@@ -692,46 +671,48 @@ const createStyles = (colors: any) =>
       width: "48.5%",
     },
     statCard: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
-      marginBottom: 0,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.sm,
       borderRadius: borderRadius.lg,
-      borderWidth: 1,
-      borderColor: `${colors.border}B3`,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius: 4,
+      elevation: 2,
     },
     statCardCompact: {
       paddingHorizontal: spacing.sm,
       paddingVertical: spacing.sm,
     },
-    statContent: {
-      alignItems: "flex-start",
-    },
-    statIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      justifyContent: "center",
+    summaryCardTop: {
+      flexDirection: "row",
       alignItems: "center",
-      marginBottom: spacing.sm,
+      marginBottom: 8,
     },
-    statInfo: {
-      width: "100%",
+    summaryIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
     },
-    statTitle: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      marginBottom: 4,
-    },
-    statValue: {
+    statNum: {
       ...typography.h3,
-      color: colors.text,
-      fontWeight: "700",
-      lineHeight: 32,
+      fontWeight: "800",
+      fontSize: 22,
+      lineHeight: 30,
     },
-    statSubtitle: {
-      ...typography.caption,
-      color: colors.textSecondary,
-      marginTop: 2,
+    statLbl: {
+      fontSize: 12,
+      fontWeight: "600",
+      flexShrink: 1,
+    },
+    summarySubText: {
+      fontSize: 11,
+      fontWeight: "500",
+      marginTop: 4,
     },
     progressCard: {
       padding: spacing.md,
@@ -863,5 +844,70 @@ const createStyles = (colors: any) =>
     },
     legendText: {
       ...typography.body,
+    },
+    statusBreakdownList: {
+      gap: spacing.sm,
+    },
+    statusBreakdownRow: {
+      gap: 6,
+    },
+    statusBreakdownHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    statusBreakdownLabel: {
+      ...typography.bodySmall,
+      fontWeight: "600",
+      textTransform: "capitalize",
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    statusBreakdownValue: {
+      ...typography.bodySmall,
+      fontWeight: "700",
+    },
+    statusBreakdownTrack: {
+      height: 8,
+      borderRadius: borderRadius.full,
+      overflow: "hidden",
+    },
+    statusBreakdownFill: {
+      height: "100%",
+      borderRadius: borderRadius.full,
+    },
+    monthlySnapshotList: {
+      gap: spacing.sm,
+    },
+    monthlySnapshotRow: {
+      gap: 6,
+    },
+    monthlySnapshotHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    monthlySnapshotMonth: {
+      ...typography.body,
+      fontWeight: "600",
+      flex: 1,
+    },
+    monthlySnapshotMeta: {
+      ...typography.caption,
+      fontWeight: "600",
+    },
+    monthlySnapshotTrack: {
+      height: 7,
+      borderRadius: borderRadius.full,
+      overflow: "hidden",
+    },
+    monthlySnapshotFill: {
+      height: "100%",
+      borderRadius: borderRadius.full,
+    },
+    monthlySnapshotAmount: {
+      ...typography.caption,
+      fontWeight: "500",
     },
   });

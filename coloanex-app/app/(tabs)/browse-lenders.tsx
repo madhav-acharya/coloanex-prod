@@ -44,7 +44,6 @@ export default function BrowseScreen() {
   const [totalCount, setTotalCount] = useState(0);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
-  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchInputRef = useRef<TextInput | null>(null);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const searchScale = useRef(new Animated.Value(0.98)).current;
@@ -95,12 +94,6 @@ export default function BrowseScreen() {
     fetchLenders(searchQuery, selectedFilter, 1);
   }, [selectedFilter]);
 
-  useEffect(() => {
-    return () => {
-      if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    };
-  }, []);
-
   const openSearchOverlay = () => {
     setSearchActive(true);
     setShowSuggestions(searchQuery.trim().length > 0);
@@ -147,7 +140,6 @@ export default function BrowseScreen() {
   };
 
   const executeSearch = (value = searchQuery, shouldClose = false) => {
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
     const query = value.trim();
     setSearchQuery(value);
     setShowSuggestions(false);
@@ -159,10 +151,6 @@ export default function BrowseScreen() {
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
     setShowSuggestions(text.trim().length > 0);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      executeSearch(text, false);
-    }, 2000);
   };
 
   const handleSuggestionPress = (name: string) => {
@@ -500,8 +488,6 @@ export default function BrowseScreen() {
               {searchQuery.length > 0 && (
                 <TouchableOpacity
                   onPress={() => {
-                    if (searchTimeout.current)
-                      clearTimeout(searchTimeout.current);
                     setSearchQuery("");
                     executeSearch("", false);
                   }}
@@ -524,7 +510,7 @@ export default function BrowseScreen() {
               </TouchableOpacity>
             </View>
 
-            {showSuggestions && suggestions.length > 0 && (
+            {showSuggestions && (
               <View
                 style={[
                   styles.suggestionsCard,
@@ -534,29 +520,47 @@ export default function BrowseScreen() {
                   },
                 ]}
               >
-                {suggestions.map((item, idx) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.suggestionItem,
-                      idx < suggestions.length - 1 && {
-                        borderBottomColor: colors.border,
-                      },
-                    ]}
-                    onPress={() => handleSuggestionPress(item.name)}
-                  >
+                {suggestions.length > 0 ? (
+                  suggestions.map((item, idx) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={[
+                        styles.suggestionItem,
+                        idx < suggestions.length - 1 && {
+                          borderBottomColor: colors.border,
+                        },
+                      ]}
+                      onPress={() => handleSuggestionPress(item.name)}
+                    >
+                      <Ionicons
+                        name="business-outline"
+                        size={14}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={[styles.suggestionText, { color: colors.text }]}
+                      >
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.noSuggestionItem}>
                     <Ionicons
-                      name="business-outline"
+                      name="information-circle-outline"
                       size={14}
-                      color={colors.primary}
+                      color={colors.textSecondary}
                     />
                     <Text
-                      style={[styles.suggestionText, { color: colors.text }]}
+                      style={[
+                        styles.noSuggestionText,
+                        { color: colors.textSecondary },
+                      ]}
                     >
-                      {item.name}
+                      No suggestions found
                     </Text>
-                  </TouchableOpacity>
-                ))}
+                  </View>
+                )}
               </View>
             )}
           </Animated.View>
@@ -621,6 +625,17 @@ const createStyles = (colors: Record<string, string>) =>
       borderBottomWidth: 1,
     },
     suggestionText: { fontSize: 13, fontWeight: "500" },
+    noSuggestionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+    },
+    noSuggestionText: {
+      fontSize: 13,
+      fontWeight: "500",
+    },
     filtersRow: { flexDirection: "row", gap: spacing.xs, paddingBottom: 4 },
     filterChip: {
       paddingHorizontal: spacing.md,
