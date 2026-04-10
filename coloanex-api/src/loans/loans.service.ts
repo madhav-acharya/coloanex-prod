@@ -99,6 +99,16 @@ export class LoansService {
             user: { select: { id: true, fullName: true, email: true } },
           },
         },
+        contract: {
+          select: {
+            id: true,
+            loanAmount: true,
+            totalAmountDue: true,
+            totalAmountPaid: true,
+            outstandingBalance: true,
+            status: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -127,6 +137,16 @@ export class LoansService {
           include: {
             tenant: { select: { id: true, name: true } },
             user: { select: { id: true, fullName: true, email: true } },
+          },
+        },
+        contract: {
+          select: {
+            id: true,
+            loanAmount: true,
+            totalAmountDue: true,
+            totalAmountPaid: true,
+            outstandingBalance: true,
+            status: true,
           },
         },
       },
