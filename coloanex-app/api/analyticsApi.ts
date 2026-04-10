@@ -22,21 +22,37 @@ export interface StatusData {
   count: number;
 }
 
-const analyticsApi = {
-  getBorrowerAnalytics: async (): Promise<BorrowerAnalytics> => {
-    const response = await client.get("/analytics/borrower");
-    return response.data;
-  },
+export interface AnalyticsRangeParams {
+  startDate?: string;
+  endDate?: string;
+}
 
-  getMonthlyLoans: async (months: number = 6): Promise<MonthlyData[]> => {
-    const response = await client.get("/analytics/loans/monthly", {
-      params: { months },
+const analyticsApi = {
+  getBorrowerAnalytics: async (
+    range?: AnalyticsRangeParams,
+  ): Promise<BorrowerAnalytics> => {
+    const response = await client.get("/analytics/borrower", {
+      params: range,
     });
     return response.data;
   },
 
-  getLoansByStatus: async (): Promise<StatusData[]> => {
-    const response = await client.get("/analytics/loans/status");
+  getMonthlyLoans: async (
+    months: number = 6,
+    range?: AnalyticsRangeParams,
+  ): Promise<MonthlyData[]> => {
+    const response = await client.get("/analytics/loans/monthly", {
+      params: { months, ...range },
+    });
+    return response.data;
+  },
+
+  getLoansByStatus: async (
+    range?: AnalyticsRangeParams,
+  ): Promise<StatusData[]> => {
+    const response = await client.get("/analytics/loans/status", {
+      params: range,
+    });
     return response.data;
   },
 };
