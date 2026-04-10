@@ -146,7 +146,61 @@ export class AnalyticsService {
     };
   }
 
-  async getBorrowerAnalytics(user: any) {
+  private buildCreatedAtFilter(startDateStr?: string, endDateStr?: string) {
+    const createdAt: { gte?: Date; lte?: Date } = {};
+
+    if (startDateStr) {
+      const start = new Date(startDateStr);
+      if (!Number.isNaN(start.getTime())) {
+        createdAt.gte = start;
+      }
+    }
+
+    if (endDateStr) {
+      const end = new Date(endDateStr);
+      if (!Number.isNaN(end.getTime())) {
+        end.setHours(23, 59, 59, 999);
+        createdAt.lte = end;
+      }
+    }
+
+    return Object.keys(createdAt).length > 0 ? createdAt : undefined;
+  }
+
+  private groupByMonthRange(data: any[], startDate: Date, endDate: Date) {
+    const result: any[] = [];
+    const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const last = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+    while (cursor <= last) {
+      const year = cursor.getFullYear();
+      const month = cursor.getMonth();
+
+      const monthData = data.filter((item) => {
+        const itemDate = new Date(item.createdAt);
+        return itemDate.getFullYear() === year && itemDate.getMonth() === month;
+      });
+
+      result.push({
+        month: cursor.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+        count: monthData.length,
+        amount: monthData.reduce(
+          (sum, item) =>
+            sum + Number(item.loanAmount || item.requestedAmount || 0),
+          0,
+        ),
+      });
+
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    return result;
+  }
+
+  async getBorrowerAnalytics(user: any, startDate?: string, endDate?: string) {
     const borrowers = await this.prisma.borrower.findMany({
       where: { userId: user.id },
       select: { id: true },
@@ -166,6 +220,47 @@ export class AnalyticsService {
     }
 
     const borrowerIds = borrowers.map((b) => b.id);
+    const createdAtFilter = this.buildCreatedAtFilter(startDate, endDate);
+    const dueDateFilter = this.buildCreatedAtFilter(startDate, endDate);
+
+    const loanWhere: any = { borrowerId: { in: borrowerIds } };
+    if (createdAtFilter) {
+      loanWhere.createdAt = createdAtFilter;
+    }
+
+    const contractWhere: any = { loan: { borrowerId: { in: borrowerIds } } };
+    if (createdAtFilter) {
+      contractWhere.createdAt = createdAtFilter;
+    }
+
+    const paidWhere: any = {
+      type: { in: ['INSTALLMENT_PAYMENT', 'PENALTY_PAYMENT'] },
+      status: 'COMPLETED',
+      contract: { loan: { borrowerId: { in: borrowerIds } } },
+    };
+    if (createdAtFilter) {
+      paidWhere.createdAt = createdAtFilter;
+    }
+
+    const pendingSchedulesWhere: any = {
+      status: 'PENDING',
+      contract: { loan: { borrowerId: { in: borrowerIds } } },
+    };
+    if (dueDateFilter) {
+      pendingSchedulesWhere.dueDate = dueDateFilter;
+    }
+
+    const overdueSchedulesWhere: any = {
+      status: 'PENDING',
+      dueDate: { lt: new Date() },
+      contract: { loan: { borrowerId: { in: borrowerIds } } },
+    };
+    if (dueDateFilter?.gte) {
+      overdueSchedulesWhere.dueDate.gte = dueDateFilter.gte;
+    }
+    if (dueDateFilter?.lte) {
+      overdueSchedulesWhere.dueDate.lte = dueDateFilter.lte;
+    }
 
     const [
       totalLoans,
@@ -176,39 +271,28 @@ export class AnalyticsService {
       overdueSchedules,
     ] = await Promise.all([
       this.prisma.loan.count({
-        where: { borrowerId: { in: borrowerIds } },
+        where: loanWhere,
       }),
       this.prisma.loan.count({
         where: {
-          borrowerId: { in: borrowerIds },
+          ...loanWhere,
           status: { in: ['CONTRACT_SIGNED', 'LOAN_PROVIDED'] },
         },
       }),
       this.prisma.contract.findMany({
-        where: { loan: { borrowerId: { in: borrowerIds } } },
+        where: contractWhere,
         select: { loanAmount: true, totalAmountDue: true },
       }),
       this.prisma.transaction.aggregate({
-        where: {
-          type: { in: ['INSTALLMENT_PAYMENT', 'PENALTY_PAYMENT'] },
-          status: 'COMPLETED',
-          contract: { loan: { borrowerId: { in: borrowerIds } } },
-        },
+        where: paidWhere,
         _sum: { amount: true },
       }),
       this.prisma.paymentSchedule.aggregate({
-        where: {
-          status: 'PENDING',
-          contract: { loan: { borrowerId: { in: borrowerIds } } },
-        },
+        where: pendingSchedulesWhere,
         _sum: { totalAmount: true },
       }),
       this.prisma.paymentSchedule.count({
-        where: {
-          status: 'PENDING',
-          dueDate: { lt: new Date() },
-          contract: { loan: { borrowerId: { in: borrowerIds } } },
-        },
+        where: overdueSchedulesWhere,
       }),
     ]);
 
@@ -263,12 +347,20 @@ export class AnalyticsService {
     return monthlyData;
   }
 
-  async getMonthlyLoans(user: any, months: number = 12) {
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - months);
+  async getMonthlyLoans(
+    user: any,
+    months: number = 12,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const createdAtFilter = this.buildCreatedAtFilter(startDate, endDate);
+    const rangeStart = createdAtFilter?.gte;
+    const rangeEnd = createdAtFilter?.lte;
+    const fallbackStart = new Date();
+    fallbackStart.setMonth(fallbackStart.getMonth() - months);
 
     const whereClause: any = {
-      createdAt: { gte: startDate },
+      createdAt: createdAtFilter || { gte: fallbackStart },
     };
 
     const normalizedRoles = (user.roles || []).map((role: string) =>
@@ -292,12 +384,17 @@ export class AnalyticsService {
       },
     });
 
+    if (rangeStart && rangeEnd) {
+      return this.groupByMonthRange(loans, rangeStart, rangeEnd);
+    }
+
     const monthlyData = this.groupByMonth(loans, months);
     return monthlyData;
   }
 
-  async getLoansByStatus(user: any) {
+  async getLoansByStatus(user: any, startDate?: string, endDate?: string) {
     const whereClause: any = {};
+    const createdAtFilter = this.buildCreatedAtFilter(startDate, endDate);
 
     const normalizedRoles = (user.roles || []).map((role: string) =>
       role.toLowerCase(),
@@ -309,6 +406,10 @@ export class AnalyticsService {
       whereClause.borrower = { userId: user.id };
     } else if (!isSuperAdmin) {
       whereClause.tenantId = user.tenantId;
+    }
+
+    if (createdAtFilter) {
+      whereClause.createdAt = createdAtFilter;
     }
 
     const loans = await this.prisma.loan.groupBy({
