@@ -161,6 +161,7 @@ export default function MyLoansScreen() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
     [],
   );
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
   const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -244,13 +245,14 @@ export default function MyLoansScreen() {
         [...entityBatches.flat(), ...contractBatches.flat()].forEach((tx) => {
           txMap.set(tx.id, tx);
         });
-        const merged = Array.from(txMap.values())
-          .filter((tx) => {
-            if (!tx.contractId) return true;
-            return contractIds.length > 0
-              ? contractIds.includes(tx.contractId)
-              : true;
-          })
+        const mergedAll = Array.from(txMap.values()).filter((tx) => {
+          if (!tx.contractId) return true;
+          return contractIds.length > 0
+            ? contractIds.includes(tx.contractId)
+            : true;
+        });
+        setAllTransactions(mergedAll);
+        const merged = mergedAll
           .sort(
             (a, b) =>
               new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
@@ -259,9 +261,11 @@ export default function MyLoansScreen() {
         setRecentTransactions(merged);
       } else {
         setRecentTransactions([]);
+        setAllTransactions([]);
       }
     } catch {
       setRecentTransactions([]);
+      setAllTransactions([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -294,10 +298,40 @@ export default function MyLoansScreen() {
       ] as string[]
     ).includes(l.status),
   ).length;
-  const totalAmount = loans.reduce(
-    (sum, l) => sum + Number(l.approvedAmount ?? l.requestedAmount ?? 0),
-    0,
-  );
+  const totalRepaidFromContracts = loans.reduce((sum, l) => {
+    return sum + Number(l.contract?.totalAmountPaid ?? 0);
+  }, 0);
+
+  const totalRepaidFromTransactions = allTransactions.reduce((sum, tx) => {
+    const repaymentTypes = ["INSTALLMENT_PAYMENT", "PENALTY_PAYMENT"];
+    if (tx.status !== "COMPLETED" || !repaymentTypes.includes(tx.type)) {
+      return sum;
+    }
+    return sum + Number(tx.amount ?? 0);
+  }, 0);
+
+  const totalPaid =
+    totalRepaidFromContracts > 0
+      ? totalRepaidFromContracts
+      : totalRepaidFromTransactions;
+
+  const totalAmountDue = loans.reduce((sum, l) => {
+    const due = Number(l.contract?.totalAmountDue ?? 0);
+    if (due > 0) return sum + due;
+    return sum + Number(l.approvedAmount ?? l.requestedAmount ?? 0);
+  }, 0);
+
+  const totalPrincipal = loans.reduce((sum, l) => {
+    const principal = Number(
+      l.contract?.loanAmount ?? l.approvedAmount ?? l.requestedAmount ?? 0,
+    );
+    return sum + principal;
+  }, 0);
+
+  const totalInterest = Math.max(totalAmountDue - totalPrincipal, 0);
+  const rejectedCount = loans.filter(
+    (l) => l.status === LoanStatus.REJECTED,
+  ).length;
 
   const summaryStats = [
     {
@@ -325,11 +359,29 @@ export default function MyLoansScreen() {
       iconBg: colors.warningLight,
     },
     {
-      key: "value",
-      label: "Total Value",
-      value: totalAmount,
-      color: "#16A34A",
-      icon: "cash-outline" as keyof typeof Ionicons.glyphMap,
+      key: "rejected",
+      label: "Rejected",
+      value: String(rejectedCount),
+      color: colors.error,
+      icon: "close-circle-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.errorLight,
+    },
+    {
+      key: "borrowedWithInterest",
+      label: "Principal + Interest",
+      value: totalAmountDue,
+      color: colors.warning,
+      icon: "calculator-outline" as keyof typeof Ionicons.glyphMap,
+      iconBg: colors.warningLight,
+      isCurrency: true,
+      subtitle: `Interest: ${totalInterest.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`,
+    },
+    {
+      key: "paid",
+      label: "Total Repaid",
+      value: totalPaid,
+      color: colors.success,
+      icon: "wallet-outline" as keyof typeof Ionicons.glyphMap,
       iconBg: colors.successLight,
       isCurrency: true,
     },
@@ -673,6 +725,17 @@ export default function MyLoansScreen() {
                           true,
                           isCompactScreen,
                         )}
+                        {(stat as any).subtitle ? (
+                          <Text
+                            style={[
+                              styles.summarySubText,
+                              { color: colors.textSecondary },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {(stat as any).subtitle}
+                          </Text>
+                        ) : null}
                       </View>
                     ) : (
                       <Text
@@ -857,6 +920,10 @@ const createStyles = (colors: Record<string, string>) =>
       alignItems: "center",
       marginBottom: 8,
     },
+    summarySubText: {
+      fontSize: 11,
+      fontWeight: "500",
+    },
     summaryIcon: {
       width: 28,
       height: 28,
@@ -1003,6 +1070,7 @@ const createStyles = (colors: Record<string, string>) =>
       width: "100%",
       alignItems: "flex-start",
       paddingHorizontal: 0,
+      gap: 4,
     },
     currencyRow: {
       flexDirection: "row",

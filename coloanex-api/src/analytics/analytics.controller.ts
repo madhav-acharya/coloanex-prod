@@ -22,8 +22,12 @@ export class AnalyticsController {
   }
 
   @Get('borrower')
-  getBorrowerAnalytics(@CurrentUser() user: any) {
-    return this.analyticsService.getBorrowerAnalytics(user);
+  getBorrowerAnalytics(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.analyticsService.getBorrowerAnalytics(user, startDate, endDate);
   }
 
   @Get('contracts/monthly')
@@ -38,16 +42,27 @@ export class AnalyticsController {
   }
 
   @Get('loans/monthly')
-  getMonthlyLoans(@CurrentUser() user: any, @Query('months') months?: string) {
+  getMonthlyLoans(
+    @CurrentUser() user: any,
+    @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.analyticsService.getMonthlyLoans(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
   @Get('loans/status')
-  getLoansByStatus(@CurrentUser() user: any) {
-    return this.analyticsService.getLoansByStatus(user);
+  getLoansByStatus(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.analyticsService.getLoansByStatus(user, startDate, endDate);
   }
 
   @Get('contracts/status')
