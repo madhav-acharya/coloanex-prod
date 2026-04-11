@@ -75,18 +75,30 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @Post('initiate')
   initiatePayment(@Body() dto: InitiatePaymentDto, @Req() req: any) {
-    return this.paymentsService.initiatePayment(dto, req.user.sub);
+    return this.paymentsService.initiatePayment(dto, req.user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('verify')
   verifyPayment(@Body() dto: VerifyPaymentDto, @Req() req: any) {
-    return this.paymentsService.verifyPayment(dto, req.user.sub);
+    return this.paymentsService.verifyPayment(dto, req.user);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('lookup')
   lookupPayment(@Body() dto: LookupPaymentDto, @Req() req: any) {
-    return this.paymentsService.lookupPayment(dto, req.user.sub);
+    return this.paymentsService.lookupPayment(dto, req.user);
+  }
+
+  @Public()
+  @Post('webhooks/esewa')
+  esewaWebhook(@Body() payload: any) {
+    return this.paymentsService.processEsewaWebhook(payload);
+  }
+
+  @Public()
+  @Post('webhooks/khalti')
+  khaltiWebhook(@Body() payload: any) {
+    return this.paymentsService.processKhaltiWebhook(payload);
   }
 }
