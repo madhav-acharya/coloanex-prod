@@ -57,9 +57,15 @@ import {
   useInitiatePaymentMutation,
   useVerifyPaymentMutation,
 } from "@/apis/paymentsApi";
+import { useGetMyWalletsQuery } from "@/apis/walletsApi";
+import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
+import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 
 import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
-import { signContractOnBlockchain, updateContractStatusOnBlockchain } from "@/utils/blockchain";
+import {
+  signContractOnBlockchain,
+  updateContractStatusOnBlockchain,
+} from "@/utils/blockchain";
 
 type ContractStatus =
   | "DRAFT"
@@ -181,6 +187,8 @@ export default function Contracts() {
   const [initiatePayment, { isLoading: isInitiatingPayment }] =
     useInitiatePaymentMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
 
   const [selectedContract, setSelectedContract] = useState<Contract | null>(
     null,
@@ -189,8 +197,23 @@ export default function Contracts() {
   const [newStatus, setNewStatus] = useState<ContractStatus>("DRAFT");
 
   const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
   const [blockchainMessage, setBlockchainMessage] = useState("");
+  const blockchainAccess = useMemo(
+    () =>
+      getBlockchainAccessSnapshot({
+        gasPaymentMode: (user as any)?.gasPaymentMode,
+        wallets,
+        subscriptions: mySubscriptions,
+      }),
+    [user, wallets, mySubscriptions],
+  );
+  const shouldUseWalletSignature =
+    blockchainAccess.canRunBlockchain &&
+    blockchainAccess.mode === "USER_WALLET";
+  const shouldShowBlockchainProcessing = blockchainAccess.canRunBlockchain;
 
   const hasBorrowerSigned = (c: Contract) =>
     c.signatures?.some((s) => s.signedBy === "BORROWER") ?? false;
@@ -322,60 +345,78 @@ export default function Contracts() {
   ];
 
   const handleGenerateContract = async (contract: Contract) => {
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    setBlockchainMessage("Updating contract status on blockchain. Please approve the MetaMask transaction...");
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        shouldUseWalletSignature
+          ? "Updating contract status on blockchain. Please approve the MetaMask transaction..."
+          : "Processing contract on blockchain...",
+      );
+    }
 
     try {
       let blockchainTxHash: string | undefined;
 
-      try {
-        blockchainTxHash = await updateContractStatusOnBlockchain(
-          contract.id,
-          "GENERATED"
-        );
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          blockchainTxHash = await updateContractStatusOnBlockchain(
+            contract.id,
+            "GENERATED",
+          );
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.reason ||
+                blockchainError.message ||
+                "Failed to process blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
-      setBlockchainMessage("Generating contract PDF and updating database...");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+        setBlockchainMessage(
+          "Generating contract PDF and updating database...",
+        );
+      }
 
       await generateContractPdf(contract.id).unwrap();
 
-      setTimeout(() => {
-        setBlockchainStep("complete");
+      if (shouldShowBlockchainProcessing) {
         setTimeout(() => {
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-        }, 1000);
-      }, 500);
+          setBlockchainStep("complete");
+          setTimeout(() => {
+            setIsProcessingBlockchain(false);
+            setBlockchainStep("blockchain");
+          }, 1000);
+        }, 500);
+      }
 
       toast({
         title: "Success",
-        description: "Contract updated on blockchain and PDF generated successfully",
+        description:
+          "Contract updated on blockchain and PDF generated successfully",
         variant: "success",
       });
     } catch (err: any) {
@@ -613,44 +654,59 @@ export default function Contracts() {
     if (!contractToSd) return;
 
     setSdDialogOpen(false);
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    setBlockchainMessage("Recording contract signature on the blockchain. Please approve the MetaMask transaction...");
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        shouldUseWalletSignature
+          ? "Recording contract signature on the blockchain. Please approve the MetaMask transaction..."
+          : "Recording contract signature on blockchain...",
+      );
+    }
 
     try {
       let blockchainTxHash: string | undefined;
 
-      try {
-        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        setSdDialogOpen(true);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          setSdDialogOpen(true);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.reason ||
+                blockchainError.message ||
+                "Failed to process blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
-      setBlockchainMessage("Signing contract and disbursing loan in database...");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+        setBlockchainMessage(
+          "Signing contract and disbursing loan in database...",
+        );
+      }
 
       await signAndDisburseContract({
         id: contractToSd.id,
@@ -663,13 +719,15 @@ export default function Contracts() {
         },
       }).unwrap();
 
-      setTimeout(() => {
-        setBlockchainStep("complete");
+      if (shouldShowBlockchainProcessing) {
         setTimeout(() => {
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-        }, 1000);
-      }, 500);
+          setBlockchainStep("complete");
+          setTimeout(() => {
+            setIsProcessingBlockchain(false);
+            setBlockchainStep("blockchain");
+          }, 1000);
+        }, 500);
+      }
 
       toast({
         title: "Success",
@@ -700,43 +758,56 @@ export default function Contracts() {
     }
 
     setSdDialogOpen(false);
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    setBlockchainMessage("Signing contract on blockchain. Please approve the MetaMask transaction...");
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        shouldUseWalletSignature
+          ? "Signing contract on blockchain. Please approve the MetaMask transaction..."
+          : "Processing contract on blockchain...",
+      );
+    }
 
     let blockchainTxHash: string | undefined;
 
-    try {
-      blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-    } catch (blockchainError: any) {
-      setIsProcessingBlockchain(false);
-      setSdDialogOpen(true);
-      if (blockchainError.code === "ACTION_REJECTED") {
-        toast({
-          title: "Transaction Rejected",
-          description: "You rejected the blockchain transaction",
-          variant: "destructive",
-        });
-        return;
-      } else if (blockchainError.message?.includes("MetaMask")) {
-        toast({
-          title: "MetaMask Required",
-          description: blockchainError.message,
-          variant: "destructive",
-        });
-        return;
-      } else {
-        toast({
-          title: "Blockchain Error",
-          description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-          variant: "destructive",
-        });
-        return;
+    if (shouldUseWalletSignature) {
+      try {
+        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
+      } catch (blockchainError: any) {
+        setIsProcessingBlockchain(false);
+        setSdDialogOpen(true);
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Rejected",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        } else if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Required",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          return;
+        } else {
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to process blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
       }
     }
 
-    setBlockchainStep("database");
-    setBlockchainMessage("Redirecting to eSewa payment gateway...");
+    if (shouldShowBlockchainProcessing) {
+      setBlockchainStep("database");
+      setBlockchainMessage("Redirecting to eSewa payment gateway...");
+    }
 
     try {
       const successUrl = `${window.location.origin}${window.location.pathname}?sd_esewa=1`;
@@ -761,7 +832,9 @@ export default function Contracts() {
         }),
       );
 
-      setIsProcessingBlockchain(false);
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+      }
 
       const form = document.createElement("form");
       form.method = "POST";
@@ -776,7 +849,9 @@ export default function Contracts() {
       document.body.appendChild(form);
       form.submit();
     } catch (err: any) {
-      setIsProcessingBlockchain(false);
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+      }
       setSdDialogOpen(true);
       toast({
         title: "Error",
@@ -812,43 +887,56 @@ export default function Contracts() {
     sessionStorage.setItem(lastAttemptKey, now.toString());
 
     setSdDialogOpen(false);
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    setBlockchainMessage("Signing contract on blockchain. Please approve the MetaMask transaction...");
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+      setBlockchainMessage(
+        shouldUseWalletSignature
+          ? "Signing contract on blockchain. Please approve the MetaMask transaction..."
+          : "Processing contract on blockchain...",
+      );
+    }
 
     let blockchainTxHash: string | undefined;
 
-    try {
-      blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-    } catch (blockchainError: any) {
-      setIsProcessingBlockchain(false);
-      setSdDialogOpen(true);
-      if (blockchainError.code === "ACTION_REJECTED") {
-        toast({
-          title: "Transaction Rejected",
-          description: "You rejected the blockchain transaction",
-          variant: "destructive",
-        });
-        return;
-      } else if (blockchainError.message?.includes("MetaMask")) {
-        toast({
-          title: "MetaMask Required",
-          description: blockchainError.message,
-          variant: "destructive",
-        });
-        return;
-      } else {
-        toast({
-          title: "Blockchain Error",
-          description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-          variant: "destructive",
-        });
-        return;
+    if (shouldUseWalletSignature) {
+      try {
+        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
+      } catch (blockchainError: any) {
+        setIsProcessingBlockchain(false);
+        setSdDialogOpen(true);
+        if (blockchainError.code === "ACTION_REJECTED") {
+          toast({
+            title: "Transaction Rejected",
+            description: "You rejected the blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        } else if (blockchainError.message?.includes("MetaMask")) {
+          toast({
+            title: "MetaMask Required",
+            description: blockchainError.message,
+            variant: "destructive",
+          });
+          return;
+        } else {
+          toast({
+            title: "Blockchain Error",
+            description:
+              blockchainError.reason ||
+              blockchainError.message ||
+              "Failed to process blockchain transaction",
+            variant: "destructive",
+          });
+          return;
+        }
       }
     }
 
-    setBlockchainStep("database");
-    setBlockchainMessage("Redirecting to Khalti payment gateway...");
+    if (shouldShowBlockchainProcessing) {
+      setBlockchainStep("database");
+      setBlockchainMessage("Redirecting to Khalti payment gateway...");
+    }
 
     try {
       const successUrl = `${window.location.origin}${window.location.pathname}?sd_khalti=1`;
@@ -873,11 +961,15 @@ export default function Contracts() {
         }),
       );
 
-      setIsProcessingBlockchain(false);
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+      }
 
       window.location.href = result.paymentUrl;
     } catch (err: any) {
-      setIsProcessingBlockchain(false);
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+      }
       setSdDialogOpen(true);
       toast({
         title: "Error",
@@ -1513,10 +1605,7 @@ export default function Contracts() {
             >
               Cancel
             </Button>
-            <Button
-              onClick={handleStatusUpdate}
-              disabled={isUpdatingContract}
-            >
+            <Button onClick={handleStatusUpdate} disabled={isUpdatingContract}>
               {isUpdatingContract ? "Updating..." : "Update Status"}
             </Button>
           </DialogFooter>
@@ -1526,7 +1615,10 @@ export default function Contracts() {
       <BlockchainProcessingModal
         open={isProcessingBlockchain}
         currentStep={blockchainStep}
-        message={blockchainMessage || "Recording on the blockchain and updating the database. Please wait..."}
+        message={
+          blockchainMessage ||
+          "Recording on the blockchain and updating the database. Please wait..."
+        }
       />
     </DashboardLayout>
   );
