@@ -13,6 +13,8 @@ import { CloudinaryUploadsService } from '../cloudinary-uploads/cloudinary-uploa
 import { MailService } from '../mail/mail.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { TransactionOrchestratorService } from '../transaction-orchestrator/transaction-orchestrator.service';
+import { SubscriptionResolverService } from '../transaction-orchestrator/subscription-resolver.service';
 import { contractGeneratedTemplate } from '../mail/templates';
 import {
   ActivityEntityType,
@@ -41,7 +43,13 @@ export class ContractsService {
     private mailService: MailService,
     private activityLogsService: ActivityLogsService,
     private blockchainService: BlockchainService,
+    private readonly transactionOrchestrator: TransactionOrchestratorService,
+    private readonly subscriptionResolver: SubscriptionResolverService,
   ) {}
+
+  private resolvePlatform(user: JwtPayload): 'APP' | 'WEB' {
+    return user.roles?.includes('Borrower') ? 'APP' : 'WEB';
+  }
 
   private async generateContractNumber(tenantId: string): Promise<string> {
     const contractCount = await this.prisma.contract.count({
@@ -239,6 +247,27 @@ export class ContractsService {
     let blockchainData: any = null;
     let blockchainTxHash: string | null = null;
 
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId: user.tenantId,
+        transactionType: 'CONTRACT_CREATE',
+        platform: this.resolvePlatform(user),
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new BadRequestException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (orchestrationDecision.gasPayer === 'USER') {
+      throw new BadRequestException(
+        'Contract creation in USER_WALLET mode must be submitted through wallet-signed web flow.',
+      );
+    }
+
     if (this.blockchainService.isEnabled()) {
       this.logger.log(
         `[Contract ${contractId}] Processing blockchain transaction...`,
@@ -320,6 +349,10 @@ export class ContractsService {
         },
       },
     });
+
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
+    );
 
     return contract as unknown as Contract;
   }
@@ -450,6 +483,27 @@ export class ContractsService {
     })) as unknown as Contract;
 
     if (updateContractDto.status && this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: contract.tenantId,
+          transactionType: 'CONTRACT_UPDATE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Contract update in USER_WALLET mode must be signed from web wallet flow.',
+        );
+      }
+
       this.logger.log(
         `[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`,
       );
@@ -471,6 +525,10 @@ export class ContractsService {
           'Blockchain update failed. Cannot update contract status.',
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     return updated;
@@ -566,6 +624,27 @@ export class ContractsService {
     });
 
     if (hasBorrowerSignature && hasTenantSignature) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: contract.tenantId,
+          transactionType: 'CONTRACT_SIGN',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Contract signing in USER_WALLET mode must be signed from web wallet flow.',
+        );
+      }
+
       await this.prisma.loan.update({
         where: { id: contract.loanId },
         data: {
@@ -605,6 +684,10 @@ export class ContractsService {
           );
         }
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     return updatedContract as unknown as Contract;
@@ -798,11 +881,38 @@ export class ContractsService {
       throw new BadRequestException('Only draft contracts can be deleted');
     }
 
-    const bcTx = await this.blockchainService.deleteContract(id);
+    if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: contract.tenantId,
+          transactionType: 'CONTRACT_DELETE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
 
-    if (!bcTx && this.blockchainService.isEnabled()) {
-      throw new InternalServerErrorException(
-        'Failed to record contract deletion on blockchain',
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Contract deletion in USER_WALLET mode must be signed from web wallet flow.',
+        );
+      }
+
+      const bcTx = await this.blockchainService.deleteContract(id);
+
+      if (!bcTx) {
+        throw new InternalServerErrorException(
+          'Failed to record contract deletion on blockchain',
+        );
+      }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
       );
     }
 
@@ -815,6 +925,7 @@ export class ContractsService {
     approvedAmount: number,
     approvedTermMonths: number,
     tenantId: string,
+    actor: JwtPayload,
   ): Promise<Contract> {
     const loan = await this.prisma.loan.findUnique({
       where: { id: loanId },
@@ -876,6 +987,32 @@ export class ContractsService {
     const contractNumber = await this.generateContractNumber(loan.tenantId);
     const contractId = randomUUID();
     let blockchain_data: any = null;
+    let orchestrationDecision:
+      | Awaited<ReturnType<TransactionOrchestratorService['orchestrate']>>
+      | undefined;
+
+    if (this.blockchainService.isEnabled()) {
+      orchestrationDecision = await this.transactionOrchestrator.orchestrate({
+        userId: actor.sub,
+        tenantId: loan.tenantId,
+        transactionType: 'CONTRACT_CREATE',
+        platform: this.resolvePlatform(actor),
+        userRoles: actor.roles,
+      });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Contract creation in USER_WALLET mode must be signed from web wallet flow.',
+        );
+      }
+    }
+
     const bcTx = await this.blockchainService.recordContract(
       contractId,
       loanId,
@@ -940,6 +1077,12 @@ export class ContractsService {
         },
       },
     });
+
+    if (orchestrationDecision) {
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
+    }
 
     return contract as unknown as Contract;
   }
@@ -1023,6 +1166,27 @@ export class ContractsService {
 
     let blockchainTxHash: string | null = null;
     if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: contract.tenantId,
+          transactionType: 'CONTRACT_UPDATE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Contract generation in USER_WALLET mode must be signed from web wallet flow.',
+        );
+      }
+
       this.logger.log(
         `[Contract ${id}] Updating blockchain status to GENERATED...`,
       );
@@ -1037,6 +1201,10 @@ export class ContractsService {
           `[Contract ${id}] Blockchain update failed, continuing without blockchain record`,
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     const updatedContract = await this.prisma.contract.update({
