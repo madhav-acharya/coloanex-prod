@@ -29,6 +29,8 @@ import Contracts from "./pages/Contracts";
 import Transactions from "./pages/Transactions";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailure from "./pages/PaymentFailure";
+import Subscriptions from "./pages/Subscriptions";
+import Pricing from "./pages/Pricing";
 import { hasPermission } from "./lib/permissions";
 import { Lock } from "lucide-react";
 
@@ -108,6 +110,25 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuth();
+  const hasToken = localStorage.getItem("token");
+
+  if (!isAuthenticated && !hasToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isSuperAdmin = user?.roles?.some(
+    (ur: any) => ur.role?.name === "Super Admin",
+  );
+
+  if (!isSuperAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -287,11 +308,24 @@ function App() {
       />
 
       <Route
-        path="/transactions"
+        path="/wallet"
         element={
           <ProtectedRoute requiredPermission="Read Payments">
             <Transactions />
           </ProtectedRoute>
+        }
+      />
+
+      <Route path="/transactions" element={<Navigate to="/wallet" replace />} />
+
+      <Route path="/pricing" element={<Pricing />} />
+
+      <Route
+        path="/subscriptions"
+        element={
+          <SuperAdminRoute>
+            <Subscriptions />
+          </SuperAdminRoute>
         }
       />
 
