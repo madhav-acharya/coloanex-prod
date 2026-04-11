@@ -5,9 +5,15 @@ import { PrismaService } from '../prisma.service';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { MailModule } from '../mail/mail.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { TransactionOrchestratorModule } from '../transaction-orchestrator/transaction-orchestrator.module';
 
 @Module({
-  imports: [ActivityLogsModule, MailModule, BlockchainModule],
+  imports: [
+    ActivityLogsModule,
+    MailModule,
+    BlockchainModule,
+    TransactionOrchestratorModule,
+  ],
   controllers: [KycController],
   providers: [KycService, PrismaService],
   exports: [KycService],
