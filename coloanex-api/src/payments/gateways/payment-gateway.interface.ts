@@ -3,6 +3,7 @@ export interface InitiatePaymentParams {
   transactionUuid: string;
   successUrl: string;
   failureUrl: string;
+  tenantConfig?: Record<string, unknown> | null;
 }
 
 export interface InitiatePaymentResult {
@@ -13,6 +14,7 @@ export interface InitiatePaymentResult {
 export interface VerifyPaymentParams {
   transactionUuid: string;
   totalAmount: number;
+  tenantConfig?: Record<string, unknown> | null;
 }
 
 export interface VerifyPaymentResult {
@@ -24,6 +26,7 @@ export interface VerifyPaymentResult {
 export interface LookupPaymentParams {
   transactionUuid: string;
   totalAmount?: number;
+  tenantConfig?: Record<string, unknown> | null;
 }
 
 export interface LookupPaymentResult {
