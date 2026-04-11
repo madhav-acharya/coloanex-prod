@@ -4,13 +4,11 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { Card, Button, AppHeader, CurrencyIcon } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { Card, AppHeader, CurrencyIcon } from "@/components/ui";
+import { spacing, borderRadius } from "@/constants/theme";
 import { rulesApi } from "@/api";
 import type { Rule } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
@@ -26,7 +24,7 @@ export default function RulesScreen() {
     try {
       const data = await rulesApi.getAll();
       setRules(data);
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
