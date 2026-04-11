@@ -4,9 +4,10 @@ import { TransactionsController } from './transactions.controller';
 import { PrismaService } from '../prisma.service';
 
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { TransactionOrchestratorModule } from '../transaction-orchestrator/transaction-orchestrator.module';
 
 @Module({
-  imports: [BlockchainModule],
+  imports: [BlockchainModule, TransactionOrchestratorModule],
   controllers: [TransactionsController],
   providers: [TransactionsService, PrismaService],
   exports: [TransactionsService],
