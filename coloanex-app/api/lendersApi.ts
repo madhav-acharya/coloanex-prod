@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { Lender, Review } from "@/types";
+import type { Lender } from "@/types";
 
 export const lendersApi = {
   getAll: async (params?: {
