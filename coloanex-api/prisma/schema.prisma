@@ -454,8 +454,8 @@ model Subscription {
   tenant           Tenant?             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   planRef          SubscriptionPlan    @relation(fields: [plan], references: [code])
 
-  @@unique([scope, userId], map: "subscriptions_scope_user_id_key")
-  @@unique([scope, tenantId], map: "subscriptions_scope_tenant_id_key")
+  @@unique([scope, userId, plan], map: "subscriptions_scope_user_id_plan_key")
+  @@unique([scope, tenantId, plan], map: "subscriptions_scope_tenant_id_plan_key")
   @@index([scope, status])
   @@index([userId, status])
   @@index([tenantId, status])
