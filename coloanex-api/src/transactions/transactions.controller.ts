@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -18,8 +19,8 @@ export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
 
   @Post()
-  create(@Body() createTransactionDto: CreateTransactionDto) {
-    return this.transactionsService.create(createTransactionDto);
+  create(@Body() createTransactionDto: CreateTransactionDto, @Req() req: any) {
+    return this.transactionsService.create(createTransactionDto, req.user);
   }
 
   @Get()
@@ -46,7 +47,8 @@ export class TransactionsController {
   updateStatus(
     @Param('id') id: string,
     @Body('status') status: TransactionStatus,
+    @Req() req: any,
   ) {
-    return this.transactionsService.updateStatus(id, status);
+    return this.transactionsService.updateStatus(id, status, req.user);
   }
 }
