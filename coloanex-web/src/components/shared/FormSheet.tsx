@@ -6,6 +6,13 @@ import { FormLabel } from "@/components/ui/form-label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Sheet as UISheet,
   SheetContent,
   SheetDescription,
@@ -116,30 +123,33 @@ export function FormSheet({
                               {field.label}
                             </FormLabel>
                             {field.type === "select" && field.options ? (
-                              <select
-                                id={field.id}
-                                value={field.value}
-                                onChange={(e) =>
-                                  handleFieldChange(field.id, e.target.value)
+                              <Select
+                                value={field.value || undefined}
+                                onValueChange={(value) =>
+                                  handleFieldChange(field.id, value)
                                 }
-                                className="w-full h-10 px-3 py-2 text-sm bg-input text-foreground border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer hover:bg-muted transition-colors"
                                 disabled={
                                   field.disabled || isSubmitting || isReadOnly
                                 }
-                                required={field.required}
                               >
-                                <option value="">
-                                  {field.placeholder || "Select..."}
-                                </option>
-                                {field.options.map((option) => (
-                                  <option
-                                    key={option.value}
-                                    value={option.value}
-                                  >
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
+                                <SelectTrigger id={field.id}>
+                                  <SelectValue
+                                    placeholder={
+                                      field.placeholder || "Select..."
+                                    }
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {field.options.map((option) => (
+                                    <SelectItem
+                                      key={option.value}
+                                      value={option.value}
+                                    >
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             ) : field.type === "textarea" ? (
                               <Textarea
                                 id={field.id}
