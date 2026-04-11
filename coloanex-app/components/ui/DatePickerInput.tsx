@@ -6,7 +6,6 @@ import {
   Platform,
   Modal,
   StyleSheet,
-  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/hooks/useTheme";
@@ -91,7 +90,9 @@ export default function DatePickerInput({
     );
   }
 
+  // Dynamic require keeps web bundle behavior unchanged while using native picker on mobile.
   const DateTimePicker =
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     require("@react-native-community/datetimepicker").default;
 
   const handleChange = (event: any, selectedDate?: Date) => {
