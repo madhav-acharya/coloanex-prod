@@ -19,12 +19,13 @@ import {
   useToast,
   AppHeader,
   BlockchainProcessingModal,
+  CurrencyIcon,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
 import { formatCurrency } from "@/utils/currency";
-import { CurrencyIcon } from "@/components/ui";
 import { uploadToCloudinary } from "@/utils/upload";
+import { ensureActiveSubscription } from "@/utils/subscriptionGuard";
 
 const COLLATERAL_TYPE_OPTIONS = [
   { label: "Property/Land", value: "Property" },
@@ -92,19 +93,24 @@ export default function LoanApplicationScreen() {
     }
   }, [
     currentStep,
+    lender?.maxAmount,
+    lender?.minAmount,
     loanAmount,
     loanPurpose,
     collateralType,
     collateralDescription,
     collateralValue,
     collateralImage,
+    termMonths,
   ]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (lenderId) {
       loadLender();
     }
   }, [lenderId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadLender = async () => {
     try {
@@ -116,7 +122,7 @@ export default function LoanApplicationScreen() {
         setPreviousLoan(latest);
         setPrefillModal(true);
       }
-    } catch (error) {
+    } catch {
       showToast("Failed to load lender information", "error");
       router.back();
     }
@@ -201,6 +207,11 @@ export default function LoanApplicationScreen() {
   };
 
   const handleSubmit = async () => {
+    const hasSubscription = await ensureActiveSubscription(showToast);
+    if (!hasSubscription) {
+      return;
+    }
+
     setLoading(true);
     try {
       const loanData: any = {
