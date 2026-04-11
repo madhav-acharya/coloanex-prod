@@ -324,6 +324,7 @@ export class UsersService {
         tenantId: finalTenantId,
         isEmailVerified: false,
         isActive: true,
+        gasPaymentMode: 'PLATFORM_WALLET' as never,
       },
       include: {
         roles: {
@@ -419,6 +420,7 @@ export class UsersService {
         tenantId: tenantId || null,
         isEmailVerified: false,
         isActive: true,
+        gasPaymentMode: 'PLATFORM_WALLET' as never,
       },
       include: {
         roles: {
@@ -711,11 +713,13 @@ export class UsersService {
       users.map(async (user) => {
         // Get borrower count for lenders in the same tenant
         let borrowerCount = 0;
-        const userRoles = (user.roles || []).map((ur) => ur.role?.name).filter(Boolean);
-        const isLender = userRoles.some(role => 
-          ['Lender', 'Admin', 'Super Admin'].includes(role)
+        const userRoles = (user.roles || [])
+          .map((ur) => ur.role?.name)
+          .filter(Boolean);
+        const isLender = userRoles.some((role) =>
+          ['Lender', 'Admin', 'Super Admin'].includes(role),
         );
-        
+
         if (isLender && user.tenantId) {
           borrowerCount = await this.prisma.borrower.count({
             where: {
@@ -742,7 +746,7 @@ export class UsersService {
           _count: user._count,
           borrowerCount,
         };
-      })
+      }),
     );
 
     return {
@@ -1361,5 +1365,52 @@ export class UsersService {
         lastActiveAt: 'desc',
       },
     });
+  }
+
+  async updateMyGasPaymentMode(
+    dto: { gasPaymentMode: 'PLATFORM_WALLET' | 'USER_WALLET' },
+    currentUser: JwtPayload,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: currentUser.sub },
+      include: {
+        roles: {
+          include: {
+            role: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const roleNames = user.roles.map((r) => r.role.name);
+    if (roleNames.includes('Borrower')) {
+      if (user.gasPaymentMode !== 'PLATFORM_WALLET') {
+        await this.prisma.user.update({
+          where: { id: currentUser.sub },
+          data: { gasPaymentMode: 'PLATFORM_WALLET' as never },
+        });
+      }
+      throw new ForbiddenException(
+        'Borrowers always use PLATFORM_WALLET and cannot change gas payment mode.',
+      );
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: currentUser.sub },
+      data: { gasPaymentMode: dto.gasPaymentMode as never },
+      select: {
+        id: true,
+        gasPaymentMode: true,
+      },
+    });
+
+    return {
+      id: updated.id,
+      gasPaymentMode: updated.gasPaymentMode,
+    };
   }
 }
