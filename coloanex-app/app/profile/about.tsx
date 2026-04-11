@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Card, AppHeader } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, typography } from "@/constants/theme";
 import { APP_NAME, APP_VERSION } from "@/constants/app";
 import { useTheme } from "@/hooks/useTheme";
 
