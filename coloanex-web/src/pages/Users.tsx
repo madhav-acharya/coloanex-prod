@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Users as UsersIcon, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  Users as UsersIcon,
+  Eye,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+} from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -8,6 +14,12 @@ import { FormSheet } from "@/components/shared/FormSheet";
 import { MultiSelect } from "@/components/shared/MultiSelect";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -503,7 +515,7 @@ export default function Users() {
         }
 
         const count = user.borrowerCount || 0;
-        
+
         if (count === 0) {
           return <span className="text-sm text-muted-foreground">0</span>;
         }
@@ -1023,14 +1035,14 @@ export default function Users() {
 }
 
 // Expandable Users Table Component
-function ExpandableUsersTable({ 
-  users, 
-  columns, 
-  isLoading, 
-  sortBy, 
-  sortOrder, 
-  onSort, 
-  actions 
+function ExpandableUsersTable({
+  users,
+  columns,
+  isLoading,
+  sortBy,
+  sortOrder,
+  onSort,
+  actions,
 }: {
   users: User[];
   columns: Column<User>[];
@@ -1098,35 +1110,41 @@ function ExpandableUsersTable({
                 <tr className="border-b hover:bg-muted/50">
                   {columns.map((column) => (
                     <td key={column.key} className="px-4 py-3 text-sm">
-                      {column.render 
-                        ? column.render(user) 
-                        : (user as any)[column.key]
-                      }
+                      {column.render
+                        ? column.render(user)
+                        : (user as any)[column.key]}
                     </td>
                   ))}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      {actions.map((action, index) => (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <button
-                          key={index}
-                          onClick={() => action.onClick(user)}
-                          className={`p-1 rounded hover:bg-accent ${
-                            action.variant === "destructive" 
-                              ? "hover:bg-destructive/20 text-destructive" 
-                              : "hover:bg-accent"
-                          }`}
-                          title={action.label}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent cursor-pointer"
+                          aria-label="Open actions"
                         >
-                          {action.icon}
+                          <MoreHorizontal className="h-4 w-4" />
                         </button>
-                      ))}
-                    </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        {actions.map((action, index) => (
+                          <DropdownMenuItem
+                            key={index}
+                            onClick={() => action.onClick(user)}
+                            className={
+                              action.variant === "destructive"
+                                ? "text-destructive focus:text-destructive cursor-pointer"
+                                : "cursor-pointer"
+                            }
+                          >
+                            <span className="mr-2">{action.icon}</span>
+                            {action.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
-                <BorrowerRowsInline
-                  lender={user}
-                  columns={columns}
-                />
+                <BorrowerRowsInline lender={user} columns={columns} />
               </React.Fragment>
             ))}
           </tbody>
@@ -1164,7 +1182,10 @@ function BorrowerRowsInline({
   if (isLoading) {
     return (
       <tr className="border-b bg-muted/20">
-        <td colSpan={columns.length + 1} className="px-4 py-2 text-sm text-muted-foreground">
+        <td
+          colSpan={columns.length + 1}
+          className="px-4 py-2 text-sm text-muted-foreground"
+        >
           Loading borrowers for {lender.fullName}...
         </td>
       </tr>
@@ -1193,7 +1214,10 @@ function BorrowerRowsInline({
         };
 
         return (
-          <tr key={`${lender.id}-${borrower.id}`} className="border-b bg-muted/20">
+          <tr
+            key={`${lender.id}-${borrower.id}`}
+            className="border-b bg-muted/20"
+          >
             {columns.map((column) => (
               <td key={column.key} className="px-4 py-3 text-sm">
                 {column.key === "borrowerCount" ? (
@@ -1205,7 +1229,9 @@ function BorrowerRowsInline({
                 )}
               </td>
             ))}
-            <td className="px-4 py-3 text-xs text-muted-foreground">Borrower</td>
+            <td className="px-4 py-3 text-xs text-muted-foreground">
+              Borrower
+            </td>
           </tr>
         );
       })}
