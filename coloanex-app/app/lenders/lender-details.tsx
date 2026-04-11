@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
-import { useToast, AppHeader, CurrencyIcon } from "@/components/ui";
+import { AppHeader, CurrencyIcon } from "@/components/ui";
 import { spacing, borderRadius } from "@/constants/theme";
 import { lendersApi, kycApi, loansApi, rulesApi } from "@/api";
 import type { Lender } from "@/types";
@@ -23,7 +23,6 @@ export default function LenderDetailsScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { showToast } = useToast();
   const [lender, setLender] = useState<Lender | null>(null);
   const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
   const [hasExistingLoan, setHasExistingLoan] = useState(false);
@@ -35,6 +34,7 @@ export default function LenderDetailsScreen() {
   const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (id) {
       Promise.all([
@@ -45,6 +45,7 @@ export default function LenderDetailsScreen() {
       ]).finally(() => setLoading(false));
     }
   }, [id]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadLender = async () => {
     const data = await lendersApi.getById(id!);
