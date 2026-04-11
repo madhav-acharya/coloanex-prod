@@ -21,6 +21,14 @@ export class InitiatePaymentDto {
   walletId?: string;
 
   @IsOptional()
+  @IsEnum(['USER_WALLET', 'PLATFORM_WALLET'])
+  gasPaymentMode?: 'USER_WALLET' | 'PLATFORM_WALLET';
+
+  @IsOptional()
+  @IsEnum(['WEB', 'APP'])
+  platform?: 'WEB' | 'APP';
+
+  @IsOptional()
   @IsString()
   contractId?: string;
 
