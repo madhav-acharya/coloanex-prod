@@ -6,22 +6,27 @@ import {
 import type { TransactionType } from "@/apis/paymentsApi";
 
 const STORAGE_KEY = "esewa_pending_payment";
+const STORAGE_KEY_FALLBACK = "esewa_pending_payment_fallback";
 
 interface PendingPayment {
   transactionUuid: string;
   amount: number;
-  walletId: string;
+  walletId?: string;
   type: string;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
   contractId?: string;
   paymentScheduleId?: string;
 }
 
 interface PayOptions {
-  walletId: string;
+  walletId?: string;
   contractId?: string;
   paymentScheduleId?: string;
   amount: number;
   type: TransactionType;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
   successPath?: string;
   failurePath?: string;
 }
@@ -53,12 +58,14 @@ function submitToEsewa(
 
 function storePendingPayment(data: PendingPayment): void {
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY_FALLBACK, JSON.stringify(data));
 }
 
-function consumePendingPayment(): PendingPayment | null {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
+function readPendingPayment(): PendingPayment | null {
+  const raw =
+    sessionStorage.getItem(STORAGE_KEY) ||
+    localStorage.getItem(STORAGE_KEY_FALLBACK);
   if (!raw) return null;
-  sessionStorage.removeItem(STORAGE_KEY);
   try {
     return JSON.parse(raw) as PendingPayment;
   } catch {
@@ -66,9 +73,30 @@ function consumePendingPayment(): PendingPayment | null {
   }
 }
 
+function clearPendingPayment(): void {
+  sessionStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY_FALLBACK);
+}
+
 export function parseEsewaCallbackParams(): EsewaCallbackParams | null {
   const params = new URLSearchParams(window.location.search);
-  const transactionUuid = params.get("transaction_uuid");
+  const encodedData = params.get("data");
+  if (encodedData) {
+    try {
+      const decoded = JSON.parse(atob(encodedData));
+      const transactionUuid =
+        decoded?.transaction_uuid || decoded?.transactionUuid;
+      const status = decoded?.status;
+      if (transactionUuid && status) {
+        return { transactionUuid, status };
+      }
+    } catch {
+      return null;
+    }
+  }
+
+  const transactionUuid =
+    params.get("transaction_uuid") || params.get("transactionUuid");
   const status = params.get("status");
   if (!transactionUuid || !status) return null;
   return { transactionUuid, status };
@@ -103,8 +131,12 @@ async function pollLookup(
           transactionUuid,
           totalAmount: amount,
           gateway: "ESEWA",
-          walletId: pending.walletId,
+          ...(pending.walletId ? { walletId: pending.walletId } : {}),
           type: pending.type as any,
+          ...(pending.gasPaymentMode
+            ? { gasPaymentMode: pending.gasPaymentMode }
+            : {}),
+          ...(pending.platform ? { platform: pending.platform } : {}),
           contractId: pending.contractId,
           paymentScheduleId: pending.paymentScheduleId,
         }).unwrap();
@@ -145,6 +177,8 @@ export function useEsewaPayment() {
       paymentScheduleId,
       amount,
       type,
+      gasPaymentMode,
+      platform,
       successPath = "/payment/success",
       failurePath = "/payment/failure",
     } = options;
@@ -158,6 +192,8 @@ export function useEsewaPayment() {
       paymentScheduleId,
       amount,
       type,
+      gasPaymentMode,
+      platform,
       gateway: "ESEWA",
       successUrl,
       failureUrl,
@@ -168,6 +204,8 @@ export function useEsewaPayment() {
       amount,
       walletId: result.walletId ?? walletId,
       type,
+      gasPaymentMode,
+      platform,
       contractId,
       paymentScheduleId,
     });
@@ -176,45 +214,66 @@ export function useEsewaPayment() {
   };
 
   const verifyFromCallback = async () => {
-    const pending = consumePendingPayment();
+    const pending = readPendingPayment();
     const callbackParams = parseEsewaCallbackParams();
 
-    if (!pending || !callbackParams) {
+    if (!pending) {
       return { success: false, transactionId: null, status: "FAILED" };
     }
 
-    // Try direct verification first
-    if (callbackParams.status === "COMPLETE") {
+    const transactionUuid =
+      callbackParams?.transactionUuid || pending.transactionUuid;
+    const callbackStatus = callbackParams?.status;
+
+    if (!transactionUuid) {
+      return { success: false, transactionId: null, status: "FAILED" };
+    }
+
+    if (callbackStatus === "COMPLETE" || callbackStatus === "Completed") {
       try {
-        return await verifyPayment({
-          transactionUuid: pending.transactionUuid,
+        const verifyResult = await verifyPayment({
+          transactionUuid,
           totalAmount: pending.amount,
           gateway: "ESEWA",
-          walletId: pending.walletId,
+          ...(pending.walletId ? { walletId: pending.walletId } : {}),
           type: pending.type as any,
+          ...(pending.gasPaymentMode
+            ? { gasPaymentMode: pending.gasPaymentMode }
+            : {}),
+          ...(pending.platform ? { platform: pending.platform } : {}),
           contractId: pending.contractId,
           paymentScheduleId: pending.paymentScheduleId,
         }).unwrap();
+        if (verifyResult?.success) {
+          clearPendingPayment();
+        }
+        return verifyResult;
       } catch (error) {
-        // If verification fails, try lookup as fallback
-        return pollLookup(
+        const lookupResult = await pollLookup(
           lookupPayment,
-          pending.transactionUuid,
+          transactionUuid,
           pending.amount,
           pending,
           verifyPayment,
         );
+        if (lookupResult?.success) {
+          clearPendingPayment();
+        }
+        return lookupResult;
       }
     }
 
-    // If status is not COMPLETE, use lookup to check actual status
-    return pollLookup(
+    const lookupResult = await pollLookup(
       lookupPayment,
-      pending.transactionUuid,
+      transactionUuid,
       pending.amount,
       pending,
       verifyPayment,
     );
+    if (lookupResult?.success) {
+      clearPendingPayment();
+    }
+    return lookupResult;
   };
 
   return {

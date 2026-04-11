@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { FileText } from "lucide-react";
+import { Check, FileText, X } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
@@ -16,6 +16,13 @@ import {
 } from "@/apis/transactionsApi";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { Button } from "@/components/ui/button";
+import {
+  useCreateWalletMutation,
+  useDeleteWalletMutation,
+  useGetMyWalletsQuery,
+  useSetPrimaryWalletMutation,
+} from "@/apis/walletsApi";
 
 export default function Transactions() {
   const { toast } = useToast();
@@ -28,12 +35,20 @@ export default function Transactions() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const { data: wallets = [], refetch: refetchWallets } =
+    useGetMyWalletsQuery();
+  const [createWallet, { isLoading: isCreatingWallet }] =
+    useCreateWalletMutation();
+  const [setPrimaryWallet] = useSetPrimaryWalletMutation();
+  const [deleteWallet] = useDeleteWalletMutation();
 
   const isSuperAdmin = user?.roles?.some(
     (ur: any) => ur.role?.name === "Super Admin",
   );
 
-  const entityId = user?.tenantId || user?.id || "";
+  const userEntityId = user?.id || "";
+  const tenantEntityId = user?.tenantId || "";
+  const entityIds = [userEntityId, tenantEntityId].filter(Boolean);
 
   const {
     data: allTransactions,
@@ -44,18 +59,43 @@ export default function Transactions() {
   });
 
   const {
-    data: entityTransactions,
-    isLoading: isLoadingEntity,
-    refetch: refetchEntity,
-  } = useGetTransactionsByEntityQuery(entityId, {
-    skip: isSuperAdmin || !entityId,
+    data: userTransactions,
+    isLoading: isLoadingUserTransactions,
+    refetch: refetchUserTransactions,
+  } = useGetTransactionsByEntityQuery(userEntityId, {
+    skip: isSuperAdmin || !userEntityId,
   });
+
+  const {
+    data: tenantTransactions,
+    isLoading: isLoadingTenantTransactions,
+    refetch: refetchTenantTransactions,
+  } = useGetTransactionsByEntityQuery(tenantEntityId, {
+    skip: isSuperAdmin || !tenantEntityId,
+  });
+
+  const mergedEntityTransactions = useMemo(() => {
+    const byId = new Map<string, Transaction>();
+    [...(userTransactions || []), ...(tenantTransactions || [])].forEach(
+      (tx) => {
+        byId.set(tx.id, tx);
+      },
+    );
+    return Array.from(byId.values());
+  }, [userTransactions, tenantTransactions]);
 
   const transactions = isSuperAdmin
     ? allTransactions || []
-    : entityTransactions || [];
-  const isLoading = isSuperAdmin ? isLoadingAll : isLoadingEntity;
-  const refetch = isSuperAdmin ? refetchAll : refetchEntity;
+    : mergedEntityTransactions;
+  const isLoading = isSuperAdmin
+    ? isLoadingAll
+    : isLoadingUserTransactions || isLoadingTenantTransactions;
+  const refetch = isSuperAdmin
+    ? refetchAll
+    : () => {
+        if (userEntityId) refetchUserTransactions();
+        if (tenantEntityId) refetchTenantTransactions();
+      };
 
   // Calculate To Give and To Receive based on transaction flow
   const { toGive, toReceive } = useMemo(() => {
@@ -73,8 +113,8 @@ export default function Transactions() {
       if (tx.status !== "COMPLETED") return;
       const amount = Number(tx.amount) || 0;
 
-      const iSent = tx.sentBy === entityId;
-      const iReceived = tx.receivedBy === entityId;
+      const iSent = entityIds.includes(tx.sentBy);
+      const iReceived = entityIds.includes(tx.receivedBy);
 
       if (iReceived && tx.type === "DISBURSEMENT") {
         give += amount;
@@ -101,7 +141,7 @@ export default function Transactions() {
       toGive: Math.max(0, give),
       toReceive: Math.max(0, receive),
     };
-  }, [transactions, isSuperAdmin, entityId]);
+  }, [transactions, isSuperAdmin, entityIds]);
 
   const MetricCard = ({
     title,
@@ -228,6 +268,103 @@ export default function Transactions() {
     }
   };
 
+  const connectMetamask = async () => {
+    try {
+      const ethereum = (window as any).ethereum;
+      if (!ethereum) {
+        toast({
+          title: "MetaMask not found",
+          description: "Install MetaMask extension to connect wallet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+
+      const accounts = (await ethereum.request({
+        method: "eth_requestAccounts",
+      })) as string[];
+      const address = accounts?.[0];
+      if (!address) {
+        toast({
+          title: "No account selected",
+          description: "Select an account in MetaMask to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await createWallet({
+        provider: "METAMASK",
+        platform: "WEB",
+        address,
+        label: "MetaMask",
+      }).unwrap();
+      await refetchWallets();
+      toast({ title: "Wallet linked", description: `Connected ${address}` });
+    } catch (error: any) {
+      if (error?.code === 4001) {
+        toast({
+          title: "MetaMask request cancelled",
+          description: "Please approve the MetaMask popup to connect.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Wallet connect failed",
+        description:
+          error?.data?.message ||
+          error?.message ||
+          "Unable to connect MetaMask",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const disconnectMetamask = async () => {
+    const metamaskWallets = wallets.filter(
+      (wallet) => wallet.provider === "METAMASK",
+    );
+    if (metamaskWallets.length === 0) {
+      toast({ title: "No MetaMask wallet connected" });
+      return;
+    }
+
+    try {
+      await Promise.all(
+        metamaskWallets.map((wallet) =>
+          deleteWallet({ id: wallet.id }).unwrap(),
+        ),
+      );
+      await refetchWallets();
+
+      const ethereum = (window as any).ethereum;
+      if (ethereum?.request) {
+        try {
+          await ethereum.request({
+            method: "wallet_revokePermissions",
+            params: [{ eth_accounts: {} }],
+          });
+        } catch {
+          // Not all providers support this method.
+        }
+      }
+
+      toast({ title: "MetaMask disconnected" });
+    } catch (error: any) {
+      toast({
+        title: "Disconnect failed",
+        description: error?.data?.message || "Unable to disconnect MetaMask",
+        variant: "destructive",
+      });
+    }
+  };
+
   const transactionColumns: Column<Transaction>[] = [
     {
       key: "type",
@@ -251,7 +388,7 @@ export default function Transactions() {
       label: "Amount",
       sortable: true,
       render: (transaction) => {
-        const isReceived = transaction.receivedBy === entityId;
+        const isReceived = entityIds.includes(transaction.receivedBy);
         const color = isReceived ? "#16A34A" : "#DC2626";
         const sign = isReceived ? "+" : "-";
 
@@ -400,8 +537,8 @@ export default function Transactions() {
   if (isLoading) {
     return (
       <DashboardLayout
-        title="Transactions"
-        description="View your system transactions"
+        title="Wallet"
+        description="Manage connected wallets and review payment activity"
       >
         <div className="flex items-center justify-center h-64">
           <p>Loading transactions...</p>
@@ -412,8 +549,8 @@ export default function Transactions() {
 
   return (
     <DashboardLayout
-      title="Transactions"
-      description="View and manage your transactions"
+      title="Wallet"
+      description="Manage wallet connections, points, and payment activity"
       searchPlaceholder="Search transactions..."
       searchValue={searchValue}
       onSearchChange={setSearchValue}
@@ -445,10 +582,10 @@ export default function Transactions() {
           options: [
             { value: "DEPOSIT", label: "Deposit" },
             { value: "WITHDRAW", label: "Withdraw" },
-            { value: "TRANSFER", label: "Transfer" },
-            { value: "REFUND", label: "Refund" },
             { value: "DISBURSEMENT", label: "Disbursement" },
             { value: "INSTALLMENT_PAYMENT", label: "Installment" },
+            { value: "PENALTY_PAYMENT", label: "Penalty" },
+            { value: "FEE", label: "Fee" },
           ],
         },
       ]}
@@ -459,6 +596,147 @@ export default function Transactions() {
       }}
     >
       <div className="space-y-6">
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <h3 className="text-lg font-semibold">Wallet Connections</h3>
+            {wallets.length > 0 ? (
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-green-900 dark:text-green-100">
+                    MetaMask Connected
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300 break-all">
+                    {wallets.find((wallet) => wallet.isPrimary)?.address ||
+                      wallets[0]?.address}
+                  </p>
+                </div>
+                <Button
+                  onClick={disconnectMetamask}
+                  disabled={isCreatingWallet}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
+                    <X className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900 dark:text-red-100">
+                    MetaMask Not Connected
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300">
+                    You are not connected to any MetaMask wallet.
+                  </p>
+                </div>
+                <Button
+                  onClick={connectMetamask}
+                  disabled={isCreatingWallet}
+                  size="sm"
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isCreatingWallet ? "Connecting..." : "Connect"}
+                </Button>
+              </div>
+            )}
+
+            {wallets.length > 0 && (
+              <>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="border rounded-md p-2">
+                    <p className="text-xs text-muted-foreground">
+                      Total Wallets
+                    </p>
+                    <p className="text-xl font-semibold">{wallets.length}</p>
+                  </div>
+                  <div className="border rounded-md p-2">
+                    <p className="text-xs text-muted-foreground">
+                      Primary Wallet
+                    </p>
+                    <p className="text-sm font-medium truncate">
+                      {wallets.find((w) => w.isPrimary)?.address || "Not set"}
+                    </p>
+                  </div>
+                  <div className="border rounded-md p-2">
+                    <p className="text-xs text-muted-foreground">
+                      Active Wallets
+                    </p>
+                    <p className="text-xl font-semibold">
+                      {wallets.filter((w) => w.isActive).length}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={connectMetamask}
+                      disabled={isCreatingWallet}
+                    >
+                      Connect MetaMask
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="bg-muted text-foreground hover:bg-muted/80"
+                      onClick={() => refetchWallets()}
+                    >
+                      Refresh Wallets
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {wallets.length === 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        No linked wallet yet.
+                      </p>
+                    )}
+                    {wallets.map((w) => (
+                      <div
+                        key={w.id}
+                        className="flex items-center justify-between border rounded-md p-2"
+                      >
+                        <div>
+                          <p className="text-sm font-medium">{w.address}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {w.provider} {w.isPrimary ? "• Primary" : ""}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          {!w.isPrimary && (
+                            <Button
+                              variant="outline"
+                              className="bg-muted text-foreground hover:bg-muted/80"
+                              onClick={() => setPrimaryWallet({ id: w.id })}
+                            >
+                              Set Primary
+                            </Button>
+                          )}
+                          <Button
+                            variant="destructive"
+                            onClick={() => deleteWallet({ id: w.id })}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-3">
           <MetricCard
             title={isSuperAdmin ? "Total Volume" : "To Give"}

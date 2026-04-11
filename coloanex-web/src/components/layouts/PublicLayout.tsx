@@ -77,6 +77,16 @@ export default function PublicLayout({
                 >
                   Security
                 </Link>
+                <Link
+                  to="/pricing"
+                  className={`cursor-pointer transition-colors ${
+                    location.pathname === "/pricing"
+                      ? "text-green-500 font-bold"
+                      : "text-white hover:text-foreground"
+                  }`}
+                >
+                  Pricing
+                </Link>
               </div>
 
               {/* Desktop Auth Buttons */}
@@ -88,7 +98,9 @@ export default function PublicLayout({
                       <Button variant="ghost">Dashboard</Button>
                     </Link>
                     <Link to="/logout">
-                      <Button variant="hero">Logout</Button>
+                      <Button className="bg-red-600 hover:bg-red-700 text-white border border-red-500">
+                        Logout
+                      </Button>
                     </Link>
                   </>
                 ) : (
@@ -176,6 +188,17 @@ export default function PublicLayout({
                 >
                   Security
                 </Link>
+                <Link
+                  to="/pricing"
+                  className={`cursor-pointer block py-2 ${
+                    location.pathname === "/pricing"
+                      ? "text-green-500 font-bold"
+                      : "text-white dark:text-foreground hover:text-foreground"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Pricing
+                </Link>
                 <div className="flex gap-3 pt-2">
                   {user ? (
                     <>
@@ -185,7 +208,7 @@ export default function PublicLayout({
                         </Button>
                       </Link>
                       <Link to="/logout" className="flex-1">
-                        <Button variant="hero" className="w-full">
+                        <Button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500">
                           Logout
                         </Button>
                       </Link>
@@ -306,7 +329,10 @@ export default function PublicLayout({
                     </Link>
                   </li>
                   <li>
-                    <Link to="#" className="hover:text-white transition-colors">
+                    <Link
+                      to="/pricing"
+                      className="hover:text-white transition-colors"
+                    >
                       Pricing
                     </Link>
                   </li>

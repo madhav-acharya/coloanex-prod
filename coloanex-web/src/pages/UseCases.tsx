@@ -7,54 +7,54 @@ import { Users, Building2, Lock, Check, Workflow } from "lucide-react";
 export default function UseCases() {
   const useCases = [
     {
-      title: "P2P Lending Platforms",
+      title: "Digital Lending SaaS Operators",
       description:
-        "Enable peer-to-peer lending with verified borrower profiles and secure document exchange.",
+        "Run multi-tenant lending operations with subscription-driven features and orchestrated transaction policies.",
       icon: Users,
       benefits: [
-        "Automated borrower verification",
-        "Secure fund transfers",
-        "Real-time loan matching",
-        "Built-in dispute resolution",
+        "Public pricing funnel with user/tenant plan purchase",
+        "Wallet abstraction across web and app",
+        "Policy-aware gas sponsorship modes",
+        "Super-admin plan governance",
       ],
       stats: {
-        loans: "50K+",
-        users: "100K+",
-        satisfaction: "98%",
+        loans: "Multi-tenant",
+        users: "Role-based",
+        satisfaction: "Policy-driven",
       },
     },
     {
-      title: "Microfinance Institutions",
+      title: "Microfinance and Cooperative Networks",
       description:
-        "Streamline loan origination with KYC automation and borrower management at scale.",
+        "Manage borrower onboarding, repayment workflows, and tenant-specific payment gateway credentials.",
       icon: Building2,
       benefits: [
-        "Batch processing capabilities",
-        "Multi-currency support",
-        "Field agent mobile access",
-        "Impact reporting tools",
+        "Tenant payment config for eSewa/Khalti",
+        "Webhook processing with idempotency logs",
+        "Borrower and contract lifecycle tracking",
+        "Role-guarded operational actions",
       ],
       stats: {
-        loans: "100K+",
-        users: "250K+",
-        satisfaction: "97%",
+        loans: "Configurable",
+        users: "Tenant scoped",
+        satisfaction: "Auditable",
       },
     },
     {
-      title: "Credit Unions",
+      title: "Compliance-First Lending Teams",
       description:
-        "Modernize member lending with collaborative workflows and audit-ready documentation.",
+        "Apply strict access control and maintain transparent transaction decision trails for compliance teams.",
       icon: Lock,
       benefits: [
-        "Member portal integration",
-        "Regulatory compliance tools",
-        "Board reporting dashboards",
-        "Legacy system integration",
+        "RBAC with super-admin controls",
+        "Transaction policy evaluation history",
+        "Gas payer and wallet source traceability",
+        "Subscription scope visibility (user vs tenant)",
       ],
       stats: {
-        loans: "75K+",
-        users: "150K+",
-        satisfaction: "99%",
+        loans: "Traceable",
+        users: "Controlled",
+        satisfaction: "Governed",
       },
     },
   ];
@@ -62,24 +62,24 @@ export default function UseCases() {
   const testimonials = [
     {
       quote:
-        "Coloanex transformed our lending operations. We've seen a 40% increase in loan origination efficiency.",
-      author: "Sarah Johnson",
-      role: "CEO, FinTech Solutions",
-      company: "P2P Lending Platform",
+        "The split between public pricing and secured admin controls helped us onboard faster without exposing operations.",
+      author: "Operations Lead",
+      role: "Digital Lending Platform",
+      company: "Tenant SaaS Deployment",
     },
     {
       quote:
-        "The compliance features alone have saved us countless hours and eliminated regulatory risks.",
-      author: "Michael Chen",
-      role: "Operations Director",
-      company: "Microfinance Institution",
+        "Tenant-level gateway config plus wallet orchestration gave us flexibility without sacrificing auditability.",
+      author: "Risk Manager",
+      role: "Microfinance Network",
+      company: "Regional Lending Operations",
     },
     {
       quote:
-        "Our members love the transparency and speed. Loan approvals that took days now take hours.",
-      author: "Emily Rodriguez",
-      role: "VP of Technology",
-      company: "Community Credit Union",
+        "Super-admin subscription governance and policy logs made internal review and access control significantly easier.",
+      author: "Technology Director",
+      role: "Compliance-Focused Lender",
+      company: "Enterprise Credit Team",
     },
   ];
 
@@ -95,8 +95,9 @@ export default function UseCases() {
             Built for Your Industry
           </h1>
           <p className="text-xl text-white/80 max-w-3xl mx-auto">
-            Flexible architecture that adapts to diverse lending models and
-            regulatory requirements across different industries.
+            Real scenarios supported by the current platform implementation:
+            public pricing, subscription plans, wallet orchestration, and
+            tenant-secure operations.
           </p>
         </div>
       </section>

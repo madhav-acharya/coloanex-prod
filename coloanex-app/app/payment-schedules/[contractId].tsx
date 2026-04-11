@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Card, AppHeader } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { paymentSchedulesApi } from "@/api";
 import type { PaymentSchedule } from "@/api/paymentSchedulesApi";
@@ -29,16 +29,18 @@ export default function PaymentSchedulesScreen() {
     try {
       const data = await paymentSchedulesApi.getByContract(contractId);
       setSchedules(data);
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadSchedules();
   }, [contractId]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const onRefresh = () => {
     setRefreshing(true);

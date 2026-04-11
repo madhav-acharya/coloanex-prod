@@ -52,6 +52,83 @@ const COLORS = [
   "#DCFCE7",
 ];
 
+type StatCardProps = {
+  title: string;
+  value: number | string;
+  color: string;
+  isCurrency?: boolean;
+  trend?: Array<{ value: number }>;
+};
+
+function StatCard({
+  title,
+  value,
+  color,
+  isCurrency = false,
+  trend,
+}: StatCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-muted-foreground mb-2">
+              {title}
+            </p>
+            <div className="flex items-center gap-1">
+              {isCurrency && (
+                <IconCurrencyRupeeNepalese
+                  className="h-5 w-5"
+                  style={{ color }}
+                />
+              )}
+              <h3 className="text-xl font-bold" style={{ color }}>
+                {typeof value === "number" ? value.toLocaleString() : value}
+              </h3>
+            </div>
+          </div>
+          <div className="w-20 h-10">
+            {trend && trend.length > 0 ? (
+              <ResponsiveContainer width="100%" height={40}>
+                <LineChart data={trend}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height={40}>
+                <LineChart
+                  data={[
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                    { value: 0 },
+                  ]}
+                >
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#E5E7EB"
+                    strokeWidth={1.5}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [startDate, setStartDate] = useState<Date>(subMonths(new Date(), 6));
@@ -122,73 +199,6 @@ const Dashboard = () => {
     }
     return trend;
   };
-
-  const StatCard = ({
-    title,
-    value,
-    color,
-    isCurrency = false,
-    trend,
-  }: any) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">
-              {title}
-            </p>
-            <div className="flex items-center gap-1">
-              {isCurrency && (
-                <IconCurrencyRupeeNepalese
-                  className="h-5 w-5"
-                  style={{ color }}
-                />
-              )}
-              <h3 className="text-xl font-bold" style={{ color }}>
-                {typeof value === "number" ? value.toLocaleString() : value}
-              </h3>
-            </div>
-          </div>
-          <div className="w-20 h-10">
-            {trend && trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart data={trend}>
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke={color}
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart
-                  data={[
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                  ]}
-                >
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#E5E7EB"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <DashboardLayout

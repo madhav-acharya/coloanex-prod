@@ -10,18 +10,24 @@ export default function PaymentFailure() {
   const { toast } = useToast();
   const ran = useRef(false);
   const [amount, setAmount] = useState<string | null>(null);
+  const [isSubscriptionContext, setIsSubscriptionContext] = useState(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
     const params = new URLSearchParams(window.location.search);
+    const context = params.get("context");
+    setIsSubscriptionContext(context === "subscription");
     const rawAmount =
       params.get("total_amount") ?? params.get("amount") ?? null;
     if (rawAmount) setAmount(rawAmount);
 
     toast({
-      title: "Payment Failed",
+      title:
+        context === "subscription"
+          ? "Subscription Payment Failed"
+          : "Payment Failed",
       description: "Your payment could not be processed. Please try again.",
       variant: "destructive",
     });
@@ -51,10 +57,16 @@ export default function PaymentFailure() {
           <Button
             className="w-full"
             variant="destructive"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (isSubscriptionContext) {
+                navigate("/pricing");
+                return;
+              }
+              navigate(-1);
+            }}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
-            Try Again
+            {isSubscriptionContext ? "Back to Pricing" : "Try Again"}
           </Button>
           <Button
             variant="outline"

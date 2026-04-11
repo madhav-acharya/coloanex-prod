@@ -28,7 +28,14 @@ import type {
 import { KycStatus, KycFileType } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
 import { KycVerificationModal } from "@/components/modals/KycVerificationModal";
-import { recordKYCOnBlockchain, updateKYCOnBlockchain, deleteKYCOnBlockchain } from "@/utils/blockchain";
+import {
+  recordKYCOnBlockchain,
+  updateKYCOnBlockchain,
+  deleteKYCOnBlockchain,
+} from "@/utils/blockchain";
+import { useGetMyWalletsQuery } from "@/apis/walletsApi";
+import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
+import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { UploadedFile } from "@/types/upload";
 import { ethers } from "ethers";
@@ -76,11 +83,28 @@ export default function KycRequests() {
   const [editingKyc, setEditingKyc] = useState<Kyc | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isProcessingBlockchain, setIsProcessingBlockchain] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
 
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
   const [updateKyc, { isLoading: isUpdating }] = useUpdateKycMutation();
   const [deleteKyc] = useDeleteKycMutation();
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
+  const blockchainAccess = useMemo(
+    () =>
+      getBlockchainAccessSnapshot({
+        gasPaymentMode: (user as any)?.gasPaymentMode,
+        wallets,
+        subscriptions: mySubscriptions,
+      }),
+    [user, wallets, mySubscriptions],
+  );
+  const shouldUseWalletSignature =
+    blockchainAccess.canRunBlockchain &&
+    blockchainAccess.mode === "USER_WALLET";
+  const shouldShowBlockchainProcessing = blockchainAccess.canRunBlockchain;
 
   const isSuperAdmin = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
@@ -322,37 +346,46 @@ export default function KycRequests() {
     if (!kycToDelete) return;
 
     setIsDeletingKyc(true);
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+    }
+
     try {
       let blockchainTxHash: string | undefined;
 
-      try {
-        blockchainTxHash = await deleteKYCOnBlockchain(kycToDelete.id);
-      } catch (blockchainError: any) {
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          setIsDeletingKyc(false);
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          setIsDeletingKyc(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.reason || blockchainError.message || "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          blockchainTxHash = await deleteKYCOnBlockchain(kycToDelete.id);
+        } catch (blockchainError: any) {
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Cancelled",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            setIsProcessingBlockchain(false);
+            setIsDeletingKyc(false);
+            return;
+          } else {
+            setIsProcessingBlockchain(false);
+            setIsDeletingKyc(false);
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.reason ||
+                blockchainError.message ||
+                "Failed to process blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+      }
 
       await deleteKyc(kycToDelete.id).unwrap();
       toast({
@@ -369,7 +402,9 @@ export default function KycRequests() {
       });
     } finally {
       setIsDeletingKyc(false);
-      setIsProcessingBlockchain(false);
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+      }
     }
   };
 
@@ -391,10 +426,12 @@ export default function KycRequests() {
     if (!selectedDocument) return;
 
     try {
-      setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
-      
-      if (status === KycStatus.VERIFIED) {
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(true);
+        setBlockchainStep("blockchain");
+      }
+
+      if (status === KycStatus.VERIFIED && shouldUseWalletSignature) {
         try {
           const userAddress = ethers.getAddress(
             "0x" +
@@ -437,16 +474,20 @@ export default function KycRequests() {
         }
       }
 
-      setBlockchainStep("database");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+      }
       await verifyKycDocument({
         id: selectedDocument.id,
         data: { status, notes },
       }).unwrap();
 
-      setBlockchainStep("complete");
-      setTimeout(() => {
-        setIsProcessingBlockchain(false);
-      }, 1000);
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("complete");
+        setTimeout(() => {
+          setIsProcessingBlockchain(false);
+        }, 1000);
+      }
 
       toast({
         title: "Success",
@@ -480,8 +521,10 @@ export default function KycRequests() {
         variant: "destructive",
       });
     } finally {
-      setIsProcessingBlockchain(false);
-      setBlockchainStep("blockchain");
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(false);
+        setBlockchainStep("blockchain");
+      }
     }
   };
 
@@ -700,6 +743,7 @@ export default function KycRequests() {
     try {
       setIsProcessingBlockchain(true);
       setBlockchainStep("database");
+      const shouldRunBlockchain = shouldUseWalletSignature;
 
       if (editingKyc) {
         await updateKyc({ id: editingKyc.id, data: kycData }).unwrap();
@@ -712,47 +756,61 @@ export default function KycRequests() {
       } else {
         const kycResponse = await createKyc(kycData).unwrap();
 
-        setBlockchainStep("blockchain");
-        try {
-          const userAddress = ethers.getAddress(
-            "0x" +
-              ethers.keccak256(ethers.toUtf8Bytes(kycResponse.id)).slice(2, 42),
-          );
+        if (shouldRunBlockchain) {
+          setBlockchainStep("blockchain");
+          try {
+            const userAddress = ethers.getAddress(
+              "0x" +
+                ethers
+                  .keccak256(ethers.toUtf8Bytes(kycResponse.id))
+                  .slice(2, 42),
+            );
 
-          await recordKYCOnBlockchain(kycResponse.id, userAddress);
+            await recordKYCOnBlockchain(kycResponse.id, userAddress);
 
+            setBlockchainStep("complete");
+            setTimeout(() => setIsProcessingBlockchain(false), 1000);
+            toast({
+              title: "Success",
+              description:
+                "KYC request submitted and recorded on blockchain successfully",
+            });
+          } catch (blockchainError) {
+            setIsProcessingBlockchain(false);
+            const error = blockchainError as Error;
+            if (error.message.includes("MetaMask")) {
+              toast({
+                title: "KYC Submitted",
+                description:
+                  "KYC request submitted successfully. MetaMask is required for blockchain verification.",
+                variant: "destructive",
+              });
+            } else if (
+              error.message.includes("User rejected") ||
+              error.message.includes("ACTION_REJECTED")
+            ) {
+              toast({
+                title: "KYC Submitted",
+                description:
+                  "KYC request submitted successfully. Blockchain recording was cancelled.",
+                variant: "destructive",
+              });
+            } else {
+              toast({
+                title: "KYC Submitted",
+                description:
+                  "KYC request submitted, but failed to record on blockchain.",
+                variant: "destructive",
+              });
+            }
+          }
+        } else {
           setBlockchainStep("complete");
           setTimeout(() => setIsProcessingBlockchain(false), 1000);
           toast({
             title: "Success",
-            description:
-              "KYC request submitted and recorded on blockchain successfully",
+            description: "KYC request submitted successfully",
           });
-        } catch (blockchainError) {
-          setIsProcessingBlockchain(false);
-          const error = blockchainError as Error;
-          if (error.message.includes("MetaMask")) {
-            toast({
-              title: "KYC Submitted",
-              description:
-                "KYC request submitted successfully. MetaMask is required for blockchain verification.",
-              variant: "destructive",
-            });
-          } else if (error.message.includes("User rejected") || error.message.includes("ACTION_REJECTED")) {
-            toast({
-              title: "KYC Submitted",
-              description:
-                "KYC request submitted successfully. Blockchain recording was cancelled.",
-              variant: "destructive",
-            });
-          } else {
-            toast({
-              title: "KYC Submitted",
-              description:
-                "KYC request submitted, but failed to record on blockchain.",
-              variant: "destructive",
-            });
-          }
         }
       }
 
@@ -1573,7 +1631,9 @@ export default function KycRequests() {
       label: "Blockchain",
       sortable: false,
       render: (doc: Kyc) => {
-        const hasBlockchainTx = !!(doc as any)?.blockchainTxHash || !!(doc as any)?.blockchain_tx_hash;
+        const hasBlockchainTx =
+          !!(doc as any)?.blockchainTxHash ||
+          !!(doc as any)?.blockchain_tx_hash;
         return (
           <button
             onClick={() => {

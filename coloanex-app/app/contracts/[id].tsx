@@ -13,23 +13,26 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import {
   Button,
   AppHeader,
   CurrencyIcon,
   BlockchainProcessingModal,
+  useToast,
 } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/api/contractsApi";
 import { formatCurrency } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
+import { ensureActiveSubscription } from "@/utils/subscriptionGuard";
 
 const { height } = Dimensions.get("window");
 
 export default function ContractDetailsScreen() {
   const { colors } = useTheme();
+  const { showToast } = useToast();
   const styles = createStyles(colors);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [contract, setContract] = useState<Contract | null>(null);
@@ -57,11 +60,18 @@ export default function ContractDetailsScreen() {
     }
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadContract();
   }, [id]);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleSignContract = async () => {
+    const hasSubscription = await ensureActiveSubscription(showToast);
+    if (!hasSubscription) {
+      return;
+    }
+
     const sig =
       signature.trim() || contract?.borrower?.user?.fullName?.trim() || "";
     if (!sig) {
@@ -84,6 +94,11 @@ export default function ContractDetailsScreen() {
   };
 
   const handleReportContract = async () => {
+    const hasSubscription = await ensureActiveSubscription(showToast);
+    if (!hasSubscription) {
+      return;
+    }
+
     if (!reportReason.trim()) {
       Alert.alert("Error", "Please enter a reason for reporting");
       return;
@@ -496,11 +511,14 @@ export default function ContractDetailsScreen() {
                   <Text style={{ marginLeft: 4 }}>
                     {(() => {
                       const amount = contract.loanAmount;
-                      const numericValue = typeof amount === "string" ? parseFloat(amount) : amount;
+                      const numericValue =
+                        typeof amount === "string"
+                          ? parseFloat(amount)
+                          : amount;
                       if (isNaN(numericValue)) return "0.00";
-                      const parts = numericValue.toFixed(2).split('.');
-                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                      return parts.join('.');
+                      const parts = numericValue.toFixed(2).split(".");
+                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                      return parts.join(".");
                     })()}
                   </Text>
                 </View>
@@ -519,11 +537,14 @@ export default function ContractDetailsScreen() {
                   <Text style={{ marginLeft: 4 }}>
                     {(() => {
                       const amount = contract.totalAmountDue;
-                      const numericValue = typeof amount === "string" ? parseFloat(amount) : amount;
+                      const numericValue =
+                        typeof amount === "string"
+                          ? parseFloat(amount)
+                          : amount;
                       if (isNaN(numericValue)) return "0.00";
-                      const parts = numericValue.toFixed(2).split('.');
-                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                      return parts.join('.');
+                      const parts = numericValue.toFixed(2).split(".");
+                      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                      return parts.join(".");
                     })()}
                   </Text>
                 </View>
@@ -588,8 +609,9 @@ export default function ContractDetailsScreen() {
             </View>
 
             <Text style={styles.modalDescription}>
-              Please describe the issue you're experiencing with this contract.
-              The lender will be notified and will review your concern.
+              Please describe the issue you&apos;re experiencing with this
+              contract. The lender will be notified and will review your
+              concern.
             </Text>
 
             <TextInput

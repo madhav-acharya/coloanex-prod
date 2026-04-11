@@ -98,6 +98,8 @@ export const baseApi = createApi({
     "PaymentSchedules",
     "Transactions",
     "Wallets",
+    "Subscriptions",
+    "PaymentConfigs",
     "MailStatus",
   ],
   endpoints: () => ({}),

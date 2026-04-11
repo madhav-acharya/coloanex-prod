@@ -16,71 +16,73 @@ export default function Security() {
   const securityFeatures = [
     {
       icon: Shield,
-      title: "End-to-End Encryption",
+      title: "Tenant-Isolated Data Boundaries",
       description:
-        "256-bit AES encryption for data at rest and TLS 1.3 for data in transit. Your data is always protected.",
+        "Core domain data is separated by tenant boundaries with explicit role/permission checks per endpoint.",
     },
     {
       icon: Lock,
-      title: "Multi-Factor Authentication",
+      title: "Role and Permission Enforcement",
       description:
-        "Support for SMS, email, and authenticator apps. Add an extra layer of security to every account.",
+        "Super admin, admin, lender, and borrower roles enforce least-privilege access across API and UI.",
     },
     {
       icon: Eye,
-      title: "Role-Based Access Control",
+      title: "Subscription Policy Guardrails",
       description:
-        "Granular permissions management with department-level isolation. Control who sees what.",
+        "Transaction policy evaluation persists eligibility decisions, denial reasons, and gas payer resolution data.",
     },
     {
       icon: FileCheck,
-      title: "Audit Trails",
+      title: "Webhook Idempotency and Traceability",
       description:
-        "Comprehensive logging of all system activities. Every action is tracked and timestamped.",
+        "Payment webhook events are stored with unique gateway-event keys to prevent duplicate processing.",
     },
     {
       icon: Server,
-      title: "SOC 2 Type II Compliant",
+      title: "Tenant Gateway Secret Management",
       description:
-        "Annual third-party audits ensure we meet the highest security standards in the industry.",
+        "eSewa and Khalti keys are isolated per tenant configuration and resolved at runtime for each payment flow.",
     },
     {
       icon: UserCheck,
-      title: "Regular Security Assessments",
+      title: "Wallet Source Control",
       description:
-        "Quarterly penetration testing and vulnerability assessments by independent security firms.",
+        "User wallet vs platform gas sponsorship is explicitly controlled through gas mode and orchestrator checks.",
     },
   ];
 
   const complianceStandards = [
     {
-      name: "SOC 2 Type II",
+      name: "RBAC Governance",
       description:
-        "Annual audits of security, availability, and confidentiality",
+        "Permission-aware access to users, tenants, roles, and payments",
     },
     {
-      name: "GDPR",
-      description: "Full compliance with EU data protection regulations",
+      name: "Tenant Isolation",
+      description: "Scoped resource access by tenant context and role",
     },
     {
-      name: "ISO 27001",
-      description: "Information security management system certification",
+      name: "Auditability",
+      description:
+        "Policy evaluations and payment webhook events are persisted",
     },
     {
-      name: "PCI DSS",
-      description: "Payment card industry data security standards",
+      name: "Operational Controls",
+      description:
+        "Plan and gateway configuration restricted to authorized admins",
     },
   ];
 
   const securityPractices = [
-    "Data encrypted at rest with 256-bit AES encryption",
-    "All data in transit protected with TLS 1.3",
-    "Regular automated and manual security testing",
-    "24/7 security monitoring and incident response",
-    "Isolated tenant data with strict access controls",
-    "Regular employee security training and awareness",
-    "Automated backup and disaster recovery systems",
-    "Strict vendor security assessment procedures",
+    "JWT-protected endpoints with explicit public route overrides",
+    "Role + permission checks on sensitive management actions",
+    "Super-admin-only subscription catalog administration",
+    "Tenant payment config upsert and delete authorization checks",
+    "Idempotent payment webhook storage to prevent duplicate side effects",
+    "Wallet ownership checks before primary switch and deletion",
+    "Transaction policy evaluation logging for audit and troubleshooting",
+    "Gas payer resolution with fallback safety rules",
   ];
 
   return (
@@ -95,8 +97,9 @@ export default function Security() {
             Enterprise-Grade Security
           </h1>
           <p className="text-xl text-white/80 max-w-3xl mx-auto">
-            Your data security is our top priority. We employ industry-leading
-            security measures to protect your sensitive information.
+            Security is implemented as policy and architecture: RBAC, tenant
+            isolation, idempotent payment workflows, and auditable transaction
+            decisions.
           </p>
         </div>
       </section>

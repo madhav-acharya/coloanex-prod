@@ -19,6 +19,50 @@ import { SubscriptionResolverService } from '../transaction-orchestrator/subscri
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
+  private gatewayConfigMissingMessage(gateway: string) {
+    const normalized = String(gateway || '').toUpperCase();
+    if (normalized === 'ESEWA') {
+      return 'Missing eSewa gateway configuration. Configure Payment Config or set ESEWA_MERCHANT_ID and ESEWA_SECRET in .env';
+    }
+    if (normalized === 'KHALTI') {
+      return 'Missing Khalti gateway configuration. Configure Payment Config or set KHALTI_PUBLIC_KEY and KHALTI_SECRET_KEY in .env';
+    }
+    return `Missing ${normalized.toLowerCase()} gateway configuration`;
+  }
+
+  private getGatewayEnvFallbackConfig(gateway: string) {
+    const normalized = String(gateway || '').toUpperCase();
+
+    if (normalized === 'ESEWA') {
+      const merchantId = process.env.ESEWA_MERCHANT_ID;
+      const secret = process.env.ESEWA_SECRET;
+      if (!merchantId || !secret) {
+        return null;
+      }
+      return {
+        merchantId,
+        secretKey: secret,
+        paymentUrl: process.env.ESEWA_PAYMENT_URL,
+        statusCheckUrl: process.env.ESEWA_PAYMENT_STATUS_CHECK_URL,
+      };
+    }
+
+    if (normalized === 'KHALTI') {
+      const secretKey = process.env.KHALTI_SECRET_KEY;
+      if (!secretKey) {
+        return null;
+      }
+      return {
+        publicKey: process.env.KHALTI_PUBLIC_KEY,
+        secretKey,
+        paymentUrl: process.env.KHALTI_PAYMENT_URL,
+        verificationUrl: process.env.KHALTI_VERIFICATION_URL,
+      };
+    }
+
+    return null;
+  }
+
   private resolvePlatform(user: { roles?: string[] }): 'APP' | 'WEB' {
     return user.roles?.includes('Borrower') ? 'APP' : 'WEB';
   }
@@ -62,6 +106,13 @@ export class PaymentsService {
         currentUserTenantId: currentUser.tenantId,
       });
 
+    const resolvedGatewayConfig =
+      paymentConfig || this.getGatewayEnvFallbackConfig(gateway);
+
+    if (!resolvedGatewayConfig) {
+      throw new BadRequestException(this.gatewayConfigMissingMessage(gateway));
+    }
+
     const paymentGateway = this.resolveGateway(gateway);
     const transactionUuid = randomUUID();
 
@@ -70,7 +121,7 @@ export class PaymentsService {
       transactionUuid,
       successUrl,
       failureUrl,
-      tenantConfig: paymentConfig as any,
+      tenantConfig: resolvedGatewayConfig as any,
     });
 
     return {
@@ -106,12 +157,19 @@ export class PaymentsService {
         currentUserTenantId: currentUser.tenantId,
       });
 
+    const resolvedGatewayConfig =
+      paymentConfig || this.getGatewayEnvFallbackConfig(gateway);
+
+    if (!resolvedGatewayConfig) {
+      throw new BadRequestException(this.gatewayConfigMissingMessage(gateway));
+    }
+
     const paymentGateway = this.resolveGateway(gateway);
 
     const verifyResult = await paymentGateway.verifyPayment({
       transactionUuid,
       totalAmount,
-      tenantConfig: paymentConfig as any,
+      tenantConfig: resolvedGatewayConfig as any,
     });
 
     if (!verifyResult.success) {
@@ -138,21 +196,35 @@ export class PaymentsService {
 
     const paymentId = randomUUID();
     const platform = this.resolvePlatform(currentUser);
+    const isSubscriptionFeePayment =
+      type === 'FEE' && !contractId && !paymentScheduleId;
 
     let blockchain_tx_hash: string | null = null;
     let gasFeeGwei: string | null = null;
     let blockchainExplorerUrl: string | null = null;
 
-    const orchestrationDecision =
-      await this.transactionOrchestrator.orchestrate({
-        userId: currentUser.sub,
-        tenantId: contractContext?.tenantId || currentUser.tenantId,
-        transactionType: type,
-        platform,
-        userRoles: currentUser.roles,
-        preferredWalletId: dto.walletId,
-        requestedGasPaymentMode: dto.gasPaymentMode,
-      });
+    const orchestrationDecision = isSubscriptionFeePayment
+      ? {
+          eligible: true,
+          scope: 'NONE' as const,
+          plan: 'NONE',
+          gasPaymentMode: 'PLATFORM_WALLET' as const,
+          gasPayer: 'PLATFORM' as const,
+          featureFlags: {},
+          evaluationData: {
+            platform,
+            bypassReason: 'subscription_fee_payment',
+          },
+        }
+      : await this.transactionOrchestrator.orchestrate({
+          userId: currentUser.sub,
+          tenantId: contractContext?.tenantId || currentUser.tenantId,
+          transactionType: type,
+          platform,
+          userRoles: currentUser.roles,
+          preferredWalletId: dto.walletId,
+          requestedGasPaymentMode: dto.gasPaymentMode,
+        });
 
     if (!orchestrationDecision.eligible) {
       throw new BadRequestException(

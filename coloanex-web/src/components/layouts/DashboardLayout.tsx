@@ -14,6 +14,7 @@ import {
   Shield,
   Users,
   Key,
+  BadgeDollarSign,
   ChevronRight,
   ChevronDown,
   PanelLeftClose,
@@ -147,6 +148,13 @@ export default function DashboardLayout({
       href: "/permissions",
       permission: "Read Permissions",
     },
+    {
+      title: "Subscriptions",
+      icon: <BadgeDollarSign className="w-4 h-4" />,
+      href: "/subscriptions",
+      permission: "Read Roles",
+      superAdminOnly: true,
+    },
   ];
 
   const managementItems = [
@@ -190,9 +198,9 @@ export default function DashboardLayout({
       permission: "Read Loans",
     },
     {
-      title: "Transactions",
+      title: "Wallet",
       icon: <Wallet className="w-4 h-4" />,
-      href: "/transactions",
+      href: "/wallet",
       permission: "Read Payments",
     },
   ];
@@ -208,6 +216,7 @@ export default function DashboardLayout({
       icon: React.ReactNode;
       href: string;
       permission?: string;
+      superAdminOnly?: boolean;
     }[];
     isOpen: boolean;
   }) => {
@@ -234,6 +243,10 @@ export default function DashboardLayout({
         {isOpen && (
           <div className="space-y-1">
             {items.map((item) => {
+              if (item.superAdminOnly && !isSuperAdmin) {
+                return null;
+              }
+
               const isActive = location.pathname === item.href;
               const hasAccess =
                 !item.permission || hasPermission(user, item.permission);

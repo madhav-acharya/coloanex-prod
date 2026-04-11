@@ -12,6 +12,9 @@ export type TransactionType =
 export interface InitiatePaymentPayload {
   contractId?: string;
   paymentScheduleId?: string;
+  walletId?: string;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
   amount: number;
   type: TransactionType;
   gateway: PaymentGateway;
@@ -23,6 +26,7 @@ export interface InitiatePaymentResult {
   transactionUuid: string;
   paymentUrl: string;
   formData: Record<string, string>;
+  walletId?: string;
 }
 
 export interface VerifyPaymentPayload {
@@ -30,6 +34,9 @@ export interface VerifyPaymentPayload {
   totalAmount: number;
   gateway: PaymentGateway;
   type: TransactionType;
+  walletId?: string;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
   contractId?: string;
   paymentScheduleId?: string;
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ export default function AnalyticsScreen() {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [isSelectingStart, setIsSelectingStart] = useState(true);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       const monthsDiff = Math.round(
         (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30),
@@ -59,16 +59,16 @@ export default function AnalyticsScreen() {
       setAnalytics(analyticsData);
       setMonthlyLoans(monthlyData);
       setLoansByStatus(statusData);
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [endDate, startDate]);
 
   useEffect(() => {
     loadAnalytics();
-  }, [startDate, endDate]);
+  }, [loadAnalytics]);
 
   const onRefresh = () => {
     setRefreshing(true);

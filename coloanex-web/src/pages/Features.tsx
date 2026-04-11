@@ -7,10 +7,11 @@ import {
   UserCheck,
   Layers,
   Activity,
-  FolderLock,
+  Wallet,
   Eye,
   Check,
   BrainCircuit,
+  CreditCard,
 } from "lucide-react";
 
 export default function Features() {
@@ -19,72 +20,72 @@ export default function Features() {
       icon: Fingerprint,
       title: "KYC Engine",
       description:
-        "Comprehensive identity verification with document validation, liveness checks, and regulatory compliance built-in.",
+        "End-to-end borrower onboarding with document verification and status-driven workflows.",
       details: [
-        "Automated document verification",
-        "Liveness detection technology",
-        "Global compliance standards",
-        "Real-time validation",
+        "Tenant-aware borrower KYC workflow",
+        "Document and identity status tracking",
+        "Role-controlled KYC review actions",
+        "Audit-ready KYC history",
       ],
     },
     {
       icon: UserCheck,
       title: "Borrower Profiles",
       description:
-        "Rich borrower identity profiles with verified credentials, credit history, and trust scores for informed decisions.",
+        "Structured borrower profiles connected to contracts, loans, schedules, and transaction trails.",
       details: [
-        "Complete credit history tracking",
-        "Trust score algorithms",
-        "Verified credentials system",
-        "Risk assessment tools",
+        "Borrower-to-tenant relationship mapping",
+        "Loan and repayment visibility",
+        "Status lifecycle from request to closure",
+        "Unified history for lender decisioning",
       ],
     },
     {
       icon: Layers,
-      title: "Multi-Tenant RBAC",
+      title: "Multi-Tenant RBAC + Super Admin Control",
       description:
-        "Institution-level tenants with granular role-based access control. Define permissions at every level.",
+        "Institution-level tenancy with strict role and permission boundaries, plus global super-admin governance.",
       details: [
-        "Hierarchical permission management",
-        "Custom role creation",
-        "Department-level isolation",
-        "Audit trail for access changes",
+        "Role/permission management by scope",
+        "Tenant-isolated operational data",
+        "Super-admin-only subscription control",
+        "Fine-grained endpoint authorization",
       ],
     },
     {
       icon: Activity,
-      title: "Audit Logging",
+      title: "Transaction Orchestrator",
       description:
-        "Complete activity trails for every action. Track document uploads, status changes, and user interactions.",
+        "Policy-driven transaction orchestration resolves wallet, gas payer, subscription scope, and eligibility in one flow.",
       details: [
-        "Comprehensive activity logs",
-        "Tamper-proof records",
-        "Advanced search and filtering",
-        "Compliance-ready exports",
+        "Gas mode: AUTO / USER_WALLET / PLATFORM_WALLET",
+        "Subscription-aware eligibility checks",
+        "Wallet resolution by platform",
+        "Persisted policy evaluation metadata",
       ],
     },
     {
-      icon: FolderLock,
-      title: "Secure Document Vault",
+      icon: Wallet,
+      title: "Wallet Abstraction",
       description:
-        "Encrypted storage for KYC documents, loan agreements, and sensitive files with access controls.",
+        "Unified wallet layer across web and app with provider-aware handling and primary wallet management.",
       details: [
-        "256-bit AES encryption",
-        "Version control",
-        "Granular access permissions",
-        "Automatic backup",
+        "MetaMask for user-paid gas on web",
+        "Secure app wallet registration",
+        "Primary wallet switching",
+        "Per-user gas preference controls",
       ],
     },
     {
-      icon: Eye,
-      title: "Real-Time Monitoring",
+      icon: CreditCard,
+      title: "Subscriptions + Pricing + Tenant Payment Config",
       description:
-        "Live dashboards tracking loan status, borrower activity, and portfolio health across your organization.",
+        "Built-in plan catalog with public pricing, purchase flows, and tenant-level eSewa/Khalti credential routing.",
       details: [
-        "Customizable dashboards",
-        "Real-time alerts",
-        "Performance metrics",
-        "Predictive analytics",
+        "Plans: free, premium, pro, enterprise",
+        "Public pricing route for non-logged users",
+        "Super-admin plan CRUD",
+        "Tenant payment gateway config management",
       ],
     },
   ];
@@ -101,8 +102,8 @@ export default function Features() {
             Powerful Features for Modern Lending
           </h1>
           <p className="text-xl text-white/80 max-w-3xl mx-auto">
-            Everything you need to manage collaborative lending with confidence,
-            security, and compliance built-in from day one.
+            Everything implemented in the platform: KYC, lending workflows,
+            wallet orchestration, subscriptions, and tenant payment controls.
           </p>
         </div>
       </section>
