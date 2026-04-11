@@ -63,4 +63,16 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   blockchain_tx_hash?: string;
+
+  @IsOptional()
+  @IsEnum(['WEB', 'APP'])
+  platform?: 'WEB' | 'APP';
+
+  @IsOptional()
+  @IsString()
+  walletId?: string;
+
+  @IsOptional()
+  @IsEnum(['USER_WALLET', 'PLATFORM_WALLET'])
+  gasPaymentMode?: 'USER_WALLET' | 'PLATFORM_WALLET';
 }
