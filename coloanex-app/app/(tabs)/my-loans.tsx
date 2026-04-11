@@ -20,6 +20,7 @@ import { CurrencyIcon } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import type { Transaction } from "@/api/transactionsApi";
 import { useAppSelector } from "@/store/hooks";
+import { showBlockchainInfo } from "@/utils/blockchain";
 
 type StatusConfig = {
   label: string;
@@ -390,9 +391,6 @@ export default function MyLoansScreen() {
   const renderLoanCard = ({ item: loan }: { item: Loan }) => {
     const amount = loan.approvedAmount ?? loan.requestedAmount;
     const lenderName = loan.borrower?.tenant?.name ?? "Unknown Lender";
-    const isActive =
-      loan.status === LoanStatus.LOAN_PROVIDED ||
-      loan.status === LoanStatus.PARTIALLY_PAID;
 
     return (
       <TouchableOpacity
@@ -487,7 +485,6 @@ export default function MyLoansScreen() {
                   },
                 ]}
                 onPress={() => {
-                  const { showBlockchainInfo } = require("@/utils/blockchain");
                   showBlockchainInfo(loan.blockchainTxHash);
                 }}
               >

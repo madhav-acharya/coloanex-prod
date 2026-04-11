@@ -45,6 +45,7 @@ export default function BrowseScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
   const searchInputRef = useRef<TextInput | null>(null);
+  const inFlightRef = useRef(false);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const searchScale = useRef(new Animated.Value(0.98)).current;
   const searchTranslate = useRef(new Animated.Value(-8)).current;
@@ -65,7 +66,8 @@ export default function BrowseScreen() {
 
   const fetchLenders = useCallback(
     async (query: string, filter: string, page: number = 1) => {
-      if (loading) return;
+      if (inFlightRef.current) return;
+      inFlightRef.current = true;
       setLoading(true);
       try {
         const currentOffset = (page - 1) * LIMIT;
@@ -83,16 +85,17 @@ export default function BrowseScreen() {
         if (result.total !== undefined) setTotalCount(result.total);
       } catch {
       } finally {
+        inFlightRef.current = false;
         setLoading(false);
       }
     },
-    [loading],
+    [],
   );
 
   useEffect(() => {
     setCurrentPage(1);
     fetchLenders(searchQuery, selectedFilter, 1);
-  }, [selectedFilter]);
+  }, [fetchLenders, searchQuery, selectedFilter]);
 
   const openSearchOverlay = () => {
     setSearchActive(true);

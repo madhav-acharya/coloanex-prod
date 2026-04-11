@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -25,17 +25,19 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useFocusEffect(
     React.useCallback(() => {
       loadUserData();
     }, []),
   );
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadUserData = async () => {
     try {
       const userData = await usersApi.getCurrentUser();
       dispatch(setUser(userData));
-    } catch (error) {}
+    } catch {}
   };
 
   const handleLogout = async () => {
@@ -45,7 +47,7 @@ export default function ProfileScreen() {
       showToast("Logged out successfully", "success");
       dispatch(logout());
       router.replace("/auth/login");
-    } catch (error) {
+    } catch {
       showToast("Logout failed, clearing session", "warning");
       dispatch(logout());
       router.replace("/auth/login");
@@ -69,6 +71,16 @@ export default function ProfileScreen() {
       icon: "moon-outline",
       title: "Theme Settings",
       route: "/profile/theme-settings",
+    },
+    {
+      icon: "card-outline",
+      title: "Subscriptions",
+      route: "/profile/subscriptions",
+    },
+    {
+      icon: "wallet-outline",
+      title: "Payment Configs",
+      route: "/profile/payment-configs",
     },
     {
       icon: "notifications-outline",
@@ -143,7 +155,7 @@ export default function ProfileScreen() {
               <View style={styles.menuItemLeft}>
                 <Ionicons
                   name={item.icon as any}
-                  size={24}
+                  size={21}
                   color={colors.textSecondary}
                 />
                 <Text style={[styles.menuItemText, { color: colors.text }]}>
@@ -162,8 +174,12 @@ export default function ProfileScreen() {
         <Button
           title={loggingOut ? "Logging out..." : "Logout"}
           onPress={handleLogout}
-          variant="outline"
-          style={styles.logoutButton}
+          variant="primary"
+          style={StyleSheet.flatten([
+            styles.logoutButton,
+            { backgroundColor: colors.error, borderColor: colors.error },
+          ])}
+          textStyle={{ color: "#FFFFFF" }}
           loading={loggingOut}
         />
 
@@ -248,7 +264,8 @@ const createStyles = (colors: any) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: spacing.lg,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
       borderBottomWidth: 1,
     },
     lastMenuItem: {
@@ -261,8 +278,9 @@ const createStyles = (colors: any) =>
     menuItemText: {
       ...typography.body,
       color: colors.text,
-      marginLeft: spacing.md,
+      marginLeft: spacing.sm,
       fontWeight: "600",
+      fontSize: 15,
     },
     logoutButton: {
       marginBottom: spacing.lg,
