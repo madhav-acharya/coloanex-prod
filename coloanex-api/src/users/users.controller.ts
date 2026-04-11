@@ -13,6 +13,7 @@ import type { Request } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateGasPaymentModeDto } from './dto/update-gas-payment-mode.dto';
 import type { UsersQueryInterface } from './interfaces/users.query.interface';
 import { RequirePermissions } from 'src/common/decorators/permissions.decorator';
 import {
@@ -116,5 +117,13 @@ export class UsersController {
   @RequirePermissions(READ_USERS)
   getOnlineUsers(@CurrentUser() user: JwtPayload) {
     return this.usersService.getOnlineUsers(user.tenantId);
+  }
+
+  @Patch('me/gas-payment-mode')
+  updateMyGasPaymentMode(
+    @Body() dto: UpdateGasPaymentModeDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.updateMyGasPaymentMode(dto, user);
   }
 }
