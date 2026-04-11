@@ -14,42 +14,48 @@ import type {
 export class EsewaGateway implements IPaymentGateway {
   readonly key = 'ESEWA';
 
-  private readonly merchantId: string;
-  private readonly secret: string;
-  private readonly paymentUrl: string;
-  private readonly statusCheckUrl: string;
+  constructor() {}
 
-  constructor() {
-    this.merchantId = process.env.ESEWA_MERCHANT_ID!;
-    this.secret = process.env.ESEWA_SECRET!;
-    this.paymentUrl = process.env.ESEWA_PAYMENT_URL!;
-    this.statusCheckUrl = process.env.ESEWA_PAYMENT_STATUS_CHECK_URL!;
+  private getConfig(tenantConfig?: Record<string, unknown> | null) {
+    return {
+      merchantId:
+        (tenantConfig?.merchantId as string | undefined) ||
+        process.env.ESEWA_MERCHANT_ID!,
+      secret:
+        (tenantConfig?.secretKey as string | undefined) ||
+        process.env.ESEWA_SECRET!,
+      paymentUrl:
+        (tenantConfig?.paymentUrl as string | undefined) ||
+        process.env.ESEWA_PAYMENT_URL!,
+      statusCheckUrl:
+        (tenantConfig?.statusCheckUrl as string | undefined) ||
+        process.env.ESEWA_PAYMENT_STATUS_CHECK_URL!,
+    };
   }
 
-  private computeSignature(message: string): string {
-    return crypto
-      .createHmac('sha256', this.secret)
-      .update(message)
-      .digest('base64');
+  private computeSignature(message: string, secret: string): string {
+    return crypto.createHmac('sha256', secret).update(message).digest('base64');
   }
 
   async initiatePayment(
     params: InitiatePaymentParams,
   ): Promise<InitiatePaymentResult> {
-    const { amount, transactionUuid, successUrl, failureUrl } = params;
+    const { amount, transactionUuid, successUrl, failureUrl, tenantConfig } =
+      params;
+    const { merchantId, secret, paymentUrl } = this.getConfig(tenantConfig);
 
     const signedFieldNames = 'total_amount,transaction_uuid,product_code';
-    const message = `total_amount=${amount},transaction_uuid=${transactionUuid},product_code=${this.merchantId}`;
-    const signature = this.computeSignature(message);
+    const message = `total_amount=${amount},transaction_uuid=${transactionUuid},product_code=${merchantId}`;
+    const signature = this.computeSignature(message, secret);
 
     return Promise.resolve({
-      paymentUrl: this.paymentUrl,
+      paymentUrl,
       formData: {
         amount: String(amount),
         tax_amount: '0',
         total_amount: String(amount),
         transaction_uuid: transactionUuid,
-        product_code: this.merchantId,
+        product_code: merchantId,
         product_service_charge: '0',
         product_delivery_charge: '0',
         success_url: successUrl,
@@ -63,10 +69,11 @@ export class EsewaGateway implements IPaymentGateway {
   async verifyPayment(
     params: VerifyPaymentParams,
   ): Promise<VerifyPaymentResult> {
-    const { transactionUuid, totalAmount } = params;
+    const { transactionUuid, totalAmount, tenantConfig } = params;
+    const { merchantId, statusCheckUrl } = this.getConfig(tenantConfig);
 
     const url =
-      `${this.statusCheckUrl}?product_code=${encodeURIComponent(this.merchantId)}` +
+      `${statusCheckUrl}?product_code=${encodeURIComponent(merchantId)}` +
       `&total_amount=${totalAmount}` +
       `&transaction_uuid=${encodeURIComponent(transactionUuid)}`;
 
@@ -91,7 +98,8 @@ export class EsewaGateway implements IPaymentGateway {
   async lookupPayment(
     params: LookupPaymentParams,
   ): Promise<LookupPaymentResult> {
-    const { transactionUuid, totalAmount } = params;
+    const { transactionUuid, totalAmount, tenantConfig } = params;
+    const { merchantId, statusCheckUrl } = this.getConfig(tenantConfig);
 
     if (!totalAmount) {
       throw new InternalServerErrorException(
@@ -100,7 +108,7 @@ export class EsewaGateway implements IPaymentGateway {
     }
 
     const url =
-      `${this.statusCheckUrl}?product_code=${encodeURIComponent(this.merchantId)}` +
+      `${statusCheckUrl}?product_code=${encodeURIComponent(merchantId)}` +
       `&total_amount=${totalAmount}` +
       `&transaction_uuid=${encodeURIComponent(transactionUuid)}`;
 
