@@ -14,7 +14,7 @@ import { notificationsApi } from "@/api";
 import { useToast, AppHeader } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import type { NotificationItem, ActivityAction } from "@/types/notification";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing } from "@/constants/theme";
 
 const getActivityIcon = (action: ActivityAction) => {
   switch (action) {
@@ -182,9 +182,11 @@ export default function ActivityLogsScreen() {
     }
   };
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadNotifications(true);
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -206,8 +208,7 @@ export default function ActivityLogsScreen() {
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
-    }
+    } catch {}
   };
 
   const markUnreadAsRead = async (unreadNotifications: NotificationItem[]) => {
@@ -228,8 +229,7 @@ export default function ActivityLogsScreen() {
         ),
       );
       setUnreadCount((prev) => Math.max(0, prev - unreadNotifications.length));
-    } catch (error) {
-    }
+    } catch {}
   };
 
   const handleMarkAllAsRead = async () => {
