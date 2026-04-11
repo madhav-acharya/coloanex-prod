@@ -230,6 +230,121 @@ async function main() {
     ),
   );
 
+  console.log('💳 Seeding subscription plans...');
+  const seededPlans = [
+    {
+      code: 'free',
+      name: 'Starter',
+      scope: 'USER' as const,
+      description:
+        'For individual lenders starting out with essential lending workflows and basic visibility.',
+      features: {
+        durationDays: 30,
+        walletMode: ['USER_WALLET'],
+        supportTier: 'Community support',
+        modules: [
+          'Borrower onboarding',
+          'Loan disbursement and repayment tracking',
+          'Basic activity logs',
+        ],
+      },
+      price: 0,
+      maxTransactions: 120,
+      currency: 'NPR',
+      billingCycle: 'MONTHLY',
+      isActive: true,
+    },
+    {
+      code: 'premium',
+      name: 'Premium',
+      scope: 'USER' as const,
+      description:
+        'For active lenders who need sponsored gas options, better limits, and faster support.',
+      features: {
+        durationDays: 30,
+        walletMode: ['USER_WALLET', 'PLATFORM_WALLET'],
+        supportTier: 'Priority email support',
+        modules: [
+          'All Starter features',
+          'Platform gas sponsorship eligibility',
+          'Advanced repayment insights',
+          'Exportable transaction reports',
+        ],
+      },
+      price: 1999,
+      maxTransactions: 1200,
+      currency: 'NPR',
+      billingCycle: 'MONTHLY',
+      isActive: true,
+    },
+    {
+      code: 'pro',
+      name: 'Pro',
+      scope: 'USER' as const,
+      description:
+        'For high-volume professionals running advanced loan operations with stronger controls.',
+      features: {
+        durationDays: 30,
+        walletMode: ['USER_WALLET', 'PLATFORM_WALLET'],
+        supportTier: 'Priority support with escalation',
+        modules: [
+          'All Premium features',
+          'Higher orchestration limits',
+          'Detailed policy audit metadata',
+          'Enhanced performance analytics',
+        ],
+      },
+      price: 4499,
+      maxTransactions: 6000,
+      currency: 'NPR',
+      billingCycle: 'MONTHLY',
+      isActive: true,
+    },
+    {
+      code: 'enterprise',
+      name: 'Enterprise',
+      scope: 'TENANT' as const,
+      description:
+        'For institutions requiring tenant-level governance, high throughput, and dedicated support.',
+      features: {
+        durationDays: 30,
+        walletMode: ['PLATFORM_WALLET', 'USER_WALLET'],
+        supportTier: 'Dedicated success and implementation support',
+        modules: [
+          'Tenant-wide subscription coverage',
+          'High-volume transaction orchestration',
+          'Tenant payment config governance',
+          'Compliance-ready operational visibility',
+        ],
+      },
+      price: 14999,
+      maxTransactions: 30000,
+      currency: 'NPR',
+      billingCycle: 'MONTHLY',
+      isActive: true,
+    },
+  ];
+
+  await Promise.all(
+    seededPlans.map((plan) =>
+      prisma.subscriptionPlan.upsert({
+        where: { code: plan.code },
+        update: {
+          name: plan.name,
+          scope: plan.scope,
+          description: plan.description,
+          features: plan.features,
+          price: plan.price,
+          maxTransactions: plan.maxTransactions,
+          currency: plan.currency,
+          billingCycle: plan.billingCycle,
+          isActive: plan.isActive,
+        },
+        create: plan,
+      }),
+    ),
+  );
+
   console.log('✅ Assigned all permissions to Super Admin role and user');
 
   console.log('\n📊 Summary:');
@@ -242,6 +357,7 @@ async function main() {
   console.log(`  * Lender: Admin permissions except Tenants`);
   console.log(`  * Borrower: KYC and Users (own) permissions`);
   console.log(`- User-role and user-permission relationships created`);
+  console.log(`- ${seededPlans.length} subscription plans seeded`);
 }
 
 main()

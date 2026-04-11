@@ -243,6 +243,11 @@ export class AuthService {
       );
     }
 
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { gasPaymentMode: 'PLATFORM_WALLET' as never },
+    });
+
     return this.performLogin(user, ipAddress, userAgent);
   }
 

@@ -11,12 +11,16 @@ import { UpdateRuleDto } from './dto/update-rule.dto';
 import type { Rule } from './entities/rule.entity';
 import type { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { TransactionOrchestratorService } from '../transaction-orchestrator/transaction-orchestrator.service';
+import { SubscriptionResolverService } from '../transaction-orchestrator/subscription-resolver.service';
 
 @Injectable()
 export class RulesService {
   constructor(
     private prisma: PrismaService,
     private blockchainService: BlockchainService,
+    private readonly transactionOrchestrator: TransactionOrchestratorService,
+    private readonly subscriptionResolver: SubscriptionResolverService,
   ) {}
 
   private withBlockchainMeta<T extends Record<string, any>>(
@@ -57,6 +61,27 @@ export class RulesService {
     }
 
     const ruleId = createRuleDto.id || randomUUID();
+
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId,
+        transactionType: 'RULE_CREATE',
+        platform: 'WEB',
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new ForbiddenException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (orchestrationDecision.gasPayer === 'USER' && !createRuleDto.id) {
+      throw new ForbiddenException(
+        'USER_WALLET mode requires client wallet signing for rule creation.',
+      );
+    }
 
     // If the client already provides an ID, it may have already recorded the
     // rule on-chain (web MetaMask flow). Avoid double-creating on-chain.
@@ -112,6 +137,10 @@ export class RulesService {
         },
       },
     })) as unknown as Rule;
+
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
+    );
 
     return this.withBlockchainMeta(createdRule as any) as unknown as Rule;
   }
@@ -226,6 +255,30 @@ export class RulesService {
     let blockchainData: Record<string, unknown> | null =
       (updateRuleDto.blockchainData as Record<string, unknown>) || null;
 
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId: rule.tenantId,
+        transactionType: 'RULE_UPDATE',
+        platform: 'WEB',
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new ForbiddenException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (
+      orchestrationDecision.gasPayer === 'USER' &&
+      !updateRuleDto.blockchainTxHash
+    ) {
+      throw new ForbiddenException(
+        'USER_WALLET mode requires wallet-signed update hash for rule updates.',
+      );
+    }
+
     if (this.blockchainService.isEnabled()) {
       const tx = await this.blockchainService.updateRule(
         id,
@@ -270,6 +323,10 @@ export class RulesService {
       },
     })) as unknown as Rule;
 
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
+    );
+
     return this.withBlockchainMeta(updatedRule as any) as unknown as Rule;
   }
 
@@ -284,6 +341,27 @@ export class RulesService {
       throw new ForbiddenException('You can only delete your own rules');
     }
 
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId: rule.tenantId,
+        transactionType: 'RULE_DELETE',
+        platform: 'WEB',
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new ForbiddenException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (orchestrationDecision.gasPayer === 'USER') {
+      throw new ForbiddenException(
+        'USER_WALLET mode rule deletion must be submitted through wallet-signed web flow.',
+      );
+    }
+
     if (this.blockchainService.isEnabled()) {
       const tx = await this.blockchainService.deleteRule(id);
       if (!tx) {
@@ -294,5 +372,9 @@ export class RulesService {
     }
 
     await this.prisma.rule.delete({ where: { id } });
+
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
+    );
   }
 }

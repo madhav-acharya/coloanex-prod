@@ -44,6 +44,7 @@ export function createUserResponse(
     fullName?: string;
     phone?: string | null;
     isActive: boolean;
+    gasPaymentMode?: string;
     lastActiveAt?: Date | null;
   },
   roles: string[],
@@ -55,6 +56,7 @@ export function createUserResponse(
     fullName: user.fullName || '',
     phone: user.phone || undefined,
     isActive: user.isActive,
+    gasPaymentMode: user.gasPaymentMode || 'PLATFORM_WALLET',
     lastActiveAt: user.lastActiveAt || undefined,
     roles,
     permissions,

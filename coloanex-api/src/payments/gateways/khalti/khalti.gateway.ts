@@ -13,14 +13,20 @@ import type {
 export class KhaltiGateway implements IPaymentGateway {
   readonly key = 'KHALTI';
 
-  private readonly secretKey: string;
-  private readonly paymentUrl: string;
-  private readonly verificationUrl: string;
+  constructor() {}
 
-  constructor() {
-    this.secretKey = process.env.KHALTI_SECRET_KEY!;
-    this.paymentUrl = process.env.KHALTI_PAYMENT_URL!;
-    this.verificationUrl = process.env.KHALTI_VERIFICATION_URL!;
+  private getConfig(tenantConfig?: Record<string, unknown> | null) {
+    return {
+      secretKey:
+        (tenantConfig?.secretKey as string | undefined) ||
+        process.env.KHALTI_SECRET_KEY!,
+      paymentUrl:
+        (tenantConfig?.paymentUrl as string | undefined) ||
+        process.env.KHALTI_PAYMENT_URL!,
+      verificationUrl:
+        (tenantConfig?.verificationUrl as string | undefined) ||
+        process.env.KHALTI_VERIFICATION_URL!,
+    };
   }
 
   async initiatePayment(
@@ -31,7 +37,10 @@ export class KhaltiGateway implements IPaymentGateway {
       transactionUuid,
       successUrl,
       failureUrl: _failureUrl,
+      tenantConfig,
     } = params;
+
+    const { secretKey, paymentUrl } = this.getConfig(tenantConfig);
 
     const websiteUrl = successUrl.startsWith('http')
       ? new URL(successUrl).origin
@@ -49,10 +58,10 @@ export class KhaltiGateway implements IPaymentGateway {
     let data: Record<string, unknown>;
 
     try {
-      response = await fetch(this.paymentUrl, {
+      response = await fetch(paymentUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Key ${this.secretKey}`,
+          Authorization: `Key ${secretKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
@@ -109,16 +118,17 @@ export class KhaltiGateway implements IPaymentGateway {
   async verifyPayment(
     params: VerifyPaymentParams,
   ): Promise<VerifyPaymentResult> {
-    const { transactionUuid } = params;
+    const { transactionUuid, tenantConfig } = params;
+    const { secretKey, verificationUrl } = this.getConfig(tenantConfig);
 
     let response: Response;
     let data: Record<string, unknown>;
 
     try {
-      response = await fetch(this.verificationUrl, {
+      response = await fetch(verificationUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Key ${this.secretKey}`,
+          Authorization: `Key ${secretKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ pidx: transactionUuid }),
@@ -157,16 +167,17 @@ export class KhaltiGateway implements IPaymentGateway {
   async lookupPayment(
     params: LookupPaymentParams,
   ): Promise<LookupPaymentResult> {
-    const { transactionUuid } = params;
+    const { transactionUuid, tenantConfig } = params;
+    const { secretKey, verificationUrl } = this.getConfig(tenantConfig);
 
     let response: Response;
     let data: Record<string, unknown>;
 
     try {
-      response = await fetch(this.verificationUrl, {
+      response = await fetch(verificationUrl, {
         method: 'POST',
         headers: {
-          Authorization: `Key ${this.secretKey}`,
+          Authorization: `Key ${secretKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ pidx: transactionUuid }),

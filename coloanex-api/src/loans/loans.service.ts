@@ -10,6 +10,8 @@ import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { TransactionOrchestratorService } from '../transaction-orchestrator/transaction-orchestrator.service';
+import { SubscriptionResolverService } from '../transaction-orchestrator/subscription-resolver.service';
 import { loanRequestTemplate, loanApprovalTemplate } from '../mail/templates';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { UpdateLoanDto } from './dto/update-loan.dto';
@@ -33,6 +35,8 @@ export class LoansService {
     private mailService: MailService,
     private contractsService: ContractsService,
     private blockchainService: BlockchainService,
+    private readonly transactionOrchestrator: TransactionOrchestratorService,
+    private readonly subscriptionResolver: SubscriptionResolverService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -45,6 +49,10 @@ export class LoansService {
 
   private isLender(user: JwtPayload): boolean {
     return user.roles.includes('Lender');
+  }
+
+  private resolvePlatform(user: JwtPayload): 'APP' | 'WEB' {
+    return this.isBorrower(user) ? 'APP' : 'WEB';
   }
 
   async checkExistingLoan(
@@ -229,6 +237,27 @@ export class LoansService {
     let blockchainTxHash: string | undefined = createLoanDto.blockchainTxHash;
     let blockchainData: any = null;
 
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId,
+        transactionType: 'LOAN_APPLICATION',
+        platform: this.resolvePlatform(user),
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new BadRequestException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (orchestrationDecision.gasPayer === 'USER' && !blockchainTxHash) {
+      throw new BadRequestException(
+        'USER_WALLET mode requires a client-signed blockchain transaction hash for loan submission.',
+      );
+    }
+
     if (!blockchainTxHash && this.blockchainService.isEnabled()) {
       this.logger.log(`[Loan ${loanId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordLoan(
@@ -313,6 +342,10 @@ export class LoansService {
       ipAddress,
       userAgent,
       tenantId,
+    );
+
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
     );
 
     if (String(loan.status) === String(LoanStatus.SUBMITTED)) {
@@ -597,6 +630,27 @@ export class LoansService {
     let blockchainData: any = null;
 
     if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId,
+          transactionType: 'LOAN_UPDATE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Loan update in USER_WALLET mode must be signed via web wallet flow.',
+        );
+      }
+
       this.logger.log(`[Loan ${id}] Updating blockchain status...`);
       const bcTx = await this.blockchainService.updateLoanStatus(
         id,
@@ -631,6 +685,10 @@ export class LoansService {
           'Blockchain update failed. Cannot update loan without blockchain record.',
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     await this.activityLogsService.logUserActivity(
@@ -738,6 +796,7 @@ export class LoansService {
         reviewLoanDto.approvedAmount!,
         reviewLoanDto.approvedTermMonths!,
         user.tenantId!,
+        user,
       );
     }
 
@@ -870,6 +929,27 @@ export class LoansService {
     const loan = await this.findOne(id);
 
     if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: loan.tenantId,
+          transactionType: 'LOAN_DELETE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'Loan deletion in USER_WALLET mode must be signed via web wallet flow.',
+        );
+      }
+
       const bcTx = await this.blockchainService.deleteLoan(id);
 
       if (bcTx) {
@@ -881,6 +961,10 @@ export class LoansService {
           `Loan ${id} deletion — blockchain unavailable, proceeding without chain record`,
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     // Delete related records to resolve foreign key constraints
@@ -952,6 +1036,27 @@ export class LoansService {
       select: { id: true },
     });
     if (contract) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: loan.tenantId,
+          transactionType: 'LOAN_REPAYMENT',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'USER_WALLET repayment flow must be signed via web wallet before API payment execution.',
+        );
+      }
+
       const paymentIdStr = randomUUID();
       const bcPayTx = await this.blockchainService.recordPayment(
         paymentIdStr,
@@ -969,6 +1074,10 @@ export class LoansService {
           `Payment ${paymentIdStr} — blockchain unavailable, proceeding without chain record`,
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     return {

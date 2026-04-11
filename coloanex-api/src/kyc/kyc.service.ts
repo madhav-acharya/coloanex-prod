@@ -8,6 +8,8 @@ import { PrismaService } from '../prisma.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import { MailService } from '../mail/mail.service';
 import { BlockchainService } from '../blockchain/blockchain.service';
+import { TransactionOrchestratorService } from '../transaction-orchestrator/transaction-orchestrator.service';
+import { SubscriptionResolverService } from '../transaction-orchestrator/subscription-resolver.service';
 import { kycApprovalTemplate } from '../mail/templates';
 import { CreateKycDto } from './dto/create-kyc.dto';
 import { UpdateKycDto } from './dto/update-kyc.dto';
@@ -30,6 +32,8 @@ export class KycService {
     private activityLogsService: ActivityLogsService,
     private mailService: MailService,
     private blockchainService: BlockchainService,
+    private readonly transactionOrchestrator: TransactionOrchestratorService,
+    private readonly subscriptionResolver: SubscriptionResolverService,
   ) {}
 
   private isSuperAdmin(user: JwtPayload): boolean {
@@ -42,6 +46,10 @@ export class KycService {
 
   private isLender(user: JwtPayload): boolean {
     return user.roles.includes('Lender');
+  }
+
+  private resolvePlatform(user: JwtPayload): 'APP' | 'WEB' {
+    return this.isBorrower(user) ? 'APP' : 'WEB';
   }
 
   async create(
@@ -152,6 +160,27 @@ export class KycService {
     let blockchainTxHash: string | null = null;
     let blockchainData: any = null;
 
+    const orchestrationDecision =
+      await this.transactionOrchestrator.orchestrate({
+        userId: user.sub,
+        tenantId,
+        transactionType: 'KYC_SUBMISSION',
+        platform: this.resolvePlatform(user),
+        userRoles: user.roles,
+      });
+
+    if (!orchestrationDecision.eligible) {
+      throw new BadRequestException(
+        orchestrationDecision.denialReason || 'Transaction blocked by policy',
+      );
+    }
+
+    if (orchestrationDecision.gasPayer === 'USER') {
+      throw new BadRequestException(
+        'KYC blockchain submission in USER_WALLET mode must be signed in the web wallet flow.',
+      );
+    }
+
     if (this.blockchainService.isEnabled()) {
       this.logger.log(`[KYC ${kycId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordKyc(
@@ -221,6 +250,10 @@ export class KycService {
       ipAddress,
       userAgent,
       tenantId,
+    );
+
+    await this.subscriptionResolver.consumeUsage(
+      orchestrationDecision.subscriptionId,
     );
 
     return kyc as unknown as Kyc;
@@ -539,6 +572,27 @@ export class KycService {
     let blockchainData: any;
 
     if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: updated.borrower?.tenantId || user.tenantId,
+          transactionType: 'KYC_UPDATE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'KYC update in USER_WALLET mode must be signed in the web wallet flow.',
+        );
+      }
+
       this.logger.log(
         `[KYC ${id}] Updating blockchain status to ${updated.status}...`,
       );
@@ -571,6 +625,10 @@ export class KycService {
           'Blockchain update failed. Cannot update KYC without blockchain record.',
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     return this.findOne(id);
@@ -608,9 +666,33 @@ export class KycService {
 
     if (
       this.blockchainService.isEnabled() &&
-      (verifyKycDto.status === KycStatus.VERIFIED || verifyKycDto.status === KycStatus.REJECTED)
+      (verifyKycDto.status === KycStatus.VERIFIED ||
+        verifyKycDto.status === KycStatus.REJECTED)
     ) {
-      this.logger.log(`[KYC ${id}] Processing blockchain verification with status: ${verifyKycDto.status}...`);
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: kyc.borrower?.tenantId || user.tenantId,
+          transactionType: 'KYC_VERIFY',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'KYC verification in USER_WALLET mode must be signed in the web wallet flow.',
+        );
+      }
+
+      this.logger.log(
+        `[KYC ${id}] Processing blockchain verification with status: ${verifyKycDto.status}...`,
+      );
       let blockchainResult = await this.blockchainService.verifyKYC(
         kyc.id,
         kyc.borrowerId,
@@ -629,7 +711,9 @@ export class KycService {
         );
 
         if (!blockchainResult) {
-          this.logger.error(`[KYC ${kyc.id}] Failed to create KYC on blockchain with VERIFIED status`);
+          this.logger.error(
+            `[KYC ${kyc.id}] Failed to create KYC on blockchain with VERIFIED status`,
+          );
           throw new BadRequestException(
             'Blockchain verification failed. Cannot create KYC record on blockchain.',
           );
@@ -655,6 +739,10 @@ export class KycService {
           'Blockchain verification failed. Cannot verify KYC without blockchain record.',
         );
       }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
     }
 
     this.logger.log(
@@ -773,10 +861,37 @@ export class KycService {
   ): Promise<void> {
     const kyc = await this.findOne(id);
 
-    const bcTx = await this.blockchainService.deleteKYC(id);
-    if (!bcTx && this.blockchainService.isEnabled()) {
-      throw new BadRequestException(
-        'Failed to record KYC deletion on blockchain',
+    if (this.blockchainService.isEnabled()) {
+      const orchestrationDecision =
+        await this.transactionOrchestrator.orchestrate({
+          userId: user.sub,
+          tenantId: kyc.borrower?.tenantId || user.tenantId,
+          transactionType: 'KYC_DELETE',
+          platform: this.resolvePlatform(user),
+          userRoles: user.roles,
+        });
+
+      if (!orchestrationDecision.eligible) {
+        throw new BadRequestException(
+          orchestrationDecision.denialReason || 'Transaction blocked by policy',
+        );
+      }
+
+      if (orchestrationDecision.gasPayer === 'USER') {
+        throw new BadRequestException(
+          'KYC deletion in USER_WALLET mode must be signed in the web wallet flow.',
+        );
+      }
+
+      const bcTx = await this.blockchainService.deleteKYC(id);
+      if (!bcTx) {
+        throw new BadRequestException(
+          'Failed to record KYC deletion on blockchain',
+        );
+      }
+
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
       );
     }
 

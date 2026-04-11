@@ -6,6 +6,7 @@ import { CloudinaryUploadsModule } from '../cloudinary-uploads/cloudinary-upload
 import { MailModule } from '../mail/mail.module';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { BlockchainModule } from '../blockchain/blockchain.module';
+import { TransactionOrchestratorModule } from '../transaction-orchestrator/transaction-orchestrator.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { BlockchainModule } from '../blockchain/blockchain.module';
     MailModule,
     ActivityLogsModule,
     BlockchainModule,
+    TransactionOrchestratorModule,
   ],
   controllers: [ContractsController],
   providers: [ContractsService, PrismaService],
