@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
@@ -243,11 +242,12 @@ export default function LoanDetailsScreen() {
 
   const formatCurrencyInline = (value: number | null | undefined) => {
     const safeValue = value ?? 0;
-    const numericValue = typeof safeValue === "string" ? parseFloat(safeValue) : safeValue;
+    const numericValue =
+      typeof safeValue === "string" ? parseFloat(safeValue) : safeValue;
     if (isNaN(numericValue)) return "0.00";
-    const parts = numericValue.toFixed(2).split('.');
-    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    return parts.join('.');
+    const parts = numericValue.toFixed(2).split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
   };
 
   const loadData = useCallback(async () => {
