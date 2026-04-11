@@ -11,7 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Card, AppHeader } from "@/components/ui";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, borderRadius } from "@/constants/theme";
 import { contractsApi } from "@/api";
 import type { Contract } from "@/types";
 import { formatCurrency } from "@/utils/currency";
@@ -28,7 +28,7 @@ export default function ContractsScreen() {
     try {
       const data = await contractsApi.getAll();
       setContracts(data);
-    } catch (error) {
+    } catch {
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -184,7 +184,6 @@ export default function ContractsScreen() {
                   {new Date(contract.startDate).toLocaleDateString()}
                 </Text>
               </View>
-
 
               {contract.signedAt && (
                 <View style={styles.dateRow}>
