@@ -48,9 +48,11 @@ export default function EditProfileScreen() {
     return formData.fullName.trim() !== "";
   }, [formData.fullName]);
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadUserData();
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadUserData = async () => {
     setLoading(true);
@@ -69,7 +71,7 @@ export default function EditProfileScreen() {
       setOriginalData(newFormData);
       setProfileImageUrl(userData.profileImage || null);
       dispatch(setUser(userData));
-    } catch (error) {
+    } catch {
       showToast("Failed to load user data", "error");
     } finally {
       setLoading(false);

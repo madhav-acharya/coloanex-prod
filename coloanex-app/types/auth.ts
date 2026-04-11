@@ -12,7 +12,7 @@ export interface AuthUser {
   profileImage?: string;
   isActive: boolean;
   lastActiveAt?: string;
-  roles: Array<{
+  roles: {
     roleId: string;
     userId: string;
     role: {
@@ -22,9 +22,8 @@ export interface AuthUser {
       createdAt: string;
       updatedAt: string;
     };
-  }>;
-  permissions: Array<
-    | string
+  }[];
+  permissions: (| string
     | {
         userId?: string;
         permissionId?: string;
@@ -35,8 +34,7 @@ export interface AuthUser {
         };
         id?: string;
         name?: string;
-      }
-  >;
+      })[];
   tenantId?: string;
 }
 

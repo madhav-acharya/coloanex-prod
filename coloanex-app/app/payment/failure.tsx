@@ -20,7 +20,7 @@ export default function PaymentFailureScreen() {
 
   useEffect(() => {
     showToast("Payment was not completed. Please try again.", "error");
-  }, []);
+  }, [showToast]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

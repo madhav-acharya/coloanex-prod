@@ -20,7 +20,7 @@ export default function PaymentSuccessScreen() {
 
   useEffect(() => {
     showToast("Payment processed successfully!", "success");
-  }, []);
+  }, [showToast]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

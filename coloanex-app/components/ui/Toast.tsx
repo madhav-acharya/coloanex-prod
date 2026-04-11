@@ -71,7 +71,7 @@ function ToastItem({
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [onRemove, opacity, translateY]);
 
   const getIcon = () => {
     switch (toast.type) {

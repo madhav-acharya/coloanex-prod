@@ -35,7 +35,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
 }) => {
   const webViewRef = useRef<WebView>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUrl, setCurrentUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -48,7 +47,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
     }
 
     setLoading(true);
-    setCurrentUrl(paymentUrl);
     setError(null);
 
     loadingTimeoutRef.current = setTimeout(() => {
@@ -66,7 +64,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
 
   const handleNavigationStateChange = (navState: WebViewNavigation) => {
     const { url } = navState;
-    setCurrentUrl(url);
     setLoading(navState.loading);
 
     if (url.includes(successUrlPattern)) {
@@ -82,7 +79,6 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
 
   const handleClose = () => {
     setLoading(true);
-    setCurrentUrl("");
     setError(null);
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
@@ -103,7 +99,9 @@ export const PaymentWebView: React.FC<PaymentWebViewProps> = ({
   const handleWebViewError = (syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
     setLoading(false);
-    setError(`Failed to load payment page: ${nativeEvent.description || "Network error"}`);
+    setError(
+      `Failed to load payment page: ${nativeEvent.description || "Network error"}`,
+    );
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
       loadingTimeoutRef.current = null;

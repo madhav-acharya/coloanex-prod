@@ -41,7 +41,8 @@ export default function TransactionsScreen() {
         new Set(
           myLoans
             .flatMap((loan) => [loan.borrowerId, loan.tenantId])
-            .concat(currentIdentifier ? [currentIdentifier] : []),
+            .concat(currentIdentifier ? [currentIdentifier] : [])
+            .concat(user?.tenantId ? [user.tenantId] : []),
         ),
       ).filter((id): id is string => Boolean(id));
       const contractIds = Array.from(
@@ -92,7 +93,7 @@ export default function TransactionsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentIdentifier]);
+  }, [currentIdentifier, user?.tenantId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -622,6 +623,23 @@ const createStyles = (colors: any) =>
       alignItems: "center",
       justifyContent: "space-between",
       gap: spacing.sm,
+    },
+    planCard: {
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      padding: spacing.sm,
+      marginTop: spacing.xs,
+      gap: 4,
+    },
+    smallButton: {
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+    },
+    smallButtonText: {
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: "700",
     },
     pageButton: {
       borderWidth: 1,

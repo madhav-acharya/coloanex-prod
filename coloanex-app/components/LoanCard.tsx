@@ -1,7 +1,6 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, LenderLogo, Button, CurrencyIcon } from "./ui";
-import { formatCurrency as formatNPR } from "@/utils/currency";
 import { useTheme } from "@/hooks/useTheme";
 
 interface LoanCardProps {

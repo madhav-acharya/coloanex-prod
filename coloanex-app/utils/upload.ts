@@ -52,7 +52,7 @@ export const uploadToCloudinary = async (
 };
 
 export const uploadMultipleToCloudinary = async (
-  files: Array<{ uri: string; name: string; type: string }>
+  files: { uri: string; name: string; type: string }[]
 ): Promise<CloudinaryUploadResponse[]> => {
   try {
     const formData = new FormData();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -25,7 +25,7 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
 import { uploadToCloudinary } from "@/utils/upload";
-import { borderRadius, spacing } from "@/constants/theme";
+import { ensureActiveSubscription } from "@/utils/subscriptionGuard";
 
 const GENDER_OPTIONS = [
   { label: "Male", value: "Male" },
@@ -76,9 +76,10 @@ export default function KYCVerificationScreen() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [prefillModal, setPrefillModal] = useState(false);
-  const [checkingKyc, setCheckingKyc] = useState(true);
   const [blockchainProcessing, setBlockchainProcessing] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
 
   const [personalInfo, setPersonalInfo] = useState({
     firstName: "",
@@ -140,8 +141,8 @@ export default function KYCVerificationScreen() {
         }
       })
       .catch(() => {})
-      .finally(() => setCheckingKyc(false));
-  }, [tenantId]);
+      .finally(() => {});
+  }, [showToast, tenantId]);
 
   const prefillFromKyc = async () => {
     try {
@@ -217,18 +218,21 @@ export default function KYCVerificationScreen() {
     }
   };
 
-  const getDocumentDetail = (docType: string): DocumentInfo => {
-    return (
-      documentDetails[docType] || {
-        documentNumber: "",
-        issueDate: null,
-        expiryDate: null,
-        issueDistrict: "",
-        frontImage: "",
-        backImage: "",
-      }
-    );
-  };
+  const getDocumentDetail = useCallback(
+    (docType: string): DocumentInfo => {
+      return (
+        documentDetails[docType] || {
+          documentNumber: "",
+          issueDate: null,
+          expiryDate: null,
+          issueDistrict: "",
+          frontImage: "",
+          backImage: "",
+        }
+      );
+    },
+    [documentDetails],
+  );
 
   const updateDocumentDetail = (
     docType: string,
@@ -346,7 +350,7 @@ export default function KYCVerificationScreen() {
     address,
     financialInfo,
     selectedDocumentTypes,
-    documentDetails,
+    getDocumentDetail,
     passportPhoto,
     selfie,
   ]);
@@ -455,6 +459,11 @@ export default function KYCVerificationScreen() {
 
   const handleSubmit = async () => {
     if (!validateStep(4)) {
+      return;
+    }
+
+    const hasSubscription = await ensureActiveSubscription(showToast);
+    if (!hasSubscription) {
       return;
     }
 
@@ -720,7 +729,7 @@ export default function KYCVerificationScreen() {
             />
 
             <Text style={[styles.label, { color: colors.text }]}>
-              Father's Name
+              Father&apos;s Name
             </Text>
             <Input
               value={personalInfo.fatherName}
@@ -731,7 +740,7 @@ export default function KYCVerificationScreen() {
             />
 
             <Text style={[styles.label, { color: colors.text }]}>
-              Mother's Name
+              Mother&apos;s Name
             </Text>
             <Input
               value={personalInfo.motherName}
@@ -742,7 +751,7 @@ export default function KYCVerificationScreen() {
             />
 
             <Text style={[styles.label, { color: colors.text }]}>
-              Grandfather's Name
+              Grandfather&apos;s Name
             </Text>
             <Input
               value={personalInfo.grandfatherName}

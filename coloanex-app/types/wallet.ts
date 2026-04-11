@@ -16,7 +16,7 @@ export interface Rule {
     gracePeriodDays: number;
   };
   paymentConfig: {
-    allowedFrequencies: Array<"WEEKLY" | "MONTHLY" | "QUARTERLY">;
+    allowedFrequencies: ("WEEKLY" | "MONTHLY" | "QUARTERLY")[];
     allowEarlyPayment: boolean;
     earlyPaymentPenalty?: number;
   };

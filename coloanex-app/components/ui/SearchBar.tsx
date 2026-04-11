@@ -51,7 +51,7 @@ export default function SearchBar({
           const results = await getSuggestions(query);
           setSuggestions(results);
           setShowSuggestions(results.length > 0);
-        } catch (error) {
+        } catch {
           setSuggestions([]);
           setShowSuggestions(false);
         }

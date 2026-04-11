@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Card, LenderLogo, RatingStars, Button } from "./ui";
 import { formatCurrencyShort } from "@/utils/currency";

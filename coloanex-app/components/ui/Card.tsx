@@ -13,7 +13,7 @@ export default function Card({
   style,
   variant = "default",
 }: CardProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <View
