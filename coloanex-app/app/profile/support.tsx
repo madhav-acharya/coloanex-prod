@@ -8,7 +8,6 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { Card, AppHeader } from "@/components/ui";
 import { spacing, typography, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
