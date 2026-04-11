@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { Kyc, KycSubmission, KycStatus } from "@/types";
+import type { Kyc } from "@/types";
 
 export const kycApi = {
   submit: async (kycData: any): Promise<any> => {
