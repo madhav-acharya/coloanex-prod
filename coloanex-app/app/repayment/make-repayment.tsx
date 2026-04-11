@@ -14,15 +14,16 @@ import { useLocalSearchParams, router } from "expo-router";
 import { Buffer } from "buffer";
 import AppHeader from "@/components/ui/AppHeader";
 import { PaymentWebView } from "@/components/payments";
-import { spacing, typography, borderRadius } from "@/constants/theme";
+import { spacing, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { useKhaltiPayment, useEsewaPayment } from "@/hooks/payments";
-import { loansApi, walletsApi, contractsApi, paymentSchedulesApi } from "@/api";
+import { loansApi, contractsApi, paymentSchedulesApi } from "@/api";
 import { useToast, BlockchainProcessingModal } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentGateway } from "@/api/paymentsApi";
 import { formatCurrency } from "@/utils/currency";
+import { ensureActiveSubscription } from "@/utils/subscriptionGuard";
 
 const SUCCESS_URL_PATTERN = "/payment/success";
 const FAILURE_URL_PATTERN = "/payment/failure";
@@ -70,7 +71,9 @@ export default function MakeRepaymentScreen() {
   const [loading, setLoading] = useState(true);
   const [initiating, setInitiating] = useState(false);
   const [blockchainProcessing, setBlockchainProcessing] = useState(false);
-  const [blockchainStep, setBlockchainStep] = useState<"blockchain" | "database" | "complete">("blockchain");
+  const [blockchainStep, setBlockchainStep] = useState<
+    "blockchain" | "database" | "complete"
+  >("blockchain");
   const [showPaymentWebView, setShowPaymentWebView] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState("");
   const [currentPaymentData, setCurrentPaymentData] = useState<{
@@ -81,9 +84,9 @@ export default function MakeRepaymentScreen() {
 
   const safeNum = (val: any) => {
     if (val === undefined || val === null) return 0;
-    if (typeof val === 'number') return val;
-    if (typeof val === 'string') {
-      if (val === '[object Object]') return 0;
+    if (typeof val === "number") return val;
+    if (typeof val === "string") {
+      if (val === "[object Object]") return 0;
       return parseFloat(val) || 0;
     }
     return 0; // if it's an object, we just gracefully fallback to 0 in case frontend got messed up
@@ -117,8 +120,7 @@ export default function MakeRepaymentScreen() {
           if (schedule?.status === "PAID") {
             setAlreadyPaid(true);
           }
-        } catch {
-        }
+        } catch {}
       }
     } catch {
       showToast("Failed to load payment details. Please try again.", "error");
@@ -126,7 +128,7 @@ export default function MakeRepaymentScreen() {
     } finally {
       setLoading(false);
     }
-  }, [params.loanId, params.contractId, params.scheduleId]);
+  }, [params.loanId, params.contractId, params.scheduleId, showToast]);
 
   useEffect(() => {
     loadData();
@@ -286,6 +288,11 @@ export default function MakeRepaymentScreen() {
   };
 
   const handlePay = async () => {
+    const hasSubscription = await ensureActiveSubscription(showToast);
+    if (!hasSubscription) {
+      return;
+    }
+
     if (!selectedGateway) {
       showToast("Please select a payment method to continue.", "warning");
       return;
@@ -298,17 +305,20 @@ export default function MakeRepaymentScreen() {
     setInitiating(true);
     try {
       const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
-      const apiUrl = Platform.OS === 'web' && apiBase.includes('192.168.')
-        ? 'http://localhost:3000/api'
-        : `${apiBase}/api`;
+      const apiUrl =
+        Platform.OS === "web" && apiBase.includes("192.168.")
+          ? "http://localhost:3000/api"
+          : `${apiBase}/api`;
 
-      const resolvedSuccessUrl = Platform.OS === 'web'
-        ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
-        : `https://coloanex-intercept.app/payment/success`;
+      const resolvedSuccessUrl =
+        Platform.OS === "web"
+          ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
+          : `https://coloanex-intercept.app/payment/success`;
 
-      const resolvedFailureUrl = Platform.OS === 'web'
-        ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
-        : `https://coloanex-intercept.app/payment/failure`;
+      const resolvedFailureUrl =
+        Platform.OS === "web"
+          ? `${window.location.origin}/payment/callback?gateway=${selectedGateway}`
+          : `https://coloanex-intercept.app/payment/failure`;
 
       const paymentHook =
         selectedGateway === "KHALTI" ? khaltiPayment : esewaPayment;
@@ -589,8 +599,6 @@ export default function MakeRepaymentScreen() {
               {formatCurrency(amount)}
             </Text>
           </View>
-
-
         </View>
 
         <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
