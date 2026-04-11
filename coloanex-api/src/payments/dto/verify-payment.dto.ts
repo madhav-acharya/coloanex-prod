@@ -30,6 +30,14 @@ export class VerifyPaymentDto {
   @IsString()
   walletId?: string;
 
+  @IsOptional()
+  @IsEnum(['USER_WALLET', 'PLATFORM_WALLET'])
+  gasPaymentMode?: 'USER_WALLET' | 'PLATFORM_WALLET';
+
+  @IsOptional()
+  @IsEnum(['WEB', 'APP'])
+  platform?: 'WEB' | 'APP';
+
   @IsEnum(VerifyTransactionType)
   type: VerifyTransactionType;
 
