@@ -25,6 +25,9 @@ import type { Loan, LoanQuery, CreateLoanDto } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { useAuth } from "@/hooks/useAuth";
 import { LoanReviewModal } from "@/components/modals/LoanReviewModal";
+import { useGetMyWalletsQuery } from "@/apis/walletsApi";
+import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
+import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 import {
   updateLoanStatusOnBlockchain,
   recordLoanOnBlockchain,
@@ -51,6 +54,21 @@ export default function LoanRequests() {
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
   const [deleteLoan] = useDeleteLoanMutation();
   const [reviewLoan, { isLoading: isReviewing }] = useReviewLoanMutation();
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
+  const blockchainAccess = useMemo(
+    () =>
+      getBlockchainAccessSnapshot({
+        gasPaymentMode: (user as any)?.gasPaymentMode,
+        wallets,
+        subscriptions: mySubscriptions,
+      }),
+    [user, wallets, mySubscriptions],
+  );
+  const shouldUseWalletSignature =
+    blockchainAccess.canRunBlockchain &&
+    blockchainAccess.mode === "USER_WALLET";
+  const shouldShowBlockchainProcessing = blockchainAccess.canRunBlockchain;
 
   const isSuperAdmin = useMemo(
     () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
@@ -277,47 +295,55 @@ export default function LoanRequests() {
     if (!loanToDelete) return;
 
     setIsDeletingLoan(true);
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
-    
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+    }
+
     try {
       let blockchainTxHash: string | undefined;
 
-      try {
-        const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
-        blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.message ||
-              "Failed to sign blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
+          blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.message ||
+                "Failed to sign blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+      }
 
       await deleteLoan(loanToDelete.id).unwrap();
-      
-      setTimeout(() => {
-        setBlockchainStep("complete");
+
+      if (shouldShowBlockchainProcessing) {
         setTimeout(() => {
-          setBlockchainStep("blockchain");
-          setIsProcessingBlockchain(false);
-        }, 1000);
-      }, 500);
+          setBlockchainStep("complete");
+          setTimeout(() => {
+            setBlockchainStep("blockchain");
+            setIsProcessingBlockchain(false);
+          }, 1000);
+        }, 500);
+      }
 
       toast({
         title: "Success",
@@ -360,60 +386,58 @@ export default function LoanRequests() {
   ) => {
     if (!selectedLoan) return;
 
-    setIsProcessingBlockchain(true);
-    setBlockchainStep("blockchain");
+    if (shouldShowBlockchainProcessing) {
+      setIsProcessingBlockchain(true);
+      setBlockchainStep("blockchain");
+    }
 
     try {
       let blockchainTxHash: string | undefined;
 
-      try {
-        console.log(
-          "Starting blockchain update for loan:",
-          selectedLoan.id,
-          "status:",
-          status,
-        );
-        blockchainTxHash = await updateLoanStatusOnBlockchain(
-          selectedLoan.id,
-          status,
-        );
-        console.log("Blockchain update successful, hash:", blockchainTxHash);
-      } catch (blockchainError: any) {
-        console.error("Blockchain error details:", blockchainError);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Cancelled",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          return;
-        } else {
-          setIsProcessingBlockchain(false);
-          setBlockchainStep("blockchain");
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.reason ||
-              blockchainError.message ||
-              "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          blockchainTxHash = await updateLoanStatusOnBlockchain(
+            selectedLoan.id,
+            status,
+          );
+        } catch (blockchainError: any) {
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Cancelled",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            setIsProcessingBlockchain(false);
+            setBlockchainStep("blockchain");
+            return;
+          } else if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Required",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            setIsProcessingBlockchain(false);
+            setBlockchainStep("blockchain");
+            return;
+          } else {
+            setIsProcessingBlockchain(false);
+            setBlockchainStep("blockchain");
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.reason ||
+                blockchainError.message ||
+                "Failed to process blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+      }
 
       await reviewLoan({
         id: selectedLoan.id,
@@ -429,13 +453,15 @@ export default function LoanRequests() {
 
       setBlockchainStep("database");
 
-      setTimeout(() => {
-        setBlockchainStep("complete");
+      if (shouldShowBlockchainProcessing) {
         setTimeout(() => {
-          setBlockchainStep("blockchain");
-          setIsProcessingBlockchain(false);
-        }, 1000);
-      }, 500);
+          setBlockchainStep("complete");
+          setTimeout(() => {
+            setBlockchainStep("blockchain");
+            setIsProcessingBlockchain(false);
+          }, 1000);
+        }, 500);
+      }
 
       toast({
         title: "Success",
@@ -567,66 +593,73 @@ export default function LoanRequests() {
     };
 
     try {
-      setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
+      if (shouldShowBlockchainProcessing) {
+        setIsProcessingBlockchain(true);
+        setBlockchainStep("blockchain");
+      }
 
       let blockchainTxHash: string | undefined;
       let loanId: string | undefined;
 
-      try {
-        if (editingLoan) {
-          const { updateLoanOnBlockchain } = await import("@/utils/blockchain");
-          blockchainTxHash = await updateLoanOnBlockchain(
-            editingLoan.id,
-            loanData.requestedAmount * 100,
-            loanData.requestedTermMonths,
-          );
-        } else {
-          loanId = crypto.randomUUID();
-          blockchainTxHash = await recordLoanOnBlockchain(
-            loanId,
-            loanData.requestedAmount * 100,
-            1200,
-            loanData.requestedTermMonths,
-          );
-        }
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.code === "INSUFFICIENT_FUNDS") {
-          toast({
-            title: "Insufficient Funds",
-            description:
-              "Not enough funds for gas fees. Get testnet tokens from faucet.",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Error",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.message ||
-              "Failed to sign blockchain transaction",
-            variant: "destructive",
-          });
-          return;
+      if (shouldUseWalletSignature) {
+        try {
+          if (editingLoan) {
+            const { updateLoanOnBlockchain } =
+              await import("@/utils/blockchain");
+            blockchainTxHash = await updateLoanOnBlockchain(
+              editingLoan.id,
+              loanData.requestedAmount * 100,
+              loanData.requestedTermMonths,
+            );
+          } else {
+            loanId = crypto.randomUUID();
+            blockchainTxHash = await recordLoanOnBlockchain(
+              loanId,
+              loanData.requestedAmount * 100,
+              1200,
+              loanData.requestedTermMonths,
+            );
+          }
+        } catch (blockchainError: any) {
+          setIsProcessingBlockchain(false);
+          if (blockchainError.code === "ACTION_REJECTED") {
+            toast({
+              title: "Transaction Rejected",
+              description: "You rejected the blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.code === "INSUFFICIENT_FUNDS") {
+            toast({
+              title: "Insufficient Funds",
+              description:
+                "Not enough funds for gas fees. Get testnet tokens from faucet.",
+              variant: "destructive",
+            });
+            return;
+          } else if (blockchainError.message?.includes("MetaMask")) {
+            toast({
+              title: "MetaMask Error",
+              description: blockchainError.message,
+              variant: "destructive",
+            });
+            return;
+          } else {
+            toast({
+              title: "Blockchain Error",
+              description:
+                blockchainError.message ||
+                "Failed to sign blockchain transaction",
+              variant: "destructive",
+            });
+            return;
+          }
         }
       }
 
-      setBlockchainStep("database");
+      if (shouldShowBlockchainProcessing) {
+        setBlockchainStep("database");
+      }
 
       if (editingLoan) {
         const payload = blockchainTxHash
@@ -638,9 +671,10 @@ export default function LoanRequests() {
           description: "Loan request updated successfully",
         });
       } else {
-        const payload = blockchainTxHash && loanId
-          ? { ...loanData, blockchainTxHash: blockchainTxHash, id: loanId }
-          : loanData;
+        const payload =
+          blockchainTxHash && loanId
+            ? { ...loanData, blockchainTxHash: blockchainTxHash, id: loanId }
+            : loanData;
         await createLoan(payload).unwrap();
         toast({
           title: "Success",
@@ -659,7 +693,9 @@ export default function LoanRequests() {
         variant: "destructive",
       });
     } finally {
-      setIsProcessingBlockchain(false);
+      if (blockchainAccess.canRunBlockchain) {
+        setIsProcessingBlockchain(false);
+      }
     }
   };
 
