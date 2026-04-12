@@ -157,8 +157,8 @@ export class KycService {
       return kycResult.id;
     });
 
-    let blockchainTxHash: string | null = null;
-    let blockchainData: any = null;
+    let blockchainTxHash: string | null = createKycDto.blockchainTxHash || null;
+    let blockchainData: any = createKycDto.blockchainData || null;
 
     const orchestrationDecision =
       await this.transactionOrchestrator.orchestrate({
@@ -175,13 +175,7 @@ export class KycService {
       );
     }
 
-    if (orchestrationDecision.gasPayer === 'USER') {
-      throw new BadRequestException(
-        'KYC blockchain submission in USER_WALLET mode must be signed in the web wallet flow.',
-      );
-    }
-
-    if (this.blockchainService.isEnabled()) {
+    if (this.blockchainService.isEnabled() && !blockchainTxHash) {
       this.logger.log(`[KYC ${kycId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordKyc(
         kycId,
@@ -203,9 +197,8 @@ export class KycService {
         };
         this.logger.log(`[KYC ${kycId}] Blockchain successful: ${bcTx.txHash}`);
       } else {
-        this.logger.error(`[KYC ${kycId}] Blockchain transaction failed`);
-        throw new BadRequestException(
-          'Blockchain transaction failed. Cannot create KYC without blockchain record.',
+        this.logger.warn(
+          `[KYC ${kycId}] Blockchain transaction failed, continuing with existing/provided blockchain metadata`,
         );
       }
     }
@@ -568,8 +561,12 @@ export class KycService {
       user.tenantId,
     );
 
-    let blockchainTxHash: string;
-    let blockchainData: any;
+    let blockchainTxHash: string | null =
+      updateKycDto.blockchainTxHash ||
+      (existing as any).blockchainTxHash ||
+      null;
+    let blockchainData: any =
+      updateKycDto.blockchainData || (existing as any).blockchainData || null;
 
     if (this.blockchainService.isEnabled()) {
       const orchestrationDecision =
@@ -587,31 +584,42 @@ export class KycService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'KYC update in USER_WALLET mode must be signed in the web wallet flow.',
+      const hasClientBlockchainRecord =
+        Boolean(updateKycDto.blockchainTxHash) ||
+        Boolean(updateKycDto.blockchainData);
+
+      if (
+        orchestrationDecision.gasPayer !== 'USER' &&
+        !hasClientBlockchainRecord
+      ) {
+        this.logger.log(
+          `[KYC ${id}] Updating blockchain status to ${updated.status}...`,
         );
+        const bcTx = await this.blockchainService.updateKYC(id, updated.status);
+
+        if (bcTx) {
+          blockchainTxHash = bcTx.txHash;
+          blockchainData = {
+            txHash: bcTx.txHash,
+            blockNumber: bcTx.blockNumber,
+            gasUsed: bcTx.gasUsed,
+            gasPriceGwei: bcTx.gasPriceGwei,
+            gasFeeGwei: bcTx.gasFeeGwei,
+            explorerUrl: bcTx.explorerUrl,
+          };
+
+          this.logger.log(
+            `[KYC ${id}] Blockchain update successful: ${bcTx.txHash}`,
+          );
+        } else if (!blockchainTxHash && !blockchainData) {
+          this.logger.error(`[KYC ${id}] Blockchain update failed`);
+          throw new BadRequestException(
+            'Blockchain update failed. Cannot update KYC without blockchain record.',
+          );
+        }
       }
 
-      this.logger.log(
-        `[KYC ${id}] Updating blockchain status to ${updated.status}...`,
-      );
-      const bcTx = await this.blockchainService.updateKYC(id, updated.status);
-
-      if (bcTx) {
-        blockchainTxHash = bcTx.txHash;
-        blockchainData = {
-          txHash: bcTx.txHash,
-          blockNumber: bcTx.blockNumber,
-          gasUsed: bcTx.gasUsed,
-          gasPriceGwei: bcTx.gasPriceGwei,
-          gasFeeGwei: bcTx.gasFeeGwei,
-          explorerUrl: bcTx.explorerUrl,
-        };
-
-        this.logger.log(
-          `[KYC ${id}] Blockchain update successful: ${bcTx.txHash}`,
-        );
+      if (blockchainTxHash || blockchainData) {
         await this.prisma.kyc.update({
           where: { id },
           data: {
@@ -619,11 +627,6 @@ export class KycService {
             blockchainData,
           },
         });
-      } else {
-        this.logger.error(`[KYC ${id}] Blockchain update failed`);
-        throw new BadRequestException(
-          'Blockchain update failed. Cannot update KYC without blockchain record.',
-        );
       }
 
       await this.subscriptionResolver.consumeUsage(
@@ -661,8 +664,10 @@ export class KycService {
       );
     }
 
-    let blockchainTxHash: string | undefined;
-    let blockchainData: any = null;
+    let blockchainTxHash: string | null =
+      verifyKycDto.blockchainTxHash || (kyc as any).blockchainTxHash || null;
+    let blockchainData: any =
+      verifyKycDto.blockchainData || (kyc as any).blockchainData || null;
 
     if (
       this.blockchainService.isEnabled() &&
@@ -684,60 +689,42 @@ export class KycService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'KYC verification in USER_WALLET mode must be signed in the web wallet flow.',
-        );
-      }
+      const hasClientBlockchainRecord =
+        Boolean(verifyKycDto.blockchainTxHash) ||
+        Boolean(verifyKycDto.blockchainData);
 
-      this.logger.log(
-        `[KYC ${id}] Processing blockchain verification with status: ${verifyKycDto.status}...`,
-      );
-      let blockchainResult = await this.blockchainService.verifyKYC(
-        kyc.id,
-        kyc.borrowerId,
-        verifyKycDto.status,
-      );
-
-      if (!blockchainResult) {
+      if (
+        orchestrationDecision.gasPayer !== 'USER' &&
+        !hasClientBlockchainRecord
+      ) {
         this.logger.log(
-          `[KYC ${kyc.id}] Direct verification failed, creating KYC directly with VERIFIED status`,
+          `[KYC ${id}] Processing blockchain verification with status: ${verifyKycDto.status}...`,
         );
-
-        blockchainResult = await this.blockchainService.verifyKYC(
+        const blockchainResult = await this.blockchainService.verifyKYC(
           kyc.id,
           kyc.borrowerId,
           verifyKycDto.status,
         );
 
-        if (!blockchainResult) {
-          this.logger.error(
-            `[KYC ${kyc.id}] Failed to create KYC on blockchain with VERIFIED status`,
+        if (blockchainResult) {
+          blockchainTxHash = blockchainResult.txHash;
+          blockchainData = {
+            txHash: blockchainResult.txHash,
+            blockNumber: blockchainResult.blockNumber,
+            gasUsed: blockchainResult.gasUsed,
+            gasPriceGwei: blockchainResult.gasPriceGwei,
+            gasFeeGwei: blockchainResult.gasFeeGwei,
+            explorerUrl: blockchainResult.explorerUrl,
+          };
+          this.logger.log(
+            `[KYC ${id}] Blockchain verification successful: ${blockchainResult.txHash}`,
           );
+        } else if (!blockchainTxHash && !blockchainData) {
+          this.logger.error(`[KYC ${id}] Blockchain verification failed`);
           throw new BadRequestException(
-            'Blockchain verification failed. Cannot create KYC record on blockchain.',
+            'Blockchain verification failed. Cannot verify KYC without blockchain record.',
           );
         }
-      }
-
-      if (blockchainResult) {
-        blockchainTxHash = blockchainResult.txHash;
-        blockchainData = {
-          txHash: blockchainResult.txHash,
-          blockNumber: blockchainResult.blockNumber,
-          gasUsed: blockchainResult.gasUsed,
-          gasPriceGwei: blockchainResult.gasPriceGwei,
-          gasFeeGwei: blockchainResult.gasFeeGwei,
-          explorerUrl: blockchainResult.explorerUrl,
-        };
-        this.logger.log(
-          `[KYC ${id}] Blockchain verification successful: ${blockchainResult.txHash}`,
-        );
-      } else {
-        this.logger.error(`[KYC ${id}] Blockchain verification failed`);
-        throw new BadRequestException(
-          'Blockchain verification failed. Cannot verify KYC without blockchain record.',
-        );
       }
 
       await this.subscriptionResolver.consumeUsage(
@@ -877,17 +864,13 @@ export class KycService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'KYC deletion in USER_WALLET mode must be signed in the web wallet flow.',
-        );
-      }
-
-      const bcTx = await this.blockchainService.deleteKYC(id);
-      if (!bcTx) {
-        throw new BadRequestException(
-          'Failed to record KYC deletion on blockchain',
-        );
+      if (orchestrationDecision.gasPayer !== 'USER') {
+        const bcTx = await this.blockchainService.deleteKYC(id);
+        if (!bcTx) {
+          throw new BadRequestException(
+            'Failed to record KYC deletion on blockchain',
+          );
+        }
       }
 
       await this.subscriptionResolver.consumeUsage(
