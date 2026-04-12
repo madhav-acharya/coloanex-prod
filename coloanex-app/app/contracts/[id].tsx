@@ -43,6 +43,9 @@ export default function ContractDetailsScreen() {
   const [signature, setSignature] = useState("");
   const [reportReason, setReportReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [processingAction, setProcessingAction] = useState<
+    "sign" | "report" | null
+  >(null);
 
   const loadContract = async () => {
     setErrorMessage(null);
@@ -58,6 +61,25 @@ export default function ContractDetailsScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const waitForBlockchainSignRecord = async (contractId: string) => {
+    const maxAttempts = 6;
+    const delayMs = 800;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const latest = await contractsApi.getById(contractId);
+      const signHash =
+        latest.blockchainData?.signTxHash || latest.blockchainTxHash;
+      if (signHash) {
+        setContract(latest);
+        return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    throw new Error("Blockchain signature record was not confirmed.");
   };
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -79,17 +101,21 @@ export default function ContractDetailsScreen() {
       return;
     }
 
+    setSignModalVisible(false);
+    setProcessingAction("sign");
     setSubmitting(true);
     try {
       await contractsApi.sign(id, { signature: sig });
+      await waitForBlockchainSignRecord(id);
+      await loadContract();
       Alert.alert("Success", "Contract signed successfully!");
-      setSignModalVisible(false);
       setSignature("");
-      loadContract();
     } catch (error: any) {
+      setSignModalVisible(true);
       Alert.alert("Error", error.message || "Failed to sign contract");
     } finally {
       setSubmitting(false);
+      setProcessingAction(null);
     }
   };
 
@@ -104,20 +130,23 @@ export default function ContractDetailsScreen() {
       return;
     }
 
+    setReportModalVisible(false);
+    setProcessingAction("report");
     setSubmitting(true);
     try {
       await contractsApi.report(id, { reportReason: reportReason.trim() });
+      await loadContract();
       Alert.alert(
         "Success",
         "Contract reported successfully. The lender will review your concern.",
       );
-      setReportModalVisible(false);
       setReportReason("");
-      loadContract();
     } catch (error: any) {
+      setReportModalVisible(true);
       Alert.alert("Error", error.message || "Failed to report contract");
     } finally {
       setSubmitting(false);
+      setProcessingAction(null);
     }
   };
 
@@ -646,9 +675,9 @@ export default function ContractDetailsScreen() {
       </Modal>
 
       <BlockchainProcessingModal
-        visible={submitting}
+        visible={submitting && processingAction !== null}
         message={
-          signModalVisible
+          processingAction === "sign"
             ? "Recording contract signature on the blockchain and updating the database. Please wait..."
             : "Recording contract report on the blockchain and updating the database. Please wait..."
         }
