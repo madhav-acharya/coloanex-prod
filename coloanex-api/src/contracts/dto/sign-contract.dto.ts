@@ -7,4 +7,11 @@ export class SignContractDto {
   @IsOptional()
   @IsString()
   ipAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  blockchainData?: Record<string, unknown>;
 }
