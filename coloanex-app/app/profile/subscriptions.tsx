@@ -6,20 +6,49 @@ import {
   SafeAreaView,
   ScrollView,
   RefreshControl,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
-import { Card, Button } from "@/components/ui";
+import { useFocusEffect } from "expo-router";
+import { Card, Button, useToast } from "@/components/ui";
 import AppHeader from "@/components/ui/AppHeader";
 import { spacing, borderRadius } from "@/constants/theme";
 import { subscriptionsApi } from "@/api";
+import type { SubscriptionPlan } from "@/api/subscriptionsApi";
 import { useTheme } from "@/hooks/useTheme";
+import { useAppSelector } from "@/store/hooks";
+import { paymentsApi } from "@/api/paymentsApi";
+import { PaymentWebView } from "@/components/payments";
+
+type GatewayType = "ESEWA" | "KHALTI";
 
 export default function ProfileSubscriptionsScreen() {
   const { colors, isDark } = useTheme();
+  const { showToast } = useToast();
+  const user = useAppSelector((state) => state.auth.user);
   const styles = createStyles(colors);
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectingId, setSelectingId] = useState<string | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showGatewayPicker, setShowGatewayPicker] = useState(false);
+  const [showPaymentWebView, setShowPaymentWebView] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [pendingPlan, setPendingPlan] = useState<{
+    planCode: string;
+    scope: "USER" | "TENANT";
+    price: number;
+  } | null>(null);
+  const [pendingGatewayPayment, setPendingGatewayPayment] = useState<{
+    gateway: GatewayType;
+    amount: number;
+    transactionUuid: string;
+    planCode: string;
+    scope: "USER" | "TENANT";
+  } | null>(null);
 
   const toneBySubscription = (scope: string, status: string) => {
     const normalizedScope = String(scope || "").toUpperCase();
@@ -73,8 +102,12 @@ export default function ProfileSubscriptionsScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const data = await subscriptionsApi.listMine().catch(() => []);
+      const [data, plansData] = await Promise.all([
+        subscriptionsApi.listMine().catch(() => []),
+        subscriptionsApi.listPlans().catch(() => []),
+      ]);
       setSubscriptions(data);
+      setPlans(plansData);
     } finally {
       setRefreshing(false);
     }
@@ -88,6 +121,167 @@ export default function ProfileSubscriptionsScreen() {
     } finally {
       setSelectingId(null);
     }
+  };
+
+  const buyPlan = async (
+    planCode: string,
+    scope: "USER" | "TENANT",
+    price: number,
+  ) => {
+    const existing = subscriptions.find(
+      (sub) =>
+        sub.plan === planCode &&
+        sub.scope === scope &&
+        sub.lifecycleStatus === "BOUGHT",
+    );
+
+    if (existing) {
+      showToast(
+        `You already have an active ${planCode} subscription`,
+        "warning",
+      );
+      return;
+    }
+
+    if (scope === "TENANT" && !user?.tenantId) {
+      showToast("Tenant account required for this plan", "warning");
+      return;
+    }
+
+    if (Number(price || 0) > 0) {
+      setPendingPlan({ planCode, scope, price: Number(price || 0) });
+      setShowGatewayPicker(true);
+      return;
+    }
+
+    try {
+      await subscriptionsApi.purchase({
+        planCode,
+        scope,
+        tenantId: scope === "TENANT" ? user?.tenantId : undefined,
+      });
+      showToast("Subscription activated", "success");
+      await loadData();
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || "Unable to purchase plan",
+        "error",
+      );
+    }
+  };
+
+  const startGatewayPayment = async (gateway: GatewayType) => {
+    if (!pendingPlan) return;
+    setProcessingPayment(true);
+
+    try {
+      const apiBase = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
+      const apiUrl = `${apiBase}/api`;
+
+      const successUrl =
+        Platform.OS === "web"
+          ? `${window.location.origin}/payment/callback?gateway=${gateway}`
+          : "https://coloanex-intercept.app/payment/success";
+      const failureUrl =
+        Platform.OS === "web"
+          ? `${window.location.origin}/payment/callback?gateway=${gateway}`
+          : "https://coloanex-intercept.app/payment/failure";
+
+      const result = await paymentsApi.initiatePayment({
+        amount: pendingPlan.price,
+        type: "FEE",
+        gateway,
+        gasPaymentMode: "PLATFORM_WALLET",
+        successUrl,
+        failureUrl,
+        platform: "APP",
+      });
+
+      let finalPaymentUrl = result.paymentUrl;
+      if (gateway === "ESEWA" && result.formData) {
+        const encoded = btoa(
+          JSON.stringify({
+            paymentUrl: result.paymentUrl,
+            formData: result.formData,
+          }),
+        );
+        finalPaymentUrl = `${apiUrl}/payments/esewa-form?data=${encoded}`;
+      }
+
+      setPendingGatewayPayment({
+        gateway,
+        amount: pendingPlan.price,
+        transactionUuid:
+          gateway === "KHALTI"
+            ? (result.formData?.pidx ?? result.transactionUuid)
+            : result.transactionUuid,
+        planCode: pendingPlan.planCode,
+        scope: pendingPlan.scope,
+      });
+
+      setShowGatewayPicker(false);
+      setPaymentUrl(finalPaymentUrl);
+      setShowPaymentWebView(true);
+    } catch (error: any) {
+      showToast(
+        error?.response?.data?.message || "Unable to initiate payment",
+        "error",
+      );
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const completeSubscriptionAfterPayment = async () => {
+    if (!pendingGatewayPayment) return;
+
+    const verifyResult = await paymentsApi.verifyPayment({
+      transactionUuid: pendingGatewayPayment.transactionUuid,
+      totalAmount: pendingGatewayPayment.amount,
+      gateway: pendingGatewayPayment.gateway,
+      type: "FEE",
+      gasPaymentMode: "PLATFORM_WALLET",
+      platform: "APP",
+    });
+
+    const transactionId = verifyResult.success
+      ? verifyResult.transactionId
+      : null;
+
+    if (!transactionId) {
+      throw new Error("Payment verification failed");
+    }
+
+    await subscriptionsApi.purchase({
+      planCode: pendingGatewayPayment.planCode,
+      scope: pendingGatewayPayment.scope,
+      tenantId:
+        pendingGatewayPayment.scope === "TENANT" ? user?.tenantId : undefined,
+      paymentTransactionId: transactionId,
+    });
+  };
+
+  const handlePaymentSuccess = async () => {
+    try {
+      await completeSubscriptionAfterPayment();
+      showToast("Subscription activated", "success");
+      await loadData();
+    } catch (error: any) {
+      showToast(error?.message || "Payment verification failed", "error");
+    } finally {
+      setShowPaymentWebView(false);
+      setPendingGatewayPayment(null);
+      setPendingPlan(null);
+      setPaymentUrl("");
+    }
+  };
+
+  const handlePaymentFailure = () => {
+    showToast("Payment failed or cancelled", "error");
+    setShowPaymentWebView(false);
+    setPendingGatewayPayment(null);
+    setPendingPlan(null);
+    setPaymentUrl("");
   };
 
   useFocusEffect(
@@ -131,7 +325,6 @@ export default function ProfileSubscriptionsScreen() {
                 maxTransactions > 0
                   ? Math.max(maxTransactions - usedTransactions, 0)
                   : null;
-              const endsAtDate = sub.endsAt ? new Date(sub.endsAt) : null;
               const lifecycleStatus = sub.lifecycleStatus || "EXPIRED";
               const isExpired = lifecycleStatus === "EXPIRED";
               const isLimitExceeded = lifecycleStatus === "LIMIT_EXCEEDED";
@@ -279,13 +472,163 @@ export default function ProfileSubscriptionsScreen() {
               );
             })
           )}
-          <Button
-            title="Manage Plans"
-            onPress={() => router.push("/pricing")}
-            style={styles.manageButton}
-          />
+        </Card>
+
+        <Card style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Available Plans
+          </Text>
+          {plans
+            .filter((plan) => plan.isActive)
+            .map((plan) => {
+              const maxTx = Number(plan.maxTransactions || 0);
+              const boughtSubscription = subscriptions.find(
+                (sub) =>
+                  sub.plan === plan.code &&
+                  sub.scope === plan.scope &&
+                  sub.lifecycleStatus === "BOUGHT",
+              );
+              const isBought = Boolean(boughtSubscription);
+              const isSelected = Boolean(boughtSubscription?.isSelected);
+
+              return (
+                <View
+                  key={plan.id}
+                  style={[
+                    styles.item,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                    },
+                  ]}
+                >
+                  <View style={styles.itemTopRow}>
+                    <Text style={[styles.planName, { color: colors.text }]}>
+                      {plan.name}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        { color: isBought ? colors.success : colors.primary },
+                      ]}
+                    >
+                      {isBought ? "Current" : plan.scope}
+                    </Text>
+                  </View>
+                  {plan.description ? (
+                    <Text
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {plan.description}
+                    </Text>
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      { color: colors.text, marginTop: spacing.xs },
+                    ]}
+                  >
+                    {plan.currency} {Number(plan.price || 0).toFixed(2)} /{" "}
+                    {plan.billingCycle}
+                  </Text>
+                  <Text
+                    style={[styles.detailText, { color: colors.textSecondary }]}
+                  >
+                    Transactions: {maxTx > 0 ? maxTx : "Unlimited"}
+                  </Text>
+                  {isBought && !isSelected ? (
+                    <Button
+                      title={
+                        selectingId === boughtSubscription?.id
+                          ? "Selecting..."
+                          : "Use This Subscription"
+                      }
+                      onPress={() =>
+                        boughtSubscription?.id &&
+                        selectSubscription(boughtSubscription.id)
+                      }
+                      style={styles.manageButton}
+                    />
+                  ) : null}
+                  {!isBought ? (
+                    <Button
+                      title="Buy"
+                      onPress={() =>
+                        buyPlan(plan.code, plan.scope, Number(plan.price || 0))
+                      }
+                      style={styles.manageButton}
+                    />
+                  ) : null}
+                </View>
+              );
+            })}
         </Card>
       </ScrollView>
+
+      <Modal
+        visible={showGatewayPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowGatewayPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Select Payment Gateway
+            </Text>
+            <View style={styles.gatewayRow}>
+              <TouchableOpacity
+                style={[styles.gatewayButton, { borderColor: colors.border }]}
+                onPress={() => startGatewayPayment("ESEWA")}
+                disabled={processingPayment}
+              >
+                <Text style={[styles.gatewayText, { color: colors.text }]}>
+                  eSewa
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.gatewayButton, { borderColor: colors.border }]}
+                onPress={() => startGatewayPayment("KHALTI")}
+                disabled={processingPayment}
+              >
+                <Text style={[styles.gatewayText, { color: colors.text }]}>
+                  Khalti
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {processingPayment ? (
+              <View style={styles.processingRow}>
+                <ActivityIndicator color={colors.primary} />
+                <Text
+                  style={[styles.detailText, { color: colors.textSecondary }]}
+                >
+                  Processing...
+                </Text>
+              </View>
+            ) : null}
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={() => setShowGatewayPicker(false)}
+              style={styles.manageButton}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <PaymentWebView
+        visible={showPaymentWebView}
+        paymentUrl={paymentUrl}
+        successUrlPattern="/payment/success"
+        failureUrlPattern="/payment/failure"
+        onSuccess={() => handlePaymentSuccess()}
+        onFailure={() => handlePaymentFailure()}
+        onCancel={handlePaymentFailure}
+        gateway={pendingGatewayPayment?.gateway || "ESEWA"}
+      />
     </SafeAreaView>
   );
 }
@@ -370,5 +713,43 @@ const createStyles = (colors: any) =>
     manageButton: {
       marginTop: spacing.md,
       backgroundColor: colors.primary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      justifyContent: "center",
+      padding: spacing.md,
+    },
+    modalCard: {
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    gatewayRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    gatewayButton: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gatewayText: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    processingRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
     },
   });
