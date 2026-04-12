@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { ethers } from "ethers";
 import { Check, FileText, X } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
@@ -8,7 +9,6 @@ import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
 import {
   useGetAllTransactionsQuery,
   useGetTransactionsByEntityQuery,
@@ -41,6 +41,103 @@ export default function Transactions() {
     useCreateWalletMutation();
   const [setPrimaryWallet] = useSetPrimaryWalletMutation();
   const [deleteWallet] = useDeleteWalletMutation();
+  const [walletCoinBalances, setWalletCoinBalances] = useState<
+    Record<string, { symbol: string; value: string }>
+  >({});
+  const [loadingWalletCoinBalances, setLoadingWalletCoinBalances] =
+    useState(false);
+  const [onChainMetaMaskMatches, setOnChainMetaMaskMatches] = useState<
+    Record<string, boolean>
+  >({});
+  const walletBalanceRefreshKey = useMemo(
+    () =>
+      wallets
+        .map((wallet) =>
+          [
+            wallet.id,
+            wallet.address,
+            wallet.provider,
+            wallet.isPrimary ? "1" : "0",
+            wallet.isActive ? "1" : "0",
+          ].join(":"),
+        )
+        .sort()
+        .join("|"),
+    [wallets],
+  );
+
+  const getNativeCoinSymbol = (chainId: string) => {
+    const normalized = String(chainId || "").toLowerCase();
+    if (normalized === "0x1" || normalized === "0xaa36a7") return "ETH";
+    if (normalized === "0x89") return "MATIC";
+    if (normalized === "0x38") return "BNB";
+    return "ETH";
+  };
+
+  const metamaskWallets = useMemo(
+    () => wallets.filter((wallet) => wallet.provider === "METAMASK"),
+    [wallets],
+  );
+  const primaryWallet = useMemo(
+    () =>
+      metamaskWallets.find((wallet) => wallet.isPrimary) || metamaskWallets[0],
+    [metamaskWallets],
+  );
+
+  const refreshWalletCoinBalances = async () => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum || metamaskWallets.length === 0) {
+      setWalletCoinBalances({});
+      return;
+    }
+
+    try {
+      setLoadingWalletCoinBalances(true);
+      const chainId = (await ethereum.request({
+        method: "eth_chainId",
+      })) as string;
+      const symbol = getNativeCoinSymbol(chainId);
+
+      const balances = await Promise.all(
+        metamaskWallets.map(async (wallet) => {
+          const raw = (await ethereum.request({
+            method: "eth_getBalance",
+            params: [wallet.address, "latest"],
+          })) as string;
+          const formatted = Number(ethers.formatEther(raw)).toFixed(6);
+          return [wallet.id, { symbol, value: formatted }] as const;
+        }),
+      );
+
+      setWalletCoinBalances(Object.fromEntries(balances));
+    } catch {
+      setWalletCoinBalances({});
+    } finally {
+      setLoadingWalletCoinBalances(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshWalletCoinBalances();
+  }, [walletBalanceRefreshKey]);
+
+  const walletCoinCards = useMemo(
+    () =>
+      metamaskWallets.map((wallet) => {
+        const balance = walletCoinBalances[wallet.id];
+        return {
+          id: wallet.id,
+          title: wallet.label || `Wallet ${wallet.address.slice(0, 6)}`,
+          value: loadingWalletCoinBalances
+            ? "Loading..."
+            : balance
+              ? `${balance.value} ${balance.symbol}`
+              : "Balance unavailable",
+          subtitle: wallet.address,
+        };
+      }),
+    [metamaskWallets, walletCoinBalances, loadingWalletCoinBalances],
+  );
 
   const isSuperAdmin = user?.roles?.some(
     (ur: any) => ur.role?.name === "Super Admin",
@@ -97,6 +194,83 @@ export default function Transactions() {
         if (tenantEntityId) refetchTenantTransactions();
       };
 
+  const metamaskAddresses = useMemo(
+    () =>
+      new Set(metamaskWallets.map((wallet) => wallet.address.toLowerCase())),
+    [metamaskWallets],
+  );
+
+  const metamaskHistoryTxHashes = useMemo(
+    () =>
+      transactions
+        .map(
+          (transaction) =>
+            ((transaction as any).blockchainTxHash ||
+              (transaction as any).blockchain_tx_hash ||
+              "") as string,
+        )
+        .filter((hash) => Boolean(hash)),
+    [transactions],
+  );
+
+  useEffect(() => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum || metamaskHistoryTxHashes.length === 0) {
+      setOnChainMetaMaskMatches({});
+      return;
+    }
+
+    let cancelled = false;
+
+    const hydrate = async () => {
+      const results: Record<string, boolean> = {};
+      await Promise.all(
+        metamaskHistoryTxHashes.map(async (hash) => {
+          try {
+            const tx = (await ethereum.request({
+              method: "eth_getTransactionByHash",
+              params: [hash],
+            })) as any;
+            if (!tx) {
+              results[hash] = false;
+              return;
+            }
+            const from = String(tx.from || "").toLowerCase();
+            const to = String(tx.to || "").toLowerCase();
+            results[hash] =
+              metamaskAddresses.has(from) || metamaskAddresses.has(to);
+          } catch {
+            results[hash] = false;
+          }
+        }),
+      );
+
+      if (!cancelled) {
+        setOnChainMetaMaskMatches(results);
+      }
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    metamaskHistoryTxHashes.join("|"),
+    Array.from(metamaskAddresses).join("|"),
+  ]);
+
+  const metamaskTableTransactions = useMemo(
+    () =>
+      transactions.filter((transaction) => {
+        const hash = ((transaction as any).blockchainTxHash ||
+          (transaction as any).blockchain_tx_hash ||
+          "") as string;
+        if (!hash) return false;
+        return onChainMetaMaskMatches[hash] === true;
+      }),
+    [transactions, onChainMetaMaskMatches],
+  );
+
   // Calculate To Give and To Receive based on transaction flow
   const { toGive, toReceive } = useMemo(() => {
     let give = 0;
@@ -143,13 +317,7 @@ export default function Transactions() {
     };
   }, [transactions, isSuperAdmin, entityIds]);
 
-  const MetricCard = ({
-    title,
-    value,
-    color,
-    isCurrency = false,
-    trend,
-  }: any) => (
+  const MetricCard = ({ title, value, color, isCurrency = false }: any) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
@@ -169,75 +337,24 @@ export default function Transactions() {
               </h3>
             </div>
           </div>
-          <div className="w-20 h-10">
-            {trend && trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart data={trend}>
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke={color}
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart
-                  data={[
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                  ]}
-                >
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#E5E7EB"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>
   );
 
-  const generateTrend = (baseValue: number, isPositive: boolean = true) => {
-    const trend = [];
-    if (baseValue <= 0) return trend;
-    for (let i = 0; i < 6; i++) {
-      const variation = isPositive
-        ? Math.floor(baseValue * (0.7 + i * 0.05)) +
-          Math.random() * baseValue * 0.1
-        : Math.max(
-            0,
-            Math.floor(baseValue * (1 - i * 0.05)) -
-              Math.random() * baseValue * 0.1,
-          );
-      trend.push({ value: Math.floor(variation) });
-    }
-    return trend;
-  };
-
   const filteredTransactions = useMemo(() => {
-    let filtered = transactions.filter((transaction: Transaction) => {
-      const matchesSearch =
-        searchValue === "" ||
-        transaction.type?.toLowerCase().includes(searchValue.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" || transaction.status === statusFilter;
-      const matchesType =
-        typeFilter === "all" || transaction.type === typeFilter;
-      return matchesSearch && matchesStatus && matchesType;
-    });
+    let filtered = metamaskTableTransactions.filter(
+      (transaction: Transaction) => {
+        const matchesSearch =
+          searchValue === "" ||
+          transaction.type?.toLowerCase().includes(searchValue.toLowerCase());
+        const matchesStatus =
+          statusFilter === "all" || transaction.status === statusFilter;
+        const matchesType =
+          typeFilter === "all" || transaction.type === typeFilter;
+        return matchesSearch && matchesStatus && matchesType;
+      },
+    );
 
     filtered.sort((a: Transaction, b: Transaction) => {
       const aValue = a[sortBy as keyof Transaction] ?? "";
@@ -249,7 +366,14 @@ export default function Transactions() {
     });
 
     return filtered;
-  }, [transactions, searchValue, statusFilter, typeFilter, sortBy, sortOrder]);
+  }, [
+    metamaskTableTransactions,
+    searchValue,
+    statusFilter,
+    typeFilter,
+    sortBy,
+    sortOrder,
+  ]);
 
   const paginatedTransactions = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
@@ -321,6 +445,42 @@ export default function Transactions() {
           error?.data?.message ||
           error?.message ||
           "Unable to connect MetaMask",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const refreshAllWalletData = async () => {
+    await refetchWallets();
+    await refreshWalletCoinBalances();
+  };
+
+  const handleUseWallet = async (id: string) => {
+    try {
+      await setPrimaryWallet({ id }).unwrap();
+      await refreshAllWalletData();
+      toast({
+        title: "Wallet switched",
+        description: "Primary wallet updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Switch failed",
+        description: error?.data?.message || "Unable to switch wallet",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteWallet = async (id: string) => {
+    try {
+      await deleteWallet({ id }).unwrap();
+      await refreshAllWalletData();
+      toast({ title: "Wallet removed" });
+    } catch (error: any) {
+      toast({
+        title: "Delete failed",
+        description: error?.data?.message || "Unable to remove wallet",
         variant: "destructive",
       });
     }
@@ -556,8 +716,16 @@ export default function Transactions() {
       onSearchChange={setSearchValue}
       actions={[
         {
+          label: metamaskWallets.length > 0 ? "Add More Wallet" : "Add Wallet",
+          onClick: () => connectMetamask(),
+          variant: "default",
+        },
+        {
           label: "Refresh",
-          onClick: () => refetch(),
+          onClick: async () => {
+            refetch();
+            await refreshAllWalletData();
+          },
           variant: "outline",
         },
       ]}
@@ -599,7 +767,7 @@ export default function Transactions() {
         <Card>
           <CardContent className="p-4 space-y-4">
             <h3 className="text-lg font-semibold">Wallet Connections</h3>
-            {wallets.length > 0 ? (
+            {metamaskWallets.length > 0 ? (
               <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
                 <div className="flex-shrink-0">
                   <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
@@ -611,9 +779,17 @@ export default function Transactions() {
                     MetaMask Connected
                   </p>
                   <p className="text-sm text-green-700 dark:text-green-300 break-all">
-                    {wallets.find((wallet) => wallet.isPrimary)?.address ||
-                      wallets[0]?.address}
+                    {primaryWallet?.address}
                   </p>
+                  {primaryWallet && (
+                    <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                      {loadingWalletCoinBalances
+                        ? "Loading balance..."
+                        : walletCoinBalances[primaryWallet.id]
+                          ? `${walletCoinBalances[primaryWallet.id].value} ${walletCoinBalances[primaryWallet.id].symbol}`
+                          : "Balance unavailable"}
+                    </p>
+                  )}
                 </div>
                 <Button
                   onClick={disconnectMetamask}
@@ -649,91 +825,6 @@ export default function Transactions() {
                 </Button>
               </div>
             )}
-
-            {wallets.length > 0 && (
-              <>
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="border rounded-md p-2">
-                    <p className="text-xs text-muted-foreground">
-                      Total Wallets
-                    </p>
-                    <p className="text-xl font-semibold">{wallets.length}</p>
-                  </div>
-                  <div className="border rounded-md p-2">
-                    <p className="text-xs text-muted-foreground">
-                      Primary Wallet
-                    </p>
-                    <p className="text-sm font-medium truncate">
-                      {wallets.find((w) => w.isPrimary)?.address || "Not set"}
-                    </p>
-                  </div>
-                  <div className="border rounded-md p-2">
-                    <p className="text-xs text-muted-foreground">
-                      Active Wallets
-                    </p>
-                    <p className="text-xl font-semibold">
-                      {wallets.filter((w) => w.isActive).length}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={connectMetamask}
-                      disabled={isCreatingWallet}
-                    >
-                      Connect MetaMask
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="bg-muted text-foreground hover:bg-muted/80"
-                      onClick={() => refetchWallets()}
-                    >
-                      Refresh Wallets
-                    </Button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {wallets.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        No linked wallet yet.
-                      </p>
-                    )}
-                    {wallets.map((w) => (
-                      <div
-                        key={w.id}
-                        className="flex items-center justify-between border rounded-md p-2"
-                      >
-                        <div>
-                          <p className="text-sm font-medium">{w.address}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {w.provider} {w.isPrimary ? "• Primary" : ""}
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          {!w.isPrimary && (
-                            <Button
-                              variant="outline"
-                              className="bg-muted text-foreground hover:bg-muted/80"
-                              onClick={() => setPrimaryWallet({ id: w.id })}
-                            >
-                              Set Primary
-                            </Button>
-                          )}
-                          <Button
-                            variant="destructive"
-                            onClick={() => deleteWallet({ id: w.id })}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
 
@@ -751,20 +842,17 @@ export default function Transactions() {
             }
             color="#DC2626"
             isCurrency={true}
-            trend={generateTrend(isSuperAdmin ? 100 : toGive, false)}
           />
           <MetricCard
             title="To Receive"
             value={toReceive}
             color="#16A34A"
             isCurrency={true}
-            trend={generateTrend(toReceive, true)}
           />
           <MetricCard
             title="Total Transactions"
             value={transactions.length}
             color="#059669"
-            trend={generateTrend(transactions.length, true)}
           />
         </div>
 
