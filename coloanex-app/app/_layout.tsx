@@ -28,7 +28,6 @@ function AppContent() {
         <Stack.Screen name="loans/apply-loan" />
         <Stack.Screen name="loans/loan-details" />
         <Stack.Screen name="repayment/make-repayment" />
-        <Stack.Screen name="pricing/index" />
         <Stack.Screen name="payment/success" />
         <Stack.Screen name="payment/failure" />
         <Stack.Screen name="profile/edit-profile" />
