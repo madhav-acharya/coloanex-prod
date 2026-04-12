@@ -110,6 +110,7 @@ export class ContractsService {
     termMonths: number,
     paymentFrequency: string,
     startDate: Date,
+    db: Pick<PrismaService, 'paymentSchedule'> = this.prisma,
   ): Promise<void> {
     const { installmentAmount, totalInstallments, totalAmountDue } =
       this.calculateInstallments(
@@ -171,8 +172,70 @@ export class ContractsService {
       totalAmountAllocated += tAmt;
     }
 
-    await this.prisma.paymentSchedule.createMany({
+    await db.paymentSchedule.createMany({
       data: schedules,
+    });
+  }
+
+  private async ensureDisbursementPaymentCompleted(
+    contractId: string,
+    transactionId: string,
+  ) {
+    const tx = await this.prisma.transaction.findFirst({
+      where: {
+        id: transactionId,
+        contractId,
+        type: 'DISBURSEMENT' as any,
+      },
+      select: { id: true, status: true },
+    });
+
+    if (!tx) {
+      throw new BadRequestException(
+        'Invalid disbursement transaction reference for this contract.',
+      );
+    }
+
+    if (String(tx.status) !== 'COMPLETED') {
+      throw new BadRequestException(
+        'Disbursement payment is not completed yet. Please finish payment verification first.',
+      );
+    }
+
+    return tx.id;
+  }
+
+  private async ensureContractActivatedState(
+    contract: {
+      id: string;
+      loanId: string;
+      loanAmount: any;
+      interestRate: any;
+      termMonths: number;
+      paymentFrequency: string;
+      startDate: Date;
+    },
+    db: Pick<PrismaService, 'paymentSchedule' | 'loan'> = this.prisma,
+  ) {
+    const existingSchedulesCount = await db.paymentSchedule.count({
+      where: { contractId: contract.id },
+    });
+
+    if (existingSchedulesCount === 0) {
+      await this.createPaymentSchedules(
+        contract.id,
+        Number(contract.loanAmount),
+        Number(contract.interestRate),
+        contract.termMonths,
+        contract.paymentFrequency,
+        new Date(contract.startDate),
+        db,
+      );
+    }
+
+    await db.loan.update({
+      where: { id: contract.loanId },
+      data: { status: 'LOAN_PROVIDED' as any },
     });
   }
 
@@ -244,8 +307,9 @@ export class ContractsService {
 
     const contractNumber = await this.generateContractNumber(user.tenantId);
     const contractId = randomUUID();
-    let blockchainData: any = null;
-    let blockchainTxHash: string | null = null;
+    let blockchainData: any = createContractDto.blockchainData || null;
+    let blockchainTxHash: string | null =
+      createContractDto.blockchainTxHash || null;
 
     const orchestrationDecision =
       await this.transactionOrchestrator.orchestrate({
@@ -262,13 +326,7 @@ export class ContractsService {
       );
     }
 
-    if (orchestrationDecision.gasPayer === 'USER') {
-      throw new BadRequestException(
-        'Contract creation in USER_WALLET mode must be submitted through wallet-signed web flow.',
-      );
-    }
-
-    if (this.blockchainService.isEnabled()) {
+    if (this.blockchainService.isEnabled() && !blockchainTxHash) {
       this.logger.log(
         `[Contract ${contractId}] Processing blockchain transaction...`,
       );
@@ -350,9 +408,11 @@ export class ContractsService {
       },
     });
 
-    await this.subscriptionResolver.consumeUsage(
-      orchestrationDecision.subscriptionId,
-    );
+    if (orchestrationDecision.gasPayer === 'PLATFORM') {
+      await this.subscriptionResolver.consumeUsage(
+        orchestrationDecision.subscriptionId,
+      );
+    }
 
     return contract as unknown as Contract;
   }
@@ -498,37 +558,47 @@ export class ContractsService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Contract update in USER_WALLET mode must be signed from web wallet flow.',
+      const existingBlockchainTxHash =
+        (contract as any).blockchainTxHash || null;
+      let resolvedBlockchainTxHash =
+        updateContractDto.blockchain_tx_hash || existingBlockchainTxHash;
+
+      if (
+        orchestrationDecision.gasPayer !== 'USER' &&
+        !updateContractDto.blockchain_tx_hash
+      ) {
+        this.logger.log(
+          `[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`,
         );
+        const bcTx = await this.blockchainService.updateContract(
+          id,
+          updateContractDto.status,
+        );
+        if (bcTx && bcTx.txHash) {
+          resolvedBlockchainTxHash = bcTx.txHash;
+          this.logger.log(
+            `[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`,
+          );
+        } else if (!resolvedBlockchainTxHash) {
+          this.logger.error(`[Contract ${id}] Blockchain update failed`);
+          throw new InternalServerErrorException(
+            'Blockchain update failed. Cannot update contract status.',
+          );
+        }
       }
 
-      this.logger.log(
-        `[Contract ${id}] Updating blockchain status to ${updateContractDto.status}...`,
-      );
-      const bcTx = await this.blockchainService.updateContract(
-        id,
-        updateContractDto.status,
-      );
-      if (bcTx && bcTx.txHash) {
-        this.logger.log(
-          `[Contract ${id}] Blockchain update successful: ${bcTx.txHash}`,
-        );
+      if (resolvedBlockchainTxHash) {
         await this.prisma.contract.update({
           where: { id },
-          data: { blockchainTxHash: bcTx.txHash },
+          data: { blockchainTxHash: resolvedBlockchainTxHash },
         });
-      } else {
-        this.logger.error(`[Contract ${id}] Blockchain update failed`);
-        throw new InternalServerErrorException(
-          'Blockchain update failed. Cannot update contract status.',
-        );
       }
 
-      await this.subscriptionResolver.consumeUsage(
-        orchestrationDecision.subscriptionId,
-      );
+      if (orchestrationDecision.gasPayer === 'PLATFORM') {
+        await this.subscriptionResolver.consumeUsage(
+          orchestrationDecision.subscriptionId,
+        );
+      }
     }
 
     return updated;
@@ -566,64 +636,30 @@ export class ContractsService {
       );
     }
 
-    const signatures = (contract.signatures as any as Signature[]) || [];
+    const existingSignatures =
+      (contract.signatures as any as Signature[]) || [];
+    if (existingSignatures.some((s) => s.signedBy === signedBy)) {
+      throw new BadRequestException(
+        `${signedBy === 'BORROWER' ? 'Borrower' : 'Tenant'} has already signed this contract`,
+      );
+    }
 
     if (signedBy === 'TENANT') {
-      if (!signatures.some((s) => s.signedBy === 'BORROWER')) {
+      if (!existingSignatures.some((s) => s.signedBy === 'BORROWER')) {
         throw new BadRequestException(
           'Borrower must sign the contract before the lender can sign',
         );
       }
     }
-    const newSignature: Signature = {
-      signedBy,
-      signature: signContractDto.signature,
-      signedAt: new Date(),
-      ipAddress: signContractDto.ipAddress,
+
+    let resolvedSignTxHash = signContractDto.blockchainTxHash;
+    let mergedBlockchainData: Record<string, unknown> = {
+      ...(((contract as any).blockchainData as Record<string, unknown>) || {}),
+      ...((signContractDto.blockchainData as Record<string, unknown>) || {}),
     };
+    let shouldConsumeSubscriptionUsage = false;
 
-    signatures.push(newSignature);
-
-    const hasBorrowerSignature = signatures.some(
-      (s) => s.signedBy === 'BORROWER',
-    );
-    const hasTenantSignature = signatures.some((s) => s.signedBy === 'TENANT');
-    const newStatus =
-      hasBorrowerSignature && hasTenantSignature
-        ? ContractStatus.SIGNED
-        : contract.status === ContractStatus.GENERATED
-          ? ContractStatus.GENERATED
-          : contract.status;
-
-    const updatedContract = await this.prisma.contract.update({
-      where: { id },
-      data: {
-        signatures: signatures as any,
-        status: newStatus as any,
-        signedAt:
-          hasBorrowerSignature && hasTenantSignature ? new Date() : undefined,
-      },
-      include: {
-        tenant: {
-          select: { id: true, name: true, logo: true },
-        },
-        borrower: {
-          include: {
-            user: {
-              select: { id: true, fullName: true, email: true },
-            },
-          },
-        },
-        loan: {
-          select: { id: true, purpose: true },
-        },
-        rule: {
-          select: { id: true, name: true, ruleType: true },
-        },
-      },
-    });
-
-    if (hasBorrowerSignature && hasTenantSignature) {
+    if (this.blockchainService.isEnabled()) {
       const orchestrationDecision =
         await this.transactionOrchestrator.orchestrate({
           userId: user.sub,
@@ -639,56 +675,137 @@ export class ContractsService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
+      const existingSignTxHash =
+        (mergedBlockchainData.signTxHash as string | undefined) ||
+        ((contract as any).blockchainTxHash as string | undefined) ||
+        null;
+      const hasClientBlockchainRecord =
+        Boolean(signContractDto.blockchainTxHash) ||
+        Boolean(signContractDto.blockchainData);
+
+      resolvedSignTxHash =
+        resolvedSignTxHash || existingSignTxHash || undefined;
+
+      if (
+        orchestrationDecision.gasPayer === 'USER' &&
+        !hasClientBlockchainRecord &&
+        !resolvedSignTxHash
+      ) {
         throw new BadRequestException(
-          'Contract signing in USER_WALLET mode must be signed from web wallet flow.',
+          'USER_WALLET contract signing requires wallet-signed transaction hash.',
         );
       }
 
-      await this.prisma.loan.update({
-        where: { id: contract.loanId },
-        data: {
-          status: 'CONTRACT_SIGNED' as any,
-        },
-      });
-
-      if (this.blockchainService.isEnabled()) {
+      if (
+        orchestrationDecision.gasPayer !== 'USER' &&
+        !hasClientBlockchainRecord &&
+        !resolvedSignTxHash
+      ) {
         this.logger.log(
           `[Contract ${id}] Processing blockchain contract signing...`,
         );
         const signBcTx = await this.blockchainService.signContract(id);
 
-        if (signBcTx) {
-          this.logger.log(
-            `[Contract ${id}] Blockchain signing successful: ${signBcTx.txHash}`,
-          );
-          const anyContract = updatedContract as any;
-          const existingBlockchainData = anyContract.blockchainData ?? {};
-          const signData = {
-            signTxHash: signBcTx.txHash,
-            signBlockNumber: signBcTx.blockNumber,
-            signGasFeeGwei: signBcTx.gasFeeGwei,
-            signExplorerUrl: signBcTx.explorerUrl,
-          };
-
-          await this.prisma.contract.update({
-            where: { id },
-            data: {
-              blockchainData: { ...existingBlockchainData, ...signData },
-            },
-          });
-        } else {
+        if (!signBcTx) {
           this.logger.error(`[Contract ${id}] Blockchain signing failed`);
           throw new BadRequestException(
             'Blockchain signing failed. Cannot complete contract signing without blockchain record.',
           );
         }
+
+        resolvedSignTxHash = signBcTx.txHash;
+        mergedBlockchainData = {
+          ...mergedBlockchainData,
+          signTxHash: signBcTx.txHash,
+          signBlockNumber: signBcTx.blockNumber,
+          signGasFeeGwei: signBcTx.gasFeeGwei,
+          signExplorerUrl: signBcTx.explorerUrl,
+        };
       }
 
-      await this.subscriptionResolver.consumeUsage(
-        orchestrationDecision.subscriptionId,
-      );
+      if (resolvedSignTxHash) {
+        mergedBlockchainData = {
+          ...mergedBlockchainData,
+          signTxHash: resolvedSignTxHash,
+        };
+      }
+
+      shouldConsumeSubscriptionUsage =
+        orchestrationDecision.gasPayer === 'PLATFORM';
+
+      if (shouldConsumeSubscriptionUsage) {
+        await this.subscriptionResolver.consumeUsage(
+          orchestrationDecision.subscriptionId,
+        );
+      }
     }
+
+    const newSignature: Signature = {
+      signedBy,
+      signature: signContractDto.signature,
+      signedAt: new Date(),
+      ipAddress: signContractDto.ipAddress,
+    };
+
+    const signatures = [...existingSignatures, newSignature];
+
+    const hasBorrowerSignature = signatures.some(
+      (s) => s.signedBy === 'BORROWER',
+    );
+    const hasTenantSignature = signatures.some((s) => s.signedBy === 'TENANT');
+    const newStatus =
+      hasBorrowerSignature && hasTenantSignature
+        ? ContractStatus.SIGNED
+        : contract.status === ContractStatus.GENERATED
+          ? ContractStatus.GENERATED
+          : contract.status;
+
+    const updatedContract = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contract.update({
+        where: { id },
+        data: {
+          signatures: signatures as any,
+          status: newStatus as any,
+          signedAt:
+            hasBorrowerSignature && hasTenantSignature ? new Date() : undefined,
+          ...(resolvedSignTxHash
+            ? { blockchainTxHash: resolvedSignTxHash }
+            : {}),
+          ...(Object.keys(mergedBlockchainData).length > 0
+            ? { blockchainData: mergedBlockchainData as any }
+            : {}),
+        },
+        include: {
+          tenant: {
+            select: { id: true, name: true, logo: true },
+          },
+          borrower: {
+            include: {
+              user: {
+                select: { id: true, fullName: true, email: true },
+              },
+            },
+          },
+          loan: {
+            select: { id: true, purpose: true },
+          },
+          rule: {
+            select: { id: true, name: true, ruleType: true },
+          },
+        },
+      });
+
+      if (hasBorrowerSignature && hasTenantSignature) {
+        await tx.loan.update({
+          where: { id: contract.loanId },
+          data: {
+            status: 'CONTRACT_SIGNED' as any,
+          },
+        });
+      }
+
+      return updated;
+    });
 
     return updatedContract as unknown as Contract;
   }
@@ -714,9 +831,37 @@ export class ContractsService {
       );
     }
 
-    if (contract.status !== ContractStatus.GENERATED) {
+    if (
+      ![
+        ContractStatus.GENERATED,
+        ContractStatus.SIGNED,
+        ContractStatus.ACTIVE,
+      ].includes(contract.status as ContractStatus)
+    ) {
       throw new BadRequestException(
-        'Contract must be in GENERATED status to sign and disburse',
+        'Contract must be GENERATED, SIGNED, or ACTIVE to complete sign and disburse',
+      );
+    }
+
+    const paymentRequiredMethods = ['ESEWA', 'KHALTI', 'FONEPAY'];
+    const existingDisbursementTxId = (contract as any)?.disbursementInfo
+      ?.transactionId as string | undefined;
+    const resolvedDisbursementTxId =
+      dto.transactionId || existingDisbursementTxId;
+
+    if (
+      paymentRequiredMethods.includes(dto.method) &&
+      !resolvedDisbursementTxId
+    ) {
+      throw new BadRequestException(
+        'Disbursement payment must be completed before sign and disburse.',
+      );
+    }
+
+    if (resolvedDisbursementTxId) {
+      await this.ensureDisbursementPaymentCompleted(
+        id,
+        resolvedDisbursementTxId,
       );
     }
 
@@ -728,60 +873,79 @@ export class ContractsService {
       );
     }
 
-    if (existingSigs.some((s) => s.signedBy === 'TENANT')) {
-      throw new BadRequestException('Tenant has already signed this contract');
-    }
-
-    const tenantSignature: Signature = {
-      signedBy: 'TENANT',
-      signature: dto.signature,
-      signedAt: new Date(),
-    };
-
-    const signatures = [...existingSigs, tenantSignature];
+    const tenantAlreadySigned = existingSigs.some(
+      (s) => s.signedBy === 'TENANT',
+    );
+    const signatures = tenantAlreadySigned
+      ? existingSigs
+      : [
+          ...existingSigs,
+          {
+            signedBy: 'TENANT',
+            signature: dto.signature,
+            signedAt: new Date(),
+          } as Signature,
+        ];
 
     const disbursementInfo = {
       method: dto.method,
       accountNumber: dto.accountNumber,
       accountName: dto.accountName,
       disbursedAt: new Date(),
-      transactionId: dto.transactionId,
+      transactionId: resolvedDisbursementTxId,
       status: 'COMPLETED',
     };
 
-    const updatedContract = await this.prisma.contract.update({
-      where: { id },
-      data: {
-        signatures: signatures as any,
-        status: ContractStatus.ACTIVE,
-        signedAt: new Date(),
-        disbursementInfo: disbursementInfo as any,
-      },
-      include: {
-        tenant: { select: { id: true, name: true, logo: true } },
-        borrower: {
-          include: {
-            user: { select: { id: true, fullName: true, email: true } },
-          },
+    const mergedBlockchainData = {
+      ...(((contract as any).blockchainData as Record<string, unknown>) || {}),
+      ...((dto.blockchainData as Record<string, unknown>) || {}),
+      ...(dto.blockchainTxHash
+        ? { signAndDisburseTxHash: dto.blockchainTxHash }
+        : {}),
+    };
+
+    const updatedContract = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contract.update({
+        where: { id },
+        data: {
+          signatures: signatures as any,
+          status: ContractStatus.ACTIVE,
+          signedAt: new Date(),
+          disbursementInfo: disbursementInfo as any,
+          ...(dto.blockchainTxHash
+            ? { blockchainTxHash: dto.blockchainTxHash }
+            : {}),
+          ...(Object.keys(mergedBlockchainData).length > 0
+            ? { blockchainData: mergedBlockchainData as any }
+            : {}),
         },
-        loan: { select: { id: true, purpose: true } },
-        rule: { select: { id: true, name: true, ruleType: true } },
-      },
-    });
+        include: {
+          tenant: { select: { id: true, name: true, logo: true } },
+          borrower: {
+            include: {
+              user: { select: { id: true, fullName: true, email: true } },
+            },
+          },
+          loan: { select: { id: true, purpose: true } },
+          rule: { select: { id: true, name: true, ruleType: true } },
+        },
+      });
 
-    await this.prisma.loan.update({
-      where: { id: contract.loanId },
-      data: { status: 'LOAN_PROVIDED' as any },
-    });
+      await this.ensureContractActivatedState(
+        {
+          id,
+          loanId: contract.loanId,
+          loanAmount: contract.loanAmount,
+          interestRate: contract.interestRate,
+          termMonths: contract.termMonths,
+          paymentFrequency: contract.paymentFrequency,
+          startDate: new Date(contract.startDate),
+        },
+        tx as any,
+      );
 
-    await this.createPaymentSchedules(
-      id,
-      Number(contract.loanAmount),
-      Number(contract.interestRate),
-      contract.termMonths,
-      contract.paymentFrequency,
-      new Date(contract.startDate),
-    );
+      return updated;
+    });
 
     return updatedContract as unknown as Contract;
   }
@@ -807,8 +971,34 @@ export class ContractsService {
       throw new ForbiddenException('Only tenant can disburse the loan');
     }
 
-    if (contract.status !== ContractStatus.SIGNED) {
+    if (
+      ![ContractStatus.SIGNED, ContractStatus.ACTIVE].includes(
+        contract.status as ContractStatus,
+      )
+    ) {
       throw new BadRequestException('Contract must be SIGNED to disburse');
+    }
+
+    const paymentRequiredMethods = ['ESEWA', 'KHALTI', 'FONEPAY'];
+    const existingDisbursementTxId = (contract as any)?.disbursementInfo
+      ?.transactionId as string | undefined;
+    const resolvedDisbursementTxId =
+      disburseContractDto.transactionId || existingDisbursementTxId;
+
+    if (
+      paymentRequiredMethods.includes(disburseContractDto.method) &&
+      !resolvedDisbursementTxId
+    ) {
+      throw new BadRequestException(
+        'Disbursement payment must be completed before disbursement.',
+      );
+    }
+
+    if (resolvedDisbursementTxId) {
+      await this.ensureDisbursementPaymentCompleted(
+        id,
+        resolvedDisbursementTxId,
+      );
     }
 
     const disbursementInfo = {
@@ -816,51 +1006,52 @@ export class ContractsService {
       accountNumber: disburseContractDto.accountNumber,
       accountName: disburseContractDto.accountName,
       disbursedAt: new Date(),
-      transactionId: disburseContractDto.transactionId,
+      transactionId: resolvedDisbursementTxId,
       status: 'COMPLETED',
     };
 
-    const updatedContract = await this.prisma.contract.update({
-      where: { id },
-      data: {
-        disbursementInfo: disbursementInfo as any,
-        status: ContractStatus.ACTIVE,
-      },
-      include: {
-        tenant: {
-          select: { id: true, name: true, logo: true },
+    const updatedContract = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contract.update({
+        where: { id },
+        data: {
+          disbursementInfo: disbursementInfo as any,
+          status: ContractStatus.ACTIVE,
         },
-        borrower: {
-          include: {
-            user: {
-              select: { id: true, fullName: true, email: true },
+        include: {
+          tenant: {
+            select: { id: true, name: true, logo: true },
+          },
+          borrower: {
+            include: {
+              user: {
+                select: { id: true, fullName: true, email: true },
+              },
             },
           },
+          loan: {
+            select: { id: true, purpose: true },
+          },
+          rule: {
+            select: { id: true, name: true, ruleType: true },
+          },
         },
-        loan: {
-          select: { id: true, purpose: true },
-        },
-        rule: {
-          select: { id: true, name: true, ruleType: true },
-        },
-      },
-    });
+      });
 
-    await this.prisma.loan.update({
-      where: { id: contract.loanId },
-      data: {
-        status: 'LOAN_PROVIDED' as any,
-      },
-    });
+      await this.ensureContractActivatedState(
+        {
+          id,
+          loanId: contract.loanId,
+          loanAmount: contract.loanAmount,
+          interestRate: contract.interestRate,
+          termMonths: contract.termMonths,
+          paymentFrequency: contract.paymentFrequency,
+          startDate: new Date(contract.startDate),
+        },
+        tx as any,
+      );
 
-    await this.createPaymentSchedules(
-      id,
-      Number(contract.loanAmount),
-      Number(contract.interestRate),
-      contract.termMonths,
-      contract.paymentFrequency,
-      new Date(contract.startDate),
-    );
+      return updated;
+    });
 
     return updatedContract as unknown as Contract;
   }
@@ -897,23 +1088,21 @@ export class ContractsService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Contract deletion in USER_WALLET mode must be signed from web wallet flow.',
-        );
+      if (orchestrationDecision.gasPayer !== 'USER') {
+        const bcTx = await this.blockchainService.deleteContract(id);
+
+        if (!bcTx) {
+          throw new InternalServerErrorException(
+            'Failed to record contract deletion on blockchain',
+          );
+        }
       }
 
-      const bcTx = await this.blockchainService.deleteContract(id);
-
-      if (!bcTx) {
-        throw new InternalServerErrorException(
-          'Failed to record contract deletion on blockchain',
+      if (orchestrationDecision.gasPayer === 'PLATFORM') {
+        await this.subscriptionResolver.consumeUsage(
+          orchestrationDecision.subscriptionId,
         );
       }
-
-      await this.subscriptionResolver.consumeUsage(
-        orchestrationDecision.subscriptionId,
-      );
     }
 
     await this.prisma.contract.delete({ where: { id } });
@@ -1005,12 +1194,6 @@ export class ContractsService {
           orchestrationDecision.denialReason || 'Transaction blocked by policy',
         );
       }
-
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Contract creation in USER_WALLET mode must be signed from web wallet flow.',
-        );
-      }
     }
 
     const bcTx = await this.blockchainService.recordContract(
@@ -1079,9 +1262,11 @@ export class ContractsService {
     });
 
     if (orchestrationDecision) {
-      await this.subscriptionResolver.consumeUsage(
-        orchestrationDecision.subscriptionId,
-      );
+      if (orchestrationDecision.gasPayer === 'PLATFORM') {
+        await this.subscriptionResolver.consumeUsage(
+          orchestrationDecision.subscriptionId,
+        );
+      }
     }
 
     return contract as unknown as Contract;
@@ -1178,12 +1363,6 @@ export class ContractsService {
       if (!orchestrationDecision.eligible) {
         throw new BadRequestException(
           orchestrationDecision.denialReason || 'Transaction blocked by policy',
-        );
-      }
-
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Contract generation in USER_WALLET mode must be signed from web wallet flow.',
         );
       }
 
