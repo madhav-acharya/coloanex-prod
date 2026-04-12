@@ -813,6 +813,11 @@ export default function LoanApplicationScreen() {
         visible={loading}
         message="Recording your loan application on the blockchain and updating the database. Please wait..."
       />
+
+      <BlockchainProcessingModal
+        visible={uploadingImage}
+        message="Uploading collateral image. Please wait..."
+      />
     </View>
   );
 }
