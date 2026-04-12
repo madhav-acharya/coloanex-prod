@@ -13,6 +13,7 @@ export interface BlockchainData {
   network?: string;
   contractAddress?: string;
   timestamp?: string;
+  signTxHash?: string;
 }
 
 export interface DisbursementInfo {
@@ -54,6 +55,8 @@ export interface Contract {
   contractPdfUrl?: string;
   signatures?: Signature[];
   termsAndConditions: string;
+  blockchainTxHash?: string;
+  blockchainData?: BlockchainData;
   disbursementInfo?: DisbursementInfo;
   reportReason?: string;
   signedAt?: string;
@@ -87,6 +90,8 @@ export interface Contract {
 export interface SignContractDto {
   signature: string;
   ipAddress?: string;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
 }
 
 export interface ReportContractDto {
