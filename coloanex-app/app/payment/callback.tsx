@@ -206,7 +206,7 @@ export default function PaymentCallbackScreen() {
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
               activeOpacity={0.85}
-              onPress={() => router.replace("/pricing")}
+              onPress={() => router.replace("/profile/subscriptions")}
             >
               <Ionicons
                 name="pricetag-outline"
@@ -216,7 +216,7 @@ export default function PaymentCallbackScreen() {
               <Text
                 style={[styles.primaryBtnText, { color: colors.buttonText }]}
               >
-                Back to Pricing
+                Back to Subscriptions
               </Text>
             </TouchableOpacity>
           ) : (
@@ -293,7 +293,9 @@ export default function PaymentCallbackScreen() {
           activeOpacity={0.85}
           onPress={() =>
             router.replace(
-              flowType === "SUBSCRIPTION" ? "/pricing" : "/(tabs)/my-loans",
+              flowType === "SUBSCRIPTION"
+                ? "/profile/subscriptions"
+                : "/(tabs)/my-loans",
             )
           }
         >
@@ -307,7 +309,9 @@ export default function PaymentCallbackScreen() {
             color={colors.text}
           />
           <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
-            {flowType === "SUBSCRIPTION" ? "Back to Pricing" : "View My Loans"}
+            {flowType === "SUBSCRIPTION"
+              ? "Back to Subscriptions"
+              : "View My Loans"}
           </Text>
         </TouchableOpacity>
       </View>
