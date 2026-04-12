@@ -69,18 +69,6 @@ export const getBlockchainAccessSnapshot = (params: {
       : "NOT_CONFIGURED";
 
   if (mode === "USER_WALLET") {
-    if (!hasWallet) {
-      return {
-        mode,
-        modeLabel: GAS_MODE_LABELS[mode],
-        hasWallet,
-        hasActiveSubscription,
-        hasSubscriptionCapacity,
-        canRunBlockchain: false,
-        reason: "User Wallet mode requires a connected wallet.",
-      };
-    }
-
     return {
       mode,
       modeLabel: GAS_MODE_LABELS[mode],
