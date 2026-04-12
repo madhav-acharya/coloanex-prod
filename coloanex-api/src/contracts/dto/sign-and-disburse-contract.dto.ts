@@ -18,4 +18,11 @@ export class SignAndDisburseContractDto {
   @IsOptional()
   @IsString()
   transactionId?: string;
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  blockchainData?: Record<string, unknown>;
 }
