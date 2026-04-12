@@ -252,11 +252,8 @@ export class PaymentsService {
           `[Payment ${paymentId}] Blockchain transaction successful: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
         );
       } else {
-        this.logger.error(
-          `[Payment ${paymentId}] Blockchain transaction failed`,
-        );
-        throw new BadRequestException(
-          'Blockchain transaction failed. Cannot record payment without blockchain record.',
+        this.logger.warn(
+          `[Payment ${paymentId}] Blockchain transaction failed, proceeding without blockchain record`,
         );
       }
     } else {
@@ -513,26 +510,6 @@ export class PaymentsService {
           } as never,
         },
       });
-    }
-
-    if (transaction?.contractId) {
-      const contract = await this.prisma.contract.findUnique({
-        where: { id: transaction.contractId },
-        select: { id: true, status: true, loanId: true },
-      });
-      if (contract && contract.status !== 'COMPLETED') {
-        await this.prisma.contract.update({
-          where: { id: contract.id },
-          data: { status: 'ACTIVE' as never },
-        });
-
-        if (transaction?.type === 'DISBURSEMENT') {
-          await this.prisma.loan.update({
-            where: { id: contract.loanId },
-            data: { status: 'LOAN_PROVIDED' as never },
-          });
-        }
-      }
     }
 
     return {
