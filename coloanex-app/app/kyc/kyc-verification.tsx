@@ -1303,6 +1303,11 @@ export default function KYCVerificationScreen() {
         currentStep={blockchainStep}
         message="Recording your KYC verification on the blockchain and updating the database. Please wait..."
       />
+
+      <BlockchainProcessingModal
+        visible={uploadingImage}
+        message="Uploading document image. Please wait..."
+      />
     </View>
   );
 }

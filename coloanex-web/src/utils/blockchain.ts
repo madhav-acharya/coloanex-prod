@@ -233,7 +233,7 @@ export const updateLoanOnBlockchain = async (
     signer,
   );
 
-  const tx = await contract.updateLoanStatus(loanId, BigInt(1));
+  const tx = await contract.updateLoanStatus(loanId, "UPDATED");
   const receipt = await tx.wait();
   return receipt.hash;
 };

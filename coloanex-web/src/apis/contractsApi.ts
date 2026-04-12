@@ -7,8 +7,6 @@ export interface Signature {
   ipAddress?: string;
 }
 
-
-
 export interface DisbursementInfo {
   method: "ESEWA" | "FONEPAY" | "KHALTI" | "WALLET" | "BANK_TRANSFER";
   accountNumber?: string;
@@ -119,6 +117,8 @@ export interface SignAndDisburseContractDto {
   accountNumber?: string;
   accountName?: string;
   transactionId?: string;
+  blockchainTxHash?: string;
+  blockchainData?: Record<string, unknown>;
 }
 
 export const contractsApi = baseApi.injectEndpoints({
@@ -215,8 +215,6 @@ export const contractsApi = baseApi.injectEndpoints({
         { type: "Contracts", id: "LIST" },
       ],
     }),
-
-
   }),
 });
 

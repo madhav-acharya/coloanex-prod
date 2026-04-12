@@ -201,7 +201,14 @@ export function FileUploader({
             </div>
           ) : null}
 
-          {!disabled && (
+          {isUploading && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/60">
+              <Loader2 className="w-7 h-7 text-white animate-spin" />
+              <p className="mt-2 text-xs text-white">Uploading...</p>
+            </div>
+          )}
+
+          {!disabled && !isUploading && (
             <Button
               type="button"
               variant="destructive"

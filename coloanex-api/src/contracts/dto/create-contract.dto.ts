@@ -39,4 +39,11 @@ export class CreateContractDto {
   @IsNumber()
   @Min(0)
   interestRate?: number;
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  blockchainData?: Record<string, unknown>;
 }

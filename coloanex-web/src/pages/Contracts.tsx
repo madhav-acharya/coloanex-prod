@@ -214,6 +214,7 @@ export default function Contracts() {
     blockchainAccess.canRunBlockchain &&
     blockchainAccess.mode === "USER_WALLET";
   const shouldShowBlockchainProcessing = blockchainAccess.canRunBlockchain;
+  const shouldShowSdProcessing = true;
 
   const hasBorrowerSigned = (c: Contract) =>
     c.signatures?.some((s) => s.signedBy === "BORROWER") ?? false;
@@ -451,6 +452,25 @@ export default function Contracts() {
     }
   };
 
+  const safeRefreshContracts = async () => {
+    try {
+      await refetchContracts();
+    } catch {
+      return;
+    }
+  };
+
+  const completeBlockchainFlow = async () => {
+    await safeRefreshContracts();
+    if (shouldShowSdProcessing) {
+      setBlockchainStep("complete");
+      setTimeout(() => {
+        setIsProcessingBlockchain(false);
+        setBlockchainStep("blockchain");
+      }, 900);
+    }
+  };
+
   useEffect(() => {
     const raw = window.location.search;
 
@@ -466,6 +486,7 @@ export default function Contracts() {
       signature: string;
       walletId: string;
       amount: number;
+      blockchainTxHash?: string;
     };
     sessionStorage.removeItem("coloanex_pending_sd");
     window.history.replaceState({}, "", window.location.pathname);
@@ -497,35 +518,67 @@ export default function Contracts() {
       return;
     }
 
-    verifyPayment({
-      transactionUuid,
-      totalAmount: pending.amount,
-      gateway: "ESEWA",
-      type: "DISBURSEMENT",
-      contractId: pending.contractId,
-    })
-      .unwrap()
-      .then((result) => {
-        if (!result.success) throw new Error("Payment verification failed");
-        return signAndDisburseContract({
+    const finalizeEsewa = async () => {
+      try {
+        if (shouldShowSdProcessing) {
+          setIsProcessingBlockchain(true);
+          setBlockchainStep("database");
+          setBlockchainMessage(
+            "Verifying payment and preparing contract finalization...",
+          );
+        }
+
+        const result = await verifyPayment({
+          transactionUuid,
+          totalAmount: pending.amount,
+          gateway: "ESEWA",
+          type: "DISBURSEMENT",
+          contractId: pending.contractId,
+        }).unwrap();
+
+        if (!result.success) {
+          throw new Error("Payment verification failed");
+        }
+
+        let blockchainTxHash = pending.blockchainTxHash;
+        if (shouldShowSdProcessing) {
+          if (shouldUseWalletSignature) {
+            setBlockchainStep("blockchain");
+            setBlockchainMessage(
+              "Payment verified. Please approve MetaMask to sign contract on blockchain...",
+            );
+            blockchainTxHash = await signContractOnBlockchain(
+              pending.contractId,
+            );
+          }
+          setBlockchainStep("database");
+          setBlockchainMessage(
+            "Payment and blockchain succeeded. Finalizing contract status, loan status, and schedules...",
+          );
+        }
+
+        await signAndDisburseContract({
           id: pending.contractId,
           data: {
             signature: pending.signature,
             method: "ESEWA",
             transactionId: result.transactionId ?? undefined,
+            blockchainTxHash,
           },
         }).unwrap();
-      })
-      .then(() => {
+
+        await completeBlockchainFlow();
         toast({
           title: "Success",
           description:
             "Contract signed and loan disbursed successfully via eSewa.",
           variant: "success",
         });
-        refetchContracts();
-      })
-      .catch((err: any) => {
+      } catch (err: any) {
+        if (shouldShowSdProcessing) {
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+        }
         toast({
           title: "Error",
           description:
@@ -534,7 +587,10 @@ export default function Contracts() {
             "Failed to complete sign & disburse",
           variant: "destructive",
         });
-      });
+      }
+    };
+
+    void finalizeEsewa();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -554,6 +610,7 @@ export default function Contracts() {
       signature: string;
       walletId: string;
       amount: number;
+      blockchainTxHash?: string;
     };
     sessionStorage.removeItem("coloanex_pending_sd_khalti");
     window.history.replaceState({}, "", window.location.pathname);
@@ -567,35 +624,67 @@ export default function Contracts() {
       return;
     }
 
-    verifyPayment({
-      transactionUuid: pidx,
-      totalAmount: pending.amount,
-      gateway: "KHALTI",
-      type: "DISBURSEMENT",
-      contractId: pending.contractId,
-    })
-      .unwrap()
-      .then((result) => {
-        if (!result.success) throw new Error("Payment verification failed");
-        return signAndDisburseContract({
+    const finalizeKhalti = async () => {
+      try {
+        if (shouldShowSdProcessing) {
+          setIsProcessingBlockchain(true);
+          setBlockchainStep("database");
+          setBlockchainMessage(
+            "Verifying payment and preparing contract finalization...",
+          );
+        }
+
+        const result = await verifyPayment({
+          transactionUuid: pidx,
+          totalAmount: pending.amount,
+          gateway: "KHALTI",
+          type: "DISBURSEMENT",
+          contractId: pending.contractId,
+        }).unwrap();
+
+        if (!result.success) {
+          throw new Error("Payment verification failed");
+        }
+
+        let blockchainTxHash = pending.blockchainTxHash;
+        if (shouldShowSdProcessing) {
+          if (shouldUseWalletSignature) {
+            setBlockchainStep("blockchain");
+            setBlockchainMessage(
+              "Payment verified. Please approve MetaMask to sign contract on blockchain...",
+            );
+            blockchainTxHash = await signContractOnBlockchain(
+              pending.contractId,
+            );
+          }
+          setBlockchainStep("database");
+          setBlockchainMessage(
+            "Payment and blockchain succeeded. Finalizing contract status, loan status, and schedules...",
+          );
+        }
+
+        await signAndDisburseContract({
           id: pending.contractId,
           data: {
             signature: pending.signature,
             method: "KHALTI",
             transactionId: result.transactionId ?? undefined,
+            blockchainTxHash,
           },
         }).unwrap();
-      })
-      .then(() => {
+
+        await completeBlockchainFlow();
         toast({
           title: "Success",
           description:
             "Contract signed and loan disbursed successfully via Khalti.",
           variant: "success",
         });
-        refetchContracts();
-      })
-      .catch((err: any) => {
+      } catch (err: any) {
+        if (shouldShowSdProcessing) {
+          setIsProcessingBlockchain(false);
+          setBlockchainStep("blockchain");
+        }
         toast({
           title: "Error",
           description:
@@ -604,7 +693,10 @@ export default function Contracts() {
             "Failed to complete sign & disburse",
           variant: "destructive",
         });
-      });
+      }
+    };
+
+    void finalizeKhalti();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -654,7 +746,7 @@ export default function Contracts() {
     if (!contractToSd) return;
 
     setSdDialogOpen(false);
-    if (shouldShowBlockchainProcessing) {
+    if (shouldShowSdProcessing) {
       setIsProcessingBlockchain(true);
       setBlockchainStep("blockchain");
       setBlockchainMessage(
@@ -713,21 +805,14 @@ export default function Contracts() {
         data: {
           signature: user?.fullName ?? "",
           method: sdMethod,
-          transactionId: sdTransactionId || blockchainTxHash || undefined,
+          transactionId: sdTransactionId || undefined,
+          blockchainTxHash,
           accountNumber: sdAccountNumber || undefined,
           accountName: sdAccountName || undefined,
         },
       }).unwrap();
 
-      if (shouldShowBlockchainProcessing) {
-        setTimeout(() => {
-          setBlockchainStep("complete");
-          setTimeout(() => {
-            setIsProcessingBlockchain(false);
-            setBlockchainStep("blockchain");
-          }, 1000);
-        }, 500);
-      }
+      await completeBlockchainFlow();
 
       toast({
         title: "Success",
@@ -758,53 +843,8 @@ export default function Contracts() {
     }
 
     setSdDialogOpen(false);
-    if (shouldShowBlockchainProcessing) {
+    if (shouldShowSdProcessing) {
       setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
-      setBlockchainMessage(
-        shouldUseWalletSignature
-          ? "Signing contract on blockchain. Please approve the MetaMask transaction..."
-          : "Processing contract on blockchain...",
-      );
-    }
-
-    let blockchainTxHash: string | undefined;
-
-    if (shouldUseWalletSignature) {
-      try {
-        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        setSdDialogOpen(true);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.reason ||
-              blockchainError.message ||
-              "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-    }
-
-    if (shouldShowBlockchainProcessing) {
       setBlockchainStep("database");
       setBlockchainMessage("Redirecting to eSewa payment gateway...");
     }
@@ -828,13 +868,8 @@ export default function Contracts() {
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
           amount: contractToSd.loanAmount,
-          blockchainTxHash,
         }),
       );
-
-      if (shouldShowBlockchainProcessing) {
-        setIsProcessingBlockchain(false);
-      }
 
       const form = document.createElement("form");
       form.method = "POST";
@@ -849,7 +884,7 @@ export default function Contracts() {
       document.body.appendChild(form);
       form.submit();
     } catch (err: any) {
-      if (shouldShowBlockchainProcessing) {
+      if (shouldShowSdProcessing) {
         setIsProcessingBlockchain(false);
       }
       setSdDialogOpen(true);
@@ -887,53 +922,8 @@ export default function Contracts() {
     sessionStorage.setItem(lastAttemptKey, now.toString());
 
     setSdDialogOpen(false);
-    if (shouldShowBlockchainProcessing) {
+    if (shouldShowSdProcessing) {
       setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
-      setBlockchainMessage(
-        shouldUseWalletSignature
-          ? "Signing contract on blockchain. Please approve the MetaMask transaction..."
-          : "Processing contract on blockchain...",
-      );
-    }
-
-    let blockchainTxHash: string | undefined;
-
-    if (shouldUseWalletSignature) {
-      try {
-        blockchainTxHash = await signContractOnBlockchain(contractToSd.id);
-      } catch (blockchainError: any) {
-        setIsProcessingBlockchain(false);
-        setSdDialogOpen(true);
-        if (blockchainError.code === "ACTION_REJECTED") {
-          toast({
-            title: "Transaction Rejected",
-            description: "You rejected the blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        } else if (blockchainError.message?.includes("MetaMask")) {
-          toast({
-            title: "MetaMask Required",
-            description: blockchainError.message,
-            variant: "destructive",
-          });
-          return;
-        } else {
-          toast({
-            title: "Blockchain Error",
-            description:
-              blockchainError.reason ||
-              blockchainError.message ||
-              "Failed to process blockchain transaction",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-    }
-
-    if (shouldShowBlockchainProcessing) {
       setBlockchainStep("database");
       setBlockchainMessage("Redirecting to Khalti payment gateway...");
     }
@@ -957,17 +947,12 @@ export default function Contracts() {
           contractId: contractToSd.id,
           signature: user?.fullName ?? "",
           amount: contractToSd.loanAmount,
-          blockchainTxHash,
         }),
       );
 
-      if (shouldShowBlockchainProcessing) {
-        setIsProcessingBlockchain(false);
-      }
-
       window.location.href = result.paymentUrl;
     } catch (err: any) {
-      if (shouldShowBlockchainProcessing) {
+      if (shouldShowSdProcessing) {
         setIsProcessingBlockchain(false);
       }
       setSdDialogOpen(true);
@@ -1045,8 +1030,7 @@ export default function Contracts() {
       label: "Generate Contract",
       icon: <FilePlus className="w-4 h-4" />,
       onClick: (c: Contract) => handleGenerateContract(c),
-      show: (c: Contract) =>
-        (c.status === "DRAFT" && !c.contractPdfUrl) || c.status === "GENERATED",
+      show: (c: Contract) => c.status === "DRAFT" && !c.contractPdfUrl,
       isLoading: isGenerating,
     },
     {

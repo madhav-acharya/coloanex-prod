@@ -70,4 +70,11 @@ export class CreateKycDto {
   @ValidateNested({ each: true })
   @Type(() => CreateKycFileDto)
   files?: CreateKycFileDto[];
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  blockchainData?: Record<string, unknown>;
 }

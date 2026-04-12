@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { ethers } from "ethers";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,6 +138,11 @@ const Settings = () => {
     "USER_WALLET" | "PLATFORM_WALLET"
   >("PLATFORM_WALLET");
   const [manualWalletAddress, setManualWalletAddress] = useState("");
+  const [walletCoinBalances, setWalletCoinBalances] = useState<
+    Record<string, { symbol: string; value: string }>
+  >({});
+  const [loadingWalletCoinBalances, setLoadingWalletCoinBalances] =
+    useState(false);
   const [showAddPaymentConfig, setShowAddPaymentConfig] = useState(false);
   const [configScope, setConfigScope] = useState<"USER" | "TENANT">("USER");
 
@@ -224,11 +230,36 @@ const Settings = () => {
   const hasActiveSubscription = subscriptionStats.some(
     (subscription) => subscription.isBought,
   );
-  const hasLimitReached = subscriptionStats.some(
-    (subscription) =>
-      subscription.remainingTransactions !== null &&
-      subscription.remainingTransactions <= 0,
-  );
+  const selectedSubscription =
+    subscriptionStats.find((subscription) => subscription.isSelected) ||
+    subscriptionStats.find((subscription) => subscription.isBought) ||
+    null;
+  const hasLimitReached =
+    !!selectedSubscription &&
+    selectedSubscription.remainingTransactions !== null &&
+    selectedSubscription.remainingTransactions <= 0;
+
+  useEffect(() => {
+    const boughtSubscriptions = subscriptionStats.filter(
+      (subscription) => subscription.isBought,
+    );
+    if (boughtSubscriptions.length !== 1) return;
+
+    const onlySubscription = boughtSubscriptions[0];
+    if (onlySubscription.isSelected || isSelectingSubscription) return;
+
+    selectSubscription({ id: onlySubscription.id })
+      .unwrap()
+      .then(() => refetchMySubscriptions())
+      .catch(() => {
+        // keep settings usable even if auto-select fails
+      });
+  }, [
+    subscriptionStats,
+    isSelectingSubscription,
+    selectSubscription,
+    refetchMySubscriptions,
+  ]);
 
   const handleBuyPlanFromSettings = async (plan: (typeof plans)[number]) => {
     const existing = subscriptionStats.find(
@@ -533,6 +564,61 @@ const Settings = () => {
       toast.error(error?.data?.message || "Failed to disconnect MetaMask");
     }
   };
+
+  const getNativeCoinSymbol = (chainId: string) => {
+    const normalized = String(chainId || "").toLowerCase();
+    if (normalized === "0x1" || normalized === "0xaa36a7") return "ETH";
+    if (normalized === "0x89") return "MATIC";
+    if (normalized === "0x38") return "BNB";
+    return "ETH";
+  };
+
+  const refreshWalletCoinBalances = async () => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) {
+      setWalletCoinBalances({});
+      return;
+    }
+
+    const metamaskWallets = wallets.filter(
+      (wallet) => wallet.provider === "METAMASK",
+    );
+    if (metamaskWallets.length === 0) {
+      setWalletCoinBalances({});
+      return;
+    }
+
+    try {
+      setLoadingWalletCoinBalances(true);
+      const chainId = (await ethereum.request({
+        method: "eth_chainId",
+      })) as string;
+      const symbol = getNativeCoinSymbol(chainId);
+
+      const balances = await Promise.all(
+        metamaskWallets.map(async (wallet) => {
+          const raw = (await ethereum.request({
+            method: "eth_getBalance",
+            params: [wallet.address, "latest"],
+          })) as string;
+          const formatted = Number(ethers.formatEther(raw)).toFixed(6);
+          return [wallet.id, { symbol, value: formatted }] as const;
+        }),
+      );
+
+      setWalletCoinBalances(Object.fromEntries(balances));
+    } catch {
+      setWalletCoinBalances({});
+    } finally {
+      setLoadingWalletCoinBalances(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSection === "wallet") {
+      void refreshWalletCoinBalances();
+    }
+  }, [activeSection, wallets]);
 
   const saveGasMode = async (mode: "USER_WALLET" | "PLATFORM_WALLET") => {
     if (mode === gasPaymentMode) {
@@ -1203,7 +1289,10 @@ const Settings = () => {
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => refetchWallets()}
+                      onClick={async () => {
+                        await refetchWallets();
+                        await refreshWalletCoinBalances();
+                      }}
                       className="cursor-pointer bg-muted text-foreground hover:bg-muted/80"
                     >
                       Refresh Wallets
@@ -1245,6 +1334,15 @@ const Settings = () => {
                             <p className="text-xs text-muted-foreground">
                               {wallet.address}
                             </p>
+                            {wallet.provider === "METAMASK" ? (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {loadingWalletCoinBalances
+                                  ? "Loading balance..."
+                                  : walletCoinBalances[wallet.id]
+                                    ? `${walletCoinBalances[wallet.id].value} ${walletCoinBalances[wallet.id].symbol}`
+                                    : "Balance unavailable"}
+                              </p>
+                            ) : null}
                           </div>
                           <div className="flex gap-2">
                             {!wallet.isPrimary && (
@@ -1390,7 +1488,8 @@ const Settings = () => {
                               ? `Valid till ${new Date(subscription.endsAt).toLocaleDateString()}`
                               : "No expiry date"}
                           </p>
-                          {subscription.isBought && (
+                          {(subscription.isBought ||
+                            subscription.status === "ACTIVE") && (
                             <div className="mt-3 flex justify-end">
                               <Button
                                 size="sm"

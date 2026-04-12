@@ -252,12 +252,6 @@ export class LoansService {
       );
     }
 
-    if (orchestrationDecision.gasPayer === 'USER' && !blockchainTxHash) {
-      throw new BadRequestException(
-        'USER_WALLET mode requires a client-signed blockchain transaction hash for loan submission.',
-      );
-    }
-
     if (!blockchainTxHash && this.blockchainService.isEnabled()) {
       this.logger.log(`[Loan ${loanId}] Processing blockchain transaction...`);
       const bcTx = await this.blockchainService.recordLoan(
@@ -626,8 +620,11 @@ export class LoansService {
       },
     });
 
-    let blockchainTxHash: string | null = null;
-    let blockchainData: any = null;
+    let blockchainTxHash: string | null =
+      updateLoanDto.blockchainTxHash ||
+      (existing as any).blockchainTxHash ||
+      null;
+    let blockchainData: any = (existing as any).blockchainData || null;
 
     if (this.blockchainService.isEnabled()) {
       const orchestrationDecision =
@@ -645,29 +642,41 @@ export class LoansService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Loan update in USER_WALLET mode must be signed via web wallet flow.',
+      const hasClientBlockchainRecord = Boolean(updateLoanDto.blockchainTxHash);
+
+      if (
+        orchestrationDecision.gasPayer !== 'USER' &&
+        !hasClientBlockchainRecord
+      ) {
+        this.logger.log(`[Loan ${id}] Updating blockchain status...`);
+        const bcTx = await this.blockchainService.updateLoanStatus(
+          id,
+          existing.status,
         );
+
+        if (bcTx) {
+          blockchainTxHash = bcTx.txHash;
+          blockchainData = {
+            txHash: bcTx.txHash,
+            blockNumber: bcTx.blockNumber,
+            gasUsed: bcTx.gasUsed,
+            gasPriceGwei: bcTx.gasPriceGwei,
+            gasFeeGwei: bcTx.gasFeeGwei,
+            explorerUrl: bcTx.explorerUrl,
+          };
+
+          this.logger.log(
+            `[Loan ${id}] Blockchain update successful: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+          );
+        } else if (!blockchainTxHash && !blockchainData) {
+          this.logger.error(`[Loan ${id}] Blockchain update failed`);
+          throw new BadRequestException(
+            'Blockchain update failed. Cannot update loan without blockchain record.',
+          );
+        }
       }
 
-      this.logger.log(`[Loan ${id}] Updating blockchain status...`);
-      const bcTx = await this.blockchainService.updateLoanStatus(
-        id,
-        existing.status,
-      );
-
-      if (bcTx) {
-        blockchainTxHash = bcTx.txHash;
-        blockchainData = {
-          txHash: bcTx.txHash,
-          blockNumber: bcTx.blockNumber,
-          gasUsed: bcTx.gasUsed,
-          gasPriceGwei: bcTx.gasPriceGwei,
-          gasFeeGwei: bcTx.gasFeeGwei,
-          explorerUrl: bcTx.explorerUrl,
-        };
-
+      if (blockchainTxHash || blockchainData) {
         await this.prisma.loan.update({
           where: { id },
           data: {
@@ -675,15 +684,6 @@ export class LoansService {
             blockchainData,
           },
         });
-
-        this.logger.log(
-          `[Loan ${id}] Blockchain update successful: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
-        );
-      } else {
-        this.logger.error(`[Loan ${id}] Blockchain update failed`);
-        throw new BadRequestException(
-          'Blockchain update failed. Cannot update loan without blockchain record.',
-        );
       }
 
       await this.subscriptionResolver.consumeUsage(
@@ -944,22 +944,18 @@ export class LoansService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'Loan deletion in USER_WALLET mode must be signed via web wallet flow.',
-        );
-      }
+      if (orchestrationDecision.gasPayer !== 'USER') {
+        const bcTx = await this.blockchainService.deleteLoan(id);
 
-      const bcTx = await this.blockchainService.deleteLoan(id);
-
-      if (bcTx) {
-        this.logger.log(
-          `Loan ${id} deletion recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
-        );
-      } else {
-        this.logger.warn(
-          `Loan ${id} deletion — blockchain unavailable, proceeding without chain record`,
-        );
+        if (bcTx) {
+          this.logger.log(
+            `Loan ${id} deletion recorded on blockchain: tx=${bcTx.txHash} gas=${bcTx.gasFeeGwei} GWEI`,
+          );
+        } else {
+          this.logger.warn(
+            `Loan ${id} deletion — blockchain unavailable, proceeding without chain record`,
+          );
+        }
       }
 
       await this.subscriptionResolver.consumeUsage(
@@ -1051,28 +1047,24 @@ export class LoansService {
         );
       }
 
-      if (orchestrationDecision.gasPayer === 'USER') {
-        throw new BadRequestException(
-          'USER_WALLET repayment flow must be signed via web wallet before API payment execution.',
+      if (orchestrationDecision.gasPayer !== 'USER') {
+        const paymentIdStr = randomUUID();
+        const bcPayTx = await this.blockchainService.recordPayment(
+          paymentIdStr,
+          contract.id,
+          Math.round(amount * 100),
+          paymentMethodId || 'WALLET',
+          `payment-${id}`,
         );
-      }
-
-      const paymentIdStr = randomUUID();
-      const bcPayTx = await this.blockchainService.recordPayment(
-        paymentIdStr,
-        contract.id,
-        Math.round(amount * 100),
-        paymentMethodId || 'WALLET',
-        `payment-${id}`,
-      );
-      if (bcPayTx) {
-        this.logger.log(
-          `Payment ${paymentIdStr} recorded on blockchain: tx=${bcPayTx.txHash} gas=${bcPayTx.gasFeeGwei} GWEI`,
-        );
-      } else {
-        this.logger.warn(
-          `Payment ${paymentIdStr} — blockchain unavailable, proceeding without chain record`,
-        );
+        if (bcPayTx) {
+          this.logger.log(
+            `Payment ${paymentIdStr} recorded on blockchain: tx=${bcPayTx.txHash} gas=${bcPayTx.gasFeeGwei} GWEI`,
+          );
+        } else {
+          this.logger.warn(
+            `Payment ${paymentIdStr} — blockchain unavailable, proceeding without chain record`,
+          );
+        }
       }
 
       await this.subscriptionResolver.consumeUsage(

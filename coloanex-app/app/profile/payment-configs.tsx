@@ -25,6 +25,7 @@ export default function ProfilePaymentConfigsScreen() {
   const [configs, setConfigs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
 
   const [scope, setScope] = useState<"USER" | "TENANT">("USER");
   const [gateway, setGateway] = useState<"ESEWA" | "KHALTI">("ESEWA");
@@ -86,6 +87,11 @@ export default function ProfilePaymentConfigsScreen() {
         webhookUrl: webhookUrl || undefined,
       });
       showToast("Payment config saved", "success");
+      setEditingConfigId(null);
+      setMerchantId("");
+      setPublicKey("");
+      setSecretKey("");
+      setWebhookUrl("");
       await loadData();
     } catch (error: any) {
       showToast(
@@ -95,6 +101,28 @@ export default function ProfilePaymentConfigsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEditConfig = (config: any) => {
+    setEditingConfigId(config.id);
+    setScope(config.ownerScope || "USER");
+    setGateway(config.gateway || "ESEWA");
+    setEnvironment(config.environment || "sandbox");
+    setMerchantId(config.merchantId || "");
+    setPublicKey(config.publicKey || "");
+    setSecretKey(config.secretKey || "");
+    setWebhookUrl(config.webhookUrl || "");
+  };
+
+  const resetForm = () => {
+    setEditingConfigId(null);
+    setScope("USER");
+    setGateway("ESEWA");
+    setEnvironment("sandbox");
+    setMerchantId("");
+    setPublicKey("");
+    setSecretKey("");
+    setWebhookUrl("");
   };
 
   return (
@@ -126,9 +154,23 @@ export default function ProfilePaymentConfigsScreen() {
           />
         }
       >
-        <Card style={[styles.card, { backgroundColor: colors.card }]}>
+        <Card
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.primary + "30",
+              borderWidth: 1,
+            },
+          ]}
+        >
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Add / Update
+            {editingConfigId ? "Edit Payment Config" : "Add Payment Config"}
+          </Text>
+          <Text
+            style={[styles.sectionSubtitle, { color: colors.textSecondary }]}
+          >
+            Configure who receives disbursement and repayment payments.
           </Text>
 
           <View style={styles.row}>
@@ -204,10 +246,24 @@ export default function ProfilePaymentConfigsScreen() {
           />
 
           <Button
-            title={saving ? "Saving..." : "Save Config"}
+            title={
+              saving
+                ? "Saving..."
+                : editingConfigId
+                  ? "Update Config"
+                  : "Save Config"
+            }
             onPress={saveConfig}
             loading={saving}
           />
+          {editingConfigId ? (
+            <Button
+              title="Cancel Edit"
+              variant="outline"
+              onPress={resetForm}
+              style={{ marginTop: spacing.sm }}
+            />
+          ) : null}
         </Card>
 
         <Card style={[styles.card, { backgroundColor: colors.card }]}>
@@ -222,24 +278,73 @@ export default function ProfilePaymentConfigsScreen() {
             configs.map((cfg) => (
               <View
                 key={cfg.id}
-                style={[styles.item, { borderColor: colors.border }]}
+                style={[
+                  styles.item,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: colors.background,
+                  },
+                ]}
               >
-                <Text style={{ color: colors.text, fontWeight: "700" }}>
-                  {cfg.ownerScope} • {cfg.gateway} • {cfg.environment}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                <View style={styles.itemHeader}>
+                  <Text style={{ color: colors.text, fontWeight: "700" }}>
+                    {cfg.ownerScope} • {cfg.gateway}
+                  </Text>
+                  <View
+                    style={[
+                      styles.badge,
+                      {
+                        backgroundColor:
+                          cfg.environment === "production"
+                            ? colors.success + "20"
+                            : colors.warning + "20",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color:
+                          cfg.environment === "production"
+                            ? colors.success
+                            : colors.warning,
+                        fontSize: 11,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {String(cfg.environment).toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    marginTop: 4,
+                  }}
+                >
                   Merchant: {cfg.merchantId || "-"}
                 </Text>
-                <Button
-                  title="Delete"
-                  variant="outline"
-                  onPress={async () => {
-                    await paymentConfigsApi.remove(cfg.id).catch(() => null);
-                    await loadData();
-                  }}
-                  style={{ marginTop: spacing.xs }}
-                  textStyle={{ color: colors.error }}
-                />
+                <View style={styles.itemActions}>
+                  <Button
+                    title="Edit"
+                    variant="outline"
+                    onPress={() => startEditConfig(cfg)}
+                    style={{ flex: 1, marginTop: spacing.xs }}
+                  />
+                  <Button
+                    title="Delete"
+                    variant="outline"
+                    onPress={async () => {
+                      await paymentConfigsApi.remove(cfg.id).catch(() => null);
+                      if (editingConfigId === cfg.id) {
+                        resetForm();
+                      }
+                      await loadData();
+                    }}
+                    style={{ flex: 1, marginTop: spacing.xs }}
+                    textStyle={{ color: colors.error }}
+                  />
+                </View>
               </View>
             ))
           )}
@@ -271,6 +376,11 @@ const createStyles = (colors: any) =>
     content: { flex: 1, padding: spacing.md },
     card: { padding: spacing.md, marginBottom: spacing.md },
     sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: spacing.sm },
+    sectionSubtitle: {
+      fontSize: 13,
+      marginBottom: spacing.md,
+      lineHeight: 18,
+    },
     row: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
     toggleButton: { flex: 1 },
     item: {
@@ -278,5 +388,21 @@ const createStyles = (colors: any) =>
       borderRadius: borderRadius.md,
       padding: spacing.sm,
       marginTop: spacing.xs,
+    },
+    itemHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.sm,
+    },
+    itemActions: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    badge: {
+      borderRadius: 999,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
     },
   });

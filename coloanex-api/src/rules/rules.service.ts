@@ -251,9 +251,11 @@ export class RulesService {
     };
 
     let blockchainTxHash: string | null =
-      updateRuleDto.blockchainTxHash || null;
+      updateRuleDto.blockchainTxHash || (rule as any).blockchainTxHash || null;
     let blockchainData: Record<string, unknown> | null =
-      (updateRuleDto.blockchainData as Record<string, unknown>) || null;
+      (updateRuleDto.blockchainData as Record<string, unknown>) ||
+      ((rule as any).blockchainData as Record<string, unknown>) ||
+      null;
 
     const orchestrationDecision =
       await this.transactionOrchestrator.orchestrate({
@@ -279,7 +281,11 @@ export class RulesService {
       );
     }
 
-    if (this.blockchainService.isEnabled()) {
+    const hasClientBlockchainRecord =
+      Boolean(updateRuleDto.blockchainTxHash) ||
+      Boolean(updateRuleDto.blockchainData);
+
+    if (this.blockchainService.isEnabled() && !hasClientBlockchainRecord) {
       const tx = await this.blockchainService.updateRule(
         id,
         Math.round(
@@ -292,14 +298,16 @@ export class RulesService {
         updateRuleDto.isActive ?? rule.isActive,
       );
 
-      if (!tx) {
+      if (!tx && !blockchainTxHash && !blockchainData) {
         throw new InternalServerErrorException(
           'Blockchain update failed. Cannot update rule without blockchain record.',
         );
       }
 
-      blockchainTxHash = tx.txHash;
-      blockchainData = tx as unknown as Record<string, unknown>;
+      if (tx) {
+        blockchainTxHash = tx.txHash;
+        blockchainData = tx as unknown as Record<string, unknown>;
+      }
     }
 
     const updatedRule = (await this.prisma.rule.update({

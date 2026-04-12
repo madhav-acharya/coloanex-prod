@@ -12,4 +12,11 @@ export class VerifyKycDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  blockchainTxHash?: string;
+
+  @IsOptional()
+  blockchainData?: Record<string, unknown>;
 }

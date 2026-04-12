@@ -201,6 +201,11 @@ const Profile = () => {
                 <div>
                   <h3 className="text-xl font-semibold">{user.fullName}</h3>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
+                  {isUploading && (
+                    <p className="text-xs text-primary mt-1">
+                      Uploading image...
+                    </p>
+                  )}
                   <div className="flex items-center gap-2 mt-2">
                     <Badge
                       variant={user.isActive ? "default" : "destructive"}
@@ -272,7 +277,7 @@ const Profile = () => {
                   </Label>
                   <Input
                     value={new Date(
-                      user.lastActiveAt || ""
+                      user.lastActiveAt || "",
                     ).toLocaleDateString()}
                     disabled
                     className="disabled:opacity-100 disabled:cursor-default"
