@@ -26,28 +26,35 @@ export class WalletResolverService {
       }
     }
 
-    const primary = await this.prisma.wallet.findFirst({
-      where: {
-        userId,
-        ...(purpose ? { purpose: purpose as never } : { isPrimary: true }),
-        isActive: true,
-        platform: platform as never,
-      },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const purposePriority: Array<'GAS' | 'PRIMARY' | 'GENERAL'> = purpose
+      ? purpose === 'GAS'
+        ? ['GAS', 'PRIMARY', 'GENERAL']
+        : ['PRIMARY', 'GENERAL']
+      : ['PRIMARY', 'GENERAL'];
 
-    if (primary) {
-      return primary;
+    for (const prioritizedPurpose of purposePriority) {
+      const wallet = await this.prisma.wallet.findFirst({
+        where: {
+          userId,
+          purpose: prioritizedPurpose as never,
+          isActive: true,
+          platform: platform as never,
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      if (wallet) {
+        return wallet;
+      }
     }
 
     return this.prisma.wallet.findFirst({
       where: {
         userId,
-        ...(purpose ? { purpose: purpose as never } : {}),
         isActive: true,
         platform: platform as never,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPrimary: 'desc' }, { updatedAt: 'desc' }],
     });
   }
 }
