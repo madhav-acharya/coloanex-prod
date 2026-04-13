@@ -7,6 +7,7 @@ import {
   Patch,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -36,6 +37,19 @@ export class TransactionsController {
   @Get('entity/:id')
   findByEntity(@Param('id') id: string) {
     return this.transactionsService.findByEntity(id);
+  }
+
+  @Get('wallet/summary')
+  getWalletSummary(
+    @Req() req: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.transactionsService.getWalletSummary(
+      req.user,
+      startDate,
+      endDate,
+    );
   }
 
   @Get(':id')
