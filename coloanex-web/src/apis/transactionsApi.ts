@@ -65,6 +65,18 @@ export interface CreateTransactionDto {
   paymentDetails?: PaymentDetails;
 }
 
+export interface WalletSummaryResponse {
+  toGive: number;
+  toReceive: number;
+  totalTransactions: number;
+  toGivePercentage: number;
+  toReceivePercentage: number;
+  totalTransactionsPercentage: number;
+  toGiveSeries: Array<{ month: string; value: number }>;
+  toReceiveSeries: Array<{ month: string; value: number }>;
+  totalTransactionsSeries: Array<{ month: string; value: number }>;
+}
+
 export const transactionsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     createTransaction: builder.mutation<Transaction, CreateTransactionDto>({
@@ -85,6 +97,21 @@ export const transactionsApi = baseApi.injectEndpoints({
     }),
     getTransactionsByEntity: builder.query<Transaction[], string>({
       query: (id) => `/transactions/entity/${id}`,
+      providesTags: ["Transactions"],
+    }),
+    getWalletSummary: builder.query<
+      WalletSummaryResponse,
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "/transactions/wallet/summary",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
       providesTags: ["Transactions"],
     }),
     getTransaction: builder.query<Transaction, string>({
@@ -110,6 +137,7 @@ export const {
   useGetAllTransactionsQuery,
   useGetTransactionsByContractQuery,
   useGetTransactionsByEntityQuery,
+  useGetWalletSummaryQuery,
   useGetTransactionQuery,
   useUpdateTransactionStatusMutation,
 } = transactionsApi;
