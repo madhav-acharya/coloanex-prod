@@ -31,6 +31,99 @@ export class TransactionsService {
     return user.roles?.includes('Borrower') ? 'APP' : 'WEB';
   }
 
+  private resolveWalletRange(startDate?: string, endDate?: string) {
+    const now = new Date();
+    const end = endDate ? new Date(endDate) : now;
+    if (Number.isNaN(end.getTime())) end.setTime(now.getTime());
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(end.getTime() - 180 * 24 * 60 * 60 * 1000);
+    if (Number.isNaN(start.getTime())) {
+      start.setTime(end.getTime() - 180 * 24 * 60 * 60 * 1000);
+    }
+    if (end < start) {
+      const temp = new Date(start);
+      start.setTime(end.getTime());
+      end.setTime(temp.getTime());
+    }
+    return { start, end };
+  }
+
+  private buildWalletBuckets(start: Date, end: Date) {
+    const durationMs = end.getTime() - start.getTime();
+    const hourMs = 60 * 60 * 1000;
+    const dayMs = 24 * hourMs;
+    const monthMs = 30 * dayMs;
+
+    if (durationMs <= dayMs) {
+      const buckets: Array<{ start: Date; end: Date; label: string }> = [];
+      let cursor = new Date(start);
+      while (cursor <= end) {
+        const bucketStart = new Date(cursor);
+        const bucketEnd = new Date(cursor.getTime() + 4 * hourMs);
+        buckets.push({
+          start: bucketStart,
+          end: bucketEnd,
+          label: bucketStart.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }),
+        });
+        cursor = bucketEnd;
+      }
+      return buckets;
+    }
+
+    if (durationMs <= 31 * dayMs) {
+      const buckets: Array<{ start: Date; end: Date; label: string }> = [];
+      let cursor = new Date(start);
+      while (cursor <= end) {
+        const bucketStart = new Date(cursor);
+        const bucketEnd = new Date(cursor.getTime() + dayMs);
+        buckets.push({
+          start: bucketStart,
+          end: bucketEnd,
+          label: bucketStart.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          }),
+        });
+        cursor = bucketEnd;
+      }
+      return buckets;
+    }
+
+    const buckets: Array<{ start: Date; end: Date; label: string }> = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const last = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cursor <= last) {
+      const bucketStart = new Date(cursor);
+      const bucketEnd = new Date(
+        cursor.getFullYear(),
+        cursor.getMonth() + 1,
+        1,
+      );
+      buckets.push({
+        start: bucketStart,
+        end: bucketEnd,
+        label: bucketStart.toLocaleDateString('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }),
+      });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return buckets;
+  }
+
+  private percentageFromSeries(series: Array<{ value: number }>) {
+    const first = Number(series[0]?.value || 0);
+    const last = Number(series[series.length - 1]?.value || 0);
+    if (first === 0) return last > 0 ? 100 : 0;
+    return Number((((last - first) / first) * 100).toFixed(2));
+  }
+
   private async attachActorDetails<
     T extends { sentBy: string; receivedBy: string },
   >(
@@ -315,6 +408,152 @@ export class TransactionsService {
     return (await this.attachActorDetails(
       transactions as any[],
     )) as unknown as Transaction[];
+  }
+
+  async getWalletSummary(
+    user: { sub: string; tenantId?: string; roles?: string[] },
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const { start, end } = this.resolveWalletRange(startDate, endDate);
+    const roleNames = (user.roles || []).map((role) => role.toLowerCase());
+    const isSuperAdmin = roleNames.includes('super admin');
+    const entityIds = [user.sub, user.tenantId].filter(Boolean) as string[];
+
+    const where: any = {
+      createdAt: { gte: start, lte: end },
+    };
+
+    if (!isSuperAdmin) {
+      where.OR = [
+        { sentBy: { in: entityIds } },
+        { receivedBy: { in: entityIds } },
+      ];
+    }
+
+    const transactions = await this.prisma.transaction.findMany({
+      where,
+      select: {
+        sentBy: true,
+        receivedBy: true,
+        amount: true,
+        type: true,
+        status: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    let toGive = 0;
+    let toReceive = 0;
+
+    transactions.forEach((tx) => {
+      if (tx.status !== 'COMPLETED') return;
+      const amount = Number(tx.amount) || 0;
+
+      if (isSuperAdmin) {
+        toGive += amount;
+        return;
+      }
+
+      const iSent = entityIds.includes(tx.sentBy);
+      const iReceived = entityIds.includes(tx.receivedBy);
+
+      if (iReceived && tx.type === 'DISBURSEMENT') toGive += amount;
+      if (
+        iSent &&
+        (tx.type === 'INSTALLMENT_PAYMENT' || tx.type === 'PENALTY_PAYMENT')
+      ) {
+        toGive -= amount;
+      }
+
+      if (iSent && tx.type === 'DISBURSEMENT') toReceive += amount;
+      if (
+        iReceived &&
+        (tx.type === 'INSTALLMENT_PAYMENT' || tx.type === 'PENALTY_PAYMENT')
+      ) {
+        toReceive -= amount;
+      }
+    });
+
+    const buckets = this.buildWalletBuckets(start, end);
+
+    const toGiveSeries = buckets.map((bucket) => {
+      let value = 0;
+      transactions.forEach((tx) => {
+        const d = new Date(tx.createdAt);
+        if (d < bucket.start || d >= bucket.end || tx.status !== 'COMPLETED') {
+          return;
+        }
+        const amount = Number(tx.amount) || 0;
+
+        if (isSuperAdmin) {
+          value += amount;
+          return;
+        }
+
+        const iSent = entityIds.includes(tx.sentBy);
+        const iReceived = entityIds.includes(tx.receivedBy);
+
+        if (iReceived && tx.type === 'DISBURSEMENT') value += amount;
+        if (
+          iSent &&
+          (tx.type === 'INSTALLMENT_PAYMENT' || tx.type === 'PENALTY_PAYMENT')
+        ) {
+          value -= amount;
+        }
+      });
+
+      return { month: bucket.label, value: Math.max(0, value) };
+    });
+
+    const toReceiveSeries = buckets.map((bucket) => {
+      let value = 0;
+      transactions.forEach((tx) => {
+        const d = new Date(tx.createdAt);
+        if (d < bucket.start || d >= bucket.end || tx.status !== 'COMPLETED') {
+          return;
+        }
+
+        if (isSuperAdmin) return;
+
+        const amount = Number(tx.amount) || 0;
+        const iSent = entityIds.includes(tx.sentBy);
+        const iReceived = entityIds.includes(tx.receivedBy);
+
+        if (iSent && tx.type === 'DISBURSEMENT') value += amount;
+        if (
+          iReceived &&
+          (tx.type === 'INSTALLMENT_PAYMENT' || tx.type === 'PENALTY_PAYMENT')
+        ) {
+          value -= amount;
+        }
+      });
+
+      return { month: bucket.label, value: Math.max(0, value) };
+    });
+
+    const totalTransactionsSeries = buckets.map((bucket) => {
+      const value = transactions.filter((tx) => {
+        const d = new Date(tx.createdAt);
+        return d >= bucket.start && d < bucket.end;
+      }).length;
+      return { month: bucket.label, value };
+    });
+
+    return {
+      toGive: Math.max(0, toGive),
+      toReceive: Math.max(0, toReceive),
+      totalTransactions: transactions.length,
+      toGivePercentage: this.percentageFromSeries(toGiveSeries),
+      toReceivePercentage: this.percentageFromSeries(toReceiveSeries),
+      totalTransactionsPercentage: this.percentageFromSeries(
+        totalTransactionsSeries,
+      ),
+      toGiveSeries,
+      toReceiveSeries,
+      totalTransactionsSeries,
+    };
   }
 
   async findOne(id: string): Promise<Transaction> {

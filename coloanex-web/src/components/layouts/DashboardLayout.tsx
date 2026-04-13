@@ -153,7 +153,6 @@ export default function DashboardLayout({
       icon: <BadgeDollarSign className="w-4 h-4" />,
       href: "/subscriptions",
       permission: "Read Roles",
-      superAdminOnly: true,
     },
   ];
 

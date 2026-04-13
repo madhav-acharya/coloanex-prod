@@ -23,6 +23,30 @@ export interface TenantAnalytics {
   totalDisbursed: number;
   totalCollected: number;
   pendingPayments: number;
+  trendPercentages?: {
+    newBorrowers: number;
+    periodLoans: number;
+    activeLoans: number;
+    periodContracts: number;
+    verifiedBorrowers: number;
+    pendingKYCs: number;
+    activeContracts: number;
+    periodDisbursed: number;
+    periodCollected: number;
+    pendingPayments: number;
+  };
+  trendSeries?: {
+    newBorrowers: Array<{ month: string; value: number }>;
+    periodLoans: Array<{ month: string; value: number }>;
+    activeLoans: Array<{ month: string; value: number }>;
+    periodContracts: Array<{ month: string; value: number }>;
+    verifiedBorrowers: Array<{ month: string; value: number }>;
+    pendingKYCs: Array<{ month: string; value: number }>;
+    activeContracts: Array<{ month: string; value: number }>;
+    periodDisbursed: Array<{ month: string; value: number }>;
+    periodCollected: Array<{ month: string; value: number }>;
+    pendingPayments: Array<{ month: string; value: number }>;
+  };
 }
 
 export interface MonthlyData {
@@ -51,64 +75,168 @@ export interface BorrowerStatusData {
   count: number;
 }
 
+type TrendQuery =
+  | number
+  | {
+      months?: number;
+      startDate?: string;
+      endDate?: string;
+    }
+  | void;
+
 const analyticsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getAdminAnalytics: builder.query<AdminAnalytics, void>({
       query: () => "analytics/admin",
     }),
-    getTenantAnalytics: builder.query<TenantAnalytics, string | void>({
-      query: (tenantId) => ({
+    getTenantAnalytics: builder.query<
+      TenantAnalytics,
+      { tenantId?: string; startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
         url: "analytics/tenant",
-        params: tenantId ? { tenantId } : {},
+        params: params
+          ? {
+              ...(params.tenantId ? { tenantId: params.tenantId } : {}),
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
       }),
     }),
-    getMonthlyContracts: builder.query<MonthlyData[], number | void>({
-      query: (months = 12) => ({
+    getMonthlyContracts: builder.query<MonthlyData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/contracts/monthly",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getMonthlyLoans: builder.query<MonthlyData[], number | void>({
-      query: (months = 12) => ({
+    getMonthlyLoans: builder.query<MonthlyData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/loans/monthly",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getLoansByStatus: builder.query<StatusData[], void>({
-      query: () => "analytics/loans/status",
+    getLoansByStatus: builder.query<
+      StatusData[],
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "analytics/loans/status",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
     }),
-    getContractsByStatus: builder.query<StatusData[], void>({
-      query: () => "analytics/contracts/status",
+    getContractsByStatus: builder.query<
+      StatusData[],
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "analytics/contracts/status",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
     }),
-    getMonthlyRevenue: builder.query<RevenueData[], number | void>({
-      query: (months = 12) => ({
+    getMonthlyRevenue: builder.query<RevenueData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/revenue/monthly",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getMonthlyUsers: builder.query<MonthlyData[], number | void>({
-      query: (months = 12) => ({
+    getMonthlyUsers: builder.query<MonthlyData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/users/monthly",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getUsersByRole: builder.query<UserRoleData[], void>({
-      query: () => "analytics/users/by-role",
+    getUsersByRole: builder.query<
+      UserRoleData[],
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "analytics/users/by-role",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
     }),
-    getMonthlyBorrowers: builder.query<MonthlyData[], number | void>({
-      query: (months = 12) => ({
+    getMonthlyBorrowers: builder.query<MonthlyData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/borrowers/monthly",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getBorrowerMonthlyLoans: builder.query<MonthlyData[], number | void>({
-      query: (months = 12) => ({
+    getBorrowerMonthlyLoans: builder.query<MonthlyData[], TrendQuery>({
+      query: (arg) => ({
         url: "analytics/borrowers/monthly-loans",
-        params: { months },
+        params:
+          typeof arg === "number"
+            ? { months: arg }
+            : {
+                months: arg?.months ?? 12,
+                ...(arg?.startDate ? { startDate: arg.startDate } : {}),
+                ...(arg?.endDate ? { endDate: arg.endDate } : {}),
+              },
       }),
     }),
-    getBorrowersByStatus: builder.query<BorrowerStatusData[], void>({
-      query: () => "analytics/borrowers/by-status",
+    getBorrowersByStatus: builder.query<
+      BorrowerStatusData[],
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "analytics/borrowers/by-status",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
     }),
   }),
 });

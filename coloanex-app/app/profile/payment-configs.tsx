@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -190,19 +191,54 @@ export default function ProfilePaymentConfigsScreen() {
             ) : null}
           </View>
 
-          <View style={styles.row}>
-            <Button
-              title="eSewa"
-              variant={gateway === "ESEWA" ? "primary" : "outline"}
+          <View style={styles.gatewayRow}>
+            <TouchableOpacity
               onPress={() => setGateway("ESEWA")}
-              style={styles.toggleButton}
-            />
-            <Button
-              title="Khalti"
-              variant={gateway === "KHALTI" ? "primary" : "outline"}
+              style={[
+                styles.gatewayCard,
+                {
+                  borderColor:
+                    gateway === "ESEWA" ? colors.primary : colors.border,
+                  backgroundColor:
+                    gateway === "ESEWA"
+                      ? colors.primary + "20"
+                      : colors.background,
+                },
+              ]}
+            >
+              <Image
+                source={require("../../assets/images/esewa-logo.png")}
+                style={styles.gatewayLogo}
+                resizeMode="contain"
+              />
+              <Text style={[styles.gatewayTitle, { color: colors.text }]}>
+                eSewa
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => setGateway("KHALTI")}
-              style={styles.toggleButton}
-            />
+              style={[
+                styles.gatewayCard,
+                {
+                  borderColor:
+                    gateway === "KHALTI" ? colors.primary : colors.border,
+                  backgroundColor:
+                    gateway === "KHALTI"
+                      ? colors.primary + "20"
+                      : colors.background,
+                },
+              ]}
+            >
+              <Image
+                source={require("../../assets/images/khalti-logo.png")}
+                style={styles.gatewayLogo}
+                resizeMode="contain"
+              />
+              <Text style={[styles.gatewayTitle, { color: colors.text }]}>
+                Khalti
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.row}>
@@ -287,9 +323,20 @@ export default function ProfilePaymentConfigsScreen() {
                 ]}
               >
                 <View style={styles.itemHeader}>
-                  <Text style={{ color: colors.text, fontWeight: "700" }}>
-                    {cfg.ownerScope} • {cfg.gateway}
-                  </Text>
+                  <View style={styles.savedGatewayWrap}>
+                    <Image
+                      source={
+                        cfg.gateway === "ESEWA"
+                          ? require("../../assets/images/esewa-logo.png")
+                          : require("../../assets/images/khalti-logo.png")
+                      }
+                      style={styles.savedGatewayLogo}
+                      resizeMode="contain"
+                    />
+                    <Text style={{ color: colors.text, fontWeight: "700" }}>
+                      {cfg.ownerScope} • {cfg.gateway}
+                    </Text>
+                  </View>
                   <View
                     style={[
                       styles.badge,
@@ -382,6 +429,28 @@ const createStyles = (colors: any) =>
       lineHeight: 18,
     },
     row: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
+    gatewayRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    gatewayCard: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: borderRadius.md,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: spacing.sm,
+      gap: spacing.xs,
+    },
+    gatewayLogo: {
+      width: 52,
+      height: 30,
+    },
+    gatewayTitle: {
+      fontSize: 14,
+      fontWeight: "700",
+    },
     toggleButton: { flex: 1 },
     item: {
       borderWidth: 1,
@@ -394,6 +463,16 @@ const createStyles = (colors: any) =>
       alignItems: "center",
       justifyContent: "space-between",
       gap: spacing.sm,
+    },
+    savedGatewayWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      flex: 1,
+    },
+    savedGatewayLogo: {
+      width: 24,
+      height: 24,
     },
     itemActions: {
       flexDirection: "row",

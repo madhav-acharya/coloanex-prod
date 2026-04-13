@@ -1685,88 +1685,112 @@ const Settings = () => {
                 )}
 
                 {showAddPaymentConfig && (
-                  <div className="rounded-lg border bg-card p-4 space-y-4">
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div className="space-y-2">
-                        <Label>
-                          Scope <span className="text-red-500">*</span>
+                  <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 space-y-5">
+                    <div className="grid gap-4 lg:grid-cols-3">
+                      <div className="rounded-xl border border-border/80 bg-card/60 p-3">
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Scope
                         </Label>
-                        <Select
-                          value={configScope}
-                          onValueChange={(value) =>
-                            setConfigScope(value as "USER" | "TENANT")
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select scope" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="USER">User</SelectItem>
-                            <SelectItem value="TENANT">Tenant</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigScope("USER")}
+                            className={
+                              configScope === "USER"
+                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "border-border/70"
+                            }
+                          >
+                            User
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigScope("TENANT")}
+                            className={
+                              configScope === "TENANT"
+                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "border-border/70"
+                            }
+                          >
+                            Tenant
+                          </Button>
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>
-                          Gateway <span className="text-red-500">*</span>
+                      <div className="rounded-xl border border-border/80 bg-card/60 p-3">
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Gateway
                         </Label>
-                        <Select
-                          value={configGateway}
-                          onValueChange={(value) =>
-                            setConfigGateway(value as "ESEWA" | "KHALTI")
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gateway" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ESEWA">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={gatewayLogoByType.ESEWA}
-                                  alt="eSewa"
-                                  className="h-4 w-4 rounded-sm object-cover"
-                                />
-                                <span>eSewa</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="KHALTI">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={gatewayLogoByType.KHALTI}
-                                  alt="Khalti"
-                                  className="h-4 w-4 rounded-sm object-cover"
-                                />
-                                <span>Khalti</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigGateway("ESEWA")}
+                            className={
+                              configGateway === "ESEWA"
+                                ? "h-12 border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "h-12 border-border/70"
+                            }
+                          >
+                            <img
+                              src={gatewayLogoByType.ESEWA}
+                              alt="eSewa"
+                              className="mr-2 h-5 w-5 rounded-sm object-cover"
+                            />
+                            eSewa
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigGateway("KHALTI")}
+                            className={
+                              configGateway === "KHALTI"
+                                ? "h-12 border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "h-12 border-border/70"
+                            }
+                          >
+                            <img
+                              src={gatewayLogoByType.KHALTI}
+                              alt="Khalti"
+                              className="mr-2 h-5 w-5 rounded-sm object-cover"
+                            />
+                            Khalti
+                          </Button>
+                        </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>
-                          Environment <span className="text-red-500">*</span>
+                      <div className="rounded-xl border border-border/80 bg-card/60 p-3">
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Environment
                         </Label>
-                        <Select
-                          value={configEnvironment}
-                          onValueChange={(value) =>
-                            setConfigEnvironment(
-                              value as "sandbox" | "production",
-                            )
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select environment" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sandbox">Sandbox</SelectItem>
-                            <SelectItem value="production">
-                              Production
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigEnvironment("sandbox")}
+                            className={
+                              configEnvironment === "sandbox"
+                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "border-border/70"
+                            }
+                          >
+                            Sandbox
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setConfigEnvironment("production")}
+                            className={
+                              configEnvironment === "production"
+                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                : "border-border/70"
+                            }
+                          >
+                            Production
+                          </Button>
+                        </div>
                       </div>
                     </div>
 

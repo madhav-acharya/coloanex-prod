@@ -40,7 +40,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { Calendar } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Calendar } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
 const COLORS = [
@@ -58,6 +58,7 @@ type StatCardProps = {
   color: string;
   isCurrency?: boolean;
   trend?: Array<{ value: number }>;
+  trendPercentage?: number;
 };
 
 function StatCard({
@@ -66,7 +67,23 @@ function StatCard({
   color,
   isCurrency = false,
   trend,
+  trendPercentage,
 }: StatCardProps) {
+  const trendStart = trend?.[0]?.value ?? 0;
+  const trendEnd = trend?.[trend.length - 1]?.value ?? 0;
+  const calculatedPercentage =
+    trendStart === 0
+      ? trendEnd > 0
+        ? 100
+        : 0
+      : Number((((trendEnd - trendStart) / trendStart) * 100).toFixed(2));
+  const resolvedPercentage = trendPercentage ?? calculatedPercentage;
+  const previousPoint =
+    trend?.[Math.max((trend?.length || 1) - 2, 0)]?.value ?? 0;
+  const movement = trendEnd - previousPoint;
+  const isUp =
+    resolvedPercentage > 0 || (resolvedPercentage === 0 && movement > 0);
+
   return (
     <Card>
       <CardContent className="p-4">
@@ -87,41 +104,57 @@ function StatCard({
               </h3>
             </div>
           </div>
-          <div className="w-20 h-10">
-            {trend && trend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart data={trend}>
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke={color}
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height={40}>
-                <LineChart
-                  data={[
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                    { value: 0 },
-                  ]}
-                >
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#E5E7EB"
-                    strokeWidth={1.5}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
+          <div className="w-24">
+            <div
+              className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                isUp
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-rose-500/20 text-rose-400"
+              }`}
+            >
+              {isUp ? (
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="mr-1 h-3 w-3" />
+              )}
+              {`${isUp ? "+" : "-"}${Math.abs(resolvedPercentage).toFixed(2)}%`}
+            </div>
+            <div className="w-full h-10">
+              {trend && trend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={40}>
+                  <LineChart data={trend}>
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke={color}
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height={40}>
+                  <LineChart
+                    data={[
+                      { value: 0 },
+                      { value: 0 },
+                      { value: 0 },
+                      { value: 0 },
+                      { value: 0 },
+                      { value: 0 },
+                    ]}
+                  >
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#E5E7EB"
+                      strokeWidth={1.5}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -143,7 +176,17 @@ const Dashboard = () => {
     skip: !isSuperAdmin,
   });
 
-  const { data: tenantData } = useGetTenantAnalyticsQuery(undefined);
+  const { data: tenantData } = useGetTenantAnalyticsQuery(
+    isSuperAdmin
+      ? undefined
+      : {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+    {
+      skip: isSuperAdmin,
+    },
+  );
 
   const months = Math.max(
     1,
@@ -152,29 +195,53 @@ const Dashboard = () => {
     ),
   );
 
-  const { data: monthlyContracts } = useGetMonthlyContractsQuery(months);
-  const { data: monthlyLoans } = useGetMonthlyLoansQuery(months);
-  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(months, {
+  const rangeParams = {
+    months,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  };
+
+  const { data: monthlyContracts } = useGetMonthlyContractsQuery(rangeParams);
+  const { data: monthlyLoans } = useGetMonthlyLoansQuery(rangeParams);
+  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(rangeParams, {
     skip: isSuperAdmin,
   });
-  const { data: loansByStatus } = useGetLoansByStatusQuery();
-  const { data: contractsByStatus } = useGetContractsByStatusQuery();
-  const { data: monthlyRevenue } = useGetMonthlyRevenueQuery(months);
-  const { data: monthlyUsers } = useGetMonthlyUsersQuery(months, {
+  const { data: loansByStatus } = useGetLoansByStatusQuery({
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  });
+  const { data: contractsByStatus } = useGetContractsByStatusQuery({
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  });
+  const { data: monthlyRevenue } = useGetMonthlyRevenueQuery(rangeParams);
+  const { data: monthlyUsers } = useGetMonthlyUsersQuery(rangeParams, {
     skip: !isSuperAdmin,
   });
-  const { data: usersByRole } = useGetUsersByRoleQuery(undefined, {
-    skip: !isSuperAdmin,
-  });
-  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(
-    months,
+  const { data: usersByRole } = useGetUsersByRoleQuery(
+    {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    },
     {
       skip: !isSuperAdmin,
     },
   );
-  const { data: borrowersByStatus } = useGetBorrowersByStatusQuery(undefined, {
-    skip: !isSuperAdmin,
-  });
+  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(
+    rangeParams,
+    {
+      skip: !isSuperAdmin,
+    },
+  );
+  const { data: borrowersByStatus } = useGetBorrowersByStatusQuery(
+    {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+    },
+    {
+      skip: !isSuperAdmin,
+    },
+  );
 
   // Calculate date-range aware values from monthly data
   const getDateRangeValue = (monthlyData: any[], key: string = "count") => {
@@ -269,67 +336,62 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Total Users"
-                value={getDateRangeValue(monthlyUsers)}
+                value={adminData.totalUsers}
                 color="#16A34A"
                 trend={ensureTrendData(monthlyUsers)}
               />
               <StatCard
-                title="Active Users"
-                value={Math.floor(getDateRangeValue(monthlyUsers) * 0.8)}
-                color="#22C55E"
-                trend={ensureTrendData(
-                  monthlyUsers?.map((m, index) => ({
-                    count: Math.max(0, m.count - Math.floor(index / 3)),
-                  })),
-                )}
-              />
-              <StatCard
                 title="Total Loans"
-                value={getDateRangeValue(monthlyLoans)}
-                color="#059669"
+                value={adminData.totalLoans}
+                color="#22C55E"
                 trend={ensureTrendData(monthlyLoans)}
               />
               <StatCard
                 title="Total Contracts"
-                value={getDateRangeValue(monthlyContracts)}
-                color="#F59E0B"
+                value={adminData.totalContracts}
+                color="#059669"
                 trend={ensureTrendData(monthlyContracts)}
+              />
+              <StatCard
+                title="Total Transactions"
+                value={adminData.totalTransactions}
+                color="#F59E0B"
+                trend={ensureTrendData(monthlyRevenue, 6)}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
-                title="Monthly Loans"
-                value={getDateRangeValue(monthlyLoans)}
+                title="Total Tenants"
+                value={adminData.totalTenants}
                 color="#16A34A"
-                trend={ensureTrendData(monthlyLoans)}
+                trend={ensureTrendData(monthlyUsers)}
               />
               <StatCard
-                title="Monthly Contracts"
-                value={getDateRangeValue(monthlyContracts)}
+                title="Active Tenants"
+                value={adminData.activeTenants}
                 color="#22C55E"
-                trend={ensureTrendData(monthlyContracts)}
+                trend={ensureTrendData(monthlyUsers)}
               />
               <StatCard
-                title="Total Revenue"
-                value={getDateRangeRevenueValue(monthlyRevenue)}
+                title="Pending KYCs"
+                value={adminData.pendingKYCs}
                 color="#059669"
-                trend={ensureTrendData(monthlyRevenue, 6)}
-                isCurrency={true}
+                trend={ensureTrendData(monthlyUsers)}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StatCard
-                title="Period Loan Amount"
-                value={getDateRangeRevenueValue(monthlyRevenue) * 3}
+                title="Total Loan Amount"
+                value={adminData.totalLoanAmount}
                 color="#16A34A"
                 isCurrency={true}
                 trend={ensureTrendData(monthlyRevenue, 6)}
               />
               <StatCard
-                title="Period Revenue"
-                value={getDateRangeRevenueValue(monthlyRevenue)}
+                title="Total Contract Amount"
+                value={adminData.totalContractAmount}
                 color="#22C55E"
                 isCurrency={true}
                 trend={ensureTrendData(monthlyRevenue, 6)}
@@ -344,91 +406,112 @@ const Dashboard = () => {
                 title="New Borrowers"
                 value={getDateRangeValue(monthlyBorrowers)}
                 color="#16A34A"
-                trend={ensureTrendData(monthlyBorrowers)}
+                trend={
+                  tenantData?.trendSeries?.newBorrowers ||
+                  ensureTrendData(monthlyBorrowers)
+                }
+                trendPercentage={tenantData?.trendPercentages?.newBorrowers}
               />
               <StatCard
                 title="Period Loans"
                 value={getDateRangeValue(monthlyLoans)}
                 color="#22C55E"
-                trend={ensureTrendData(monthlyLoans)}
+                trend={
+                  tenantData?.trendSeries?.periodLoans ||
+                  ensureTrendData(monthlyLoans)
+                }
+                trendPercentage={tenantData?.trendPercentages?.periodLoans}
               />
               <StatCard
                 title="Active Loans"
-                value={Math.floor(getDateRangeValue(monthlyLoans) * 0.7)}
+                value={tenantData?.activeLoans ?? 0}
                 color="#059669"
-                trend={ensureTrendData(
-                  monthlyLoans?.map((m) => ({
-                    count: Math.max(1, Math.floor(m.count * 0.7)),
-                  })),
-                )}
+                trend={
+                  tenantData?.trendSeries?.activeLoans ||
+                  ensureTrendData(monthlyLoans)
+                }
+                trendPercentage={tenantData?.trendPercentages?.activeLoans}
               />
               <StatCard
                 title="Period Contracts"
                 value={getDateRangeValue(monthlyContracts)}
                 color="#16A34A"
-                trend={ensureTrendData(monthlyContracts)}
+                trend={
+                  tenantData?.trendSeries?.periodContracts ||
+                  ensureTrendData(monthlyContracts)
+                }
+                trendPercentage={tenantData?.trendPercentages?.periodContracts}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Verified Borrowers"
-                value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.8)}
+                value={tenantData?.verifiedKYCs ?? 0}
                 color="#16A34A"
-                trend={ensureTrendData(
-                  monthlyBorrowers?.map((m) => ({
-                    count: Math.floor(m.count * 0.8),
-                  })),
-                )}
+                trend={
+                  tenantData?.trendSeries?.verifiedBorrowers ||
+                  ensureTrendData(monthlyBorrowers)
+                }
+                trendPercentage={
+                  tenantData?.trendPercentages?.verifiedBorrowers
+                }
               />
               <StatCard
                 title="Pending KYCs"
-                value={Math.floor(getDateRangeValue(monthlyBorrowers) * 0.2)}
+                value={tenantData?.pendingKYCs ?? 0}
                 color="#F59E0B"
-                trend={ensureTrendData(
-                  monthlyBorrowers?.map((m) => ({
-                    count: Math.max(0, Math.floor(m.count * 0.2)),
-                  })),
-                )}
+                trend={
+                  tenantData?.trendSeries?.pendingKYCs ||
+                  ensureTrendData(monthlyBorrowers)
+                }
+                trendPercentage={tenantData?.trendPercentages?.pendingKYCs}
               />
               <StatCard
                 title="Active Contracts"
-                value={Math.floor(getDateRangeValue(monthlyContracts) * 0.7)}
+                value={tenantData?.activeContracts ?? 0}
                 color="#22C55E"
-                trend={ensureTrendData(
-                  monthlyContracts?.map((m) => ({
-                    count: Math.floor(m.count * 0.7),
-                  })),
-                )}
+                trend={
+                  tenantData?.trendSeries?.activeContracts ||
+                  ensureTrendData(monthlyContracts)
+                }
+                trendPercentage={tenantData?.trendPercentages?.activeContracts}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Period Disbursed"
-                value={getDateRangeRevenueValue(monthlyRevenue) * 2}
+                value={tenantData?.totalDisbursed ?? 0}
                 color="#16A34A"
                 isCurrency={true}
-                trend={ensureTrendData(monthlyRevenue, 6)}
+                trend={
+                  tenantData?.trendSeries?.periodDisbursed ||
+                  ensureTrendData(monthlyRevenue, 6)
+                }
+                trendPercentage={tenantData?.trendPercentages?.periodDisbursed}
               />
               <StatCard
                 title="Period Collected"
-                value={getDateRangeRevenueValue(monthlyRevenue) * 1.5}
+                value={tenantData?.totalCollected ?? 0}
                 color="#22C55E"
                 isCurrency={true}
-                trend={ensureTrendData(monthlyRevenue, 6)}
+                trend={
+                  tenantData?.trendSeries?.periodCollected ||
+                  ensureTrendData(monthlyRevenue, 6)
+                }
+                trendPercentage={tenantData?.trendPercentages?.periodCollected}
               />
               <StatCard
                 title="Pending Payments"
-                value={getDateRangeRevenueValue(monthlyRevenue) * 0.5}
+                value={tenantData?.pendingPayments ?? 0}
                 color="#F59E0B"
                 isCurrency={true}
-                trend={ensureTrendData(
-                  monthlyRevenue?.map((m, index) => ({
-                    revenue: Math.max(0, m.revenue * 0.5 - index * 1000),
-                  })),
-                  6,
-                )}
+                trend={
+                  tenantData?.trendSeries?.pendingPayments ||
+                  ensureTrendData(monthlyRevenue, 6)
+                }
+                trendPercentage={tenantData?.trendPercentages?.pendingPayments}
               />
             </div>
           </>

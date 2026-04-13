@@ -17,8 +17,15 @@ export class AnalyticsController {
   getTenantAnalytics(
     @CurrentUser() user: any,
     @Query('tenantId') tenantId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
-    return this.analyticsService.getTenantAnalytics(user, tenantId);
+    return this.analyticsService.getTenantAnalytics(
+      user,
+      tenantId,
+      startDate,
+      endDate,
+    );
   }
 
   @Get('borrower')
@@ -34,10 +41,14 @@ export class AnalyticsController {
   getMonthlyContracts(
     @CurrentUser() user: any,
     @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.analyticsService.getMonthlyContracts(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
@@ -66,41 +77,64 @@ export class AnalyticsController {
   }
 
   @Get('contracts/status')
-  getContractsByStatus(@CurrentUser() user: any) {
-    return this.analyticsService.getContractsByStatus(user);
+  getContractsByStatus(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.analyticsService.getContractsByStatus(user, startDate, endDate);
   }
 
   @Get('revenue/monthly')
   getMonthlyRevenue(
     @CurrentUser() user: any,
     @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.analyticsService.getMonthlyRevenue(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
   @Get('users/monthly')
-  getMonthlyUsers(@CurrentUser() user: any, @Query('months') months?: string) {
+  getMonthlyUsers(
+    @CurrentUser() user: any,
+    @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
     return this.analyticsService.getMonthlyUsers(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
   @Get('users/by-role')
-  getUsersByRole(@CurrentUser() user: any) {
-    return this.analyticsService.getUsersByRole(user);
+  getUsersByRole(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.analyticsService.getUsersByRole(user, startDate, endDate);
   }
   @Get('borrowers/monthly')
   getMonthlyBorrowers(
     @CurrentUser() user: any,
     @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.analyticsService.getMonthlyBorrowers(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
@@ -108,15 +142,23 @@ export class AnalyticsController {
   getBorrowerMonthlyLoans(
     @CurrentUser() user: any,
     @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.analyticsService.getBorrowerMonthlyLoans(
       user,
       months ? parseInt(months) : 12,
+      startDate,
+      endDate,
     );
   }
 
   @Get('borrowers/by-status')
-  getBorrowersByStatus(@CurrentUser() user: any) {
-    return this.analyticsService.getBorrowersByStatus(user);
+  getBorrowersByStatus(
+    @CurrentUser() user: any,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.analyticsService.getBorrowersByStatus(user, startDate, endDate);
   }
 }
