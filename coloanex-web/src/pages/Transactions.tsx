@@ -1,17 +1,33 @@
 import { useState, useMemo, useEffect } from "react";
 import { ethers } from "ethers";
-import { Check, FileText, X } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Calendar,
+  Check,
+  FileText,
+  X,
+} from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+import { Line, LineChart, ResponsiveContainer } from "recharts";
+import { format, subMonths } from "date-fns";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
 import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import {
   useGetAllTransactionsQuery,
   useGetTransactionsByEntityQuery,
+  useGetWalletSummaryQuery,
   Transaction,
 } from "@/apis/transactionsApi";
 import { useSelector } from "react-redux";
@@ -35,6 +51,8 @@ export default function Transactions() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [startDate, setStartDate] = useState<Date>(subMonths(new Date(), 6));
+  const [endDate, setEndDate] = useState<Date>(new Date());
   const { data: wallets = [], refetch: refetchWallets } =
     useGetMyWalletsQuery();
   const [createWallet, { isLoading: isCreatingWallet }] =
@@ -142,6 +160,11 @@ export default function Transactions() {
   const isSuperAdmin = user?.roles?.some(
     (ur: any) => ur.role?.name === "Super Admin",
   );
+
+  const { data: walletSummary } = useGetWalletSummaryQuery({
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+  });
 
   const userEntityId = user?.id || "";
   const tenantEntityId = user?.tenantId || "";
@@ -317,7 +340,116 @@ export default function Transactions() {
     };
   }, [transactions, isSuperAdmin, entityIds]);
 
-  const MetricCard = ({ title, value, color, isCurrency = false }: any) => (
+  const buildMonthlyWalletSeries = (
+    source: Transaction[],
+    metric: "give" | "receive" | "count",
+    monthCount: number = 6,
+  ) => {
+    const now = new Date();
+    const series: Array<{ value: number }> = [];
+
+    for (let i = monthCount - 1; i >= 0; i--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const month = monthDate.getMonth();
+      const year = monthDate.getFullYear();
+
+      const monthTransactions = source.filter((tx) => {
+        const txDate = new Date(tx.createdAt);
+        return txDate.getMonth() === month && txDate.getFullYear() === year;
+      });
+
+      if (metric === "count") {
+        series.push({ value: monthTransactions.length });
+        continue;
+      }
+
+      if (isSuperAdmin) {
+        const volume = monthTransactions.reduce(
+          (acc, tx) =>
+            acc + (tx.status === "COMPLETED" ? Number(tx.amount) || 0 : 0),
+          0,
+        );
+        series.push({ value: volume });
+        continue;
+      }
+
+      let monthValue = 0;
+      monthTransactions.forEach((tx) => {
+        if (tx.status !== "COMPLETED") return;
+        const amount = Number(tx.amount) || 0;
+        const iSent = entityIds.includes(tx.sentBy);
+        const iReceived = entityIds.includes(tx.receivedBy);
+
+        if (metric === "give") {
+          if (iReceived && tx.type === "DISBURSEMENT") monthValue += amount;
+          if (
+            iSent &&
+            (tx.type === "INSTALLMENT_PAYMENT" || tx.type === "PENALTY_PAYMENT")
+          ) {
+            monthValue -= amount;
+          }
+        }
+
+        if (metric === "receive") {
+          if (iSent && tx.type === "DISBURSEMENT") monthValue += amount;
+          if (
+            iReceived &&
+            (tx.type === "INSTALLMENT_PAYMENT" || tx.type === "PENALTY_PAYMENT")
+          ) {
+            monthValue -= amount;
+          }
+        }
+      });
+
+      series.push({ value: Math.max(0, monthValue) });
+    }
+
+    return series;
+  };
+
+  const getSeriesPercentage = (series: Array<{ value: number }>) => {
+    if (!series.length) return 0;
+    const start = Number(series[0]?.value || 0);
+    const end = Number(series[series.length - 1]?.value || 0);
+    if (start === 0) return end > 0 ? 100 : 0;
+    return Number((((end - start) / start) * 100).toFixed(2));
+  };
+
+  const toGiveSeries = useMemo(
+    () => buildMonthlyWalletSeries(transactions, "give"),
+    [transactions, isSuperAdmin, entityIds.join("|")],
+  );
+  const toReceiveSeries = useMemo(
+    () => buildMonthlyWalletSeries(transactions, "receive"),
+    [transactions, isSuperAdmin, entityIds.join("|")],
+  );
+  const totalTransactionsSeries = useMemo(
+    () => buildMonthlyWalletSeries(transactions, "count"),
+    [transactions],
+  );
+
+  const resolvedToGiveSeries =
+    walletSummary?.toGiveSeries && walletSummary.toGiveSeries.length > 0
+      ? walletSummary.toGiveSeries
+      : toGiveSeries;
+  const resolvedToReceiveSeries =
+    walletSummary?.toReceiveSeries && walletSummary.toReceiveSeries.length > 0
+      ? walletSummary.toReceiveSeries
+      : toReceiveSeries;
+  const resolvedTotalTransactionsSeries =
+    walletSummary?.totalTransactionsSeries &&
+    walletSummary.totalTransactionsSeries.length > 0
+      ? walletSummary.totalTransactionsSeries
+      : totalTransactionsSeries;
+
+  const MetricCard = ({
+    title,
+    value,
+    color,
+    isCurrency = false,
+    trendData,
+    trendPercentage,
+  }: any) => (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
@@ -335,6 +467,37 @@ export default function Transactions() {
               <h3 className="text-xl font-bold" style={{ color }}>
                 {typeof value === "number" ? value.toLocaleString() : value}
               </h3>
+            </div>
+          </div>
+          <div className="w-24">
+            <div
+              className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                trendPercentage >= 0
+                  ? "bg-emerald-500/20 text-emerald-400"
+                  : "bg-rose-500/20 text-rose-400"
+              }`}
+            >
+              {trendPercentage >= 0 ? (
+                <ArrowUpRight className="mr-1 h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="mr-1 h-3 w-3" />
+              )}
+              {`${trendPercentage >= 0 ? "+" : "-"}${Math.abs(
+                trendPercentage,
+              ).toFixed(2)}%`}
+            </div>
+            <div className="h-10 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trendData}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={color}
+                    strokeWidth={1.8}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
         </div>
@@ -765,6 +928,55 @@ export default function Transactions() {
     >
       <div className="space-y-6">
         <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <label className="text-sm font-medium text-foreground">
+                Date Range:
+              </label>
+              <div className="flex items-center gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-[200px] justify-start text-left font-normal"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {format(startDate, "PPP")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => date && setStartDate(date)}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-muted-foreground">to</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-[200px] justify-start text-left font-normal"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {format(endDate, "PPP")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => date && setEndDate(date)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardContent className="p-4 space-y-4">
             <h3 className="text-lg font-semibold">Wallet Connections</h3>
             {metamaskWallets.length > 0 ? (
@@ -832,27 +1044,45 @@ export default function Transactions() {
           <MetricCard
             title={isSuperAdmin ? "Total Volume" : "To Give"}
             value={
-              isSuperAdmin
-                ? transactions.reduce(
-                    (acc, tx) =>
-                      acc + (tx.status === "COMPLETED" ? Number(tx.amount) : 0),
-                    0,
-                  )
-                : toGive
+              walletSummary
+                ? walletSummary.toGive
+                : isSuperAdmin
+                  ? transactions.reduce(
+                      (acc, tx) =>
+                        acc +
+                        (tx.status === "COMPLETED" ? Number(tx.amount) : 0),
+                      0,
+                    )
+                  : toGive
             }
             color="#DC2626"
             isCurrency={true}
+            trendData={resolvedToGiveSeries}
+            trendPercentage={
+              walletSummary?.toGivePercentage ??
+              getSeriesPercentage(resolvedToGiveSeries)
+            }
           />
           <MetricCard
             title="To Receive"
-            value={toReceive}
+            value={walletSummary?.toReceive ?? toReceive}
             color="#16A34A"
             isCurrency={true}
+            trendData={resolvedToReceiveSeries}
+            trendPercentage={
+              walletSummary?.toReceivePercentage ??
+              getSeriesPercentage(resolvedToReceiveSeries)
+            }
           />
           <MetricCard
             title="Total Transactions"
-            value={transactions.length}
+            value={walletSummary?.totalTransactions ?? transactions.length}
             color="#059669"
+            trendData={resolvedTotalTransactionsSeries}
+            trendPercentage={
+              walletSummary?.totalTransactionsPercentage ??
+              getSeriesPercentage(resolvedTotalTransactionsSeries)
+            }
           />
         </div>
 
