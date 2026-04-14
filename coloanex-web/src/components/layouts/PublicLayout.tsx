@@ -33,10 +33,11 @@ export default function PublicLayout({
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
                   <img src="/logo.png" alt="C" className="w-full h-full" />
                 </div>
+                <span className="font-bold text-white text-lg">Coloanex</span>
               </Link>
 
               {/* Desktop Navigation */}
-              <div className="hidden md:flex items-center gap-8">
+              <div className="hidden lg:flex items-center gap-8">
                 <Link
                   to="/"
                   className={`cursor-pointer transition-colors ${
@@ -46,6 +47,16 @@ export default function PublicLayout({
                   }`}
                 >
                   Home
+                </Link>
+                <Link
+                  to="/how-it-works"
+                  className={`cursor-pointer transition-colors ${
+                    location.pathname === "/how-it-works"
+                      ? "text-green-500 font-bold"
+                      : "text-white hover:text-foreground"
+                  }`}
+                >
+                  How It Works
                 </Link>
                 <Link
                   to="/features"
@@ -90,7 +101,7 @@ export default function PublicLayout({
               </div>
 
               {/* Desktop Auth Buttons */}
-              <div className="hidden md:flex items-center gap-3 text-white">
+              <div className="hidden lg:flex items-center gap-3 text-white">
                 <ThemeSwitcher />
                 {user ? (
                   <>
@@ -122,7 +133,7 @@ export default function PublicLayout({
 
               {/* Mobile Menu Button */}
               <button
-                className="md:hidden p-2 text-foreground cursor-pointer"
+                className="lg:hidden p-2 text-white hover:text-green-500 cursor-pointer"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? (
@@ -133,34 +144,74 @@ export default function PublicLayout({
               </button>
             </div>
           </div>
+        </nav>
+      )}
 
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden bg-background dark:bg-card border-b border-border animate-fade-in text-white">
-              <div className="px-4 py-4 space-y-3">
-                <div className="flex items-center justify-between py-2 mb-2 pb-2 border-b border-border">
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    Theme
-                  </span>
-                  <ThemeSwitcher />
+      {/* Mobile Sidebar Navigation */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-[60] flex">
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          {/* Sidebar Content */}
+          <div className="relative w-[90%] sm:w-[85%] max-w-sm h-full bg-gradient-dark border-r border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+            {/* Mobile Sidebar Header */}
+            <div className="flex items-center justify-between px-4 h-16 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <img src="/logo.png" alt="C" className="w-full h-full" />
                 </div>
+                <span className="font-bold text-white text-lg">Coloanex</span>
+              </div>
+              <button
+                className="p-2 text-white/80 hover:text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Mobile Links */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <span className="text-sm font-semibold text-white/70">
+                  Theme Selection
+                </span>
+                <ThemeSwitcher />
+              </div>
+
+              <div className="space-y-4">
                 <Link
                   to="/"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/"
                       ? "text-green-500 font-bold"
-                      : "text-white dark:text-foreground hover:text-foreground"
+                      : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Home
                 </Link>
                 <Link
+                  to="/how-it-works"
+                  className={`cursor-pointer block py-2 ${
+                    location.pathname === "/how-it-works"
+                      ? "text-green-500 font-bold"
+                      : "text-white/80 hover:text-white transition-colors"
+                  }`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  How It Works
+                </Link>
+                <Link
                   to="/features"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/features"
                       ? "text-green-500 font-bold"
-                      : "text-white dark:text-foreground hover:text-foreground"
+                      : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -171,7 +222,7 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/use-cases"
                       ? "text-green-500 font-bold"
-                      : "text-white dark:text-foreground hover:text-foreground"
+                      : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -182,7 +233,7 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/security"
                       ? "text-green-500 font-bold"
-                      : "text-white dark:text-foreground hover:text-foreground"
+                      : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -193,48 +244,46 @@ export default function PublicLayout({
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/pricing"
                       ? "text-green-500 font-bold"
-                      : "text-white dark:text-foreground hover:text-foreground"
+                      : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   Pricing
                 </Link>
-                <div className="flex gap-3 pt-2">
-                  {user ? (
-                    <>
-                      <Link to="/dashboard" className="flex-1">
-                        <Button variant="ghost" className="w-full">
-                          Dashboard
-                        </Button>
-                      </Link>
-                      <Link to="/logout" className="flex-1">
-                        <Button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500">
-                          Logout
-                        </Button>
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <Link to="/login" className="flex-1">
-                        <Button variant="ghost" className="w-full">
-                          Login
-                        </Button>
-                      </Link>
-                      <Link to="/signup" className="flex-1">
-                        <Button
-                          variant="outline"
-                          className="w-full bg-green-700"
-                        >
-                          Get Started
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-4 border-t border-white/10 mt-auto">
+                {user ? (
+                  <>
+                    <Link to="/dashboard" className="w-full">
+                      <Button variant="outline" className="w-full text-foreground">
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Link to="/logout" className="w-full">
+                      <Button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500">
+                        Logout
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/login" className="w-full">
+                      <Button variant="outline" className="w-full text-foreground">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link to="/signup" className="w-full">
+                      <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                        Get Started
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
-          )}
-        </nav>
+          </div>
+        </div>
       )}
 
       {/* Main Content */}
@@ -301,6 +350,7 @@ export default function PublicLayout({
                 </div>
               </div>
 
+              <div className="col-span-1 md:col-span-3 grid grid-cols-3 gap-2 sm:gap-8">
               <div>
                 <h4 className="font-bold mb-4 text-white">Product</h4>
                 <ul className="space-y-2 text-sm text-white/70">
@@ -394,6 +444,7 @@ export default function PublicLayout({
                     </Link>
                   </li>
                 </ul>
+              </div>
               </div>
             </div>
 
