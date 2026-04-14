@@ -1,316 +1,126 @@
-import { Link } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { ShieldCheck, Lock, HardDrive, Key, FileCheck, ArrowRight, Eye, KeyRound, Server } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
-import {
-  Shield,
-  Lock,
-  Eye,
-  FileCheck,
-  Server,
-  UserCheck,
-  Check,
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
+
+const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
+const stagger = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.15 } } };
 
 export default function Security() {
-  const securityFeatures = [
-    {
-      icon: Shield,
-      title: "Tenant-Isolated Data Boundaries",
-      description:
-        "Core domain data is separated by tenant boundaries with explicit role/permission checks per endpoint.",
-    },
-    {
-      icon: Lock,
-      title: "Role and Permission Enforcement",
-      description:
-        "Super admin, admin, lender, and borrower roles enforce least-privilege access across API and UI.",
-    },
-    {
-      icon: Eye,
-      title: "Subscription Policy Guardrails",
-      description:
-        "Transaction policy evaluation persists eligibility decisions, denial reasons, and gas payer resolution data.",
-    },
-    {
-      icon: FileCheck,
-      title: "Webhook Idempotency and Traceability",
-      description:
-        "Payment webhook events are stored with unique gateway-event keys to prevent duplicate processing.",
-    },
-    {
-      icon: Server,
-      title: "Tenant Gateway Secret Management",
-      description:
-        "eSewa and Khalti keys are isolated per tenant configuration and resolved at runtime for each payment flow.",
-    },
-    {
-      icon: UserCheck,
-      title: "Wallet Source Control",
-      description:
-        "User wallet vs platform gas sponsorship is explicitly controlled through gas mode and orchestrator checks.",
-    },
-  ];
-
-  const complianceStandards = [
-    {
-      name: "RBAC Governance",
-      description:
-        "Permission-aware access to users, tenants, roles, and payments",
-    },
-    {
-      name: "Tenant Isolation",
-      description: "Scoped resource access by tenant context and role",
-    },
-    {
-      name: "Auditability",
-      description:
-        "Policy evaluations and payment webhook events are persisted",
-    },
-    {
-      name: "Operational Controls",
-      description:
-        "Plan and gateway configuration restricted to authorized admins",
-    },
-  ];
-
-  const securityPractices = [
-    "JWT-protected endpoints with explicit public route overrides",
-    "Role + permission checks on sensitive management actions",
-    "Super-admin-only subscription catalog administration",
-    "Tenant payment config upsert and delete authorization checks",
-    "Idempotent payment webhook storage to prevent duplicate side effects",
-    "Wallet ownership checks before primary switch and deletion",
-    "Transaction policy evaluation logging for audit and troubleshooting",
-    "Gas payer resolution with fallback safety rules",
-  ];
-
   return (
     <PublicLayout>
-      {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-hero dark:bg-gradient-dark text-white">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-6">
-            <Shield className="w-10 h-10" />
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold mb-6">
-            Enterprise-Grade Security
-          </h1>
-          <p className="text-xl text-white/80 max-w-3xl mx-auto">
-            Security is implemented as policy and architecture: RBAC, tenant
-            isolation, idempotent payment workflows, and auditable transaction
-            decisions.
-          </p>
-        </div>
-      </section>
-
-      {/* Security Features */}
-      <section className="bg-primary/10 dark:bg-card py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Multi-Layered Security Architecture
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Protection at every level of your data
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {securityFeatures.map((feature, index) => (
-              <Card
-                key={index}
-                className="bg-gradient-dark dark:bg-popover text-white dark:text-foreground border-0 shadow-card hover:shadow-soft transition-all duration-300"
-              >
-                <CardContent className="p-8">
-                  <div className=" flex items-center justify-center mb-6">
-                    <feature.icon className="w-7 h-7 text-primary-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white dark:text-foreground mb-3">
-                    {feature.title}
-                  </h3>
-                  <p className="text-white/60 dark:text-muted-foreground">
-                    {feature.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Compliance */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30 dark:bg-background">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Compliance & Certifications
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Meeting the highest industry standards
-            </p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {complianceStandards.map((standard, index) => (
-              <Card
-                key={index}
-                className="bg-gradient-dark text-white border-0 shadow-card"
-              >
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <FileCheck className="w-8 h-8 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-lg text-foreground mb-2">
-                    {standard.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {standard.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Security Practices */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-              Our Security Practices
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Comprehensive measures to keep your data safe
-            </p>
-          </div>
-          <Card className="bg-gradient-dark text-white border-0 shadow-card">
-            <CardContent className="p-8 md:p-12">
-              <div className="grid md:grid-cols-2 gap-6">
-                {securityPractices.map((practice, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <Check className="w-6 h-6 text-primary shrink-0 mt-0.5" />
-                    <p className="text-muted-foreground">{practice}</p>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Data Protection */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-dark text-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl sm:text-4xl font-bold mb-6">
-                Your Data, Your Control
-              </h2>
-              <p className="text-white/80 text-lg mb-6">
-                We believe in transparency and giving you complete control over
-                your data. You own your data, and you can export or delete it at
-                any time.
+      <div className="bg-background text-foreground transition-colors duration-300 pb-20">
+        
+        {/* Core Hero */}
+        <div className="relative pt-32 pb-24 flex flex-col items-center justify-center text-center">
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 via-background to-background dark:from-emerald-500/20 -z-10" />
+          <motion.div initial="hidden" animate="visible" variants={stagger} className="container mx-auto px-4 max-w-5xl">
+            <motion.div variants={fadeIn}>
+              <Badge variant="outline" className="mb-6 py-1.5 px-6 text-sm bg-emerald-500/10 text-emerald-500 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+                Bank-Grade Defenses
+              </Badge>
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tighter mb-8 text-foreground leading-[1.1]">
+                Uncompromising <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-600">Security Layers</span>
+              </h1>
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed mb-10 max-w-3xl mx-auto">
+                No single point of failure. We combine microservice isolation, cryptographic guarantees on the blockchain, and rigorous continuous pentesting.
               </p>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold mb-1">Data Portability</h4>
-                    <p className="text-white/70">
-                      Export your data anytime in standard formats
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold mb-1">
-                      Right to Be Forgotten
-                    </h4>
-                    <p className="text-white/70">
-                      Request complete deletion of your data
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-semibold mb-1">
-                      Transparent Practices
-                    </h4>
-                    <p className="text-white/70">
-                      Clear documentation of how we handle your data
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="relative">
-              <Card className="bg-white/10 backdrop-blur border-white/20">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-bold mb-4">
-                    Security Resources
-                  </h3>
-                  <div className="space-y-4">
-                    <a
-                      href="#"
-                      className="block p-4 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <h4 className="font-semibold mb-1">
-                        Security Whitepaper
-                      </h4>
-                      <p className="text-sm text-white/70">
-                        Detailed overview of our security architecture
-                      </p>
-                    </a>
-                    <a
-                      href="#"
-                      className="block p-4 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <h4 className="font-semibold mb-1">Privacy Policy</h4>
-                      <p className="text-sm text-white/70">
-                        How we collect, use, and protect your data
-                      </p>
-                    </a>
-                    <a
-                      href="#"
-                      className="block p-4 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      <h4 className="font-semibold mb-1">Compliance Docs</h4>
-                      <p className="text-sm text-white/70">
-                        Certifications and audit reports
-                      </p>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </section>
 
-      {/* CTA */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Questions About Our Security?
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8">
-            Our security team is here to answer any questions you may have about
-            protecting your data.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="hero" size="lg">
-              Contact Security Team
-            </Button>
-            <Link to="/signup">
-              <Button variant="heroOutline" size="lg">
-                Get Started
-              </Button>
-            </Link>
-          </div>
+        {/* Security Deep Dives */}
+        <div className="container mx-auto px-4 max-w-6xl space-y-32 mt-12">
+          
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger} className="grid md:grid-cols-2 gap-16 items-center">
+            <motion.div variants={fadeIn}>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/20 text-emerald-500 mb-6 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h2 className="text-4xl font-bold mb-4">Encryption Defaults</h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Your data doesn't just rest behind a firewall; it is fragmented, encrypted with AES-256 at rest, and transmitted exclusively over TLS 1.3 endpoints.
+              </p>
+              
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger className="text-left font-semibold text-lg hover:text-emerald-500 hover:no-underline">At-Rest Protection</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    Volumes holding PII (Personally Identifiable Information) require physical hardware key injection on node restarts, completely blinding external infrastructure providers.
+                  </AccordionContent>
+                </AccordionItem>
+                <AccordionItem value="item-2">
+                  <AccordionTrigger className="text-left font-semibold text-lg hover:text-emerald-500 hover:no-underline">Key Management Service (KMS)</AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed">
+                    Tenant data is isolated via unique keys rotated automatically every 30 days. No two organizations share cryptographic space on our multi-tenant architecture.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </motion.div>
+            
+            <motion.div variants={fadeIn} className="relative flex justify-center">
+              <div className="relative rounded-3xl w-full max-w-md aspect-square bg-gradient-to-br from-background to-emerald-500/5 border border-border flex items-center justify-center p-8 shadow-2xl">
+                 <div className="absolute inset-4 border border-dashed border-emerald-500/20 rounded-2xl"></div>
+                 <div className="absolute inset-8 border border-dashed border-emerald-500/40 rounded-xl"></div>
+                 <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }} className="w-32 h-32 bg-card rounded-2xl shadow-2xl flex items-center justify-center border border-emerald-500/50 z-10">
+                    <KeyRound className="w-16 h-16 text-emerald-500" />
+                 </motion.div>
+              </div>
+            </motion.div>
+          </motion.section>
+
+          <Separator className="my-12 opacity-50" />
+
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger} className="grid md:grid-cols-2 gap-16 items-center md:flex-row-reverse">
+             <motion.div variants={fadeIn}>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-500/20 text-teal-500 mb-6 shadow-[0_0_20px_rgba(20,184,166,0.4)]">
+                <FileCheck className="w-8 h-8" />
+              </div>
+              <h2 className="text-4xl font-bold mb-4">Immutable Audits</h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Blockchain isn't just a buzzword here. It serves as our final indisputable log of reality. By committing hashes of documents and smart contract terms on-chain, we verify without exposing plain text.
+              </p>
+              <div className="grid gap-6">
+                 <div className="flex gap-4">
+                    <Eye className="w-8 h-8 text-teal-500 shrink-0" />
+                    <div><h4 className="font-bold text-lg">Zero-Knowledge Verification</h4><p className="text-muted-foreground mt-1 text-sm">Auditors can mathematically prove a ledger state is accurate without seeing the underlying identities or sums.</p></div>
+                 </div>
+                 <div className="flex gap-4">
+                    <Server className="w-8 h-8 text-teal-500 shrink-0" />
+                    <div><h4 className="font-bold text-lg">Distributed Fallback</h4><p className="text-muted-foreground mt-1 text-sm">Even if cloud providers fail, the integrity of loan definitions is preserved globally across the node network.</p></div>
+                 </div>
+              </div>
+            </motion.div>
+            
+            <motion.div variants={fadeIn} className="relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl aspect-[4/3] bg-gradient-to-tr from-teal-500/10 to-transparent border border-border flex items-center justify-center p-8">
+                 <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }} className="w-full flex flex-col gap-4">
+                    <div className="w-full bg-card border-l-4 border-teal-500 p-4 rounded-r-xl shadow-lg flex justify-between items-center"><span className="text-sm font-semibold text-foreground">Block #14920</span><div className="font-mono text-xs text-teal-500">0x8a7...3f2</div></div>
+                    <div className="w-full bg-card border-l-4 border-teal-500 p-4 rounded-r-xl shadow-lg flex justify-between items-center ml-4"><span className="text-sm font-semibold text-foreground">Payment Receipt Sync</span><div className="font-mono text-xs text-teal-500">0x1c9...8e4</div></div>
+                    <div className="w-full bg-card border-l-4 border-emerald-500 p-4 rounded-r-xl shadow-lg flex justify-between items-center ml-8"><span className="text-sm font-semibold text-foreground">Loan Finalized</span><div className="font-mono text-xs text-emerald-500">0x5f2...7a1</div></div>
+                 </motion.div>
+              </div>
+            </motion.div>
+          </motion.section>
+          
+          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="pb-24 pt-16 text-center">
+            <motion.div variants={fadeIn} className="bg-gradient-to-r from-card to-muted p-12 md:p-16 rounded-[2.5rem] border border-border flex flex-col items-center">
+                <h2 className="text-4xl font-extrabold mb-6">Secured the first day. Guaranteed forever.</h2>
+                <Button size="lg" className="rounded-full px-10 py-6 text-lg font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                  Read our Whitepaper <ArrowRight className="ml-2 w-6 h-6" />
+                </Button>
+            </motion.div>
+          </motion.section>
+
         </div>
-      </section>
+      </div>
     </PublicLayout>
   );
 }
