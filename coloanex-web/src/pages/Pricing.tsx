@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import { motion } from "framer-motion";
 import PublicLayout from "@/components/layouts/PublicLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -221,6 +222,21 @@ export default function Pricing() {
             Start free and upgrade as your lending workflows scale across
             wallets, gas sponsorship, and tenant-managed payment rails.
           </p>
+                  <div className="relative mx-auto mt-12 w-64 h-64 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform duration-500">
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 40, ease: "linear" }} className="absolute w-[140%] h-[140%] border-2 border-white/10 rounded-full" />
+            <motion.div animate={{ rotate: -360 }} transition={{ repeat: Infinity, duration: 25, ease: "linear" }} className="absolute w-[100%] h-[100%] border border-dashed border-emerald-400/30 rounded-full" />
+            
+            <motion.div animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="w-24 h-24 bg-white/10 backdrop-blur-xl rounded-3xl border border-white/20 shadow-[0_0_40px_rgba(255,255,255,0.1)] flex items-center justify-center z-10">
+              <svg className="w-12 h-12 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </motion.div>
+            
+            <motion.div animate={{ x: [0, 20, 0], y: [0, 20, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }} className="absolute top-4 right-0 w-12 h-12 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 flex items-center justify-center">
+               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            </motion.div>
+          </div>
+
         </div>
       </section>
 

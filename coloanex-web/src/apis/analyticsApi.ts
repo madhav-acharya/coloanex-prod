@@ -82,7 +82,7 @@ type TrendQuery =
       startDate?: string;
       endDate?: string;
     }
-  | void;
+  | undefined;
 
 const analyticsApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
