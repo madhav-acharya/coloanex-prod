@@ -123,7 +123,7 @@ function StatCard({
               {trend && trend.length > 0 ? (
                 <ResponsiveContainer width="100%" height={40}>
                   <LineChart data={trend}>
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="value"
                       stroke={color}
@@ -144,7 +144,7 @@ function StatCard({
                       { value: 0 },
                     ]}
                   >
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="value"
                       stroke="#E5E7EB"
@@ -530,7 +530,7 @@ const Dashboard = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="count"
                       stroke="#16A34A"
@@ -556,7 +556,7 @@ const Dashboard = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="count"
                       stroke="#22C55E"
@@ -583,7 +583,7 @@ const Dashboard = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="count"
                       stroke="#059669"
@@ -609,7 +609,7 @@ const Dashboard = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Line
+                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                       type="monotone"
                       dataKey="count"
                       stroke="#059669"
@@ -767,7 +767,7 @@ const Dashboard = () => {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Line
+                      <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
                         type="monotone"
                         dataKey="count"
                         stroke="#16A34A"
