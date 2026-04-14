@@ -1191,10 +1191,10 @@ const Settings = () => {
               <Separator />
               <CardContent className="pt-6 space-y-6">
                 {wallets.length > 0 ? (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
                     </div>
                     <div className="flex-1">
@@ -1210,23 +1210,24 @@ const Settings = () => {
                       onClick={disconnectMetamask}
                       disabled={isCreatingWallet}
                       size="sm"
-                      className="cursor-pointer bg-red-600 hover:bg-red-700 text-white"
+                      variant="outline"
+                      className="cursor-pointer border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20"
                     >
                       Disconnect
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg">
+                  <div className="flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
-                        <X className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                        <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-red-900 dark:text-red-100">
+                      <p className="font-semibold text-gray-900 dark:text-gray-50">
                         MetaMask Not Connected
                       </p>
-                      <p className="text-sm text-red-700 dark:text-red-300">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                         You are not connected to any MetaMask wallet.
                       </p>
                     </div>
@@ -1234,7 +1235,7 @@ const Settings = () => {
                       onClick={connectMetamask}
                       disabled={isCreatingWallet}
                       size="sm"
-                      className="cursor-pointer bg-red-600 hover:bg-red-700 text-white"
+                      className="bg-green-600 hover:bg-green-700 text-white cursor-pointer border-0"
                     >
                       {isCreatingWallet ? "Connecting..." : "Connect"}
                     </Button>
