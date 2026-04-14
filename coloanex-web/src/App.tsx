@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Features from "./pages/Features";
 import UseCases from "./pages/UseCases";
+import HowItWorks from "./pages/HowItWorks";
 import Security from "./pages/Security";
 import { logout } from "./store/slices/authSlice";
 import {
@@ -229,6 +230,7 @@ function App() {
       <Route path="/features" element={<Features />} />
       <Route path="/use-cases" element={<UseCases />} />
       <Route path="/security" element={<Security />} />
+      <Route path="/how-it-works" element={<HowItWorks />} />
       <Route
         path="/dashboard"
         element={
