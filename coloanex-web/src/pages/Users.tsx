@@ -14,6 +14,7 @@ import { FormSheet } from "@/components/shared/FormSheet";
 import { MultiSelect } from "@/components/shared/MultiSelect";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,6 @@ import {
   extractUserRoles,
   extractUserPermissions,
   extractRolePermissions,
-  getAdditionalPermissionIds,
 } from "@/lib/permissions";
 
 export default function Users() {
@@ -70,6 +70,7 @@ export default function Users() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [filters, setFilters] = useState<UsersQueryParams>({
     page: 1,
@@ -117,7 +118,9 @@ export default function Users() {
   const {
     data: usersData,
     isLoading,
+    isFetching,
     error: usersError,
+    refetch,
   } = useGetUsersQuery(filters, { skip: !isAuthenticated });
   const { data: tenantsData, isLoading: isLoadingTenants } = useGetTenantsQuery(
     { limit: 100 },
@@ -350,24 +353,42 @@ export default function Users() {
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
 
-    setIsDeletingUser(true);
-    try {
-      await deleteUser(userToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete user",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingUser(false);
-    }
+    const targetUserId = userToDelete.id;
+    const targetUserName = userToDelete.fullName;
+    setDeleteDialogOpen(false);
+    setUserToDelete(null);
+
+    let isCancelled = false;
+
+    toast({
+      title: "User Deleted",
+      description: `${targetUserName} has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `${targetUserName} has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      
+      try {
+        await deleteUser(targetUserId).unwrap();
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to permanently delete user",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const handleSubmit = async () => {
@@ -576,7 +597,6 @@ export default function Users() {
     },
   ];
 
-  // Define filter fields
   const filterFields = [
     {
       name: "role",
@@ -596,23 +616,31 @@ export default function Users() {
 
   return (
     <DashboardLayout
-      title="Users"
-      description="Manage system users"
+      title="User Management"
+      description="Manage system users, roles, and permissions"
       searchPlaceholder="Search users..."
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
+      onRefresh={async () => {
+        setIsRefreshing(true);
+        try {
+          await refetch();
+        } finally {
+          setTimeout(() => setIsRefreshing(false), 1000);
+        }
+      }}
+      isRefreshing={isRefreshing || isFetching}
       filters={filterFields}
       filterValues={filterValues}
       onFilterChange={handleFilterChange}
       actionLabel="Add User"
       onActionClick={handleCreateClick}
     >
-      <ExpandableUsersTable
-        users={users}
+      <DataTable
+        data={users}
         columns={columns}
         isLoading={isLoading}
         sortBy={filters.sortBy}
-        sortOrder={filters.sortOrder}
         onSort={handleSort}
         actions={[
           {
@@ -629,7 +657,7 @@ export default function Users() {
             label: "Delete",
             icon: <Trash2 className="w-4 h-4" />,
             onClick: handleDeleteClick,
-            variant: "destructive" as const,
+            variant: "destructive",
           },
         ]}
       />
@@ -647,7 +675,7 @@ export default function Users() {
         />
       </div>
 
-      {/* Form Sheet */}
+
       <FormSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
@@ -685,7 +713,7 @@ export default function Users() {
                     role?.name?.toLowerCase() === "admin" ||
                     role?.name?.toLowerCase() === "lender"
                   );
-                }) && <span className="text-red-500 ml-1">*</span>}
+                }) && <span className="text-destructive ml-1">*</span>}
               </label>
               {selectedRoles.some((roleId) => {
                 const role = allRoles.find((r) => r.id === roleId);
@@ -782,7 +810,7 @@ export default function Users() {
                       <div>
                         <label className="text-sm font-medium text-foreground">
                           Organization Name{" "}
-                          <span className="text-red-500">*</span>
+                          <span className="text-destructive">*</span>
                         </label>
                         <Input
                           value={tenantFormData.tenantName}
@@ -797,7 +825,7 @@ export default function Users() {
                       </div>
                       <div>
                         <label className="text-sm font-medium text-foreground">
-                          Contact Email <span className="text-red-500">*</span>
+                          Contact Email <span className="text-destructive">*</span>
                         </label>
                         <Input
                           type="email"
@@ -1019,7 +1047,7 @@ export default function Users() {
         </div>
       </FormSheet>
 
-      {/* Delete Confirmation Dialog */}
+      {}
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -1034,207 +1062,3 @@ export default function Users() {
   );
 }
 
-// Expandable Users Table Component
-function ExpandableUsersTable({
-  users,
-  columns,
-  isLoading,
-  sortBy,
-  sortOrder,
-  onSort,
-  actions,
-}: {
-  users: User[];
-  columns: Column<User>[];
-  isLoading: boolean;
-  sortBy: string;
-  sortOrder: "asc" | "desc";
-  onSort: (key: string) => void;
-  actions: any[];
-}) {
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  if (users.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <UsersIcon className="w-12 h-12 text-muted-foreground" />
-        <div className="text-muted-foreground">No users found</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b bg-muted/50">
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
-                  style={{ width: column.width }}
-                >
-                  {column.sortable ? (
-                    <button
-                      onClick={() => onSort(column.key)}
-                      className="flex items-center gap-2 hover:text-foreground"
-                    >
-                      {column.label}
-                      {sortBy === column.key && (
-                        <span className="text-xs">
-                          {sortOrder === "asc" ? "↑" : "↓"}
-                        </span>
-                      )}
-                    </button>
-                  ) : (
-                    column.label
-                  )}
-                </th>
-              ))}
-              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <React.Fragment key={user.id}>
-                {/* Main user row */}
-                <tr className="border-b hover:bg-muted/50">
-                  {columns.map((column) => (
-                    <td key={column.key} className="px-4 py-3 text-sm">
-                      {column.render
-                        ? column.render(user)
-                        : (user as any)[column.key]}
-                    </td>
-                  ))}
-                  <td className="px-4 py-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent cursor-pointer"
-                          aria-label="Open actions"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        {actions.map((action, index) => (
-                          <DropdownMenuItem
-                            key={index}
-                            onClick={() => action.onClick(user)}
-                            className={
-                              action.variant === "destructive"
-                                ? "text-destructive focus:text-destructive cursor-pointer"
-                                : "cursor-pointer"
-                            }
-                          >
-                            <span className="mr-2">{action.icon}</span>
-                            {action.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-                <BorrowerRowsInline lender={user} columns={columns} />
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function BorrowerRowsInline({
-  lender,
-  columns,
-}: {
-  lender: User;
-  columns: Column<User>[];
-}) {
-  const lenderRoles = (lender.roles || [])
-    .map((r: any) => (r && typeof r === "object" && "role" in r ? r.role : r))
-    .filter((r: any) => r && typeof r === "object" && "name" in r)
-    .map((role: { name: string }) => role.name);
-  const isLender = lenderRoles.some((role) =>
-    ["Lender", "Admin", "Super Admin"].includes(role),
-  );
-
-  const {
-    data: borrowers = [],
-    isLoading,
-    error,
-  } = useGetBorrowersByTenantQuery(lender.tenantId as string, {
-    skip: !lender.tenantId || !isLender,
-  });
-
-  if (!lender.tenantId || !isLender) return null;
-
-  if (isLoading) {
-    return (
-      <tr className="border-b bg-muted/20">
-        <td
-          colSpan={columns.length + 1}
-          className="px-4 py-2 text-sm text-muted-foreground"
-        >
-          Loading borrowers for {lender.fullName}...
-        </td>
-      </tr>
-    );
-  }
-
-  if (error) {
-    return null;
-  }
-
-  return (
-    <>
-      {borrowers.map((borrower: any) => {
-        const borrowerAsUser: User = {
-          id: borrower.user?.id || borrower.id,
-          fullName: borrower.user?.fullName || "Unknown Borrower",
-          email: borrower.user?.email || "",
-          phone: borrower.user?.phone || "",
-          isActive: true,
-          createdAt: borrower.createdAt,
-          updatedAt: borrower.updatedAt,
-          tenantId: lender.tenantId,
-          roles: [{ name: "Borrower", id: "borrower" }],
-          permissions: [],
-          borrowerCount: undefined,
-        };
-
-        return (
-          <tr
-            key={`${lender.id}-${borrower.id}`}
-            className="border-b bg-muted/20"
-          >
-            {columns.map((column) => (
-              <td key={column.key} className="px-4 py-3 text-sm">
-                {column.key === "borrowerCount" ? (
-                  <span className="text-muted-foreground text-sm">-</span>
-                ) : column.render ? (
-                  column.render(borrowerAsUser)
-                ) : (
-                  (borrowerAsUser as any)[column.key]
-                )}
-              </td>
-            ))}
-            <td className="px-4 py-3 text-xs text-muted-foreground">
-              Borrower
-            </td>
-          </tr>
-        );
-      })}
-    </>
-  );
-}
