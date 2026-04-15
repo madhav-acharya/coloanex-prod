@@ -212,7 +212,7 @@ export default function HowItWorks() {
                     <Building2 className="w-6 h-6 text-accent" />
                   </motion.div>
                   <motion.div animate={{ x: [0, -15, 0], y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }} className="absolute top-10 left-10 bg-card p-4 rounded-xl shadow-lg border border-border z-30">
-                    <Smartphone className="w-6 h-6 text-emerald-500" />
+                    <Smartphone className="w-6 h-6 text-primary" />
                   </motion.div>
                 </div>
               </div>
@@ -232,21 +232,21 @@ export default function HowItWorks() {
               <div className="grid sm:grid-cols-3 gap-6 text-left mt-8">
                 <Card className="bg-card cursor-pointer hover:border-primary transition-colors">
                   <CardContent className="p-6 space-y-4">
-                    <ShieldCheck className="w-10 h-10 text-emerald-500" />
+                    <ShieldCheck className="w-10 h-10 text-primary" />
                     <h3 className="font-bold text-lg">Bank-Level Encryption</h3>
                     <p className="text-sm text-muted-foreground-foreground/50">All incoming KYC data and personal identifiable information is AES-256 encrypted at rest.</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-card cursor-pointer hover:border-primary transition-colors">
                   <CardContent className="p-6 space-y-4">
-                    <Building2 className="w-10 h-10 text-emerald-500" />
+                    <Building2 className="w-10 h-10 text-primary" />
                     <h3 className="font-bold text-lg">Tenant Isolation</h3>
                     <p className="text-sm text-muted-foreground-foreground/50">Every organizational deployment gets its own unique, sandboxed database container.</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-card cursor-pointer hover:border-primary transition-colors">
                   <CardContent className="p-6 space-y-4">
-                    <Globe className="w-10 h-10 text-emerald-500" />
+                    <Globe className="w-10 h-10 text-primary" />
                     <h3 className="font-bold text-lg">Global Compliance</h3>
                     <p className="text-sm text-muted-foreground-foreground/50">Automated KYC integrations cross-check international sanctions and anti-money laundering registries.</p>
                   </CardContent>
@@ -298,7 +298,7 @@ export default function HowItWorks() {
                   <Button size="lg" className="rounded-full px-10 py-6 text-lg font-semibold shadow-glow cursor-pointer" asChild>
                     <Link to="/signup">Deploy Your Tenant <ArrowRight className="ml-2 w-6 h-6" /></Link>
                   </Button>
-                  <Button size="lg" variant="outline" className="rounded-full px-10 py-6 text-lg font-medium border-primary/30 hover:bg-primary/10 cursor-pointer" asChild>
+                  <Button size="lg" variant="outline" className="rounded-full px-10 py-6 text-lg font-medium border-primary/30 hover:bg-muted cursor-pointer" asChild>
                     <Link to="/features">Review the Features</Link>
                   </Button>
                 </div>
