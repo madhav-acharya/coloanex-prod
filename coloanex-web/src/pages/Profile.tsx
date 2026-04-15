@@ -18,6 +18,7 @@ import {
   User,
   Calendar,
   Shield,
+  Lock,
   Camera,
 } from "lucide-react";
 
@@ -298,7 +299,7 @@ const Profile = () => {
                   <Button
                     type="submit"
                     disabled={isLoading || isUploading}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {isLoading || isUploading ? (
                       <>
@@ -325,38 +326,44 @@ const Profile = () => {
           <Separator />
           <CardContent className="pt-6">
             <div className="space-y-4">
-              <div>
-                <Label className="flex items-center gap-2 mb-3">
-                  <Shield className="w-4 h-4" />
-                  Roles
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
+                  <Shield className="w-5 h-5 text-primary" />
+                  Assigned Roles
                 </Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid gap-3">
                   {user.roles && user.roles.length > 0 ? (
                     user.roles.map((roleWrapper) => (
-                      <Badge
+                      <div
                         key={roleWrapper.role.id}
-                        variant="outline"
-                        className="px-3 py-1"
+                        className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
                       >
-                        {roleWrapper.role.name}
-                      </Badge>
+                        <p className="font-semibold text-sm">
+                          {roleWrapper.role.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 lowercase first-letter:uppercase">
+                          {roleWrapper.role.description ||
+                            `Access level granted by ${roleWrapper.role.name} role`}
+                        </p>
+                      </div>
                     ))
                   ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No roles assigned
-                    </p>
+                    <div className="p-4 rounded-xl border border-dashed text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No roles assigned
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <Separator />
-
-              <div>
-                <Label className="flex items-center gap-2 mb-3">
-                  <Shield className="w-4 h-4" />
-                  Permissions
+              <div className="space-y-4">
+                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
+                  <Lock className="w-5 h-5 text-primary" />
+                  Specific Permissions
                 </Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
                   {user.permissions && user.permissions.length > 0 ? (
                     (Array.isArray(user.permissions)
                       ? user.permissions
@@ -369,22 +376,30 @@ const Profile = () => {
                             permission?.name ||
                             "Unknown";
                       return (
-                        <Badge
+                        <div
                           key={index}
-                          variant="secondary"
-                          className="px-3 py-1"
+                          className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
                         >
-                          {permissionName}
-                        </Badge>
+                          <p className="font-semibold text-sm">
+                            {permissionName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Allows you to {permissionName.toLowerCase()} within
+                            the platform
+                          </p>
+                        </div>
                       );
                     })
                   ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No permissions assigned
-                    </p>
+                    <div className="p-4 rounded-xl border border-dashed text-center">
+                      <p className="text-sm text-muted-foreground">
+                        No individual permissions assigned
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
+            </div>
             </div>
           </CardContent>
         </Card>
