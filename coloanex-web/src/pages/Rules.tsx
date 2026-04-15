@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Eye, Edit, Trash2, FileText, Link as LinkIcon } from "lucide-react";
+import { Eye, Edit, Trash2, FileText, Link as LinkIcon, CheckCircle2 } from "lucide-react";
+import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -59,7 +60,7 @@ export default function Rules() {
   );
   const tenants = tenantsData?.data || [];
 
-  const { data: rules = [], isLoading } = useGetRulesQuery();
+  const { data: rules = [], isLoading, refetch: refetchRules, isFetching: isRefreshingRules } = useGetRulesQuery();
   const [createRule, { isLoading: isCreating }] = useCreateRuleMutation();
   const [updateRule, { isLoading: isUpdating }] = useUpdateRuleMutation();
   const [deleteRule, { isLoading: isDeleting }] = useDeleteRuleMutation();
@@ -138,7 +139,7 @@ export default function Rules() {
       label: "Type",
       sortable: true,
       render: (rule) => (
-        <Badge className="bg-blue-100 dark:bg-blue-600 text-white dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+        <Badge className="bg-blue-100 dark:bg-blue-600 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
           {rule.ruleType ? rule.ruleType.replace(/_/g, " ") : "N/A"}
         </Badge>
       ),
@@ -157,8 +158,8 @@ export default function Rules() {
         <Badge
           className={
             rule.isActive
-              ? "bg-green-100 dark:bg-green-600 text-white dark:text-green-300 border border-green-200 dark:border-green-800"
-              : "bg-gray-100 dark:bg-gray-600 text-white dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+              ? "bg-green-100 dark:bg-primary text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800"
+              : "bg-gray-100 dark:bg-gray-600 text-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
           }
         >
           {rule.isActive ? "Active" : "Inactive"}
@@ -169,33 +170,11 @@ export default function Rules() {
       key: "blockchainTxHash",
       label: "Blockchain",
       sortable: false,
-      render: (rule) => {
-        const hasBlockchainTx = !!rule?.blockchainTxHash;
-        return (
-          <button
-            onClick={() => {
-              if (hasBlockchainTx) {
-                window.open(
-                  `https://sepolia.etherscan.io/tx/${rule.blockchainTxHash}`,
-                  "_blank",
-                );
-              } else {
-                toast({
-                  title: "Info",
-                  description: "This record is stored off-chain only.",
-                });
-              }
-            }}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
-              hasBlockchainTx
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-600 cursor-default"
-            }`}
-          >
-            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
-          </button>
-        );
-      },
+      render: (rule) => (
+        <BlockchainStatusBadge
+          blockchainTxHash={rule?.blockchainTxHash}
+        />
+      ),
     },
     {
       key: "createdAt",
@@ -685,6 +664,8 @@ export default function Rules() {
       searchPlaceholder="Search rules by name or type..."
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      onRefresh={refetchRules}
+      isRefreshing={isRefreshingRules}
       actions={[
         {
           label: "Add Rule",
