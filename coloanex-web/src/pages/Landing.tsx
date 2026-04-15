@@ -104,7 +104,7 @@ export default function Landing() {
               <Button
                 variant="default"
                 size="lg"
-                className="w-full mb-4 bg-green-600 hover:bg-green-700 text-white"
+                className="w-full mb-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={openAuthModal}
               >
                 Get Started
@@ -230,7 +230,7 @@ export default function Landing() {
                   setAuthModalOpen(false);
                   navigate("/signup");
                 }}
-                className="text-green-600 hover:underline font-semibold cursor-pointer"
+                className="text-primary hover:underline font-semibold cursor-pointer"
               >
                 Create Account
               </button>
