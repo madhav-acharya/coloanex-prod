@@ -102,11 +102,11 @@ const STATUS_COLORS: Record<ContractStatus, string> = {
   SIGNED:
     "bg-purple-100 dark:bg-purple-600 text-purple-900 dark:text-purple-300 border-purple-200 dark:border-purple-800",
   ACTIVE:
-    "bg-green-100 dark:bg-green-600 text-green-900 dark:text-green-300 border-green-200 dark:border-green-800",
+    "bg-green-100 dark:bg-primary text-green-900 dark:text-green-300 border-green-200 dark:border-green-800",
   COMPLETED:
-    "bg-emerald-100 dark:bg-emerald-600 text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    "bg-emerald-100 dark:bg-primary text-emerald-900 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
   DEFAULTED:
-    "bg-red-100 dark:bg-red-600 text-red-900 dark:text-red-300 border-red-200 dark:border-red-800",
+    "bg-red-100 dark:bg-destructive text-red-900 dark:text-red-300 border-red-200 dark:border-red-800",
   CANCELLED:
     "bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700",
   REPORTED:
@@ -164,12 +164,14 @@ export default function Contracts() {
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const user = useSelector((state: RootState) => state.auth.user);
 
   const {
     data: contracts = [],
     isLoading,
+    isFetching,
     refetch: refetchContracts,
   } = useGetContractsQuery(undefined, {
     refetchOnMountOrArgChange: true,
@@ -287,10 +289,10 @@ export default function Contracts() {
                 });
               }
             }}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all ${
               hasBlockchainTx
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-600 cursor-default"
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 cursor-pointer"
+                : "bg-destructive/10 text-destructive border-destructive/20 cursor-default"
             }`}
           >
             {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
@@ -431,25 +433,44 @@ export default function Contracts() {
     }
   };
 
-  const confirmDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (!contractToDelete) return;
 
-    try {
-      await deleteContract(contractToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "Contract deleted successfully",
-        variant: "success",
-      });
-      setDeleteDialogOpen(false);
-      setContractToDelete(null);
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err?.data?.message || "Failed to delete contract",
-        variant: "destructive",
-      });
-    }
+    const targetId = contractToDelete.id;
+    const targetNumber = contractToDelete.contractNumber;
+    setDeleteDialogOpen(false);
+    setContractToDelete(null);
+
+    let isCancelled = false;
+
+    toast({
+      title: "Contract Removed",
+      description: `Contract ${targetNumber} has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `Contract ${targetNumber} has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deleteContract(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete contract",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const safeRefreshContracts = async () => {
@@ -1078,14 +1099,20 @@ export default function Contracts() {
 
   return (
     <DashboardLayout
-      title="Contracts"
-      description="Manage loan contracts and disbursements"
-      searchPlaceholder="Search by contract number..."
+      title="Contract Management"
+      description="Monitor and manage loan contracts"
+      searchPlaceholder="Search contract number..."
       searchValue={searchValue}
-      onSearchChange={(v) => {
-        setSearchValue(v);
-        setCurrentPage(1);
+      onSearchChange={setSearchValue}
+      onRefresh={async () => {
+        setIsRefreshing(true);
+        try {
+          await refetchContracts();
+        } finally {
+          setTimeout(() => setIsRefreshing(false), 1000);
+        }
       }}
+      isRefreshing={isRefreshing || isFetching}
       filters={[
         {
           name: "status",
@@ -1198,7 +1225,7 @@ export default function Contracts() {
             </Button>
             {viewContract?.status === "GENERATED" && (
               <Button
-                className="cursor-pointer gap-2 bg-green-600 hover:bg-green-700 text-white"
+                className="cursor-pointer gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
                 onClick={() => {
                   const c = viewContract;
                   setViewContract(null);
@@ -1211,7 +1238,7 @@ export default function Contracts() {
             )}
             {viewContract?.status === "SIGNED" && (
               <Button
-                className="cursor-pointer gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                className="cursor-pointer gap-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                 onClick={() => {
                   setContractToDisburse(viewContract);
                   setViewContract(null);
@@ -1320,7 +1347,7 @@ export default function Contracts() {
                     }`}
                   >
                     <img
-                      src="/esewa-logo.png"
+                      src="/images/esewa.png"
                       alt="eSewa"
                       className="h-9 w-auto object-contain"
                     />
@@ -1339,7 +1366,7 @@ export default function Contracts() {
                     }`}
                   >
                     <img
-                      src="/khalti-logo.png"
+                      src="/images/khalti.png"
                       alt="Khalti"
                       className="h-9 w-auto object-contain"
                     />
@@ -1431,8 +1458,8 @@ export default function Contracts() {
                 <img
                   src={
                     sdGateway === "ESEWA"
-                      ? "/esewa-logo.png"
-                      : "/khalti-logo.png"
+                      ? "/images/esewa.png"
+                      : "/images/khalti.png"
                   }
                   alt={sdGateway === "ESEWA" ? "eSewa" : "Khalti"}
                   className="h-4 w-auto object-contain"
@@ -1530,7 +1557,7 @@ export default function Contracts() {
             <Button
               onClick={confirmDisburse}
               disabled={isDisbursing}
-              className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+              className="bg-secondary hover:bg-secondary/90 text-secondary-foreground cursor-pointer"
             >
               {isDisbursing ? "Disbursing…" : "Disburse"}
             </Button>
@@ -1541,7 +1568,7 @@ export default function Contracts() {
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        onConfirm={confirmDelete}
+        onConfirm={handleConfirmDelete}
         title="Delete Contract"
         description={`Are you sure you want to delete contract "${contractToDelete?.contractNumber}"? This cannot be undone.`}
         isLoading={isDeleting}
