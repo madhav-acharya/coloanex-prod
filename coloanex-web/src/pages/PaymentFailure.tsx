@@ -37,7 +37,7 @@ export default function PaymentFailure() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
         <div className="rounded-full bg-red-100 dark:bg-red-950 p-6">
-          <XCircle className="h-16 w-16 text-red-600 dark:text-red-400" />
+          <XCircle className="h-16 w-16 text-destructive" />
         </div>
 
         <div className="space-y-2">
