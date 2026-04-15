@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
-import { Shield } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { DataCard, DataCardGrid } from "@/components/shared/DataCard";
 import { FormSheet } from "@/components/shared/FormSheet";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useCreatePlanMutation,
   useDeletePlanMutation,
@@ -21,6 +23,8 @@ export default function Subscriptions() {
   const { toast } = useToast();
   const [searchValue, setSearchValue] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(
     null,
@@ -106,7 +110,12 @@ export default function Subscriptions() {
       },
     ]);
 
-  const { data: plans = [] } = useListPlansQuery();
+  const {
+    data: plans = [],
+    isLoading,
+    isFetching,
+    refetch,
+  } = useListPlansQuery();
 
   const [createPlan, { isLoading: isCreatingPlan }] = useCreatePlanMutation();
   const [updatePlan, { isLoading: isUpdatingPlan }] = useUpdatePlanMutation();
@@ -122,6 +131,11 @@ export default function Subscriptions() {
         .includes(query),
     );
   }, [plans, searchValue]);
+
+  const paginatedPlans = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredPlans.slice(startIndex, startIndex + pageSize);
+  }, [filteredPlans, currentPage, pageSize]);
 
   const handleCreateClick = () => {
     setSelectedPlan(null);
@@ -306,39 +320,68 @@ export default function Subscriptions() {
       searchPlaceholder="Search plans..."
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      onRefresh={refetch}
+      isRefreshing={isFetching}
       actionLabel="Add Plan"
       onActionClick={handleCreateClick}
     >
-      {filteredPlans.length === 0 ? (
+      {isLoading ? (
+        <DataCardGrid>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[125px] w-full rounded-xl" />
+          ))}
+        </DataCardGrid>
+      ) : filteredPlans.length === 0 ? (
         <div className="text-center py-12">
-          <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">No plans found</p>
         </div>
       ) : (
-        <DataCardGrid>
-          {filteredPlans.map((plan) => (
-            <DataCard
-              key={plan.id}
-              id={plan.id}
-              title={`${plan.name} ${plan.isActive ? "• Active" : "• Disabled"}`}
-              subtitle={`Up to ${Number(plan.maxTransactions || 0).toLocaleString()} transactions`}
-              metadata={`${plan.scope} • ${plan.currency} ${Number(plan.price).toLocaleString()}`}
-              icon={Shield}
-              onView={(id) => {
-                const item = plans.find((p) => p.id === id);
-                if (item) handleViewClick(item);
+        <>
+          <DataCardGrid>
+            {paginatedPlans.map((plan) => (
+              <DataCard
+                key={plan.id}
+                id={plan.id}
+                title={plan.name}
+                metadata={`${plan.isActive ? "Active" : "Disabled"} ${plan.scope} subscription with ${Number(plan.maxTransactions || 0).toLocaleString()} transactions `}
+                icon={CreditCard}
+                iconColor="text-indigo-500"
+                iconBg="bg-indigo-500/10"
+                onView={(id) => {
+                  const item = plans.find((p) => p.id === id);
+                  if (item) handleViewClick(item);
+                }}
+                onEdit={(id) => {
+                  const item = plans.find((p) => p.id === id);
+                  if (item) handleEditClick(item);
+                }}
+                onDelete={(id) => {
+                  const item = plans.find((p) => p.id === id);
+                  if (item) handleDeleteClick(item);
+                }}
+              />
+            ))}
+          </DataCardGrid>
+
+          <div className="mt-8 pt-6 border-t border-border/50">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(filteredPlans.length / pageSize) || 1}
+              hasNextPage={currentPage * pageSize < filteredPlans.length}
+              hasPreviousPage={currentPage > 1}
+              total={filteredPlans.length}
+              limit={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
               }}
-              onEdit={(id) => {
-                const item = plans.find((p) => p.id === id);
-                if (item) handleEditClick(item);
-              }}
-              onDelete={(id) => {
-                const item = plans.find((p) => p.id === id);
-                if (item) handleDeleteClick(item);
-              }}
+              className="mt-0"
+              pageSizeOptions={[12, 24, 48, 96]}
             />
-          ))}
-        </DataCardGrid>
+          </div>
+        </>
       )}
 
       <FormSheet
