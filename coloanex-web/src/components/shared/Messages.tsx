@@ -10,31 +10,44 @@ interface MessagesProps {
 const messageConfig = {
   success: {
     icon: CheckCircle2,
-    className:
-      "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-100",
-    iconClassName: "text-green-500 dark:text-green-400",
+    style: {
+      borderColor: 'var(--color-success-dark)',
+      backgroundColor: 'var(--color-success-light)',
+      color: 'var(--color-success-dark)',
+    } as React.CSSProperties,
+    iconStyle: { color: 'var(--color-success)' } as React.CSSProperties,
   },
   error: {
     icon: XCircle,
-    className:
-      "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-100",
-    iconClassName: "text-red-500 dark:text-red-400",
+    style: {
+      borderColor: 'var(--color-danger-border)',
+      backgroundColor: 'var(--color-danger-light)',
+      color: 'var(--color-danger-text)',
+    } as React.CSSProperties,
+    iconStyle: { color: 'var(--color-danger)' } as React.CSSProperties,
   },
   warning: {
     icon: AlertCircle,
-    className:
-      "border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-100",
-    iconClassName: "text-yellow-500 dark:text-yellow-400",
+    style: {
+      borderColor: 'var(--color-warning-border)',
+      backgroundColor: 'var(--color-warning-light)',
+      color: 'var(--color-warning-text)',
+    } as React.CSSProperties,
+    iconStyle: { color: 'var(--color-warning)' } as React.CSSProperties,
   },
   info: {
     icon: Info,
-    className:
-      "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-100",
-    iconClassName: "text-blue-500 dark:text-blue-400",
+    style: {
+      borderColor: 'var(--color-info-border)',
+      backgroundColor: 'var(--color-info-light)',
+      color: 'var(--color-info-text)',
+    } as React.CSSProperties,
+    iconStyle: { color: 'var(--color-info)' } as React.CSSProperties,
   },
 };
 
 export function Messages({ messages, className }: MessagesProps) {
+  type ConfigKey = keyof typeof messageConfig;
   if (!messages || messages.length === 0) {
     return null;
   }
@@ -42,19 +55,17 @@ export function Messages({ messages, className }: MessagesProps) {
   return (
     <div className={cn("space-y-3", className)}>
       {messages.map((message, index) => {
-        const config = messageConfig[message.type];
+        const config = messageConfig[message.type as ConfigKey];
         const Icon = config.icon;
         const messageId = message.id || `message-${index}`;
 
         return (
           <div
             key={messageId}
-            className={cn(
-              "flex items-start gap-3 p-4 rounded-lg border",
-              config.className,
-            )}
+            className={cn("flex items-start gap-3 p-4 rounded-lg border")}
+            style={config.style}
           >
-            <Icon className={cn("h-5 w-5 mt-0.5", config.iconClassName)} />
+            <Icon className="h-5 w-5 mt-0.5" style={config.iconStyle} />
             <div className="flex-1 min-w-0">
               {message.title && (
                 <h4 className="text-sm font-semibold mb-1">{message.title}</h4>
