@@ -11,6 +11,7 @@ import {
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { format, subMonths } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -64,6 +65,7 @@ export default function Transactions() {
   >({});
   const [loadingWalletCoinBalances, setLoadingWalletCoinBalances] =
     useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [onChainMetaMaskMatches, setOnChainMetaMaskMatches] = useState<
     Record<string, boolean>
   >({});
@@ -146,11 +148,13 @@ export default function Transactions() {
         return {
           id: wallet.id,
           title: wallet.label || `Wallet ${wallet.address.slice(0, 6)}`,
-          value: loadingWalletCoinBalances
-            ? "Loading..."
-            : balance
-              ? `${balance.value} ${balance.symbol}`
-              : "Balance unavailable",
+          value: loadingWalletCoinBalances ? (
+            <Skeleton className="h-6 w-24" />
+          ) : balance ? (
+            `${balance.value} ${balance.symbol}`
+          ) : (
+            "Balance unavailable"
+          ),
           subtitle: wallet.address,
         };
       }),
@@ -171,8 +175,9 @@ export default function Transactions() {
   const entityIds = [userEntityId, tenantEntityId].filter(Boolean);
 
   const {
-    data: allTransactions,
+    data: allTransactions = [],
     isLoading: isLoadingAll,
+    isFetching: isFetchingAll,
     refetch: refetchAll,
   } = useGetAllTransactionsQuery(undefined, {
     skip: !isSuperAdmin,
@@ -181,6 +186,7 @@ export default function Transactions() {
   const {
     data: userTransactions,
     isLoading: isLoadingUserTransactions,
+    isFetching: isFetchingUser,
     refetch: refetchUserTransactions,
   } = useGetTransactionsByEntityQuery(userEntityId, {
     skip: isSuperAdmin || !userEntityId,
@@ -189,6 +195,7 @@ export default function Transactions() {
   const {
     data: tenantTransactions,
     isLoading: isLoadingTenantTransactions,
+    isFetching: isFetchingTenant,
     refetch: refetchTenantTransactions,
   } = useGetTransactionsByEntityQuery(tenantEntityId, {
     skip: isSuperAdmin || !tenantEntityId,
@@ -210,6 +217,12 @@ export default function Transactions() {
   const isLoading = isSuperAdmin
     ? isLoadingAll
     : isLoadingUserTransactions || isLoadingTenantTransactions;
+
+  const dataIsMissing = !isLoading && transactions.length === 0;
+  const isFetchingPage = isSuperAdmin
+    ? isFetchingAll
+    : isFetchingUser || isFetchingTenant;
+
   const refetch = isSuperAdmin
     ? refetchAll
     : () => {
@@ -282,17 +295,18 @@ export default function Transactions() {
     Array.from(metamaskAddresses).join("|"),
   ]);
 
-  const metamaskTableTransactions = useMemo(
-    () =>
-      transactions.filter((transaction) => {
-        const hash = ((transaction as any).blockchainTxHash ||
-          (transaction as any).blockchain_tx_hash ||
-          "") as string;
-        if (!hash) return false;
-        return onChainMetaMaskMatches[hash] === true;
-      }),
-    [transactions, onChainMetaMaskMatches],
-  );
+  const metamaskTableTransactions = useMemo(() => {
+    // Super admins should see all transactions, other users only see their wallet matches
+    if (isSuperAdmin) return transactions;
+    
+    return transactions.filter((transaction) => {
+      const hash = ((transaction as any).blockchainTxHash ||
+        (transaction as any).blockchain_tx_hash ||
+        "") as string;
+      if (!hash) return false;
+      return onChainMetaMaskMatches[hash] === true;
+    });
+  }, [transactions, onChainMetaMaskMatches, isSuperAdmin]);
 
   // Calculate To Give and To Receive based on transaction flow
   const { toGive, toReceive } = useMemo(() => {
@@ -449,64 +463,86 @@ export default function Transactions() {
     isCurrency = false,
     trendData,
     trendPercentage,
-  }: any) => (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-muted-foreground mb-2">
-              {title}
-            </p>
-            <div className="flex items-center gap-1">
-              {isCurrency && (
-                <IconCurrencyRupeeNepalese
-                  className="h-5 w-5"
-                  style={{ color }}
-                />
-              )}
-              <h3 className="text-xl font-bold" style={{ color }}>
-                {typeof value === "number" ? value.toLocaleString() : value}
-              </h3>
+    isLoading = false,
+  }: any) => {
+    if (isLoading) {
+      return (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-32" />
+              </div>
+              <div className="w-24 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             </div>
-          </div>
-          <div className="w-24">
-            <div
-              className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                trendPercentage >= 0
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-rose-500/20 text-rose-400"
-              }`}
-            >
-              {trendPercentage >= 0 ? (
-                <ArrowUpRight className="mr-1 h-3 w-3" />
-              ) : (
-                <ArrowDownRight className="mr-1 h-3 w-3" />
-              )}
-              {`${trendPercentage >= 0 ? "+" : "-"}${Math.abs(
-                trendPercentage,
-              ).toFixed(2)}%`}
-            </div>
-            <div className="h-10 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <Line
-                    isAnimationActive={true}
-                    animationDuration={1500}
-                    animationEasing="ease-in-out"
-                    type="monotone"
-                    dataKey="value"
-                    stroke={color}
-                    strokeWidth={1.8}
-                    dot={false}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-muted-foreground mb-2">
+                {title}
+              </p>
+              <div className="flex items-center gap-1">
+                {isCurrency && (
+                  <IconCurrencyRupeeNepalese
+                    className="h-5 w-5"
+                    style={{ color }}
                   />
-                </LineChart>
-              </ResponsiveContainer>
+                )}
+                <h3 className="text-xl font-bold" style={{ color }}>
+                  {typeof value === "number" ? value.toLocaleString() : value}
+                </h3>
+              </div>
+            </div>
+            <div className="w-24">
+              <div
+                className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  trendPercentage >= 0
+                    ? "bg-primary/20 text-primary"
+                    : "bg-rose-500/20 text-rose-400"
+                }`}
+              >
+                {trendPercentage >= 0 ? (
+                  <ArrowUpRight className="mr-1 h-3 w-3" />
+                ) : (
+                  <ArrowDownRight className="mr-1 h-3 w-3" />
+                )}
+                {`${trendPercentage >= 0 ? "+" : "-"}${Math.abs(
+                  trendPercentage,
+                ).toFixed(2)}%`}
+              </div>
+              <div className="h-10 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData}>
+                    <Line
+                      isAnimationActive={true}
+                      animationDuration={1500}
+                      animationEasing="ease-in-out"
+                      type="monotone"
+                      dataKey="value"
+                      stroke={color}
+                      strokeWidth={1.8}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   const filteredTransactions = useMemo(() => {
     let filtered = metamaskTableTransactions.filter(
@@ -616,15 +652,23 @@ export default function Transactions() {
     }
   };
 
-  const refreshAllWalletData = async () => {
-    await refetchWallets();
-    await refreshWalletCoinBalances();
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchWallets(),
+        refetch(),
+        refreshWalletCoinBalances(),
+      ]);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
   };
 
   const handleUseWallet = async (id: string) => {
     try {
       await setPrimaryWallet({ id }).unwrap();
-      await refreshAllWalletData();
+      await handleRefresh();
       toast({
         title: "Wallet switched",
         description: "Primary wallet updated successfully.",
@@ -641,7 +685,7 @@ export default function Transactions() {
   const handleDeleteWallet = async (id: string) => {
     try {
       await deleteWallet({ id }).unwrap();
-      await refreshAllWalletData();
+      await handleRefresh();
       toast({ title: "Wallet removed" });
     } catch (error: any) {
       toast({
@@ -728,7 +772,7 @@ export default function Transactions() {
         }
 
         return (
-          <span className={isReceived ? "text-green-600" : "text-red-600"}>
+          <span className={isReceived ? "text-primary" : "text-destructive"}>
             {sign}
             <IconCurrencyRupeeNepalese
               className="inline h-4 w-4 mx-0.5"
@@ -786,9 +830,9 @@ export default function Transactions() {
           PENDING:
             "bg-amber-100 dark:bg-amber-600 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800",
           COMPLETED:
-            "bg-green-100 dark:bg-green-600 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800",
+            "bg-green-100 dark:bg-primary text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800",
           FAILED:
-            "bg-red-100 dark:bg-red-600 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
+            "bg-red-100 dark:bg-destructive text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800",
           CANCELLED:
             "bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700",
         };
@@ -827,10 +871,10 @@ export default function Transactions() {
                 });
               }
             }}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
+             className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all ${
               hasBlockchainTx
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-600 cursor-default"
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 cursor-pointer"
+                : "bg-destructive/10 text-destructive border-destructive/20 cursor-default"
             }`}
           >
             {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
@@ -875,24 +919,18 @@ export default function Transactions() {
 
   return (
     <DashboardLayout
-      title="Wallet"
-      description="Manage wallet connections, points, and payment activity"
+      title="Transactions"
+      description="Manage your transaction history and wallets"
       searchPlaceholder="Search transactions..."
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      onRefresh={handleRefresh}
+      isRefreshing={isRefreshing || isFetchingPage || loadingWalletCoinBalances}
       actions={[
         {
           label: metamaskWallets.length > 0 ? "Add More Wallet" : "Add Wallet",
           onClick: () => connectMetamask(),
           variant: "default",
-        },
-        {
-          label: "Refresh",
-          onClick: async () => {
-            refetch();
-            await refreshAllWalletData();
-          },
-          variant: "outline",
         },
       ]}
       filters={[
@@ -983,61 +1021,66 @@ export default function Transactions() {
           <CardContent className="p-4 space-y-4">
             <h3 className="text-lg font-semibold">Wallet Connections</h3>
             {metamaskWallets.length > 0 ? (
-              <div className="flex items-center gap-3 p-4 !bg-green-200 dark:bg-green-800 border border-green-200 dark:border-green-800 rounded-lg">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                    <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center border border-white/20 shadow-sm">
+                    <Check className="w-6 h-6 text-white" />
                   </div>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold !text-green-600 dark:text-green-100">
-                    MetaMask Connected
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-500 break-all">
-                    {primaryWallet?.address}
-                  </p>
-                  {primaryWallet && (
-                    <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                      {loadingWalletCoinBalances
-                        ? "Loading balance..."
-                        : walletCoinBalances[primaryWallet.id]
-                          ? `${walletCoinBalances[primaryWallet.id].value} ${walletCoinBalances[primaryWallet.id].symbol}`
-                          : "Balance unavailable"}
+                  <div>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">
+                      MetaMask Connected
                     </p>
-                  )}
+                    <p className="text-sm text-muted-foreground/80 font-medium break-all">
+                      {primaryWallet?.address}
+                    </p>
+                    {primaryWallet && (
+                      <div className="mt-1">
+                        {loadingWalletCoinBalances ? (
+                          <Skeleton className="h-4 w-28 bg-emerald-500/20" />
+                        ) : walletCoinBalances[primaryWallet.id] ? (
+                          <p className="text-xs text-emerald-700/80 dark:text-emerald-300 font-bold">
+                            {`${walletCoinBalances[primaryWallet.id].value} ${walletCoinBalances[primaryWallet.id].symbol}`}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-emerald-700/80 dark:text-emerald-300 font-bold">
+                            Balance unavailable
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <Button
                   onClick={disconnectMetamask}
                   disabled={isCreatingWallet}
                   size="sm"
                   variant="outline"
-                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20"
+                  className="border-red-200 text-destructive hover:bg-red-50 hover:text-red-700 font-bold h-11 px-6 transition-all"
                 >
                   Disconnect
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                    <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <div className="flex items-center justify-between p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-destructive flex items-center justify-center border border-white/20 shadow-sm">
+                    <X className="w-6 h-6 text-white" />
                   </div>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900 dark:text-gray-50">
-                    MetaMask Not Connected
-                  </p>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    You are not connected to any MetaMask wallet.
-                  </p>
+                  <div>
+                    <p className="font-bold text-destructive text-lg">
+                      MetaMask Not Connected
+                    </p>
+                    <p className="text-sm text-muted-foreground/80 font-medium">
+                      You are currently disconnected. Link your wallet to perform on-chain operations.
+                    </p>
+                  </div>
                 </div>
                 <Button
                   onClick={connectMetamask}
                   disabled={isCreatingWallet}
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white border-0"
+                  className="bg-destructive hover:bg-destructive/90 text-white font-bold h-11 px-6 border border-white/10"
                 >
-                  {isCreatingWallet ? "Connecting..." : "Connect"}
+                  {isCreatingWallet ? "Connecting..." : "Connect Wallet"}
                 </Button>
               </div>
             )}
@@ -1066,6 +1109,7 @@ export default function Transactions() {
               walletSummary?.toGivePercentage ??
               getSeriesPercentage(resolvedToGiveSeries)
             }
+            isLoading={isLoading}
           />
           <MetricCard
             title="To Receive"
@@ -1077,6 +1121,7 @@ export default function Transactions() {
               walletSummary?.toReceivePercentage ??
               getSeriesPercentage(resolvedToReceiveSeries)
             }
+            isLoading={isLoading}
           />
           <MetricCard
             title="Total Transactions"
@@ -1087,6 +1132,7 @@ export default function Transactions() {
               walletSummary?.totalTransactionsPercentage ??
               getSeriesPercentage(resolvedTotalTransactionsSeries)
             }
+            isLoading={isLoading}
           />
         </div>
 
@@ -1095,7 +1141,7 @@ export default function Transactions() {
           <DataTable
             columns={transactionColumns}
             data={paginatedTransactions}
-            isLoading={false}
+            isLoading={isLoading}
             emptyMessage="No transactions found"
             emptyIcon={<FileText className="w-12 h-12 text-muted-foreground" />}
             onSort={handleSort}
