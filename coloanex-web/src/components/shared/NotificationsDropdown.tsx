@@ -35,31 +35,31 @@ import { formatDistanceToNow } from "date-fns";
 const getActivityIcon = (action: string) => {
   switch (action) {
     case "CREATE":
-      return <Plus className="h-5 w-5 text-blue-600" />;
+      return <Plus className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
     case "UPDATE":
-      return <Edit className="h-5 w-5 text-amber-600" />;
+      return <Edit className="h-5 w-5" style={{ color: 'var(--color-warning)' }} />;
     case "DELETE":
-      return <Trash2 className="h-5 w-5 text-red-600" />;
+      return <Trash2 className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
     case "KYC_VERIFY":
-      return <ShieldCheck className="h-5 w-5 text-green-600" />;
+      return <ShieldCheck className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
     case "KYC_REJECT":
-      return <ShieldX className="h-5 w-5 text-red-600" />;
+      return <ShieldX className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
     case "LOGIN":
-      return <LogIn className="h-5 w-5 text-blue-600" />;
+      return <LogIn className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
     case "LOGOUT":
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "VISIT":
-      return <Eye className="h-5 w-5 text-purple-600" />;
+      return <Eye className="h-5 w-5" style={{ color: 'var(--color-warning)' }} />;
     case "LEAVE":
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "LOAN_APPROVE":
-      return <BadgeCheck className="h-5 w-5 text-green-600" />;
+      return <BadgeCheck className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
     case "LOAN_REJECT":
-      return <ShieldX className="h-5 w-5 text-red-600" />;
+      return <ShieldX className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
     case "CONTRACT_SIGN":
-      return <FileCheck className="h-5 w-5 text-blue-600" />;
+      return <FileCheck className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
     case "PAYMENT_RECEIVED":
-      return <Banknote className="h-5 w-5 text-green-600" />;
+      return <Banknote className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
     default:
       return <FileText className="h-5 w-5 text-muted-foreground" />;
   }
@@ -226,7 +226,10 @@ export const NotificationsDropdown = () => {
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center bg-red-500 text-white rounded-full text-xs font-semibold">
+          <span
+            className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center rounded-full text-xs font-semibold"
+            style={{ backgroundColor: 'var(--color-badge-danger)', color: 'var(--color-danger-fg)' }}
+          >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -310,7 +313,7 @@ export const NotificationsDropdown = () => {
                             {formatDescription(notification)}
                           </p>
                           {!notification.isRead && (
-                            <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                            <div className="flex-shrink-0 w-2 h-2 rounded-full mt-1" style={{ backgroundColor: 'var(--color-unread-dot)' }}></div>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
@@ -340,7 +343,7 @@ export const NotificationsDropdown = () => {
                         )}
                       </div>
                       {notification.isRead && (
-                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--color-success)' }} />
                       )}
                     </div>
                   </div>

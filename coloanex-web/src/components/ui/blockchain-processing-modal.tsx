@@ -67,14 +67,14 @@ export function BlockchainProcessingModal({
             <div className="w-full space-y-3 pt-2">
               <div className="flex items-center space-x-3">
                 {currentStep === "blockchain" ? (
-                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                 ) : (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-primary" />
                 )}
                 <span
                   className={`text-sm ${
                     currentStep === "blockchain"
-                      ? "text-green-600 font-medium"
+                      ? "text-primary font-medium"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -85,19 +85,19 @@ export function BlockchainProcessingModal({
               </div>
               <div className="flex items-center space-x-3">
                 {currentStep === "database" ? (
-                  <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  <div className="h-2 w-2 rounded-full bg-primary/80 animate-pulse" />
                 ) : currentStep === "complete" ? (
-                  <Check className="h-4 w-4 text-green-500" />
+                  <Check className="h-4 w-4 text-primary" />
                 ) : (
-                  <div className="h-2 w-2 rounded-full bg-gray-300" />
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
                 )}
                 <span
                   className={`text-sm ${
                     currentStep === "database"
-                      ? "text-blue-600 font-medium"
+                      ? "text-primary/80 font-medium"
                       : currentStep === "complete"
                         ? "text-muted-foreground"
-                        : "text-gray-400"
+                        : "text-muted-foreground/50"
                   }`}
                 >
                   {currentStep === "database"

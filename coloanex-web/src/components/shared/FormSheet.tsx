@@ -236,7 +236,8 @@ export function FormSheet({
                 </Button>
                 <Button
                   type="submit"
-                  className="cursor-pointer bg-green-500 hover:bg-green-600 border-green-500 hover:border-green-600 text-white"
+                  className="cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-fg)', borderColor: 'var(--color-primary)' }}
                   disabled={isSubmitting || !isFormValid}
                 >
                   {isSubmitting ? "Saving..." : submitText}

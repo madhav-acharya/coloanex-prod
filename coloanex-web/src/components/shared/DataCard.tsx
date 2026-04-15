@@ -7,29 +7,37 @@ export function DataCard({
   subtitle,
   metadata,
   icon: Icon,
+  iconColor = "text-primary",
+  iconBg = "bg-primary/10",
   onView,
   onEdit,
   onDelete,
   viewTitle = "View",
   editTitle = "Edit",
   deleteTitle = "Delete",
-}: DataCardProps) {
+}: DataCardProps & { iconColor?: string; iconBg?: string }) {
   return (
-    <div className="bg-card rounded-lg border p-3 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+    <div className="bg-card rounded-lg border border-border p-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           {Icon && (
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Icon className="w-5 h-5 text-primary" />
+            <div className={`p-2 ${iconBg} rounded-lg`}>
+              <Icon className={`w-5 h-5 ${iconColor}`} />
             </div>
           )}
-          <div>
-            <h3 className="font-semibold text-foreground">{title}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-foreground truncate text-sm" title={title}>
+              {title}
+            </h3>
             {subtitle && (
-              <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+              <p className="text-foreground mt-1 truncate text-sm" title={subtitle}>
+                {subtitle}
+              </p>
             )}
             {metadata && (
-              <p className="text-xs text-muted-foreground mt-1">{metadata}</p>
+              <p className="text-xs text-muted-foreground mt-1 truncate" title={metadata}>
+                {metadata}
+              </p>
             )}
           </div>
         </div>
@@ -55,7 +63,7 @@ export function DataCard({
             className="p-2 hover:bg-destructive/10 rounded transition-colors cursor-pointer"
             title={deleteTitle}
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            <Trash2 className="w-4 h-4" style={{ color: 'var(--color-danger)' }} />
           </button>
         </div>
       </div>

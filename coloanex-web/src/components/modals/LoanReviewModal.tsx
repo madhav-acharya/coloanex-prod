@@ -446,7 +446,7 @@ export function LoanReviewModal({
                   isSubmitting ||
                   (status === LoanStatus.REJECTED && !rejectionReason.trim())
                 }
-                className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
               >
                 {isSubmitting
                   ? "Submitting..."
@@ -501,10 +501,10 @@ export function LoanReviewModal({
                 <h3
                   className={`text-xl font-bold ${
                     status === LoanStatus.APPROVED
-                      ? "text-green-600 dark:text-green-400"
+                      ? "text-primary"
                       : status === LoanStatus.REJECTED
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-blue-600 dark:text-blue-400"
+                        ? "text-destructive"
+                        : "text-foreground"
                   }`}
                 >
                   {status === LoanStatus.APPROVED
@@ -532,7 +532,7 @@ export function LoanReviewModal({
 
             <div className="space-y-5 mb-6">
               {/* Borrower Info Section */}
-              <div className="bg-black-300 rounded-lg p-4 space-y-3 border border-slate-200 dark:border-border">
+              <div className="bg-card rounded-lg p-4 space-y-3 border border-border">
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Loan Information
                 </h4>
@@ -549,7 +549,7 @@ export function LoanReviewModal({
                     <Label className="text-xs text-muted-foreground">
                       Requested Amount
                     </Label>
-                    <p className="text-sm font-medium mt-1 text-blue-600 dark:text-blue-400">
+                    <p className="text-sm font-medium mt-1 text-primary">
                       {formatCurrency(loan.requestedAmount)}
                     </p>
                   </div>
@@ -559,9 +559,9 @@ export function LoanReviewModal({
               {status === LoanStatus.APPROVED && (
                 <>
                   {/* Approval Details Section */}
-                  <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-4 space-y-4 border border-green-200 dark:border-green-800">
-                    <h4 className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide flex items-center gap-2">
-                      <span className="w-2 h-2 bg-green-600 dark:bg-green-400 rounded-full"></span>
+                  <div className="bg-primary/5 rounded-lg p-4 space-y-4 border border-primary/20">
+                    <h4 className="text-xs font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
+                      <span className="w-2 h-2 bg-primary rounded-full"></span>
                       Approval Details
                     </h4>
 
@@ -572,7 +572,7 @@ export function LoanReviewModal({
                           className="text-sm font-medium text-foreground"
                         >
                           Approved Amount{" "}
-                          <span className="text-red-500">*</span>
+                          <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           id="approvedAmount"
@@ -593,7 +593,7 @@ export function LoanReviewModal({
                           className="text-sm font-medium text-foreground"
                         >
                           Approved Term (Months){" "}
-                          <span className="text-red-500">*</span>
+                          <span className="text-destructive">*</span>
                         </Label>
                         <Input
                           id="approvedTermMonths"
@@ -616,7 +616,7 @@ export function LoanReviewModal({
                           className="text-sm font-medium text-foreground"
                         >
                           Select Loan Rule{" "}
-                          <span className="text-red-500">*</span>
+                          <span className="text-destructive">*</span>
                         </Label>
                         <Select
                           value={selectedRuleId}
@@ -669,16 +669,16 @@ export function LoanReviewModal({
               )}
 
               {status === LoanStatus.REJECTED && (
-                <div className="bg-red-50 dark:bg-red-950/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                  <h4 className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wide flex items-center gap-2 mb-3">
-                    <span className="w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></span>
+                <div className="bg-destructive/5 rounded-lg p-4 border border-destructive/20">
+                  <h4 className="text-xs font-semibold text-destructive uppercase tracking-wide flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 bg-destructive rounded-full"></span>
                     Rejection Details
                   </h4>
                   <div>
                     <Label className="text-sm font-medium text-foreground">
                       Rejection Reason
                     </Label>
-                    <p className="text-sm mt-2 bg-background p-3 rounded border border-red-200 dark:border-red-800">
+                    <p className="text-sm mt-2 bg-background p-3 rounded border border-destructive/20">
                       {rejectionReason || "No reason provided"}
                     </p>
                   </div>
@@ -687,9 +687,9 @@ export function LoanReviewModal({
 
               {status !== LoanStatus.APPROVED &&
                 status !== LoanStatus.REJECTED && (
-                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                    <h4 className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide flex items-center gap-2 mb-3">
-                      <span className="w-2 h-2 bg-blue-600 dark:bg-blue-400 rounded-full"></span>
+                  <div className="bg-secondary/5 rounded-lg p-4 border border-secondary/20">
+                    <h4 className="text-xs font-semibold text-secondary-foreground uppercase tracking-wide flex items-center gap-2 mb-3">
+                      <span className="w-2 h-2 bg-secondary-foreground rounded-full"></span>
                       Status Update
                     </h4>
                     <div>
@@ -727,10 +727,10 @@ export function LoanReviewModal({
                       !rulesData ||
                       rulesData.length === 0))
                 }
-                className={`min-w-[120px] ${
+                className={`min-w-[120px] text-white ${
                   status === LoanStatus.REJECTED
-                    ? "bg-red-600 hover:bg-red-700 text-white"
-                    : "bg-green-600 hover:bg-green-700 text-white"
+                    ? "bg-destructive hover:bg-destructive/90"
+                    : "bg-primary hover:bg-primary/90"
                 }`}
                 title={
                   status === LoanStatus.APPROVED &&

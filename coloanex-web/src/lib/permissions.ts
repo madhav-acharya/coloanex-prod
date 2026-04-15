@@ -24,6 +24,7 @@ export const extractRolePermissions = (
 };
 
 export const extractUserRoleIds = (user: User): string[] => {
+  if (!user) return [];
   return (
     user.roles
       ?.map((r) => {
@@ -42,6 +43,7 @@ export const extractUserRoleIds = (user: User): string[] => {
 };
 
 export const extractUserPermissionIds = (user: User): string[] => {
+  if (!user) return [];
   return (
     user.permissions
       ?.map((p) => {
@@ -66,6 +68,7 @@ export const extractUserPermissionIds = (user: User): string[] => {
 export const extractUserRoles = (
   user: User,
 ): Array<{ id: string; name: string; description?: string }> => {
+  if (!user) return [];
   return (
     user.roles
       ?.map((r) => {
@@ -93,6 +96,7 @@ export const extractUserRoles = (
 export const extractUserPermissions = (
   user: User,
 ): Array<{ id: string; name: string; description?: string }> => {
+  if (!user) return [];
   return (
     user.permissions
       ?.map((p) => {
@@ -131,7 +135,6 @@ export const getAdditionalPermissionIds = (
 export const hasPermission = (user: any, permissionName: string): boolean => {
   if (!user) return false;
 
-  // Super Admin has all permissions - bypass permission checks
   const userRoles = extractUserRoles(user);
   const isSuperAdmin = userRoles.some((role) => role.name === "Super Admin");
   if (isSuperAdmin) return true;

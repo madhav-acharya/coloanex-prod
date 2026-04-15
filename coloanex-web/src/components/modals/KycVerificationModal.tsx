@@ -712,7 +712,7 @@ export function KycVerificationModal({
                                   href={file.fileUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 hover:underline text-sm text-center px-2"
+                                  className="text-primary hover:underline text-sm text-center px-2"
                                 >
                                   View Document
                                 </a>
@@ -772,7 +772,7 @@ export function KycVerificationModal({
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
             >
               {isSubmitting
                 ? "Saving..."

@@ -310,7 +310,7 @@ export default function PaymentSuccess() {
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
         <div className="rounded-full bg-green-100 dark:bg-green-950 p-6">
-          <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-400" />
+          <CheckCircle2 className="h-16 w-16 text-primary" />
         </div>
 
         <div className="space-y-2">

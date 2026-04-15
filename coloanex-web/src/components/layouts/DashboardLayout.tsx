@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
   ScrollText,
   Wallet,
   Lock,
+  RefreshCw,
 } from "lucide-react";
 import {
   Select,
@@ -53,6 +55,10 @@ interface DashboardLayoutProps {
   actionLabel?: string;
   onActionClick?: () => void;
   actions?: ActionButton[];
+  className?: string;
+  searchClassName?: string;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function DashboardLayout({
@@ -68,6 +74,10 @@ export default function DashboardLayout({
   actionLabel,
   onActionClick,
   actions,
+  className,
+  searchClassName,
+  onRefresh,
+  isRefreshing = false,
 }: DashboardLayoutProps) {
   const COLLAPSED_WIDTH = 64;
   const DEFAULT_WIDTH = 256;
@@ -138,19 +148,19 @@ export default function DashboardLayout({
   const accessControlItems = [
     {
       title: "Roles",
-      icon: <Shield className="w-4 h-4" />,
+      icon: <Shield className="w-4 h-4 text-blue-600" />,
       href: "/roles",
       permission: "Read Roles",
     },
     {
       title: "Permissions",
-      icon: <Key className="w-4 h-4" />,
+      icon: <Key className="w-4 h-4 text-amber-600" />,
       href: "/permissions",
       permission: "Read Permissions",
     },
     {
       title: "Subscriptions",
-      icon: <BadgeDollarSign className="w-4 h-4" />,
+      icon: <BadgeDollarSign className="w-4 h-4 text-indigo-600" />,
       href: "/subscriptions",
       permission: "Read Roles",
     },
@@ -159,25 +169,25 @@ export default function DashboardLayout({
   const managementItems = [
     {
       title: "Users",
-      icon: <Users className="w-4 h-4" />,
+      icon: <Users className="w-4 h-4 text-green-600" />,
       href: "/users",
       permission: "Read Users",
     },
     {
       title: "Tenants",
-      icon: <Building2 className="w-4 h-4" />,
+      icon: <Building2 className="w-4 h-4 text-sky-600" />,
       href: "/tenants",
       permission: "Read Tenants",
     },
     {
       title: "KYC Requests",
-      icon: <FileText className="w-4 h-4" />,
+      icon: <FileText className="w-4 h-4 text-rose-600" />,
       href: "/kyc-requests",
       permission: "Read KYC Documents",
     },
     {
       title: "Loan Requests",
-      icon: <Landmark className="w-4 h-4" />,
+      icon: <Landmark className="w-4 h-4 text-purple-600" />,
       href: "/loan-requests",
       permission: "Read Loans",
     },
@@ -186,19 +196,19 @@ export default function DashboardLayout({
   const loanManagementItems = [
     {
       title: "Loan Rules",
-      icon: <ScrollText className="w-4 h-4" />,
+      icon: <ScrollText className="w-4 h-4 text-orange-600" />,
       href: "/rules",
       permission: "Read Loans",
     },
     {
       title: "Contracts",
-      icon: <FileText className="w-4 h-4" />,
+      icon: <FileText className="w-4 h-4 text-cyan-600" />,
       href: "/contracts",
       permission: "Read Loans",
     },
     {
       title: "Wallet",
-      icon: <Wallet className="w-4 h-4" />,
+      icon: <Wallet className="w-4 h-4 text-emerald-600" />,
       href: "/wallet",
       permission: "Read Payments",
     },
@@ -284,10 +294,10 @@ export default function DashboardLayout({
                   key={item.title}
                   to={item.href}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-pointer",
+                    "flex items-center gap-3 px-3 py-2 rounded-[8px] text-sm transition-all duration-150 cursor-pointer",
                     isActive
-                      ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary pl-[10px]"
-                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary active:bg-primary/15",
+                      ? "bg-primary/15 text-primary font-bold"
+                      : "text-foreground/80 font-medium hover:bg-muted hover:text-primary active:bg-muted",
                     isCollapsed && "justify-center px-2 border-l-0 pl-2",
                   )}
                 >
@@ -308,7 +318,7 @@ export default function DashboardLayout({
         {!isCollapsed && (
           <Link to="/" className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <img src="/logo.png" alt="C" className="w-full h-full" />
+              <img src="./images/logo.png" alt="C" className="w-full h-full" />
             </div>
             <span className="text-xl font-bold">Coloanex</span>
           </Link>
@@ -345,7 +355,7 @@ export default function DashboardLayout({
                 )}
                 title="Tenant assignment required"
               >
-                <LayoutDashboard className="w-4 h-4" />
+                <LayoutDashboard className="w-4 h-4 text-indigo-500" />
                 {!isCollapsed && (
                   <>
                     <span className="flex-1">Dashboard</span>
@@ -357,14 +367,14 @@ export default function DashboardLayout({
               <Link
                 to="/dashboard"
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 cursor-pointer",
+                  "flex items-center gap-3 px-3 py-2 rounded-[8px] text-sm transition-all duration-150 cursor-pointer",
                   location.pathname === "/dashboard"
-                    ? "bg-primary/20 text-primary font-semibold border-l-2 border-primary pl-[10px]"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary active:bg-primary/15",
+                    ? "bg-primary/15 text-primary font-bold"
+                    : "text-foreground/80 font-medium hover:bg-muted hover:text-primary active:bg-muted",
                   isCollapsed && "justify-center px-2 border-l-0 pl-2",
                 )}
               >
-                <LayoutDashboard className="w-4 h-4" />
+                <LayoutDashboard className="w-4 h-4 text-indigo-500" />
                 {!isCollapsed && <span>Dashboard</span>}
               </Link>
             )}
@@ -396,7 +406,7 @@ export default function DashboardLayout({
           <div className="flex justify-center">
             <Avatar className="w-8 h-8">
               <AvatarImage src={user?.profileImage} alt={user?.fullName} />
-              <AvatarFallback className="bg-green-600 text-white font-medium">
+              <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                 {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </AvatarFallback>
             </Avatar>
@@ -422,7 +432,7 @@ export default function DashboardLayout({
       </aside>
 
       <main className="flex-1 overflow-y-auto bg-background">
-        <div className="bg-background backdrop-blur supports-[backdrop-filter]:bg-background border-b sticky top-0 z-10 shadow-sm">
+        <div className="bg-background backdrop-blur supports-[backdrop-filter]:bg-background border-b sticky top-0 z-10">
           <div className="px-3 sm:px-4 md:px-6 py-3 md:py-4">
             <div className="mb-3 md:mb-4 flex items-center justify-between">
               <div>
@@ -451,7 +461,7 @@ export default function DashboardLayout({
                       placeholder={searchPlaceholder}
                       value={searchValue}
                       onChange={(e) => onSearchChange(e.target.value)}
-                      className="pl-9 w-full"
+                      className={cn("pl-9 w-full", searchClassName)}
                     />
                   </div>
                 )}
@@ -468,7 +478,12 @@ export default function DashboardLayout({
                           onFilterChange?.(filter.name, value)
                         }
                       >
-                        <SelectTrigger className="cursor-pointer">
+                        <SelectTrigger
+                          className={cn(
+                            "cursor-pointer h-11 bg-background border-border",
+                            filter.className,
+                          )}
+                        >
                           <SelectValue
                             placeholder={filter.placeholder || filter.label}
                           />
@@ -491,10 +506,32 @@ export default function DashboardLayout({
                         onChange={(e) =>
                           onFilterChange?.(filter.name, e.target.value)
                         }
+                        className={cn(
+                          "h-11 bg-background border-border",
+                          filter.className,
+                        )}
                       />
                     )}
                   </div>
                 ))}
+
+                {onRefresh && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={onRefresh}
+                    disabled={isRefreshing}
+                    className={cn(
+                      "h-11 w-11 shrink-0 bg-background border-border hover:bg-muted transition-all duration-200",
+                      isRefreshing && "animate-spin-slow",
+                    )}
+                    title="Refresh Data"
+                  >
+                    <RefreshCw
+                      className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+                    />
+                  </Button>
+                )}
               </div>
 
               {actions && actions.length > 0 ? (
@@ -505,11 +542,6 @@ export default function DashboardLayout({
                       onClick={action.onClick}
                       disabled={action.disabled}
                       variant={action.variant || "default"}
-                      className={
-                        action.variant === "default" || !action.variant
-                          ? "bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer"
-                          : "whitespace-nowrap cursor-pointer"
-                      }
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       {action.label}
@@ -519,7 +551,7 @@ export default function DashboardLayout({
               ) : actionLabel && onActionClick ? (
                 <Button
                   onClick={onActionClick}
-                  className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap cursor-pointer ml-auto"
+                  className="whitespace-nowrap cursor-pointer ml-auto"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   {actionLabel}
@@ -529,7 +561,18 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        <div className="container mx-auto p-4 md:p-6">{children}</div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className={cn("container mx-auto p-4 md:p-8", className)}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
       </main>
     </div>
   );

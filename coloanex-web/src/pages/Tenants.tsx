@@ -85,7 +85,9 @@ export default function Tenants() {
   const {
     data: tenantsData,
     isLoading,
+    isFetching,
     error: tenantsError,
+    refetch,
   } = useGetTenantsQuery(filters, { skip: !isAuthenticated });
   const { data: usersData, isLoading: isLoadingUsers } = useGetUsersQuery(
     { limit: 1000 },
@@ -205,27 +207,55 @@ export default function Tenants() {
     setDeleteDialogOpen(true);
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch().unwrap();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!tenantToDelete) return;
 
-    setIsDeletingTenant(true);
-    try {
-      await deleteTenant(tenantToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "Tenant deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setTenantToDelete(null);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete tenant",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingTenant(false);
-    }
+    const targetId = tenantToDelete.id;
+    const targetName = tenantToDelete.name;
+    setDeleteDialogOpen(false);
+    setTenantToDelete(null);
+
+    let isCancelled = false;
+
+    toast({
+      title: "Tenant Removed",
+      description: `Tenant "${targetName}" has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `Tenant "${targetName}" has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deleteTenant(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete tenant",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const handleSubmit = async () => {
@@ -319,7 +349,7 @@ export default function Tenants() {
         <Badge
           className={
             tenant.isActive
-              ? "bg-green-100 dark:bg-green-600 text-green-700 dark:text-white border border-green-200 dark:border-green-800"
+              ? "bg-green-100 dark:bg-primary text-green-700 dark:text-green-800 border border-green-200 dark:border-green-800"
               : "bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
           }
         >
@@ -360,6 +390,8 @@ export default function Tenants() {
       searchPlaceholder="Search tenants..."
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
+      onRefresh={handleRefresh}
+      isRefreshing={isRefreshing}
       filters={filterFields}
       filterValues={filterValues}
       onFilterChange={handleFilterChange}

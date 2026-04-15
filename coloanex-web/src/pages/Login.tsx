@@ -89,7 +89,7 @@ const Login = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Email <span className="text-red-500">*</span>
+                Email <span className="text-destructive">*</span>
               </label>
               <Input
                 type="email"
@@ -103,7 +103,7 @@ const Login = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Password <span className="text-red-500">*</span>
+                Password <span className="text-destructive">*</span>
               </label>
               <div className="relative">
                 <Input
@@ -130,7 +130,7 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 cursor-pointer"
+              className="w-full bg-primary hover:bg-primary/90 cursor-pointer"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign In"}
@@ -141,7 +141,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => navigate("/signup")}
-                className="text-green-600 hover:underline font-semibold cursor-pointer"
+                className="text-primary hover:underline font-semibold cursor-pointer"
               >
                 Create Account
               </button>

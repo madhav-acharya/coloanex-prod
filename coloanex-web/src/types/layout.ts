@@ -4,6 +4,7 @@ export interface FilterField {
   type: "select" | "text";
   options?: { label: string; value: string }[];
   placeholder?: string;
+  className?: string;
 }
 
 export interface ActionButton {

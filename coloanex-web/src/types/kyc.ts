@@ -97,6 +97,7 @@ export interface VerifyKycDto {
 }
 
 export interface KycsResponse {
+  currentPage: number;
   data: Kyc[];
   total: number;
   page: number;

@@ -24,6 +24,7 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
   pageSizeOptions?: number[];
+  className?: string;
 }
 
 export function Pagination({
@@ -36,6 +37,7 @@ export function Pagination({
   onPageChange,
   onPageSizeChange,
   pageSizeOptions = [10, 20, 50, 100],
+  className,
 }: PaginationProps) {
   const startItem = (currentPage - 1) * limit + 1;
   const endItem = Math.min(currentPage * limit, total);
@@ -82,12 +84,12 @@ export function Pagination({
   const pageNumbers = generatePageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4 border-t bg-gradient-to-r from-neutral-light/30 to-neutral-light/50">
+    <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4 border-t bg-gradient-to-r from-neutral-light/30 to-neutral-light/50", className)}>
       <div className="text-sm font-medium text-neutral-dark">
         Showing{" "}
-        <span className="text-green-600 font-semibold">{startItem}</span> to{" "}
-        <span className="text-green-600 font-semibold">{endItem}</span> of{" "}
-        <span className="text-green-600 font-semibold">{total}</span> results
+        <span className="text-primary font-semibold">{startItem}</span> to{" "}
+        <span className="text-primary font-semibold">{endItem}</span> of{" "}
+        <span className="text-primary font-semibold">{total}</span> results
       </div>
       <div className="flex items-center gap-2">
         <Button
@@ -96,9 +98,9 @@ export function Pagination({
           onClick={() => onPageChange(1)}
           disabled={!hasPreviousPage}
           className={cn(
-            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
+            "border-input hover:bg-muted hover:text-foreground transition-all duration-200",
             hasPreviousPage
-              ? "cursor-pointer text-green-700 dark:text-green-400"
+              ? "cursor-pointer text-primary"
               : "cursor-not-allowed opacity-40",
           )}
         >
@@ -110,9 +112,9 @@ export function Pagination({
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPreviousPage}
           className={cn(
-            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
+            "border-input hover:bg-muted hover:text-foreground transition-all duration-200",
             hasPreviousPage
-              ? "cursor-pointer text-green-700 dark:text-green-400"
+              ? "cursor-pointer text-primary"
               : "cursor-not-allowed opacity-40",
           )}
         >
@@ -134,10 +136,10 @@ export function Pagination({
               className={cn(
                 "min-w-9 font-semibold transition-all duration-200",
                 page === currentPage
-                  ? "bg-green-600 hover:bg-green-700 text-white hover:shadow-lg scale-105 cursor-pointer border-green-600"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-glow scale-105 cursor-pointer border-primary"
                   : page === "..."
                     ? "cursor-not-allowed border-transparent hover:border-transparent"
-                    : "cursor-pointer border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 hover:text-green-700 dark:hover:text-green-400 text-neutral-dark dark:text-foreground",
+                    : "cursor-pointer border-input hover:bg-muted hover:text-foreground text-foreground",
               )}
             >
               {page}
@@ -151,9 +153,9 @@ export function Pagination({
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
           className={cn(
-            "border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:border-green-400 dark:hover:border-green-600 transition-all duration-200",
+            "border-input hover:bg-muted hover:text-foreground transition-all duration-200",
             hasNextPage
-              ? "cursor-pointer text-green-700 dark:text-green-400"
+              ? "cursor-pointer text-primary"
               : "cursor-not-allowed opacity-40",
           )}
         >
@@ -193,7 +195,7 @@ export function Pagination({
                     <SelectItem
                       key={size}
                       value={size.toString()}
-                      className="hover:bg-green-50 dark:hover:bg-green-950 focus:bg-green-50 dark:focus:bg-green-950"
+                      className="hover:bg-muted focus:bg-muted"
                     >
                       {size}
                     </SelectItem>

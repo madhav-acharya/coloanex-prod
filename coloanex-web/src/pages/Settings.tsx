@@ -9,18 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useUpdateUserMutation } from "@/apis/usersApi";
 import {
   useDisconnectMailMutation,
   useGetMailStatusQuery,
 } from "@/apis/mailApi";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -68,8 +62,8 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const gatewayLogoByType: Record<"ESEWA" | "KHALTI", string> = {
-  ESEWA: "/images/esewa-logo.png",
-  KHALTI: "/images/khalti-logo.png",
+  ESEWA: "/images/esewa.png",
+  KHALTI: "/images/khalti.png",
 };
 
 const planAccentByCode: Record<
@@ -77,10 +71,10 @@ const planAccentByCode: Record<
   { card: string; button: string; chip: string }
 > = {
   free: {
-    card: "border-emerald-400/40 bg-gradient-to-br from-emerald-500/10 to-transparent",
+    card: "border-primary/40 bg-gradient-to-br from-emerald-500/10 to-transparent",
     button:
-      "bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-500/80",
-    chip: "bg-emerald-500/15 text-emerald-300",
+      "bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/80",
+    chip: "bg-primary/15 text-emerald-300",
   },
   premium: {
     card: "border-sky-400/40 bg-gradient-to-br from-sky-500/10 to-transparent",
@@ -107,6 +101,7 @@ const Settings = () => {
   const { mode, setTheme } = useTheme();
   const [updateUser, { isLoading }] = useUpdateUserMutation();
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [accountForm, setAccountForm] = useState({
     fullName: user?.fullName || "",
@@ -329,12 +324,20 @@ const Settings = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const currentMode = (user as any)?.gasPaymentMode;
-    if (currentMode === "USER_WALLET" || currentMode === "PLATFORM_WALLET") {
-      setGasPaymentMode(currentMode);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        refetchWallets(),
+        refetchMailStatus(),
+        refetchMySubscriptions(),
+        refetchConfigs(),
+        refreshWalletCoinBalances(),
+      ]);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
     }
-  }, [user]);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -738,16 +741,18 @@ const Settings = () => {
       badge:
         blockchainAccess.mode === "USER_WALLET" ? (
           blockchainAccess.hasWallet ? (
-            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Check className="w-3 h-3" />
               Connected
             </span>
           ) : (
-            <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <X className="w-3 h-3" />
               Not Connected
             </span>
           )
         ) : (
-          <span className="text-xs px-2 py-1 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300 font-medium">
+          <span className="text-xs px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-500 border border-sky-500/20 font-bold uppercase tracking-wider">
             Platform Mode
           </span>
         ),
@@ -758,15 +763,15 @@ const Settings = () => {
       title: "Subscriptions",
       description: "View active plan and upgrade options",
       badge: hasLimitReached ? (
-        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+        <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
           Limit Reached
         </span>
       ) : hasActiveSubscription ? (
-        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+        <span className="text-xs px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 border border-green-500/20 font-bold uppercase tracking-wider">
           Active
         </span>
       ) : (
-        <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium">
+        <span className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold uppercase tracking-wider">
           Inactive
         </span>
       ),
@@ -787,21 +792,21 @@ const Settings = () => {
                 : "Configure receive credentials for user and tenant payment flows",
             badge:
               connectedGatewayTypes.length > 0 ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-emerald-500/50 bg-emerald-500/10 px-2 py-1">
+                <div className="flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5">
                   {connectedGatewayTypes.map((gateway) => (
                     <img
                       key={gateway}
                       src={gatewayLogoByType[gateway]}
                       alt={gateway}
-                      className="h-4 w-4 rounded-sm object-cover"
+                      className="h-3 w-3 rounded-sm object-cover"
                     />
                   ))}
-                  <span className="text-[10px] font-semibold text-emerald-300 uppercase tracking-wide">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
                     Connected
                   </span>
                 </div>
               ) : (
-                <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+                <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
                   Not Connected
                 </span>
               ),
@@ -814,11 +819,11 @@ const Settings = () => {
       title: "Mail Service",
       description: mailStatus?.isConnected ? "Connected" : "Not connected",
       badge: mailStatus?.isConnected ? (
-        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
+        <span className="text-xs px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 border border-green-500/20 font-bold uppercase tracking-wider">
           Connected
         </span>
       ) : (
-        <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 font-medium">
+        <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
           Not Connected
         </span>
       ),
@@ -906,7 +911,7 @@ const Settings = () => {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {isLoading ? (
                         <>
@@ -1054,7 +1059,7 @@ const Settings = () => {
                     <Button
                       type="submit"
                       disabled={isLoading}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {isLoading ? (
                         <>
@@ -1190,54 +1195,53 @@ const Settings = () => {
               </CardHeader>
               <Separator />
               <CardContent className="pt-6 space-y-6">
-                {wallets.length > 0 ? (
-                  <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
-                        <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
+                {wallets.some((w) => w.provider === "METAMASK") ? (
+                  <div className="flex items-center justify-between p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center border border-white/20 shadow-sm">
+                        <Check className="w-6 h-6 text-white" />
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-green-900 dark:text-green-100">
-                        MetaMask Connected
-                      </p>
-                      <p className="text-sm text-green-700 dark:text-green-300 break-all">
-                        {wallets.find((wallet) => wallet.isPrimary)?.address ||
-                          wallets[0]?.address}
-                      </p>
+                      <div>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">
+                          MetaMask Connected
+                        </p>
+                        <p className="text-sm text-muted-foreground/80 font-medium break-all">
+                          {wallets.find((wallet) => wallet.isPrimary)?.address ||
+                            wallets.find((w) => w.provider === "METAMASK")?.address}
+                        </p>
+                      </div>
                     </div>
                     <Button
                       onClick={disconnectMetamask}
                       disabled={isCreatingWallet}
                       size="sm"
                       variant="outline"
-                      className="cursor-pointer border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20"
+                      className="border-red-200 text-destructive hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold h-11 px-6 transition-all"
                     >
                       Disconnect
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 p-4 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm">
-                    <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                        <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  <div className="flex items-center justify-between p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-destructive flex items-center justify-center border border-white/20 shadow-sm">
+                        <X className="w-6 h-6 text-white" />
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 dark:text-gray-50">
-                        MetaMask Not Connected
-                      </p>
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        You are not connected to any MetaMask wallet.
-                      </p>
+                      <div>
+                        <p className="font-bold text-destructive text-lg">
+                          MetaMask Not Connected
+                        </p>
+                        <p className="text-sm text-muted-foreground/80 font-medium">
+                          You are currently disconnected. Link your wallet to perform on-chain operations.
+                        </p>
+                      </div>
                     </div>
                     <Button
                       onClick={connectMetamask}
                       disabled={isCreatingWallet}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white cursor-pointer border-0"
+                      className="bg-destructive hover:bg-destructive/90 text-white font-bold h-11 px-6 border border-white/10"
                     >
-                      {isCreatingWallet ? "Connecting..." : "Connect"}
+                      {isCreatingWallet ? "Connecting..." : "Connect Wallet"}
                     </Button>
                   </div>
                 )}
@@ -1262,7 +1266,7 @@ const Settings = () => {
                     <Button
                       className={`cursor-pointer ${
                         gasPaymentMode === "USER_WALLET"
-                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
                           : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                       }`}
                       onClick={() => saveGasMode("USER_WALLET")}
@@ -1272,7 +1276,7 @@ const Settings = () => {
                     <Button
                       className={`cursor-pointer ${
                         gasPaymentMode === "PLATFORM_WALLET"
-                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                           : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
                       }`}
                       onClick={() => saveGasMode("PLATFORM_WALLET")}
@@ -1430,16 +1434,26 @@ const Settings = () => {
                       and blockchain workflows.
                     </div>
                   ) : (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-4 md:grid-cols-2">
                       {subscriptionStats.map((subscription) => (
                         <div
                           key={subscription.id}
-                          className="rounded-lg border border-border/70 bg-card p-4"
+                          className="rounded-xl border border-border/70 bg-card/60 p-4 hover:shadow-md transition-all"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-sm">
-                              {subscription.plan}
-                            </p>
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {subscription.plan} Plan
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {subscription.scope} scope • Valid till{" "}
+                                {subscription.endsAt
+                                  ? new Date(
+                                      subscription.endsAt,
+                                    ).toLocaleDateString()
+                                  : "Indefinitely"}
+                              </p>
+                            </div>
                             <Badge
                               variant={
                                 subscription.lifecycleStatus === "EXPIRED"
@@ -1449,40 +1463,36 @@ const Settings = () => {
                                     ? "outline"
                                     : "secondary"
                               }
+                              className="text-[10px] font-bold uppercase"
                             >
-                              {subscription.lifecycleStatus === "BOUGHT"
-                                ? "Bought"
-                                : subscription.lifecycleStatus ===
-                                    "LIMIT_EXCEEDED"
-                                  ? "Limit Exceeded"
-                                  : "Expired"}
+                              {subscription.lifecycleStatus}
                             </Badge>
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                            <span>Scope: {subscription.scope}</span>
-                            <span>Used: {subscription.usedTransactions}</span>
-                            <span>
-                              Remaining:{" "}
-                              {subscription.remainingTransactions === null
-                                ? "Unlimited"
-                                : subscription.remainingTransactions}
-                            </span>
-                            <span>
-                              Max:{" "}
-                              {subscription.maxTransactions > 0
-                                ? subscription.maxTransactions
-                                : "Unlimited"}
-                            </span>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider font-semibold">
+                            <div className="bg-muted/50 p-1.5 rounded-lg text-center">
+                              <p className="text-muted-foreground">Used</p>
+                              <p className="text-foreground">
+                                {subscription.usedTransactions}
+                              </p>
+                            </div>
+                            <div className="bg-muted/50 p-1.5 rounded-lg text-center">
+                              <p className="text-muted-foreground">Remaining</p>
+                              <p className="text-foreground">
+                                {subscription.remainingTransactions === null
+                                  ? "∞"
+                                  : subscription.remainingTransactions}
+                              </p>
+                            </div>
                           </div>
 
                           <p
                             className={`text-xs mt-1 ${
                               subscription.lifecycleStatus === "EXPIRED"
-                                ? "text-red-500"
+                                ? "text-destructive"
                                 : subscription.lifecycleStatus ===
                                     "LIMIT_EXCEEDED"
                                   ? "text-amber-500"
-                                  : "text-emerald-500"
+                                  : "text-primary"
                             }`}
                           >
                             {subscription.endsAt
@@ -1602,7 +1612,7 @@ const Settings = () => {
                 <div className="flex justify-end">
                   <Button
                     onClick={() => navigate("/pricing")}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     Buy / Upgrade Subscription
                   </Button>
@@ -1644,7 +1654,7 @@ const Settings = () => {
                     {!showAddPaymentConfig ? (
                       <Button
                         onClick={() => setShowAddPaymentConfig(true)}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         Add Payment Config
                       </Button>
@@ -1661,7 +1671,7 @@ const Settings = () => {
                 </div>
 
                 {connectedGatewayTypes.length > 0 && (
-                  <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/5 px-3 py-2">
+                  <div className="rounded-lg border border-primary/40 bg-primary/5 px-3 py-2">
                     <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300 mb-2">
                       Connected Gateways
                     </p>
@@ -1669,7 +1679,7 @@ const Settings = () => {
                       {connectedGatewayTypes.map((gateway) => (
                         <div
                           key={gateway}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 px-2 py-1"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 px-2 py-1"
                         >
                           <img
                             src={gatewayLogoByType[gateway]}
@@ -1686,7 +1696,7 @@ const Settings = () => {
                 )}
 
                 {showAddPaymentConfig && (
-                  <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 space-y-5">
+                  <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 space-y-5">
                     <div className="grid gap-4 lg:grid-cols-3">
                       <div className="rounded-xl border border-border/80 bg-card/60 p-3">
                         <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -1699,7 +1709,7 @@ const Settings = () => {
                             onClick={() => setConfigScope("USER")}
                             className={
                               configScope === "USER"
-                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "border-primary bg-primary/20 text-emerald-300"
                                 : "border-border/70"
                             }
                           >
@@ -1711,7 +1721,7 @@ const Settings = () => {
                             onClick={() => setConfigScope("TENANT")}
                             className={
                               configScope === "TENANT"
-                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "border-primary bg-primary/20 text-emerald-300"
                                 : "border-border/70"
                             }
                           >
@@ -1731,7 +1741,7 @@ const Settings = () => {
                             onClick={() => setConfigGateway("ESEWA")}
                             className={
                               configGateway === "ESEWA"
-                                ? "h-12 border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "h-12 border-primary bg-primary/20 text-emerald-300"
                                 : "h-12 border-border/70"
                             }
                           >
@@ -1748,7 +1758,7 @@ const Settings = () => {
                             onClick={() => setConfigGateway("KHALTI")}
                             className={
                               configGateway === "KHALTI"
-                                ? "h-12 border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "h-12 border-primary bg-primary/20 text-emerald-300"
                                 : "h-12 border-border/70"
                             }
                           >
@@ -1773,7 +1783,7 @@ const Settings = () => {
                             onClick={() => setConfigEnvironment("sandbox")}
                             className={
                               configEnvironment === "sandbox"
-                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "border-primary bg-primary/20 text-emerald-300"
                                 : "border-border/70"
                             }
                           >
@@ -1785,7 +1795,7 @@ const Settings = () => {
                             onClick={() => setConfigEnvironment("production")}
                             className={
                               configEnvironment === "production"
-                                ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+                                ? "border-primary bg-primary/20 text-emerald-300"
                                 : "border-border/70"
                             }
                           >
@@ -1799,7 +1809,8 @@ const Settings = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>
-                            Merchant ID <span className="text-red-500">*</span>
+                            Merchant ID{" "}
+                            <span className="text-destructive">*</span>
                           </Label>
                           <Input
                             placeholder={paymentConfigPlaceholders.merchantId}
@@ -1840,7 +1851,8 @@ const Settings = () => {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>
-                            Public Key <span className="text-red-500">*</span>
+                            Public Key{" "}
+                            <span className="text-destructive">*</span>
                           </Label>
                           <Input
                             placeholder={paymentConfigPlaceholders.publicKey}
@@ -1873,7 +1885,7 @@ const Settings = () => {
                       <Button
                         onClick={savePaymentConfig}
                         disabled={isSavingConfig}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
                       >
                         {isSavingConfig ? "Saving..." : "Save Config"}
                       </Button>
@@ -1912,7 +1924,7 @@ const Settings = () => {
                         </div>
                         <Button
                           variant="destructive"
-                          className="bg-red-600 hover:bg-red-700 text-white"
+                          className="bg-destructive hover:bg-red-700 text-white"
                           onClick={async () => {
                             await deletePaymentConfig({ id: cfg.id });
                             await refetchConfigs();
@@ -1946,7 +1958,7 @@ const Settings = () => {
                 ) : mailStatus?.isConnected ? (
                   <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800/40 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                         <Check className="w-5 h-5 text-white" />
                       </div>
                     </div>
@@ -1962,7 +1974,7 @@ const Settings = () => {
                       onClick={handleMailDisconnect}
                       disabled={isDisconnecting}
                       size="sm"
-                      className="cursor-pointer bg-red-600 hover:bg-red-700 text-white"
+                      className="cursor-pointer bg-destructive hover:bg-red-700 text-white"
                     >
                       {isDisconnecting ? (
                         <>
@@ -1980,7 +1992,7 @@ const Settings = () => {
                 ) : (
                   <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800/40 rounded-lg">
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-destructive flex items-center justify-center">
                         <X className="w-5 h-5 text-white" />
                       </div>
                     </div>
@@ -1996,7 +2008,7 @@ const Settings = () => {
                     <Button
                       onClick={handleMailConnect}
                       size="sm"
-                      className="cursor-pointer bg-green-600 hover:bg-green-700 text-white"
+                      className="cursor-pointer bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       Connect
@@ -2036,7 +2048,7 @@ const Settings = () => {
                       onCheckedChange={() =>
                         handleNotificationToggle("emailNotifications")
                       }
-                      className="data-[state=checked]:bg-green-600"
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                   <Separator />
@@ -2055,7 +2067,7 @@ const Settings = () => {
                       onCheckedChange={() =>
                         handleNotificationToggle("loanUpdates")
                       }
-                      className="data-[state=checked]:bg-green-600"
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                   <Separator />
@@ -2074,7 +2086,7 @@ const Settings = () => {
                       onCheckedChange={() =>
                         handleNotificationToggle("kycUpdates")
                       }
-                      className="data-[state=checked]:bg-green-600"
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                   <Separator />
@@ -2096,7 +2108,7 @@ const Settings = () => {
                       onCheckedChange={() =>
                         handleNotificationToggle("securityAlerts")
                       }
-                      className="data-[state=checked]:bg-green-600"
+                      className="data-[state=checked]:bg-primary"
                     />
                   </div>
                 </div>
@@ -2111,7 +2123,9 @@ const Settings = () => {
   return (
     <DashboardLayout
       title="Settings"
-      description="Manage your account settings and preferences"
+      description="Manage your account preferences, security, and wallet connections"
+      onRefresh={handleRefresh}
+      isRefreshing={isRefreshing}
     >
       <Card>
         <CardContent className="p-0">

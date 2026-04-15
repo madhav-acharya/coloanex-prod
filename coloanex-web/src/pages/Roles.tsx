@@ -39,7 +39,6 @@ export default function Roles() {
     sortOrder: "asc",
   });
 
-  // Form fields setup
   const { fields, updateField, resetFields, setFieldValues } = useFormFields([
     {
       id: "name",
@@ -60,10 +59,16 @@ export default function Roles() {
   const {
     data: rolesData,
     isLoading,
+    isFetching: isRefreshingRoles,
     error: rolesError,
+    refetch: refetchRoles,
   } = useGetRolesQuery(filters, { skip: !isAuthenticated });
-  const { data: permissionsData, isLoading: isLoadingPermissions } =
-    useGetPermissionsQuery(
+  const { 
+    data: permissionsData, 
+    isLoading: isLoadingPermissions,
+    isFetching: isRefreshingPermissions,
+    refetch: refetchPermissions,
+  } = useGetPermissionsQuery(
       { limit: 100 },
       { skip: !sheetOpen || !isAuthenticated },
     );
@@ -161,24 +166,41 @@ export default function Roles() {
   const handleConfirmDelete = async () => {
     if (!roleToDelete) return;
 
-    setIsDeletingRole(true);
-    try {
-      await deleteRole(roleToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "Role deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setRoleToDelete(null);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete role",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingRole(false);
-    }
+    const targetId = roleToDelete.id;
+    const targetName = roleToDelete.name;
+    setDeleteDialogOpen(false);
+    setRoleToDelete(null);
+
+    let isCancelled = false;
+
+    toast({
+      title: "Role Removed",
+      description: `Role "${targetName}" has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `Role "${targetName}" has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deleteRole(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete role",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const handleSubmit = async () => {
@@ -227,13 +249,15 @@ export default function Roles() {
       searchPlaceholder="Search roles..."
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
+      onRefresh={refetchRoles}
+      isRefreshing={isRefreshingRoles}
       actionLabel="Add Role"
       onActionClick={handleCreateClick}
     >
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
             <p className="mt-4 text-muted-foreground">Loading roles...</p>
           </div>
         </div>
@@ -255,6 +279,8 @@ export default function Roles() {
                   role.permissions?.length || 0
                 } permissions assigned`}
                 icon={Shield}
+                iconColor="text-blue-500"
+                iconBg="bg-blue-500/10"
                 onView={(id) => {
                   const role = roles.find((r) => r.id === id);
                   if (role) handleViewClick(role);
@@ -287,7 +313,6 @@ export default function Roles() {
         </>
       )}
 
-      {/* Form Sheet */}
       <FormSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
@@ -314,7 +339,6 @@ export default function Roles() {
         messages={messages}
         isReadOnly={isReadOnly}
       >
-        {/* Permissions Section */}
         <MultiSelect
           label="Permissions"
           placeholder="Select permissions for this role"
@@ -330,7 +354,6 @@ export default function Roles() {
         />
       </FormSheet>
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

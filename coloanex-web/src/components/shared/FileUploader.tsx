@@ -180,7 +180,7 @@ export function FileUploader({
       <div className="space-y-2">
         <label className="text-sm font-medium">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span className="text-destructive ml-1">*</span>}
         </label>
         <div className="relative border-2 border-dashed rounded-lg overflow-hidden group w-full h-40">
           {isImage(file.mimeType) ? (
@@ -191,7 +191,7 @@ export function FileUploader({
             />
           ) : isPdf(file.mimeType) ? (
             <div className="w-full h-full bg-muted flex flex-col items-center justify-center">
-              <FileText className="w-16 h-16 text-red-500 mb-2" />
+              <FileText className="w-16 h-16 text-destructive mb-2" />
               <span className="text-sm text-foreground px-2 text-center truncate w-full">
                 {file.fileName}
               </span>
@@ -228,7 +228,7 @@ export function FileUploader({
     <div className="space-y-2">
       <label className="text-sm font-medium">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-destructive ml-1">*</span>}
       </label>
 
       {value.length > 0 && multiple && (
@@ -246,7 +246,7 @@ export function FileUploader({
                 />
               ) : isPdf(file.mimeType) ? (
                 <div className="w-full h-full bg-muted flex flex-col items-center justify-center p-2">
-                  <FileText className="w-8 h-8 text-red-500 mb-1" />
+                  <FileText className="w-8 h-8 text-destructive mb-1" />
                   <span className="text-xs text-foreground text-center truncate w-full">
                     {file.fileName}
                   </span>

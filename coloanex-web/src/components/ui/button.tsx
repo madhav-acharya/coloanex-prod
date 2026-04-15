@@ -5,23 +5,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft hover:shadow-glow cursor-pointer active:scale-[0.98]",
+          "bg-gradient-brand text-primary-foreground cursor-pointer hover:scale-[1.02] active:scale-[0.98] border-none",
         destructive:
-          "bg-red-600 text-white hover:bg-red-700 border border-red-500/80 cursor-pointer shadow-soft hover:shadow-glow active:scale-[0.98]",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 border border-destructive/80 cursor-pointer active:scale-[0.98]",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground cursor-pointer",
+          "border border-input bg-background hover:bg-muted hover:text-foreground cursor-pointer transition-colors",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer shadow-soft hover:shadow-glow active:scale-[0.98]",
-        ghost: "hover:bg-accent hover:text-accent-foreground cursor-pointer",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 cursor-pointer active:scale-[0.98]",
+        ghost: "hover:bg-muted hover:text-foreground cursor-pointer transition-colors",
         link: "text-primary underline-offset-4 hover:underline cursor-pointer",
-        hero: "bg-primary text-primary-foreground shadow-soft hover:shadow-glow hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
+        hero: "bg-primary text-primary-foreground hover:scale-[1.02] active:scale-[0.98] cursor-pointer",
         heroOutline:
-          "border-2 border-primary text-primary bg-transparent hover:bg-primary/10 cursor-pointer",
+          "border-2 border-primary text-primary bg-transparent hover:bg-muted cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
       },
       size: {
         default: "h-10 px-4 py-2",

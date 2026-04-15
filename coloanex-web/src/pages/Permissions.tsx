@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataCard, DataCardGrid } from "@/components/shared/DataCard";
 import { FormSheet } from "@/components/shared/FormSheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useFormFields } from "@/hooks/use-form-fields";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
@@ -58,7 +59,9 @@ export default function Permissions() {
   const {
     data: permissionsData,
     isLoading,
+    isFetching,
     error: permissionsError,
+    refetch,
   } = useGetPermissionsQuery(filters, { skip: !isAuthenticated });
   const [createPermission, { isLoading: isCreating, error: createError }] =
     useCreatePermissionMutation();
@@ -147,27 +150,55 @@ export default function Permissions() {
     setDeleteDialogOpen(true);
   };
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch().unwrap();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!permissionToDelete) return;
 
-    setIsDeletingPermission(true);
-    try {
-      await deletePermission(permissionToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "Permission deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setPermissionToDelete(null);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete permission",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingPermission(false);
-    }
+    const targetId = permissionToDelete.id;
+    const targetName = permissionToDelete.name;
+    setDeleteDialogOpen(false);
+    setPermissionToDelete(null);
+
+    let isCancelled = false;
+
+    toast({
+      title: "Permission Removed",
+      description: `Permission "${targetName}" has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `Permission "${targetName}" has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deletePermission(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete permission",
+          variant: "destructive",
+        });
+      }
+    }, 5000);
   };
 
   const handleSubmit = async () => {
@@ -204,7 +235,7 @@ export default function Permissions() {
       setSheetOpen(false);
       setSelectedPermission(null);
       resetFields();
-    } catch (error) {}
+    } catch (error) { }
   };
 
   return (
@@ -214,16 +245,17 @@ export default function Permissions() {
       searchPlaceholder="Search permissions..."
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
+      onRefresh={handleRefresh}
+      isRefreshing={isRefreshing}
       actionLabel="Add Permission"
       onActionClick={handleCreateClick}
     >
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading permissions...</p>
-          </div>
-        </div>
+        <DataCardGrid>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-[125px] w-full rounded-xl" />
+          ))}
+        </DataCardGrid>
       ) : permissions.length === 0 ? (
         <div className="text-center py-12">
           <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -237,8 +269,10 @@ export default function Permissions() {
                 key={permission.id}
                 id={permission.id}
                 title={permission.name}
-                subtitle={permission.description}
+                metadata={permission.description}
                 icon={Key}
+                iconColor="text-amber-500"
+                iconBg="bg-amber-500/10"
                 onView={(id) => {
                   const permission = permissions.find((p) => p.id === id);
                   if (permission) handleViewClick(permission);
@@ -271,7 +305,7 @@ export default function Permissions() {
         </>
       )}
 
-      {/* Form Sheet */}
+      { }
       <FormSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
@@ -305,7 +339,6 @@ export default function Permissions() {
         isReadOnly={isReadOnly}
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
