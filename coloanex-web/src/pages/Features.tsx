@@ -42,7 +42,7 @@ export default function Features() {
             <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 h-auto p-1 bg-muted/50 rounded-2xl mb-12">
               <TabsTrigger value="management" className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all"><Layers className="w-5 h-5 mr-2" /> Web Management</TabsTrigger>
               <TabsTrigger value="borrower" className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-accent data-[state=active]:shadow-lg transition-all"><Smartphone className="w-5 h-5 mr-2" /> Borrower App</TabsTrigger>
-              <TabsTrigger value="security" className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-emerald-500 data-[state=active]:shadow-lg transition-all"><ShieldCheck className="w-5 h-5 mr-2" /> Security Engine</TabsTrigger>
+              <TabsTrigger value="security" className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all"><ShieldCheck className="w-5 h-5 mr-2" /> Security Engine</TabsTrigger>
             </TabsList>
 
             {/* Management Tab Content */}
@@ -65,6 +65,10 @@ export default function Features() {
                        <Globe className="w-8 h-8 text-primary shrink-0" />
                        <div><h4 className="font-semibold text-lg">Multi-Tenant Architecture</h4><p className="text-sm text-muted-foreground mt-1">Spin up distinct branches or regions underneath one main organization with distinct rule structures.</p></div>
                     </div>
+                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
+                       <ShieldCheck className="w-8 h-8 text-primary shrink-0" />
+                       <div><h4 className="font-semibold text-lg">Proof of Compliance</h4><p className="text-sm text-muted-foreground mt-1">Every operational decision is cryptographically signed and stored, creating an immutable audit trail for regulators.</p></div>
+                    </div>
                   </div>
                 </div>
                 
@@ -77,7 +81,7 @@ export default function Features() {
                     </div>
                     <div className="flex-1 grid grid-cols-2 gap-4">
                       <div className="bg-primary/10 rounded-2xl flex items-end p-4"><div className="w-full h-2/3 bg-primary/20 rounded-t-xl overflow-hidden relative"><motion.div animate={{ height: ["0%", "100%", "50%"] }} transition={{ duration: 3, repeat: Infinity }} className="absolute bottom-0 w-full bg-primary/80 dark:bg-primary border border-primary/50 shadow-[0_0_15px_rgba(22,163,74,0.5)]"></motion.div></div></div>
-                      <div className="bg-accent/10 rounded-2xl flex items-end p-4"><div className="w-full h-full bg-accent/20 rounded-t-xl overflow-hidden relative"><motion.div animate={{ height: ["100%", "30%", "80%"] }} transition={{ duration: 4, repeat: Infinity }} className="absolute bottom-0 w-full bg-emerald-500/80 dark:bg-emerald-500 border border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.5)]"></motion.div></div></div>
+                      <div className="bg-accent/10 rounded-2xl flex items-end p-4"><div className="w-full h-full bg-accent/20 rounded-t-xl overflow-hidden relative"><motion.div animate={{ height: ["100%", "30%", "80%"] }} transition={{ duration: 4, repeat: Infinity }} className="absolute bottom-0 w-full bg-primary/80 dark:bg-primary border border-primary/50 shadow-glow"></motion.div></div></div>
                     </div>
                     <div className="mt-4 flex gap-4">
                        <div className="flex-1 h-12 bg-foreground/5 dark:bg-foreground/10 border border-border/50 rounded-xl flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-sm">View</div>
@@ -130,18 +134,18 @@ export default function Features() {
             <TabsContent value="security">
                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-12">
                    <div className="grid md:grid-cols-3 gap-8 w-full mt-8">
-                      <div className="p-8 border border-emerald-500/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                          <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                      <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
+                          <ShieldCheck className="w-12 h-12 text-primary mx-auto mb-4" />
                           <h4 className="font-bold text-xl mb-2">End-to-End Encryption</h4>
                           <p className="text-sm text-muted-foreground">All payload data moving between frontend and APIs is TLS 1.3 secured and payload hashed.</p>
                       </div>
-                      <div className="p-8 border border-emerald-500/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                          <Workflow className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                      <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
+                          <Workflow className="w-12 h-12 text-primary mx-auto mb-4" />
                           <h4 className="font-bold text-xl mb-2">Smart Contracts Mapping</h4>
                           <p className="text-sm text-muted-foreground">Coloanex commits loan metadata on-chain to provide an immutable, timestamped auditing verification layer.</p>
                       </div>
-                      <div className="p-8 border border-emerald-500/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                          <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+                      <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
+                          <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
                           <h4 className="font-bold text-xl mb-2">Continuous Pentesting</h4>
                           <p className="text-sm text-muted-foreground">Our microservices architectures strictly bound the attack surface, ensuring single point failures cannot cross the boundary.</p>
                       </div>
