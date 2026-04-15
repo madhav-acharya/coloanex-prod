@@ -75,16 +75,21 @@ export function MultiSelect({
             {selectedOptions.map((option) => (
               <span
                 key={option.id}
-                className="inline-flex items-center pl-3 pr-1 py-1.5 gap-1.5 bg-white dark:bg-green-900/30 text-green-700 dark:text-green-200 border-2 border-green-500 dark:border-green-700/50 hover:bg-green-50 dark:hover:bg-green-900/40 transition-colors shadow-sm rounded-full text-sm font-semibold"
+                className="inline-flex items-center pl-3 pr-1 py-1.5 gap-1.5 border-2 transition-colors shadow-sm rounded-full text-sm font-semibold"
+                style={{
+                  backgroundColor: 'var(--color-primary-light)',
+                  color: 'var(--color-primary-dark)',
+                  borderColor: 'var(--color-primary)',
+                }}
               >
                 <span>{option.name}</span>
                 {!disabled && (
                   <button
                     type="button"
                     onClick={() => handleRemove(option.id)}
-                    className="ml-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full p-1 cursor-pointer transition-colors"
+                    className="ml-1 rounded-full p-1 cursor-pointer transition-colors hover:opacity-70"
                   >
-                    <X className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    <X className="w-4 h-4" style={{ color: 'var(--color-danger)' }} />
                   </button>
                 )}
               </span>
@@ -157,7 +162,7 @@ export function MultiSelect({
                           className={cn(
                             "w-full flex items-start gap-3 p-2 rounded-md text-left transition-colors cursor-pointer",
                             isSelected
-                              ? "bg-primary/10 hover:bg-primary/20"
+                              ? "bg-primary/10 hover:bg-muted"
                               : "hover:bg-muted",
                           )}
                         >
@@ -170,7 +175,7 @@ export function MultiSelect({
                             )}
                           >
                             {isSelected && (
-                              <Check className="w-3 h-3 text-white" />
+                              <Check className="w-3 h-3" style={{ color: 'var(--color-primary-fg)' }} />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
