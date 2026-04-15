@@ -18,7 +18,7 @@ export function FormLabel({
   return (
     <Label className={cn("flex items-center gap-1", className)} {...props}>
       {children}
-      {required && <span className="text-red-500 text-sm">*</span>}
+      {required && <span className="text-destructive text-sm">*</span>}
       {optional && !required && (
         <span className="text-muted-foreground text-xs">(optional)</span>
       )}
