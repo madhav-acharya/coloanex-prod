@@ -37,18 +37,16 @@ export function BlockchainStatusBadge({
   return (
     <button
       onClick={handleClick}
-      className={`
-        ${sizeClasses[size]}
-        rounded-full font-medium transition-colors
-        ${
-          hasBlockchainTx
-            ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-            : "bg-gray-100 text-gray-600 cursor-default"
-        }
-        ${className}
-      `}
+      className={`${sizeClasses[size] || sizeClasses.sm} font-bold uppercase tracking-wider rounded-md border transition-all ${className} ${
+        hasBlockchainTx
+          ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 cursor-pointer"
+          : "bg-destructive/10 text-destructive border-destructive/20 cursor-default"
+      }`}
+      title={hasBlockchainTx ? "View on Blockchain" : "Off-chain record"}
     >
-      {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+      <span className="flex items-center gap-1.5">
+        {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
+      </span>
     </button>
   );
 }
