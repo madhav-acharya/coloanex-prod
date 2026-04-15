@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { format, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   useGetAdminAnalyticsQuery,
   useGetTenantAnalyticsQuery,
@@ -61,6 +62,19 @@ type StatCardProps = {
   trendPercentage?: number;
 };
 
+function ChartSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <Skeleton className="h-6 w-32" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-[300px] w-full" />
+      </CardContent>
+    </Card>
+  );
+}
+
 function StatCard({
   title,
   value,
@@ -68,7 +82,29 @@ function StatCard({
   isCurrency = false,
   trend,
   trendPercentage,
-}: StatCardProps) {
+  isLoading = false,
+}: StatCardProps & { isLoading?: boolean }) {
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-8 w-32" />
+              </div>
+            </div>
+            <div className="w-24 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const trendStart = trend?.[0]?.value ?? 0;
   const trendEnd = trend?.[trend.length - 1]?.value ?? 0;
   const calculatedPercentage =
@@ -100,7 +136,7 @@ function StatCard({
                 />
               )}
               <h3 className="text-xl font-bold" style={{ color }}>
-                {typeof value === "number" ? value.toLocaleString() : value}
+                {value !== undefined ? (typeof value === "number" ? value.toLocaleString() : value) : "0"}
               </h3>
             </div>
           </div>
@@ -108,7 +144,7 @@ function StatCard({
             <div
               className={`mb-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                 isUp
-                  ? "bg-emerald-500/20 text-emerald-400"
+                  ? "bg-primary/20 text-primary"
                   : "bg-rose-500/20 text-rose-400"
               }`}
             >
@@ -172,11 +208,13 @@ const Dashboard = () => {
   );
   const isLender = user?.roles?.some((r: any) => r.role?.name === "Lender");
 
-  const { data: adminData } = useGetAdminAnalyticsQuery(undefined, {
+
+
+  const { data: adminData, isLoading: isAdminLoading, refetch: refetchAdmin } = useGetAdminAnalyticsQuery(undefined, {
     skip: !isSuperAdmin,
   });
 
-  const { data: tenantData } = useGetTenantAnalyticsQuery(
+  const { data: tenantData, isLoading: isTenantLoading, refetch: refetchTenant } = useGetTenantAnalyticsQuery(
     isSuperAdmin
       ? undefined
       : {
@@ -201,24 +239,24 @@ const Dashboard = () => {
     endDate: endDate.toISOString(),
   };
 
-  const { data: monthlyContracts } = useGetMonthlyContractsQuery(rangeParams);
-  const { data: monthlyLoans } = useGetMonthlyLoansQuery(rangeParams);
-  const { data: monthlyBorrowers } = useGetMonthlyBorrowersQuery(rangeParams, {
+  const { data: monthlyContracts, isLoading: isContractsLoading, refetch: refetchMonthlyContracts } = useGetMonthlyContractsQuery(rangeParams);
+  const { data: monthlyLoans, isLoading: isLoansLoading, refetch: refetchMonthlyLoans } = useGetMonthlyLoansQuery(rangeParams);
+  const { data: monthlyBorrowers, isLoading: isBorrowersLoading, refetch: refetchMonthlyBorrowers } = useGetMonthlyBorrowersQuery(rangeParams, {
     skip: isSuperAdmin,
   });
-  const { data: loansByStatus } = useGetLoansByStatusQuery({
+  const { data: loansByStatus, isLoading: isStatusLoading, refetch: refetchLoansByStatus } = useGetLoansByStatusQuery({
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
   });
-  const { data: contractsByStatus } = useGetContractsByStatusQuery({
+  const { data: contractsByStatus, isLoading: isContractsStatusLoading, refetch: refetchContractsByStatus } = useGetContractsByStatusQuery({
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
   });
-  const { data: monthlyRevenue } = useGetMonthlyRevenueQuery(rangeParams);
-  const { data: monthlyUsers } = useGetMonthlyUsersQuery(rangeParams, {
+  const { data: monthlyRevenue, isLoading: isRevenueLoading, refetch: refetchMonthlyRevenue } = useGetMonthlyRevenueQuery(rangeParams);
+  const { data: monthlyUsers, isLoading: isUsersLoading, refetch: refetchMonthlyUsers } = useGetMonthlyUsersQuery(rangeParams, {
     skip: !isSuperAdmin,
   });
-  const { data: usersByRole } = useGetUsersByRoleQuery(
+  const { data: usersByRole, isLoading: isRolesLoading, refetch: refetchUsersByRole } = useGetUsersByRoleQuery(
     {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
@@ -227,13 +265,13 @@ const Dashboard = () => {
       skip: !isSuperAdmin,
     },
   );
-  const { data: borrowerMonthlyLoans } = useGetBorrowerMonthlyLoansQuery(
+  const { data: borrowerMonthlyLoans, refetch: refetchBorrowerLoans } = useGetBorrowerMonthlyLoansQuery(
     rangeParams,
     {
       skip: !isSuperAdmin,
     },
   );
-  const { data: borrowersByStatus } = useGetBorrowersByStatusQuery(
+  const { data: borrowersByStatus, refetch: refetchBorrowersByStatus } = useGetBorrowersByStatusQuery(
     {
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
@@ -243,7 +281,10 @@ const Dashboard = () => {
     },
   );
 
-  // Calculate date-range aware values from monthly data
+
+
+  const isLoadingOverall = isAdminLoading || isTenantLoading || isContractsLoading || isLoansLoading || isRevenueLoading;
+
   const getDateRangeValue = (monthlyData: any[], key: string = "count") => {
     if (!monthlyData || !Array.isArray(monthlyData)) return 0;
     return monthlyData.reduce((sum, item) => sum + (item[key] || 0), 0);
@@ -331,75 +372,84 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-        {isSuperAdmin && adminData && (
+        {isSuperAdmin && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
                 title="Total Users"
-                value={adminData.totalUsers}
+                value={adminData?.totalUsers}
                 color="#16A34A"
                 trend={ensureTrendData(monthlyUsers)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Total Loans"
-                value={adminData.totalLoans}
+                value={adminData?.totalLoans}
                 color="#22C55E"
                 trend={ensureTrendData(monthlyLoans)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Total Contracts"
-                value={adminData.totalContracts}
+                value={adminData?.totalContracts}
                 color="#059669"
                 trend={ensureTrendData(monthlyContracts)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Total Transactions"
-                value={adminData.totalTransactions}
+                value={adminData?.totalTransactions}
                 color="#F59E0B"
                 trend={ensureTrendData(monthlyRevenue, 6)}
+                isLoading={isLoadingOverall}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <StatCard
                 title="Total Tenants"
-                value={adminData.totalTenants}
+                value={adminData?.totalTenants}
                 color="#16A34A"
                 trend={ensureTrendData(monthlyUsers)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Active Tenants"
-                value={adminData.activeTenants}
+                value={adminData?.activeTenants}
                 color="#22C55E"
                 trend={ensureTrendData(monthlyUsers)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Pending KYCs"
-                value={adminData.pendingKYCs}
+                value={adminData?.pendingKYCs}
                 color="#059669"
                 trend={ensureTrendData(monthlyUsers)}
+                isLoading={isLoadingOverall}
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <StatCard
                 title="Total Loan Amount"
-                value={adminData.totalLoanAmount}
+                value={adminData?.totalLoanAmount}
                 color="#16A34A"
                 isCurrency={true}
                 trend={ensureTrendData(monthlyRevenue, 6)}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Total Contract Amount"
-                value={adminData.totalContractAmount}
+                value={adminData?.totalContractAmount}
                 color="#22C55E"
                 isCurrency={true}
                 trend={ensureTrendData(monthlyRevenue, 6)}
+                isLoading={isLoadingOverall}
               />
             </div>
           </>
         )}
-        {(isLender || (!isSuperAdmin && tenantData)) && tenantData && (
+        {(isLender || (!isSuperAdmin && tenantData)) && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard
@@ -411,6 +461,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyBorrowers)
                 }
                 trendPercentage={tenantData?.trendPercentages?.newBorrowers}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Period Loans"
@@ -421,6 +472,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyLoans)
                 }
                 trendPercentage={tenantData?.trendPercentages?.periodLoans}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Active Loans"
@@ -431,6 +483,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyLoans)
                 }
                 trendPercentage={tenantData?.trendPercentages?.activeLoans}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Period Contracts"
@@ -441,6 +494,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyContracts)
                 }
                 trendPercentage={tenantData?.trendPercentages?.periodContracts}
+                isLoading={isLoadingOverall}
               />
             </div>
 
@@ -456,6 +510,7 @@ const Dashboard = () => {
                 trendPercentage={
                   tenantData?.trendPercentages?.verifiedBorrowers
                 }
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Pending KYCs"
@@ -466,6 +521,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyBorrowers)
                 }
                 trendPercentage={tenantData?.trendPercentages?.pendingKYCs}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Active Contracts"
@@ -476,6 +532,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyContracts)
                 }
                 trendPercentage={tenantData?.trendPercentages?.activeContracts}
+                isLoading={isLoadingOverall}
               />
             </div>
 
@@ -490,6 +547,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyRevenue, 6)
                 }
                 trendPercentage={tenantData?.trendPercentages?.periodDisbursed}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Period Collected"
@@ -501,6 +559,7 @@ const Dashboard = () => {
                   ensureTrendData(monthlyRevenue, 6)
                 }
                 trendPercentage={tenantData?.trendPercentages?.periodCollected}
+                isLoading={isLoadingOverall}
               />
               <StatCard
                 title="Pending Payments"
@@ -512,61 +571,77 @@ const Dashboard = () => {
                   ensureTrendData(monthlyRevenue, 6)
                 }
                 trendPercentage={tenantData?.trendPercentages?.pendingPayments}
+                isLoading={isLoadingOverall}
               />
             </div>
           </>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {monthlyLoans && monthlyLoans.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Loans Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyLoans}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#16A34A"
-                      strokeWidth={2}
-                      name="Loans Count"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
+          {isLoadingOverall ? (
+            <>
+              <ChartSkeleton />
+              <ChartSkeleton />
+            </>
+          ) : (
+            <>
+              {monthlyLoans && monthlyLoans.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Loans Trend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={monthlyLoans}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-in-out"
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#16A34A"
+                          strokeWidth={2}
+                          name="Loans Count"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
 
-          {monthlyContracts && monthlyContracts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Contracts Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={monthlyContracts}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line isAnimationActive={true} animationDuration={1500} animationEasing="ease-in-out"
-                      type="monotone"
-                      dataKey="count"
-                      stroke="#22C55E"
-                      strokeWidth={2}
-                      name="Contracts Count"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              {monthlyContracts && monthlyContracts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contracts Trend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={monthlyContracts}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line
+                          isAnimationActive={true}
+                          animationDuration={1500}
+                          animationEasing="ease-in-out"
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#22C55E"
+                          strokeWidth={2}
+                          name="Contracts Count"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -737,7 +812,7 @@ const Dashboard = () => {
                       alignItems: "center",
                       gap: "4px",
                     }}
-                    // iconType="none"
+                    
                   />
                   <Legend />
                   <Bar
