@@ -90,8 +90,43 @@ export function DataTable<T>({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader className="bg-muted/50 border-b border-border/70">
+            <TableRow>
+              {selectable && <TableHead className="w-[50px]"></TableHead>}
+              {columns.map((column) => (
+                <TableHead key={column.key} style={{ width: column.width }}>
+                  {column.label}
+                </TableHead>
+              ))}
+              {actions && actions.length > 0 && <TableHead className="w-[100px]"></TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {[...Array(5)].map((_, i) => (
+              <TableRow key={i}>
+                {selectable && (
+                  <TableCell>
+                    <div className="flex items-center justify-center">
+                      <div className="h-4 w-4 rounded bg-muted animate-pulse" />
+                    </div>
+                  </TableCell>
+                )}
+                {columns.map((column) => (
+                  <TableCell key={column.key}>
+                    <div className="h-4 w-full max-w-[120px] rounded bg-muted animate-pulse" />
+                  </TableCell>
+                ))}
+                {actions && actions.length > 0 && (
+                  <TableCell>
+                    <div className="h-8 w-8 rounded bg-muted animate-pulse ml-auto" />
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     );
   }
@@ -99,8 +134,8 @@ export function DataTable<T>({
   return (
     <div className="border rounded-lg">
       <Table>
-        <TableHeader>
-          <TableRow>
+        <TableHeader className="bg-muted/50 border-b border-border/70">
+          <TableRow className="hover:bg-transparent">
             {selectable && (
               <TableHead className="w-[50px]">
                 <div className="flex items-center justify-center">
@@ -205,23 +240,21 @@ export function DataTable<T>({
                           {actions.map((action) => {
                             if (action.show && !action.show(row)) return null;
 
-                            let colorClass = "cursor-pointer";
-                            if (action.variant === "destructive") {
-                              colorClass =
-                                "text-red-600 hover:text-red-700 cursor-pointer";
+                            const actionStyle: React.CSSProperties = {};
+                            if (action.variant === "destructive" || action.label.toLowerCase() === "delete" || action.label.toLowerCase() === "logout") {
+                              actionStyle.color = 'var(--color-danger)';
                             } else if (action.label === "View") {
-                              colorClass =
-                                "text-blue-600 hover:text-blue-700 cursor-pointer";
+                              actionStyle.color = 'var(--color-info)';
                             } else if (action.label === "Edit") {
-                              colorClass =
-                                "text-green-600 hover:text-green-700 cursor-pointer";
+                              actionStyle.color = 'var(--color-primary)';
                             }
 
                             return (
                               <DropdownMenuItem
                                 key={action.label}
                                 onClick={() => action.onClick(row)}
-                                className={colorClass}
+                                className="cursor-pointer"
+                                style={actionStyle}
                               >
                                 {action.icon && (
                                   <span className="mr-2">{action.icon}</span>
