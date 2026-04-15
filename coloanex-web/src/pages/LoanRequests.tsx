@@ -1,6 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
-import { Eye, Edit, Trash2, FileText } from "lucide-react";
+import { Eye, Edit, Trash2, FileText, CheckCircle2 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -39,6 +47,7 @@ export default function LoanRequests() {
   const [loanFormOpen, setLoanFormOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null);
   const [isDeletingLoan, setIsDeletingLoan] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
@@ -160,7 +169,9 @@ export default function LoanRequests() {
   const {
     data: loansData,
     isLoading,
+    isFetching,
     error: loansError,
+    refetch,
   } = useGetLoansQuery(filters, { skip: !isAuthenticated });
 
   const loans = useMemo(
@@ -294,73 +305,41 @@ export default function LoanRequests() {
   const handleConfirmDelete = async () => {
     if (!loanToDelete) return;
 
-    setIsDeletingLoan(true);
-    if (shouldShowBlockchainProcessing) {
-      setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
-    }
+    const targetId = loanToDelete.id;
+    const targetPurpose = loanToDelete.purpose;
+    setDeleteDialogOpen(false);
+    setLoanToDelete(null);
 
-    try {
-      let blockchainTxHash: string | undefined;
+    let isCancelled = false;
 
-      if (shouldUseWalletSignature) {
-        try {
-          const { deleteLoanOnBlockchain } = await import("@/utils/blockchain");
-          blockchainTxHash = await deleteLoanOnBlockchain(loanToDelete.id);
-        } catch (blockchainError: any) {
-          setIsProcessingBlockchain(false);
-          if (blockchainError.code === "ACTION_REJECTED") {
-            toast({
-              title: "Transaction Rejected",
-              description: "You rejected the blockchain transaction",
-              variant: "destructive",
-            });
-            return;
-          } else {
-            toast({
-              title: "Blockchain Error",
-              description:
-                blockchainError.message ||
-                "Failed to sign blockchain transaction",
-              variant: "destructive",
-            });
-            return;
-          }
-        }
+    toast({
+      title: "Loan Request Removed",
+      description: `Request for "${targetPurpose}" has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `Request for "${targetPurpose}" has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deleteLoan(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete loan request",
+          variant: "destructive",
+        });
       }
-
-      if (shouldShowBlockchainProcessing) {
-        setBlockchainStep("database");
-      }
-
-      await deleteLoan(loanToDelete.id).unwrap();
-
-      if (shouldShowBlockchainProcessing) {
-        setTimeout(() => {
-          setBlockchainStep("complete");
-          setTimeout(() => {
-            setBlockchainStep("blockchain");
-            setIsProcessingBlockchain(false);
-          }, 1000);
-        }, 500);
-      }
-
-      toast({
-        title: "Success",
-        description: "Loan request deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setLoanToDelete(null);
-    } catch {
-      setIsProcessingBlockchain(false);
-      toast({
-        title: "Error",
-        description: "Failed to delete loan request",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingLoan(false);
-    }
+    }, 5000);
   };
 
   const handleReviewClick = (loan: Loan) => {
@@ -908,33 +887,13 @@ export default function LoanRequests() {
       key: "blockchainTxHash",
       label: "Blockchain",
       sortable: false,
-      render: (loan) => {
-        const hasBlockchainTx = !!loan?.blockchainTxHash;
-        return (
-          <button
-            onClick={() => {
-              if (hasBlockchainTx) {
-                window.open(
-                  `https://sepolia.etherscan.io/tx/${loan.blockchainTxHash}`,
-                  "_blank",
-                );
-              } else {
-                toast({
-                  title: "Info",
-                  description: "This record is stored off-chain only.",
-                });
-              }
-            }}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
-              hasBlockchainTx
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-600 cursor-default"
-            }`}
-          >
-            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
-          </button>
-        );
-      },
+      render: (c) => (
+        <BlockchainStatusBadge
+          blockchainTxHash={
+            (c as any).blockchainTxHash || (c as any).blockchain_tx_hash
+          }
+        />
+      ),
     },
     {
       key: "createdAt",
@@ -942,59 +901,6 @@ export default function LoanRequests() {
       sortable: true,
       render: (loan) =>
         loan?.createdAt ? new Date(loan.createdAt).toLocaleDateString() : "N/A",
-    },
-  ];
-
-  const loanFormFields = [
-    ...(isSuperAdmin || isLender
-      ? [
-          {
-            name: "tenantId",
-            label: "Tenant",
-            type: "select" as const,
-            options: tenantOptions,
-            required: isSuperAdmin,
-            disabled: isReadOnly,
-          },
-        ]
-      : []),
-    ...(!isBorrower
-      ? [
-          {
-            name: "userId",
-            label: "Borrower User",
-            type: "select" as const,
-            options: userOptions,
-            required: true,
-            disabled: isReadOnly,
-          },
-        ]
-      : []),
-    {
-      name: "amount",
-      label: "Loan Amount",
-      type: "number" as const,
-      required: true,
-      disabled: isReadOnly,
-      min: 1,
-    },
-    {
-      name: "interestRate",
-      label: "Interest Rate (%)",
-      type: "number" as const,
-      required: true,
-      disabled: isReadOnly,
-      min: 0,
-      max: 100,
-      step: 0.01,
-    },
-    {
-      name: "termMonths",
-      label: "Term (Months)",
-      type: "number" as const,
-      required: true,
-      disabled: isReadOnly,
-      min: 1,
     },
   ];
 
@@ -1239,11 +1145,33 @@ export default function LoanRequests() {
 
   return (
     <DashboardLayout
-      title="Loan Request Management"
-      description="Manage loan applications and requests"
-      searchPlaceholder="Search by borrower name or email..."
-      searchValue={filters.search}
+      title="Loan Requests"
+      description="Manage and review loan applications"
+      searchPlaceholder="Search purpose..."
+      searchValue={filters.search || ""}
       onSearchChange={handleSearchChange}
+      className="bg-background"
+      searchClassName="h-11 bg-background border-border"
+      filterValues={{ status: filters.status || "all" }}
+      onFilterChange={handleFilterChange}
+      onRefresh={async () => {
+        setIsRefreshing(true);
+        try {
+          await refetch();
+        } finally {
+          setIsRefreshing(false);
+        }
+      }}
+      isRefreshing={isFetching || isRefreshing}
+      filters={[
+        {
+          name: "status",
+          type: "select",
+          label: "Status",
+          placeholder: "Filter by status",
+          options: statusFilterValues.slice(1),
+        },
+      ]}
       actions={[
         {
           label:
@@ -1260,19 +1188,6 @@ export default function LoanRequests() {
           variant: "default",
         },
       ]}
-      filters={[
-        {
-          name: "status",
-          type: "select",
-          label: "Status",
-          placeholder: "Filter by status",
-          options: statusFilterValues.slice(1),
-        },
-      ]}
-      filterValues={{
-        status: filters.status || "all",
-      }}
-      onFilterChange={handleFilterChange}
     >
       <div className="space-y-6">
         <DataTable
@@ -1295,14 +1210,13 @@ export default function LoanRequests() {
               onClick: handleViewLoan,
             },
             {
-              label: "View & Verify",
-              icon: <Eye className="w-4 h-4" />,
+              label: "Review",
+              icon: <CheckCircle2 className="w-4 h-4" />,
               onClick: handleReviewClick,
               show: (loan) =>
                 (isSuperAdmin || isLender) &&
                 (loan.status === LoanStatus.UNDER_REVIEW ||
-                  loan.status === LoanStatus.SUBMITTED ||
-                  loan.status === LoanStatus.DRAFT),
+                  loan.status === LoanStatus.SUBMITTED),
             },
             {
               label: "Edit",
@@ -1322,15 +1236,6 @@ export default function LoanRequests() {
                 isSuperAdmin ||
                 isLender ||
                 (isBorrower && loan.status === LoanStatus.DRAFT),
-            },
-            {
-              label: "Review",
-              icon: <Eye className="w-4 h-4" />,
-              onClick: handleReviewClick,
-              show: (loan) =>
-                (isSuperAdmin || isLender) &&
-                (loan.status === LoanStatus.UNDER_REVIEW ||
-                  loan.status === LoanStatus.SUBMITTED),
             },
           ]}
         />
