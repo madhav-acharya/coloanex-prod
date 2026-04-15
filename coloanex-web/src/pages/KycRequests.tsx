@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Eye, FileText, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, FileText, CheckCircle2 } from "lucide-react";
+import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Pagination } from "@/components/ui/pagination";
 import { DataTable } from "@/components/shared/DataTable";
@@ -40,7 +41,6 @@ import { FormSheet } from "@/components/shared/FormSheet";
 import { UploadedFile } from "@/types/upload";
 import { ethers } from "ethers";
 
-// Local enum for UI document type selection (not in schema)
 enum KycDocumentType {
   CITIZENSHIP = "CITIZENSHIP",
   PASSPORT = "PASSPORT",
@@ -107,22 +107,22 @@ export default function KycRequests() {
   const shouldShowBlockchainProcessing = blockchainAccess.canRunBlockchain;
 
   const isSuperAdmin = useMemo(
-    () => user?.roles?.some((ur) => ur.role.name === "Super Admin") || false,
+    () => user?.roles?.some((ur) => ur.role?.name === "Super Admin") || false,
     [user],
   );
 
   const isBorrower = useMemo(
-    () => user?.roles?.some((ur) => ur.role.name === "Borrower") || false,
+    () => user?.roles?.some((ur) => ur.role?.name === "Borrower") || false,
     [user],
   );
 
   const isAdmin = useMemo(
-    () => user?.roles?.some((ur) => ur.role.name === "Admin") || false,
+    () => user?.roles?.some((ur) => ur.role?.name === "Admin") || false,
     [user],
   );
 
   const isLender = useMemo(
-    () => user?.roles?.some((ur) => ur.role.name === "Lender") || false,
+    () => user?.roles?.some((ur) => ur.role?.name === "Lender") || false,
     [user],
   );
 
@@ -151,9 +151,8 @@ export default function KycRequests() {
         value: u.id,
         label: `${u.fullName} (${u.email || u.phone})`,
       })) || [],
-    [usersData],
+    [usersData]
   );
-
   const [selectedUserId, setSelectedUserId] = useState<string>("");
 
   const [selectedDocTypes, setSelectedDocTypes] = useState<string[]>([]);
@@ -171,7 +170,6 @@ export default function KycRequests() {
     licenseExpiryDate?: string;
   }>({});
 
-  // Form state - different from the actual DTO structure
   const [formData, setFormData] = useState<any>({
     tenantId: "",
     firstName: "",
@@ -225,9 +223,8 @@ export default function KycRequests() {
     supporting: [],
   });
 
-  // Determine if user should be filtered by tenant
   const shouldFilterByTenant = useMemo(() => {
-    return isLender || user?.roles?.some((ur) => ur.role.name === "Admin");
+    return isLender || user?.roles?.some((ur) => ur.role?.name === "Admin");
   }, [isLender, user]);
 
   const [filters, setFilters] = useState<KycDocumentsQuery>({
@@ -241,7 +238,6 @@ export default function KycRequests() {
       shouldFilterByTenant && user?.tenantId ? user.tenantId : undefined,
   });
 
-  // Update filters when user changes
   useEffect(() => {
     if (shouldFilterByTenant && user?.tenantId) {
       setFilters((prev) => ({
@@ -251,11 +247,24 @@ export default function KycRequests() {
     }
   }, [shouldFilterByTenant, user?.tenantId]);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const {
     data: kycDocumentsData,
     isLoading,
+    isFetching,
     error: kycDocumentsError,
+    refetch,
   } = useGetKycsQuery(filters, { skip: !isAuthenticated });
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch().unwrap();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 1000);
+    }
+  };
 
   const [verifyKycDocument] = useVerifyKycMutation();
 
@@ -345,67 +354,41 @@ export default function KycRequests() {
   const handleConfirmDelete = async () => {
     if (!kycToDelete) return;
 
-    setIsDeletingKyc(true);
-    if (shouldShowBlockchainProcessing) {
-      setIsProcessingBlockchain(true);
-      setBlockchainStep("blockchain");
-    }
+    const targetId = kycToDelete.id;
+    const targetName = kycToDelete.borrower?.user?.fullName || kycToDelete.fullName;
+    setDeleteDialogOpen(false);
+    setKycToDelete(null);
 
-    try {
-      let blockchainTxHash: string | undefined;
+    let isCancelled = false;
 
-      if (shouldUseWalletSignature) {
-        try {
-          blockchainTxHash = await deleteKYCOnBlockchain(kycToDelete.id);
-        } catch (blockchainError: any) {
-          if (blockchainError.code === "ACTION_REJECTED") {
-            toast({
-              title: "Transaction Cancelled",
-              description: "You rejected the blockchain transaction",
-              variant: "destructive",
-            });
-            setIsProcessingBlockchain(false);
-            setIsDeletingKyc(false);
-            return;
-          } else {
-            setIsProcessingBlockchain(false);
-            setIsDeletingKyc(false);
-            toast({
-              title: "Blockchain Error",
-              description:
-                blockchainError.reason ||
-                blockchainError.message ||
-                "Failed to process blockchain transaction",
-              variant: "destructive",
-            });
-            return;
-          }
-        }
+    toast({
+      title: "KYC Request Removed",
+      description: `Request for "${targetName}" has been removed.`,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          isCancelled = true;
+          toast({
+            title: "Restored",
+            description: `KYC for "${targetName}" has been restored.`,
+          });
+        },
+      },
+      duration: 5000,
+    });
+
+    setTimeout(async () => {
+      if (isCancelled) return;
+      try {
+        await deleteKyc(targetId).unwrap();
+      } catch (err: any) {
+        toast({
+          title: "Error",
+          description: err?.data?.message || "Failed to permanently delete KYC request",
+          variant: "destructive",
+        });
       }
-
-      if (shouldShowBlockchainProcessing) {
-        setBlockchainStep("database");
-      }
-
-      await deleteKyc(kycToDelete.id).unwrap();
-      toast({
-        title: "Success",
-        description: "KYC document deleted successfully",
-      });
-      setDeleteDialogOpen(false);
-      setKycToDelete(null);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to delete KYC document",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingKyc(false);
-      if (shouldShowBlockchainProcessing) {
-        setIsProcessingBlockchain(false);
-      }
-    }
+    }, 5000);
   };
 
   const handleVerifySelected = () => {
@@ -835,7 +818,6 @@ export default function KycRequests() {
     setIsReadOnly(false);
     setDocMetadata({});
 
-    // Auto-assign tenant for Admin/Lender users
     const shouldAutoSetTenant = (isAdmin || isLender) && user?.tenantId;
 
     setFormData({
@@ -1004,22 +986,19 @@ export default function KycRequests() {
           licenseExpiryDate: "",
         };
 
-        // Extract document types from files
         const docTypes = new Set<KycDocumentType>();
 
         editingKyc.files.forEach((file) => {
           const uploadedFile: UploadedFile = {
             url: file.fileUrl,
-            fileName: "", // Not available in schema
-            mimeType: "", // Not available in schema
-            sizeInBytes: 0, // Not available in schema
+            fileName: "", 
+            mimeType: "", 
+            sizeInBytes: 0, 
           };
 
-          // Extract documentType from metadata
           const metadata = file.documentMetadata as any;
           let documentType: KycDocumentType | undefined;
 
-          // Populate document metadata from file metadata
           if (
             file.fileType === "CITIZENSHIP_FRONT" ||
             file.fileType === "CITIZENSHIP_BACK"
@@ -1165,7 +1144,7 @@ export default function KycRequests() {
             },
           ]
         : []),
-      // Document Type Selection
+      
       {
         title: "Document Type Selection",
         customContent: (
@@ -1630,35 +1609,13 @@ export default function KycRequests() {
       key: "blockchainTxHash",
       label: "Blockchain",
       sortable: false,
-      render: (doc: Kyc) => {
-        const hasBlockchainTx =
-          !!(doc as any)?.blockchainTxHash ||
-          !!(doc as any)?.blockchain_tx_hash;
-        return (
-          <button
-            onClick={() => {
-              if (hasBlockchainTx) {
-                window.open(
-                  `https://sepolia.etherscan.io/tx/${(doc as any).blockchainTxHash || (doc as any).blockchain_tx_hash}`,
-                  "_blank",
-                );
-              } else {
-                toast({
-                  title: "Info",
-                  description: "This record is stored off-chain only.",
-                });
-              }
-            }}
-            className={`px-2 py-1 text-xs rounded-full font-medium transition-colors ${
-              hasBlockchainTx
-                ? "bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer"
-                : "bg-gray-100 text-gray-600 cursor-default"
-            }`}
-          >
-            {hasBlockchainTx ? "On-Chain" : "Off-Chain"}
-          </button>
-        );
-      },
+      render: (doc: any) => (
+        <BlockchainStatusBadge
+          blockchainTxHash={
+            (doc as any).blockchainTxHash || (doc as any).blockchain_tx_hash
+          }
+        />
+      ),
     },
     {
       key: "createdAt",
@@ -1668,13 +1625,33 @@ export default function KycRequests() {
     },
   ];
 
-  return (
+return (
     <DashboardLayout
       title="KYC Documents"
       description="Manage and verify KYC documents"
       searchPlaceholder="Search by name, citizenship, or passport number..."
       searchValue={filters.search || ""}
       onSearchChange={handleSearchChange}
+      onRefresh={refetch}
+      isRefreshing={isFetching}
+      className="bg-background"
+      searchClassName="h-11 bg-background border-border"
+      filterValues={{ status: filters.status || "all" }}
+      onFilterChange={handleFilterChange}
+      filters={[
+        {
+          name: "status",
+          type: "select",
+          label: "Status",
+          placeholder: "Filter by status",
+          className: "h-11 bg-background border-border w-full md:w-48",
+          options: [
+            { label: "Pending", value: KycStatus.PENDING },
+            { label: "Verified", value: KycStatus.VERIFIED },
+            { label: "Rejected", value: KycStatus.REJECTED },
+          ],
+        },
+      ]}
       actions={[
         {
           label:
@@ -1685,29 +1662,7 @@ export default function KycRequests() {
           variant: "outline",
           disabled: selectedRows.size === 0,
         },
-        {
-          label: "Add KYC Request",
-          onClick: () => setKycFormOpen(true),
-          variant: "default",
-        },
       ]}
-      filters={[
-        {
-          name: "status",
-          type: "select",
-          label: "Status",
-          placeholder: "Filter by status",
-          options: [
-            { value: KycStatus.PENDING, label: "Pending" },
-            { value: KycStatus.VERIFIED, label: "Verified" },
-            { value: KycStatus.REJECTED, label: "Rejected" },
-          ],
-        },
-      ]}
-      filterValues={{
-        status: filters.status || "all",
-      }}
-      onFilterChange={handleFilterChange}
     >
       <DataTable
         data={kycDocuments}
@@ -1729,8 +1684,8 @@ export default function KycRequests() {
             onClick: handleViewKyc,
           },
           {
-            label: "View & Verify",
-            icon: <Eye className="w-4 h-4" />,
+            label: "Verify",
+            icon: <CheckCircle2 className="w-4 h-4" />,
             onClick: handleViewVerifyKyc,
           },
           {
@@ -1747,23 +1702,19 @@ export default function KycRequests() {
         ]}
       />
 
-      <div className="mt-6">
-        <Pagination
-          currentPage={filters.page || 1}
-          totalPages={Math.ceil(
-            (kycDocumentsData?.total || 0) / (filters.limit || 10),
-          )}
-          hasNextPage={
-            (filters.page || 1) <
-            Math.ceil((kycDocumentsData?.total || 0) / (filters.limit || 10))
-          }
-          hasPreviousPage={(filters.page || 1) > 1}
-          total={kycDocumentsData?.total || 0}
-          limit={filters.limit || 10}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
-      </div>
+          <div className="mt-8 pt-6 border-t border-border/50">
+            <Pagination
+              currentPage={kycDocumentsData?.currentPage || 1}
+              totalPages={kycDocumentsData?.totalPages || 1}
+              hasNextPage={kycDocumentsData?.hasNextPage || false}
+              hasPreviousPage={kycDocumentsData?.hasPreviousPage || false}
+              total={kycDocumentsData?.total || 0}
+              limit={kycDocumentsData?.limit || 10}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              className="mt-0"
+            />
+          </div>
 
       <FormSheet
         open={kycFormOpen}
