@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Factory, GraduationCap, Stethoscope, ShoppingBag, ArrowRight } from "lucide-react";
+import { Factory, GraduationCap, Stethoscope, ShoppingBag, ArrowRight, Globe } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -20,7 +20,7 @@ export default function UseCases() {
     {
       title: "Educational Grants",
       desc: "Universities and independent lenders can offer structured, stage-based loans to students that only disburse when passing specific academic milestones.",
-      icon: <GraduationCap className="w-12 h-12 mb-4 text-emerald-500" />,
+      icon: <GraduationCap className="w-12 h-12 mb-4 text-primary" />,
       color: "from-emerald-500 to-teal-400"
     },
     {
@@ -34,6 +34,12 @@ export default function UseCases() {
       desc: "Micro-loans to brick and mortar shops based on real-time integrated sales data. Adjust lending policies dynamically in the web tenant.",
       icon: <ShoppingBag className="w-12 h-12 mb-4 text-purple-500" />,
       color: "from-purple-500 to-fuchsia-500"
+    },
+    {
+        title: "Agricultural Micro-credits",
+        desc: "Empower farmers with seasonal credit for seeds and fertilizer. Repayment schedules can be tied to harvest cycles and market prices.",
+        icon: <Globe className="w-12 h-12 mb-4 text-emerald-600" />,
+        color: "from-emerald-600 to-green-400"
     }
   ];
 
