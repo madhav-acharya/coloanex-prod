@@ -17,6 +17,7 @@ import {
   useRefreshTokenMutation,
   useGetCurrentUserQuery,
 } from "@/apis/authApi";
+import { handleLogout } from "@/lib/logout";
 import type { LoginRequest, AuthUser } from "@/types/auth";
 
 export const useAuth = () => {
@@ -73,14 +74,8 @@ export const useAuth = () => {
     [dispatch, loginMutation, navigate]
   );
 
-  // Logout function
   const logout = useCallback(async () => {
-    try {
-      await logoutMutation().unwrap();
-    } finally {
-      dispatch(logoutAction());
-      navigate("/login");
-    }
+    await handleLogout(logoutMutation, dispatch, navigate);
   }, [dispatch, logoutMutation, navigate]);
 
   // Refresh token function
