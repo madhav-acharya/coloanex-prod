@@ -52,12 +52,12 @@ export function ProfileDropdown() {
         >
           <Avatar className="w-9 h-9 ring-2 ring-primary/20">
             <AvatarImage src={user.profileImage} alt={user.fullName} />
-            <AvatarFallback className="bg-green-600 text-white font-medium">
+            <AvatarFallback className="bg-primary text-primary-foreground font-medium">
               {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 text-left pr-1">
-            <p className="text-sm font-semibold leading-tight truncate">
+            <p className="text-sm font-bold leading-tight truncate text-foreground">
               {user.fullName}
             </p>
             <p className="text-[11px] text-muted-foreground truncate mt-0.5">
@@ -75,7 +75,7 @@ export function ProfileDropdown() {
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 ring-2 ring-primary/20">
               <AvatarImage src={user.profileImage} alt={user.fullName} />
-              <AvatarFallback className="bg-green-600 text-white font-medium">
+              <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
               </AvatarFallback>
             </Avatar>
@@ -89,7 +89,7 @@ export function ProfileDropdown() {
           <div className="mt-3 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Gas Mode</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 font-semibold text-blue-600 dark:text-blue-300">
+              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ backgroundColor: 'color-mix(in srgb, var(--color-info) 10%, transparent)', color: 'var(--color-info)' }}>
                 <Wallet className="h-3 w-3" />
                 {formatGasPaymentMode((user as any)?.gasPaymentMode)}
               </span>
@@ -153,7 +153,7 @@ export function ProfileDropdown() {
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="cursor-pointer rounded-md text-red-600 focus:text-red-600"
+          className="cursor-pointer rounded-md !text-red-500 hover:!bg-red-500/10 focus:!bg-red-500/10"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
