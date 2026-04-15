@@ -51,11 +51,8 @@ export function ConfirmationDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className={
-              variant === "destructive"
-                ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-                : "bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
-            }
+            variant={variant === "destructive" ? "destructive" : "default"}
+            className="cursor-pointer"
           >
             {isLoading ? "Loading..." : confirmText}
           </AlertDialogAction>
