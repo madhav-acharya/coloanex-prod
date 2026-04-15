@@ -15,29 +15,28 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
-      icons={{
-        success: <CircleCheckIcon className="size-4" />,
-        info: <InfoIcon className="size-4" />,
-        warning: <TriangleAlertIcon className="size-4" />,
-        error: <OctagonXIcon className="size-4" />,
-        loading: <Loader2Icon className="size-4 animate-spin" />,
-      }}
       toastOptions={{
-        style: {
-          background: "hsl(var(--popover))",
-          color: "hsl(var(--popover-foreground))",
-          border: "1px solid hsl(var(--border))",
-          borderRadius: "var(--radius)",
+        classNames: {
+          toast:
+            "group toast group-[.toaster]:!bg-background group-[.toaster]:!text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-xl group-[.toaster]:rounded-xl group-[.toaster]:px-4 group-[.toaster]:py-4 group-[.toaster]:gap-3",
+          description: "group-[.toast]:!text-muted-foreground group-[.toast]:text-xs",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:hover:bg-primary/90 group-[.toast]:transition-colors group-[.toast]:font-semibold group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg group-[.toast]:text-sm",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground group-[.toast]:hover:bg-muted/80 group-[.toast]:transition-colors group-[.toast]:px-3 group-[.toast]:py-1.5 group-[.toast]:rounded-lg group-[.toast]:text-sm",
+          success: "!border-emerald-500/50 !bg-emerald-500/5",
+          error: "!border-destructive/50 !bg-destructive/5",
+          warning: "!border-amber-500/50 !bg-amber-500/5",
+          info: "!border-blue-500/50 !bg-blue-500/5",
         },
       }}
-      style={
-        {
-          "--normal-bg": "hsl(var(--popover))",
-          "--normal-text": "hsl(var(--popover-foreground))",
-          "--normal-border": "hsl(var(--border))",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
+      icons={{
+        success: <CircleCheckIcon className="size-5 text-emerald-500" />,
+        info: <InfoIcon className="size-5 text-blue-500" />,
+        warning: <TriangleAlertIcon className="size-5 text-amber-500" />,
+        error: <OctagonXIcon className="size-5 text-destructive" />,
+        loading: <Loader2Icon className="size-5 animate-spin text-primary" />,
+      }}
       {...props}
     />
   );
