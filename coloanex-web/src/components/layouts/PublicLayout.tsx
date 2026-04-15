@@ -31,7 +31,11 @@ export default function PublicLayout({
               {/* Logo */}
               <Link to="/" className="flex items-center gap-2 cursor-pointer">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <img src="/logo.png" alt="C" className="w-full h-full" />
+                  <img
+                    src="/images/logo.png"
+                    alt="C"
+                    className="w-full h-full"
+                  />
                 </div>
                 <span className="font-bold text-white text-lg">Coloanex</span>
               </Link>
@@ -42,7 +46,7 @@ export default function PublicLayout({
                   to="/"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -52,7 +56,7 @@ export default function PublicLayout({
                   to="/how-it-works"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/how-it-works"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -62,7 +66,7 @@ export default function PublicLayout({
                   to="/features"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/features"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -72,7 +76,7 @@ export default function PublicLayout({
                   to="/use-cases"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/use-cases"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -82,7 +86,7 @@ export default function PublicLayout({
                   to="/security"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/security"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -92,7 +96,7 @@ export default function PublicLayout({
                   to="/pricing"
                   className={`cursor-pointer transition-colors ${
                     location.pathname === "/pricing"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white hover:text-foreground"
                   }`}
                 >
@@ -109,7 +113,7 @@ export default function PublicLayout({
                       <Button variant="ghost">Dashboard</Button>
                     </Link>
                     <Link to="/logout">
-                      <Button className="bg-red-600 hover:bg-red-700 text-white border border-red-500">
+                      <Button className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive">
                         Logout
                       </Button>
                     </Link>
@@ -122,7 +126,7 @@ export default function PublicLayout({
                     <Link to="/signup">
                       <Button
                         variant="outline"
-                        className="text-white bg-green-700 hover:bg-green-800"
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground border-primary"
                       >
                         Get Started
                       </Button>
@@ -133,7 +137,7 @@ export default function PublicLayout({
 
               {/* Mobile Menu Button */}
               <button
-                className="lg:hidden p-2 text-white hover:text-green-500 cursor-pointer"
+                className="lg:hidden p-2 text-white hover:text-primary cursor-pointer"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? (
@@ -188,7 +192,7 @@ export default function PublicLayout({
                   to="/"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -199,7 +203,7 @@ export default function PublicLayout({
                   to="/how-it-works"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/how-it-works"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -210,7 +214,7 @@ export default function PublicLayout({
                   to="/features"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/features"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -221,7 +225,7 @@ export default function PublicLayout({
                   to="/use-cases"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/use-cases"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -232,7 +236,7 @@ export default function PublicLayout({
                   to="/security"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/security"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -243,7 +247,7 @@ export default function PublicLayout({
                   to="/pricing"
                   className={`cursor-pointer block py-2 ${
                     location.pathname === "/pricing"
-                      ? "text-green-500 font-bold"
+                      ? "text-primary font-bold"
                       : "text-white/80 hover:text-white transition-colors"
                   }`}
                   onClick={() => setMobileMenuOpen(false)}
@@ -256,12 +260,15 @@ export default function PublicLayout({
                 {user ? (
                   <>
                     <Link to="/dashboard" className="w-full">
-                      <Button variant="outline" className="w-full text-foreground">
+                      <Button
+                        variant="outline"
+                        className="w-full text-foreground"
+                      >
                         Dashboard
                       </Button>
                     </Link>
                     <Link to="/logout" className="w-full">
-                      <Button className="w-full bg-red-600 hover:bg-red-700 text-white border border-red-500">
+                      <Button className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive">
                         Logout
                       </Button>
                     </Link>
@@ -269,12 +276,15 @@ export default function PublicLayout({
                 ) : (
                   <>
                     <Link to="/login" className="w-full">
-                      <Button variant="outline" className="w-full text-foreground">
+                      <Button
+                        variant="outline"
+                        className="w-full text-foreground"
+                      >
                         Login
                       </Button>
                     </Link>
                     <Link to="/signup" className="w-full">
-                      <Button className="w-full bg-green-600 hover:bg-green-700 text-white">
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
                         Get Started
                       </Button>
                     </Link>
@@ -301,7 +311,11 @@ export default function PublicLayout({
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <img src="/logo.png" alt="C" className="w-full h-full" />
+                      <img
+                        src="/images/logo.png"
+                        alt="C"
+                        className="w-full h-full"
+                      />
                     </div>
                   </Link>
                   <span className="text-xl font-bold">Coloanex</span>
@@ -351,100 +365,127 @@ export default function PublicLayout({
               </div>
 
               <div className="col-span-1 md:col-span-3 grid grid-cols-3 gap-2 sm:gap-8">
-              <div>
-                <h4 className="font-bold mb-4 text-white">Product</h4>
-                <ul className="space-y-2 text-sm text-white/70">
-                  <li>
-                    <Link
-                      to="/features"
-                      className="hover:text-white transition-colors"
-                    >
-                      Features
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/use-cases"
-                      className="hover:text-white transition-colors"
-                    >
-                      Use Cases
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/security"
-                      className="hover:text-white transition-colors"
-                    >
-                      Security
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/pricing"
-                      className="hover:text-white transition-colors"
-                    >
-                      Pricing
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      API Docs
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+                <div>
+                  <h4 className="font-bold mb-4 text-white">Product</h4>
+                  <ul className="space-y-2 text-sm text-white/70">
+                    <li>
+                      <Link
+                        to="/features"
+                        className="hover:text-white transition-colors"
+                      >
+                        Features
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="/use-cases"
+                        className="hover:text-white transition-colors"
+                      >
+                        Use Cases
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="/security"
+                        className="hover:text-white transition-colors"
+                      >
+                        Security
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="/pricing"
+                        className="hover:text-white transition-colors"
+                      >
+                        Pricing
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        API Docs
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
 
-              <div>
-                <h4 className="font-bold mb-4 text-white">Company</h4>
-                <ul className="space-y-2 text-sm text-white/70">
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      About
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Blog
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Careers
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Contact
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+                <div>
+                  <h4 className="font-bold mb-4 text-white">Company</h4>
+                  <ul className="space-y-2 text-sm text-white/70">
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        About
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Blog
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Careers
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Contact
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
 
-              <div>
-                <h4 className="font-bold mb-4 text-white">Legal</h4>
-                <ul className="space-y-2 text-sm text-white/70">
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Privacy Policy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Terms of Service
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Cookie Policy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="#" className="hover:text-white transition-colors">
-                      Compliance
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+                <div>
+                  <h4 className="font-bold mb-4 text-white">Legal</h4>
+                  <ul className="space-y-2 text-sm text-white/70">
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Privacy Policy
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Terms of Service
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Cookie Policy
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        to="#"
+                        className="hover:text-white transition-colors"
+                      >
+                        Compliance
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
 
