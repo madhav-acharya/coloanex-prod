@@ -261,6 +261,7 @@ export class UsersService {
       tenantContactEmail,
       tenantContactPhone,
       tenantAddress,
+      role = 'lender',
     } = createUserDto;
 
     const phoneTrimmed = phone?.trim() || null;
@@ -291,17 +292,19 @@ export class UsersService {
       parallelism: 2,
     });
 
-    const lenderRole = await this.prisma.role.findFirst({
-      where: { name: 'Lender' },
+    const targetRoleName = role.toLowerCase() === 'borrower' ? 'Borrower' : 'Lender';
+    
+    const assignedRole = await this.prisma.role.findFirst({
+      where: { name: targetRoleName },
     });
 
-    if (!lenderRole) {
-      throw new BadRequestException('Lender role not found');
+    if (!assignedRole) {
+      throw new BadRequestException(`${targetRoleName} role not found`);
     }
 
     let finalTenantId = tenantId;
 
-    if (!tenantId && tenantName) {
+    if (!tenantId && tenantName && targetRoleName === 'Lender') {
       const newTenant = await this.prisma.tenant.create({
         data: {
           name: tenantName,
@@ -338,12 +341,12 @@ export class UsersService {
     await this.prisma.userRole.create({
       data: {
         userId: user.id,
-        roleId: lenderRole.id,
+        roleId: assignedRole.id,
       },
     });
 
     await this.permissionAssignmentService.assignPermissionsToUser(user.id, [
-      'Lender',
+      targetRoleName,
     ]);
 
     if (this.activityLogsService) {
@@ -351,11 +354,11 @@ export class UsersService {
         action: ActivityAction.CREATE,
         entityType: ActivityEntityType.USER,
         entityId: user.id,
-        description: 'User registered with Lender role',
+        description: `User registered with ${targetRoleName} role`,
         before: null,
         after: {
           userId: user.id,
-          role: 'Lender',
+          role: targetRoleName,
           email: user.email,
           tenantId: finalTenantId,
         },
