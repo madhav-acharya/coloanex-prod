@@ -1,26 +1,60 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { hasPermission } from "@/lib/permissions";
+import { canAccessAdminRoutes, getRoles } from "@/lib/roleUtils";
 import { PermissionRequired } from "@/components/shared/PermissionRequired";
 import { AccessRestricted } from "@/components/shared/AccessRestricted";
-import Dashboard from "@/pages/Dashboard";
-import Users from "@/pages/Users";
-import Tenants from "@/pages/Tenants";
-import KycRequests from "@/pages/KycRequests";
-import LoanRequests from "@/pages/LoanRequests";
-import Profile from "@/pages/Profile";
-import Settings from "@/pages/Settings";
-import Rules from "@/pages/Rules";
-import Contracts from "@/pages/Contracts";
-import Transactions from "@/pages/Transactions";
-import PaymentSuccess from "@/pages/PaymentSuccess";
-import PaymentFailure from "@/pages/PaymentFailure";
+import { Skeleton } from "@/components/ui/skeleton";
+import Dashboard from "@/pages/admin/Dashboard";
+import Users from "@/pages/admin/Users";
+import Tenants from "@/pages/admin/Tenants";
+import KycRequests from "@/pages/admin/KycRequests";
+import LoanRequests from "@/pages/admin/LoanRequests";
+import Profile from "@/pages/admin/Profile";
+import Settings from "@/pages/admin/Settings";
+import Rules from "@/pages/admin/Rules";
+import Contracts from "@/pages/admin/Contracts";
+import Transactions from "@/pages/admin/Transactions";
+import PaymentSuccess from "@/pages/admin/PaymentSuccess";
+import PaymentFailure from "@/pages/admin/PaymentFailure";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermission?: string;
 }
+
+const FullPageSkeleton = () => (
+  <div className="flex h-screen overflow-hidden bg-background">
+    <aside className="w-64 shrink-0 border-r bg-background p-4 space-y-4">
+      <Skeleton className="h-10 w-3/4 rounded-lg" />
+      <div className="space-y-2 pt-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-9 w-full rounded-md" />
+        ))}
+      </div>
+    </aside>
+    <main className="flex-1 flex flex-col overflow-hidden">
+      <div className="border-b p-4 flex items-center justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48 rounded" />
+          <Skeleton className="h-4 w-72 rounded" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-9 rounded-full" />
+          <Skeleton className="h-9 w-9 rounded-full" />
+        </div>
+      </div>
+      <div className="p-8 space-y-6 flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
+        <Skeleton className="h-[400px] w-full rounded-xl" />
+      </div>
+    </main>
+  </div>
+);
 
 export const ProtectedRouteWrapper = ({
   children,
@@ -28,45 +62,33 @@ export const ProtectedRouteWrapper = ({
 }: ProtectedRouteProps) => {
   const { isAuthenticated, user, isLoading } = useAuth();
   const hasToken = localStorage.getItem("token");
-  const [showRestricted, setShowRestricted] = useState(false);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isAuthenticated || hasToken) {
-      timer = setTimeout(() => {
-        setShowRestricted(true);
-      }, 5000);
-    }
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, hasToken]);
 
   if (!isAuthenticated && !hasToken) {
     return <Navigate to="/login" replace />;
   }
 
-  const isSuperAdmin = user?.roles?.some(
-    (ur: any) => ur.role?.name === "Super Admin",
-  );
-
-  const isAdminOrLender = user?.roles?.some(
-    (ur: any) => ur.role?.name === "Admin" || ur.role?.name === "Lender",
-  );
-  
-  const needsTenantId = !isSuperAdmin && isAdminOrLender && !user?.tenantId;
-  const hasRequiredPermission = !requiredPermission || hasPermission(user, requiredPermission);
-
-  if (!needsTenantId && hasRequiredPermission) {
-    return <>{children}</>;
+  if (isLoading || !user) {
+    return <FullPageSkeleton />;
   }
 
-  if (showRestricted && !isLoading) {
-    if (needsTenantId && !["/profile", "/settings"].includes(window.location.pathname)) {
-      return <AccessRestricted />;
-    }
+  if (!canAccessAdminRoutes(user)) {
+    return <Navigate to="/borrower/dashboard" replace />;
+  }
 
-    if (requiredPermission && !hasRequiredPermission) {
-      return <PermissionRequired requiredPermission={requiredPermission} />;
-    }
+  const { isSuperAdmin } = getRoles(user);
+  const isAdminOrLender = user.roles?.some(
+    (ur: any) => ur.role?.name === "Admin" || ur.role?.name === "Lender",
+  );
+
+  const needsTenantId = !isSuperAdmin && isAdminOrLender && !user.tenantId;
+  const hasRequiredPermission = !requiredPermission || hasPermission(user, requiredPermission);
+
+  if (needsTenantId && !["/profile", "/settings"].includes(window.location.pathname)) {
+    return <AccessRestricted />;
+  }
+
+  if (requiredPermission && !hasRequiredPermission) {
+    return <PermissionRequired requiredPermission={requiredPermission} />;
   }
 
   return <>{children}</>;
