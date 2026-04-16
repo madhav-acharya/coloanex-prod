@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   useListMySubscriptionsQuery,
   useListPlansQuery,
@@ -37,6 +37,9 @@ export function ProfileDropdown() {
   const isFreePlan = !currentPlan || currentPlan.toLowerCase() === "free";
   const topPlans = plans.filter((plan) => plan.isActive).slice(0, 3);
 
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/borrower") ? "/borrower" : "";
+
   const handleLogout = () => {
     logout();
   };
@@ -48,7 +51,7 @@ export function ProfileDropdown() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-auto rounded-xl px-2 py-1.5 hover:bg-muted/70 cursor-pointer border border-transparent hover:border-border/60"
+          className="h-auto rounded-xl px-2 py-1.5 bg-muted/40 hover:bg-muted/70 cursor-pointer border border-transparent hover:border-border/60"
         >
           <Avatar className="w-9 h-9 ring-2 ring-primary/20">
             <AvatarImage src={user.profileImage} alt={user.fullName} />
@@ -105,14 +108,14 @@ export function ProfileDropdown() {
         </div>
         <DropdownMenuItem
           className="cursor-pointer rounded-md"
-          onClick={() => navigate("/profile")}
+          onClick={() => navigate(`${basePath}/profile`)}
         >
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           className="cursor-pointer rounded-md"
-          onClick={() => navigate("/settings")}
+          onClick={() => navigate(`${basePath}/settings`)}
         >
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
@@ -120,7 +123,7 @@ export function ProfileDropdown() {
         {isFreePlan && (
           <DropdownMenuItem
             className="cursor-pointer rounded-md text-primary focus:text-primary"
-            onClick={() => navigate("/pricing")}
+            onClick={() => navigate(`${basePath}/pricing`)}
           >
             <CreditCard className="mr-2 h-4 w-4" />
             <span>Upgrade Plan</span>
@@ -139,7 +142,7 @@ export function ProfileDropdown() {
                 key={plan.id}
                 className="cursor-pointer rounded-md"
                 onClick={() =>
-                  navigate(`/pricing?planCode=${encodeURIComponent(plan.code)}`)
+                  navigate(`${basePath}/pricing?planCode=${encodeURIComponent(plan.code)}`)
                 }
               >
                 <CreditCard className="mr-2 h-4 w-4" />

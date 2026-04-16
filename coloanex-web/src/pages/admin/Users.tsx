@@ -629,6 +629,7 @@ export default function Users() {
           setTimeout(() => setIsRefreshing(false), 1000);
         }
       }}
+      isLoading={isLoading || isRefreshing || isFetching}
       isRefreshing={isRefreshing || isFetching}
       filters={filterFields}
       filterValues={filterValues}

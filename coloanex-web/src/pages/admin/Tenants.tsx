@@ -391,6 +391,7 @@ export default function Tenants() {
       searchValue={filters.search}
       onSearchChange={handleSearchChange}
       onRefresh={handleRefresh}
+      isLoading={isLoading || isFetching || isRefreshing}
       isRefreshing={isRefreshing}
       filters={filterFields}
       filterValues={filterValues}

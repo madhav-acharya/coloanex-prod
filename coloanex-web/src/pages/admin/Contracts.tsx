@@ -1112,6 +1112,7 @@ export default function Contracts() {
           setTimeout(() => setIsRefreshing(false), 1000);
         }
       }}
+      isLoading={isLoading || isRefreshing || isFetching}
       isRefreshing={isRefreshing || isFetching}
       filters={[
         {

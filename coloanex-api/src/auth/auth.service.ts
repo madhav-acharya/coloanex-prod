@@ -212,7 +212,7 @@ export class AuthService {
 
     const { roles: userRoles } = extractRolesAndPermissions(user);
 
-    const allowedRoles = ['Super Admin', 'Admin', 'Lender'];
+    const allowedRoles = ['Super Admin', 'Admin', 'Lender', 'Borrower'];
     const hasAllowedRole = userRoles.some((role) =>
       allowedRoles.includes(role),
     );

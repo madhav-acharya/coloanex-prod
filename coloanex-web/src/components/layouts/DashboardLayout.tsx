@@ -5,6 +5,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
@@ -59,6 +60,8 @@ interface DashboardLayoutProps {
   searchClassName?: string;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  isLoading?: boolean;
+  skeletonType?: "table" | "cards";
 }
 
 export default function DashboardLayout({
@@ -78,6 +81,8 @@ export default function DashboardLayout({
   searchClassName,
   onRefresh,
   isRefreshing = false,
+  isLoading = false,
+  skeletonType = "table",
 }: DashboardLayoutProps) {
   const COLLAPSED_WIDTH = 64;
   const DEFAULT_WIDTH = 256;
@@ -149,19 +154,19 @@ export default function DashboardLayout({
     {
       title: "Roles",
       icon: <Shield className="w-4 h-4 text-blue-600" />,
-      href: "/roles",
+      href: "/system/roles",
       permission: "Read Roles",
     },
     {
       title: "Permissions",
       icon: <Key className="w-4 h-4 text-amber-600" />,
-      href: "/permissions",
+      href: "/system/permissions",
       permission: "Read Permissions",
     },
     {
       title: "Subscriptions",
       icon: <BadgeDollarSign className="w-4 h-4 text-indigo-600" />,
-      href: "/subscriptions",
+      href: "/system/subscriptions",
       permission: "Read Roles",
     },
   ];
@@ -318,7 +323,7 @@ export default function DashboardLayout({
         {!isCollapsed && (
           <Link to="/" className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <img src="./images/logo.png" alt="C" className="w-full h-full" />
+              <img src="/images/logo.png" alt="C" className="w-full h-full" />
             </div>
             <span className="text-xl font-bold">Coloanex</span>
           </Link>
@@ -570,7 +575,42 @@ export default function DashboardLayout({
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className={cn("container mx-auto p-4 md:p-8", className)}
           >
-            {children}
+            {isLoading ? (
+              <div className="space-y-6">
+                {skeletonType === "cards" ? (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Skeleton className="h-32 rounded-xl" />
+                      <Skeleton className="h-32 rounded-xl" />
+                      <Skeleton className="h-32 rounded-xl" />
+                    </div>
+                    <Skeleton className="h-[400px] w-full rounded-xl" />
+                  </>
+                ) : (
+                  <div className="rounded-xl border bg-card overflow-hidden">
+                    <div className="p-4 border-b flex gap-4">
+                      <Skeleton className="h-5 w-1/4 rounded" />
+                      <Skeleton className="h-5 w-1/4 rounded" />
+                      <Skeleton className="h-5 w-1/4 rounded" />
+                      <Skeleton className="h-5 w-1/4 rounded" />
+                    </div>
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="p-4 border-b flex gap-4 items-center"
+                      >
+                        <Skeleton className="h-4 w-1/4 rounded" />
+                        <Skeleton className="h-4 w-1/4 rounded" />
+                        <Skeleton className="h-4 w-1/6 rounded" />
+                        <Skeleton className="h-6 w-16 rounded-full ml-auto" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              children
+            )}
           </motion.div>
         </AnimatePresence>
       </main>

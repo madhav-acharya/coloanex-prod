@@ -19,6 +19,7 @@ import {
 } from "@/apis/rolesApi";
 import { useGetPermissionsQuery } from "@/apis/permissionsApi";
 import { useAuth } from "@/hooks/useAuth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Roles() {
   const { toast } = useToast();
@@ -251,17 +252,12 @@ export default function Roles() {
       onSearchChange={handleSearchChange}
       onRefresh={refetchRoles}
       isRefreshing={isRefreshingRoles}
+      isLoading={isLoading || isRefreshingRoles}
+      skeletonType="cards"
       actionLabel="Add Role"
       onActionClick={handleCreateClick}
     >
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading roles...</p>
-          </div>
-        </div>
-      ) : roles.length === 0 ? (
+      {roles.length === 0 ? (
         <div className="text-center py-12">
           <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">No roles found</p>

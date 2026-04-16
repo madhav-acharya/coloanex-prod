@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Info } from "lucide-react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo, useState } from "react";
 import {
   useListMySubscriptionsQuery,
@@ -423,7 +424,26 @@ export default function Pricing() {
               </p>
             </div>
           )}
-          {PricingContent}
+          
+          {plans.length === 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+               {[1, 2, 3, 4].map(idx => (
+                 <div key={idx} className="h-[450px] rounded-xl border border-border/50 bg-card p-6 flex flex-col gap-4 shadow-sm">
+                   <Skeleton className="h-6 w-3/4 mb-2" />
+                   <Skeleton className="h-10 w-1/2 mb-8" />
+                   <div className="space-y-4 flex-1">
+                     <Skeleton className="h-4 w-full" />
+                     <Skeleton className="h-4 w-full" />
+                     <Skeleton className="h-4 w-full" />
+                     <Skeleton className="h-4 w-3/4" />
+                   </div>
+                   <Skeleton className="h-12 w-full mt-auto" />
+                 </div>
+               ))}
+            </div>
+          ) : (
+            PricingContent
+          )}
         </div>
       </section>
     </PublicLayout>

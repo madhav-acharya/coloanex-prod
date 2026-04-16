@@ -665,6 +665,7 @@ export default function Rules() {
       searchValue={searchValue}
       onSearchChange={setSearchValue}
       onRefresh={refetchRules}
+      isLoading={isLoading || isRefreshingRules}
       isRefreshing={isRefreshingRules}
       actions={[
         {

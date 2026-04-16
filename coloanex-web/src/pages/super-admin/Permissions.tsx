@@ -247,16 +247,12 @@ export default function Permissions() {
       onSearchChange={handleSearchChange}
       onRefresh={handleRefresh}
       isRefreshing={isRefreshing}
+      isLoading={isLoading || isFetching || isRefreshing}
+      skeletonType="cards"
       actionLabel="Add Permission"
       onActionClick={handleCreateClick}
     >
-      {isLoading ? (
-        <DataCardGrid>
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-[125px] w-full rounded-xl" />
-          ))}
-        </DataCardGrid>
-      ) : permissions.length === 0 ? (
+      {permissions.length === 0 ? (
         <div className="text-center py-12">
           <Key className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">No permissions found</p>

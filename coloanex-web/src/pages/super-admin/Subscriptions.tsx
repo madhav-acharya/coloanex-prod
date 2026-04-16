@@ -322,16 +322,12 @@ export default function Subscriptions() {
       onSearchChange={setSearchValue}
       onRefresh={refetch}
       isRefreshing={isFetching}
+      isLoading={isLoading || isFetching}
+      skeletonType="cards"
       actionLabel="Add Plan"
       onActionClick={handleCreateClick}
     >
-      {isLoading ? (
-        <DataCardGrid>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-[125px] w-full rounded-xl" />
-          ))}
-        </DataCardGrid>
-      ) : filteredPlans.length === 0 ? (
+      {filteredPlans.length === 0 ? (
         <div className="text-center py-12">
           <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">No plans found</p>

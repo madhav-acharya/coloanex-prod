@@ -302,17 +302,17 @@ const Settings = () => {
   const paymentConfigPlaceholders =
     configGateway === "ESEWA"
       ? {
-          merchantId: "EPAYTEST",
-          publicKey: "EPAYTEST",
-          secretKey: "8gBm/:&EnhH.1/q",
-          webhookUrl: "https://rc.esewa.com.np/api/epay/transaction/status/",
-        }
+        merchantId: "EPAYTEST",
+        publicKey: "EPAYTEST",
+        secretKey: "8gBm/:&EnhH.1/q",
+        webhookUrl: "https://rc.esewa.com.np/api/epay/transaction/status/",
+      }
       : {
-          merchantId: "498dfcacd2b8400699dc8cfd98a0f077",
-          publicKey: "498dfcacd2b8400699dc8cfd98a0f077",
-          secretKey: "69ceb560028345dba3b25f9fdbea8e8a",
-          webhookUrl: "https://dev.khalti.com/api/v2/epayment/lookup/",
-        };
+        merchantId: "498dfcacd2b8400699dc8cfd98a0f077",
+        publicKey: "498dfcacd2b8400699dc8cfd98a0f077",
+        secretKey: "69ceb560028345dba3b25f9fdbea8e8a",
+        webhookUrl: "https://dev.khalti.com/api/v2/epayment/lookup/",
+      };
 
   useEffect(() => {
     if (user) {
@@ -778,40 +778,40 @@ const Settings = () => {
     },
     ...(showPaymentConfig
       ? [
-          {
-            id: "payment-config",
-            icon: CreditCard,
-            title: "Payment Config",
-            description:
-              connectedGatewayTypes.length > 0
-                ? `Connected: ${connectedGatewayTypes
-                    .map((gateway) =>
-                      gateway === "ESEWA" ? "eSewa" : "Khalti",
-                    )
-                    .join(" + ")}`
-                : "Configure receive credentials for user and tenant payment flows",
-            badge:
-              connectedGatewayTypes.length > 0 ? (
-                <div className="flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5">
-                  {connectedGatewayTypes.map((gateway) => (
-                    <img
-                      key={gateway}
-                      src={gatewayLogoByType[gateway]}
-                      alt={gateway}
-                      className="h-3 w-3 rounded-sm object-cover"
-                    />
-                  ))}
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                    Connected
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
-                  Not Connected
+        {
+          id: "payment-config",
+          icon: CreditCard,
+          title: "Payment Config",
+          description:
+            connectedGatewayTypes.length > 0
+              ? `Connected: ${connectedGatewayTypes
+                .map((gateway) =>
+                  gateway === "ESEWA" ? "eSewa" : "Khalti",
+                )
+                .join(" + ")}`
+              : "Configure receive credentials for user and tenant payment flows",
+          badge:
+            connectedGatewayTypes.length > 0 ? (
+              <div className="flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5">
+                {connectedGatewayTypes.map((gateway) => (
+                  <img
+                    key={gateway}
+                    src={gatewayLogoByType[gateway]}
+                    alt={gateway}
+                    className="h-3 w-3 rounded-sm object-cover"
+                  />
+                ))}
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                  Connected
                 </span>
-              ),
-          },
-        ]
+              </div>
+            ) : (
+              <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
+                Not Connected
+              </span>
+            ),
+        },
+      ]
       : []),
     {
       id: "mail",
@@ -1097,16 +1097,14 @@ const Settings = () => {
                   <div className="grid gap-3">
                     <button
                       onClick={() => setTheme("light")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
-                        mode === "light"
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${mode === "light"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                        }`}
                     >
                       <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                          mode === "light" ? "bg-primary" : "bg-muted"
-                        }`}
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "light" ? "bg-primary" : "bg-muted"
+                          }`}
                       >
                         <Sun
                           className={`w-5 h-5 ${mode === "light" ? "text-white" : "text-muted-foreground"}`}
@@ -1125,16 +1123,14 @@ const Settings = () => {
 
                     <button
                       onClick={() => setTheme("dark")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
-                        mode === "dark"
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${mode === "dark"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                        }`}
                     >
                       <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                          mode === "dark" ? "bg-primary" : "bg-muted"
-                        }`}
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "dark" ? "bg-primary" : "bg-muted"
+                          }`}
                       >
                         <Moon
                           className={`w-5 h-5 ${mode === "dark" ? "text-white" : "text-muted-foreground"}`}
@@ -1153,16 +1149,14 @@ const Settings = () => {
 
                     <button
                       onClick={() => setTheme("system")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
-                        mode === "system"
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${mode === "system"
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                        }`}
                     >
                       <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                          mode === "system" ? "bg-primary" : "bg-muted"
-                        }`}
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "system" ? "bg-primary" : "bg-muted"
+                          }`}
                       >
                         <Monitor
                           className={`w-5 h-5 ${mode === "system" ? "text-white" : "text-muted-foreground"}`}
@@ -1256,7 +1250,7 @@ const Settings = () => {
                       {blockchainAccess.modeLabel}
                     </p>
                     {!blockchainAccess.canRunBlockchain &&
-                    blockchainAccess.reason ? (
+                      blockchainAccess.reason ? (
                       <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
                         {blockchainAccess.reason}
                       </p>
@@ -1264,21 +1258,19 @@ const Settings = () => {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
-                      className={`cursor-pointer ${
-                        gasPaymentMode === "USER_WALLET"
-                          ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                          : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                      }`}
+                      className={`cursor-pointer ${gasPaymentMode === "USER_WALLET"
+                        ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                        : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                        }`}
                       onClick={() => saveGasMode("USER_WALLET")}
                     >
                       User Wallet
                     </Button>
                     <Button
-                      className={`cursor-pointer ${
-                        gasPaymentMode === "PLATFORM_WALLET"
-                          ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                          : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-                      }`}
+                      className={`cursor-pointer ${gasPaymentMode === "PLATFORM_WALLET"
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                        : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                        }`}
                       onClick={() => saveGasMode("PLATFORM_WALLET")}
                     >
                       Platform Sponsored
@@ -1291,18 +1283,7 @@ const Settings = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={async () => {
-                        await refetchWallets();
-                        await refreshWalletCoinBalances();
-                      }}
-                      className="cursor-pointer bg-muted text-foreground hover:bg-muted/80"
-                    >
-                      Refresh Wallets
-                    </Button>
-                  </div>
+
                   <div className="flex gap-2">
                     <Input
                       value={manualWalletAddress}
@@ -1449,8 +1430,8 @@ const Settings = () => {
                                 {subscription.scope} scope • Valid till{" "}
                                 {subscription.endsAt
                                   ? new Date(
-                                      subscription.endsAt,
-                                    ).toLocaleDateString()
+                                    subscription.endsAt,
+                                  ).toLocaleDateString()
                                   : "Indefinitely"}
                               </p>
                             </div>
@@ -1459,7 +1440,7 @@ const Settings = () => {
                                 subscription.lifecycleStatus === "EXPIRED"
                                   ? "destructive"
                                   : subscription.lifecycleStatus ===
-                                      "LIMIT_EXCEEDED"
+                                    "LIMIT_EXCEEDED"
                                     ? "outline"
                                     : "secondary"
                               }
@@ -1486,14 +1467,13 @@ const Settings = () => {
                           </div>
 
                           <p
-                            className={`text-xs mt-1 ${
-                              subscription.lifecycleStatus === "EXPIRED"
-                                ? "text-destructive"
-                                : subscription.lifecycleStatus ===
-                                    "LIMIT_EXCEEDED"
-                                  ? "text-amber-500"
-                                  : "text-primary"
-                            }`}
+                            className={`text-xs mt-1 ${subscription.lifecycleStatus === "EXPIRED"
+                              ? "text-destructive"
+                              : subscription.lifecycleStatus ===
+                                "LIMIT_EXCEEDED"
+                                ? "text-amber-500"
+                                : "text-primary"
+                              }`}
                           >
                             {subscription.endsAt
                               ? `Valid till ${new Date(subscription.endsAt).toLocaleDateString()}`
@@ -1501,28 +1481,28 @@ const Settings = () => {
                           </p>
                           {(subscription.isBought ||
                             subscription.status === "ACTIVE") && (
-                            <div className="mt-3 flex justify-end">
-                              <Button
-                                size="sm"
-                                variant={
-                                  subscription.isSelected
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                                disabled={
-                                  subscription.isSelected ||
-                                  isSelectingSubscription
-                                }
-                                onClick={() =>
-                                  handleSelectSubscription(subscription.id)
-                                }
-                              >
-                                {subscription.isSelected
-                                  ? "Selected"
-                                  : "Use This Subscription"}
-                              </Button>
-                            </div>
-                          )}
+                              <div className="mt-3 flex justify-end">
+                                <Button
+                                  size="sm"
+                                  variant={
+                                    subscription.isSelected
+                                      ? "secondary"
+                                      : "outline"
+                                  }
+                                  disabled={
+                                    subscription.isSelected ||
+                                    isSelectingSubscription
+                                  }
+                                  onClick={() =>
+                                    handleSelectSubscription(subscription.id)
+                                  }
+                                >
+                                  {subscription.isSelected
+                                    ? "Selected"
+                                    : "Use This Subscription"}
+                                </Button>
+                              </div>
+                            )}
                         </div>
                       ))}
                     </div>
@@ -1644,13 +1624,6 @@ const Settings = () => {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => refetchConfigs()}
-                      className="border-sky-500/60 text-sky-300 hover:bg-sky-500/10"
-                    >
-                      Refresh
-                    </Button>
                     {!showAddPaymentConfig ? (
                       <Button
                         onClick={() => setShowAddPaymentConfig(true)}
@@ -2124,8 +2097,6 @@ const Settings = () => {
     <DashboardLayout
       title="Settings"
       description="Manage your account preferences, security, and wallet connections"
-      onRefresh={handleRefresh}
-      isRefreshing={isRefreshing}
     >
       <Card>
         <CardContent className="p-0">

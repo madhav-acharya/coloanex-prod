@@ -303,6 +303,16 @@
   .animate-bounce-slow {
     animation: bounceSlow 2s ease-in-out infinite;
   }
+
+  .animate-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @layer components {
@@ -501,5 +511,11 @@
 @media (max-width: 768px) {
   .feature-card {
     padding: 1.5rem;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

@@ -1633,6 +1633,7 @@ return (
       searchValue={filters.search || ""}
       onSearchChange={handleSearchChange}
       onRefresh={refetch}
+      isLoading={isLoading || isFetching}
       isRefreshing={isFetching}
       className="bg-background"
       searchClassName="h-11 bg-background border-border"

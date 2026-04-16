@@ -907,11 +907,47 @@ export default function Transactions() {
   if (isLoading) {
     return (
       <DashboardLayout
-        title="Wallet"
-        description="Manage connected wallets and review payment activity"
+        title="Transactions"
+        description="Manage your transaction history and wallets"
       >
-        <div className="flex items-center justify-center h-64">
-          <p>Loading transactions...</p>
+        <div className="space-y-6">
+          <div className="h-[90px] rounded-xl border border-border/50 bg-card p-4 animate-pulse flex items-center justify-between">
+            <div className="h-6 w-32 bg-surface-bright rounded-md" />
+            <div className="h-10 w-[450px] bg-surface-bright rounded-md" />
+          </div>
+
+          <div className="h-[120px] rounded-xl border border-border/50 bg-card p-4 animate-pulse flex items-center justify-between gap-4">
+            <div className="h-full flex-1 bg-surface-bright rounded-md" />
+            <div className="h-full w-[250px] bg-surface-bright rounded-md" />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
+               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+            </div>
+            <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
+               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+            </div>
+            <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
+               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+            </div>
+          </div>
+
+          <div>
+             <div className="h-8 w-48 bg-surface-bright rounded-md mb-4 animate-pulse" />
+             <div className="h-[400px] rounded-xl border border-border/50 bg-card p-4 animate-pulse">
+               <div className="h-12 w-full bg-surface-bright/50 rounded-md mb-4" />
+               <div className="space-y-3">
+                 <div className="h-10 w-full bg-surface-bright rounded-md" />
+                 <div className="h-10 w-full bg-surface-bright rounded-md" />
+                 <div className="h-10 w-full bg-surface-bright rounded-md" />
+                 <div className="h-10 w-full bg-surface-bright rounded-md" />
+               </div>
+             </div>
+          </div>
         </div>
       </DashboardLayout>
     );
@@ -925,6 +961,7 @@ export default function Transactions() {
       searchValue={searchValue}
       onSearchChange={setSearchValue}
       onRefresh={handleRefresh}
+      isLoading={isRefreshing || isFetchingPage || loadingWalletCoinBalances}
       isRefreshing={isRefreshing || isFetchingPage || loadingWalletCoinBalances}
       actions={[
         {

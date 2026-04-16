@@ -1,8 +1,9 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
+import { logout } from "@/store/slices/authSlice";
 import { useState } from "react";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 
@@ -20,6 +21,13 @@ export default function PublicLayout({
   const { user } = useSelector((state: RootState) => state.auth);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,11 +120,12 @@ export default function PublicLayout({
                     <Link to="/dashboard">
                       <Button variant="ghost">Dashboard</Button>
                     </Link>
-                    <Link to="/logout">
-                      <Button className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive">
-                        Logout
-                      </Button>
-                    </Link>
+                    <Button
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </Button>
                   </>
                 ) : (
                   <>
@@ -166,7 +175,11 @@ export default function PublicLayout({
             <div className="flex items-center justify-between px-4 h-16 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <img src="/logo.png" alt="C" className="w-full h-full" />
+                  <img
+                    src="/images/logo.png"
+                    alt="C"
+                    className="w-full h-full"
+                  />
                 </div>
                 <span className="font-bold text-white text-lg">Coloanex</span>
               </div>

@@ -1162,6 +1162,7 @@ export default function LoanRequests() {
           setIsRefreshing(false);
         }
       }}
+      isLoading={isLoading || isFetching || isRefreshing}
       isRefreshing={isFetching || isRefreshing}
       filters={[
         {

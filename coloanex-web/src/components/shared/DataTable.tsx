@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { MoreHorizontal, ArrowUpDown } from "lucide-react";
 import { Column } from "@/types/components";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DataTableProps<T> {
   data: T[];
@@ -109,18 +110,18 @@ export function DataTable<T>({
                 {selectable && (
                   <TableCell>
                     <div className="flex items-center justify-center">
-                      <div className="h-4 w-4 rounded bg-muted animate-pulse" />
+                      <Skeleton className="h-4 w-4" />
                     </div>
                   </TableCell>
                 )}
                 {columns.map((column) => (
                   <TableCell key={column.key}>
-                    <div className="h-4 w-full max-w-[120px] rounded bg-muted animate-pulse" />
+                    <Skeleton className="h-4 w-full max-w-[120px]" />
                   </TableCell>
                 ))}
                 {actions && actions.length > 0 && (
                   <TableCell>
-                    <div className="h-8 w-8 rounded bg-muted animate-pulse ml-auto" />
+                    <Skeleton className="h-8 w-8 ml-auto" />
                   </TableCell>
                 )}
               </TableRow>
