@@ -19,6 +19,7 @@ import {
 } from "@/apis/authApi";
 import { handleLogout } from "@/lib/logout";
 import type { LoginRequest, AuthUser } from "@/types/auth";
+import { getHomeRoute } from "@/lib/roleUtils";
 
 export const useAuth = () => {
   const dispatch = useDispatch();
@@ -60,7 +61,12 @@ export const useAuth = () => {
         localStorage.setItem("refreshToken", response.refreshToken);
         localStorage.setItem("sessionId", response.sessionId);
         dispatch(setAuth({ token: response.accessToken }));
-        navigate("/dashboard");
+        if (response.user) {
+          dispatch(setUser(response.user));
+          navigate(getHomeRoute(response.user));
+        } else {
+          navigate("/dashboard");
+        }
         return response;
       } catch (error) {
         const errorMessage =
