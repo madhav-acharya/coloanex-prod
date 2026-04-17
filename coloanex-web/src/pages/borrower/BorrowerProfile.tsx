@@ -21,6 +21,8 @@ import {
   Lock,
   Camera,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const BorrowerProfile = () => {
   const { user } = useAuth();
@@ -144,107 +146,102 @@ const BorrowerProfile = () => {
   }
 
   return (
-    <BorrowerLayout
-      title="Profile"
-      description="View and manage your profile information"
-    >
-      <div className="space-y-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle>Personal Information</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                Update your personal details and contact information
-              </p>
-            </div>
-            {!isEditing && (
-              <Button onClick={() => setIsEditing(true)} size="sm">
-                Edit Profile
-              </Button>
-            )}
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="flex items-center gap-6 mb-6">
-                <div className="relative group">
-                  <Avatar className="w-20 h-20 shadow-lg">
-                    <AvatarImage
-                      src={previewImage || user.profileImage}
-                      alt={user.fullName}
-                    />
-                    <AvatarFallback className="bg-gradient-hero text-white text-3xl font-bold">
-                      {user.fullName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    </div>
-                  )}
-                  {isEditing && !isUploading && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <Camera className="w-6 h-6 text-white" />
-                    </button>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold">{user.fullName}</h3>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                  {isUploading && (
-                    <p className="text-xs text-primary mt-1">
-                      Uploading image...
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge
-                      variant={user.isActive ? "default" : "destructive"}
-                      className="text-xs"
-                    >
-                      {user.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                    {selectedImage && (
-                      <Badge variant="secondary" className="text-xs">
-                        New image selected
-                      </Badge>
-                    )}
+    <BorrowerLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+        {/* Header */}
+        <div className="space-y-3 animate-fade-in text-center sm:text-left">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tighter text-foreground font-headline leading-none">
+            Personal Identity
+          </h1>
+          <p className="text-muted-foreground text-lg sm:text-xl font-medium max-w-2xl">
+            Manage your digital identity and contact preferences across CoLoanEx.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-up">
+          {/* Avatar & Summary */}
+          <Card className="lg:col-span-1 bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:scale-125 transition-transform duration-700" />
+            <div className="relative z-10 flex flex-col items-center text-center space-y-6">
+              <div className="relative group">
+                <Avatar className="w-32 h-32 shadow-2xl border-4 border-background ring-4 ring-primary/10">
+                  <AvatarImage src={previewImage || user.profileImage} alt={user.fullName} />
+                  <AvatarFallback className="bg-gradient-hero text-white text-4xl font-black">
+                    {user.fullName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {isUploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
+                    <Loader2 className="w-10 h-10 text-white animate-spin" />
                   </div>
+                )}
+                {isEditing && !isUploading && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer border-2 border-primary"
+                  >
+                    <Camera className="w-8 h-8 text-white" />
+                  </button>
+                )}
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-black text-foreground tracking-tight">{user.fullName}</h3>
+                <p className="text-muted-foreground font-medium">{user.email}</p>
+                <div className="flex justify-center gap-2 pt-2">
+                  <Badge variant="outline" className={cn(
+                    "rounded-full px-4 py-1 font-black text-[10px] uppercase tracking-widest",
+                    user.isActive ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                  )}>
+                    {user.isActive ? "Active Account" : "Inactive"}
+                  </Badge>
                 </div>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Full Name
-                  </Label>
+              <div className="w-full pt-8 grid grid-cols-2 gap-4 border-t border-border/20">
+                 <div className="space-y-1 text-left">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Joined</p>
+                    <p className="font-bold text-sm">{format(new Date(user.lastActiveAt || Date.now()), "MMM yyyy")}</p>
+                 </div>
+                 <div className="space-y-1 text-right">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Level</p>
+                    <p className="font-bold text-sm text-primary">Silver Tier</p>
+                 </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Form */}
+          <Card className="lg:col-span-2 bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-10">
+            <form onSubmit={handleSubmit} className="space-y-10">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <User className="w-6 h-6 text-primary" /> Profile Details
+                </h3>
+                {!isEditing && (
+                  <Button onClick={() => setIsEditing(true)} variant="outline" className="rounded-full px-6 font-bold text-xs uppercase tracking-widest border-primary/20 hover:bg-primary/5">
+                    Modify Details
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Display Name</Label>
                   <Input
                     id="fullName"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    required
-                    className="disabled:opacity-100 disabled:cursor-default"
+                    className="h-14 rounded-2xl bg-surface-container/30 border-border/40 focus:ring-primary/20 font-bold transition-all disabled:opacity-70"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2">
-                    <Mail className="w-4 h-4" />
-                    Email
-                  </Label>
+                <div className="space-y-3">
+                  <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Verified Email Address</Label>
                   <Input
                     id="email"
                     name="email"
@@ -252,157 +249,86 @@ const BorrowerProfile = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className="disabled:opacity-100 disabled:cursor-default"
+                    className="h-14 rounded-2xl bg-surface-container/30 border-border/40 focus:ring-primary/20 font-bold transition-all disabled:opacity-70"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
-                    Phone
-                  </Label>
+                <div className="space-y-3">
+                  <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Mobile Contact</Label>
                   <Input
                     id="phone"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className="disabled:opacity-100 disabled:cursor-default"
+                    className="h-14 rounded-2xl bg-surface-container/30 border-border/40 focus:ring-primary/20 font-bold transition-all disabled:opacity-70"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Member Since
-                  </Label>
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Account Since</Label>
                   <Input
-                    value={new Date(
-                      user.lastActiveAt || "",
-                    ).toLocaleDateString()}
+                    value={format(new Date(user.lastActiveAt || Date.now()), "PPPP")}
                     disabled
-                    className="disabled:opacity-100 disabled:cursor-default"
+                    className="h-14 rounded-2xl bg-surface-container/10 border-border/20 font-bold opacity-50"
                   />
                 </div>
               </div>
 
               {isEditing && (
-                <div className="flex gap-3 justify-end pt-4">
+                <div className="flex gap-4 justify-end pt-6 border-t border-border/20">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     onClick={handleCancel}
                     disabled={isLoading || isUploading}
+                    className="rounded-full px-8 font-bold text-xs uppercase tracking-widest"
                   >
-                    Cancel
+                    Discard
                   </Button>
                   <Button
                     type="submit"
                     disabled={isLoading || isUploading}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="rounded-full px-12 h-12 bg-primary hover:bg-primary/90 font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
                   >
-                    {isLoading || isUploading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      "Save Changes"
-                    )}
+                    {isLoading || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Commit Changes"}
                   </Button>
                 </div>
               )}
             </form>
-          </CardContent>
-        </Card>
+          </Card>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Roles & Permissions</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Your assigned roles and permissions in the system
-            </p>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2">
+        {/* Roles & Permissions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-up delay-200">
+           <Card className="bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-8">
+              <h3 className="text-lg font-black tracking-tight flex items-center gap-3 mb-6">
+                 <Shield className="w-5 h-5 text-primary" /> Authority
+              </h3>
               <div className="space-y-4">
-                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
-                  <Shield className="w-5 h-5 text-primary" />
-                  Assigned Roles
-                </Label>
-                <div className="grid gap-3">
-                  {user.roles && user.roles.length > 0 ? (
-                    user.roles.map((roleWrapper) => (
-                      <div
-                        key={roleWrapper.role.id}
-                        className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
-                      >
-                        <p className="font-semibold text-sm">
-                          {roleWrapper.role.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1 lowercase first-letter:uppercase">
-                          {roleWrapper.role.description ||
-                            `Access level granted by ${roleWrapper.role.name} role`}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No roles assigned
-                      </p>
+                 {user.roles?.map((r) => (
+                    <div key={r.role.id} className="p-5 rounded-2xl bg-primary/5 border border-primary/20 group hover:bg-primary/10 transition-all">
+                       <p className="font-black text-primary text-sm uppercase tracking-wider">{r.role.name}</p>
+                       <p className="text-xs text-muted-foreground mt-1 font-medium">{r.role.description || "Unrestricted platform participant"}</p>
                     </div>
-                  )}
-                </div>
+                 ))}
               </div>
+           </Card>
 
-              <div className="space-y-4">
-                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
-                  <Lock className="w-5 h-5 text-primary" />
-                  Specific Permissions
-                </Label>
-                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
-                  {user.permissions && user.permissions.length > 0 ? (
-                    (Array.isArray(user.permissions)
-                      ? user.permissions
-                      : []
-                    ).map((permission: any, index: number) => {
-                      const permissionName =
-                        typeof permission === "string"
-                          ? permission
-                          : permission?.permission?.name ||
-                            permission?.name ||
-                            "Unknown";
-                      return (
-                        <div
-                          key={index}
-                          className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
-                        >
-                          <p className="font-semibold text-sm">
-                            {permissionName}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Allows you to {permissionName.toLowerCase()} within
-                            the platform
-                          </p>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No individual permissions assigned
-                      </p>
+           <Card className="bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] p-8 overflow-hidden">
+              <h3 className="text-lg font-black tracking-tight flex items-center gap-3 mb-6">
+                 <Lock className="w-5 h-5 text-primary" /> Active Permissions
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-premium">
+                 {user.permissions?.map((p: any, i: number) => (
+                    <div key={i} className="p-3 rounded-xl bg-surface-container/20 border border-border/20 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                       {typeof p === 'string' ? p : p?.name || 'Authorized'}
                     </div>
-                  )}
-                </div>
+                 ))}
               </div>
-            </div>
-            </div>
-          </CardContent>
-        </Card>
+           </Card>
+        </div>
       </div>
     </BorrowerLayout>
   );
