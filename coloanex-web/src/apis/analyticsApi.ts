@@ -70,6 +70,17 @@ export interface UserRoleData {
   count: number;
 }
 
+export interface BorrowerAnalytics {
+  totalLoans: number;
+  activeLoans: number;
+  totalBorrowed: number;
+  totalInterest: number;
+  totalAmountDue: number;
+  totalPaid: number;
+  pendingAmount: number;
+  overduePayments: number;
+}
+
 export interface BorrowerStatusData {
   status: string;
   count: number;
@@ -238,6 +249,20 @@ const analyticsApi = baseApi.injectEndpoints({
           : {},
       }),
     }),
+    getBorrowerAnalytics: builder.query<
+      BorrowerAnalytics,
+      { startDate?: string; endDate?: string } | void
+    >({
+      query: (params) => ({
+        url: "analytics/borrower",
+        params: params
+          ? {
+              ...(params.startDate ? { startDate: params.startDate } : {}),
+              ...(params.endDate ? { endDate: params.endDate } : {}),
+            }
+          : {},
+      }),
+    }),
   }),
 });
 
@@ -254,6 +279,7 @@ export const {
   useGetMonthlyBorrowersQuery,
   useGetBorrowerMonthlyLoansQuery,
   useGetBorrowersByStatusQuery,
+  useGetBorrowerAnalyticsQuery,
 } = analyticsApi;
 
 export default analyticsApi;
