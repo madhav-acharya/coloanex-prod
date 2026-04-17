@@ -6,9 +6,11 @@ import { SuperAdminRoutes } from "@/routes/SuperAdminRoute";
 import { BorrowerRoutes } from "@/routes/BorrowerRoute";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActivityLog } from "@/hooks/useActivityLog";
+import { useTheme } from "@/hooks/useTheme";
 
 function App() {
   useActivityLog();
+  useTheme();
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
