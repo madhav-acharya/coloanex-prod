@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Workflow,
   Layers,
@@ -12,7 +11,6 @@ import {
   CheckCircle2,
   ArrowRight,
 } from "lucide-react";
-import PublicLayout from "@/components/layouts/PublicLayout";
 import { motion } from "framer-motion";
 
 const fadeIn = {
@@ -26,342 +24,220 @@ const stagger = {
 
 export default function Features() {
   return (
-    <PublicLayout>
-      <div className="bg-background text-foreground transition-colors duration-300 pb-20 overflow-hidden">
-        {/* Dynamic Hero */}
-        <div className="relative pt-32 pb-24 flex flex-col items-center justify-center text-center overflow-hidden">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 150, ease: "linear" }}
-            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-[radial-gradient(ellipse_at_center,rgba(var(--primary-rgb),0.05),transparent_70%)] z-0 pointer-events-none"
-          ></motion.div>
-
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-            className="container mx-auto px-4 max-w-5xl relative z-10"
-          >
-            <motion.div variants={fadeIn}>
-              <Badge
-                variant="outline"
-                className="mb-6 py-1.5 px-6 text-sm bg-primary/10 text-primary border-primary/20 shadow-glow"
-              >
-                Enterprise Feature Suite
-              </Badge>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tighter mb-8 text-foreground leading-[1.1]">
-                Everything You Need to{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-                  Scale Credit
-                </span>
-              </h1>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed mb-10 max-w-3xl mx-auto">
-                Coloanex was engineered from the ground up for massive scaling.
-                Real-time synchronicity, mathematical trust via blockchain, and
-                unparalleled analytics.
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Feature Tabs section */}
-        <div className="container mx-auto px-4 max-w-6xl mt-12 mb-24">
-          <Tabs defaultValue="management" className="w-full">
-            <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 h-auto p-1 bg-muted/50 rounded-2xl mb-12">
-              <TabsTrigger
-                value="management"
-                className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all"
-              >
-                <Layers className="w-5 h-5 mr-2" /> Web Management
-              </TabsTrigger>
-              <TabsTrigger
-                value="borrower"
-                className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-accent data-[state=active]:shadow-lg transition-all"
-              >
-                <Smartphone className="w-5 h-5 mr-2" /> Borrower App
-              </TabsTrigger>
-              <TabsTrigger
-                value="security"
-                className="py-4 text-base md:text-lg font-semibold rounded-xl data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all"
-              >
-                <ShieldCheck className="w-5 h-5 mr-2" /> Security Engine
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Management Tab Content */}
-            <TabsContent value="management">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="grid md:grid-cols-2 gap-12 items-center"
-              >
-                <div>
-                  <h3 className="text-3xl font-bold mb-4">
-                    Complete Operational Superiority
-                  </h3>
-                  <p className="text-lg text-muted-foreground mb-8">
-                    Administrate the whole lending pipeline, customize terms,
-                    manage distinct regions seamlessly.
-                  </p>
-
-                  <div className="space-y-4">
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <Workflow className="w-8 h-8 text-primary shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          Multi-Tier Approvals
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Implement rigid verification and multi-signature
-                          authorization processes to prevent internal fraud.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <BarChart3 className="w-8 h-8 text-primary shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          Real-Time Data Pipelines
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Dashboards update seamlessly instantly as borrowers
-                          apply or make payments across devices without page
-                          reloads.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <Globe className="w-8 h-8 text-primary shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          Multi-Tenant Architecture
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Spin up distinct branches or regions underneath one
-                          main organization with distinct rule structures.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <ShieldCheck className="w-8 h-8 text-primary shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          Proof of Compliance
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Every operational decision is cryptographically signed
-                          and stored, creating an immutable audit trail for
-                          regulators.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="relative aspect-square flex items-center justify-center p-8">
-                  <div className="absolute inset-0 bg-primary/5 rounded-[3rem] -rotate-6"></div>
-                  <div className="w-full h-full bg-card shadow-2xl rounded-3xl border border-primary/20 p-6 flex flex-col relative z-10 overflow-hidden">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="flex-1 h-3 bg-muted rounded-full"></div>
-                      <div className="w-24 h-3 bg-muted rounded-full"></div>
-                    </div>
-                    <div className="flex-1 grid grid-cols-2 gap-4">
-                      <div className="bg-primary/10 rounded-2xl flex items-end p-4">
-                        <div className="w-full h-2/3 bg-primary/20 rounded-t-xl overflow-hidden relative">
-                          <motion.div
-                            animate={{ height: ["0%", "100%", "50%"] }}
-                            transition={{ duration: 3, repeat: Infinity }}
-                            className="absolute bottom-0 w-full bg-primary/80 dark:bg-primary border border-primary/50 shadow-[0_0_15px_rgba(22,163,74,0.5)]"
-                          ></motion.div>
-                        </div>
-                      </div>
-                      <div className="bg-accent/10 rounded-2xl flex items-end p-4">
-                        <div className="w-full h-full bg-accent/20 rounded-t-xl overflow-hidden relative">
-                          <motion.div
-                            animate={{ height: ["100%", "30%", "80%"] }}
-                            transition={{ duration: 4, repeat: Infinity }}
-                            className="absolute bottom-0 w-full bg-primary/80 dark:bg-primary border border-primary/50 shadow-glow"
-                          ></motion.div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 flex gap-4">
-                      <div className="flex-1 h-12 bg-foreground/5 dark:bg-foreground/10 border border-border/50 rounded-xl flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-sm">
-                        View
-                      </div>
-                      <div className="flex-1 h-12 bg-foreground/5 dark:bg-foreground/10 border border-border/50 rounded-xl flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-sm">
-                        View
-                      </div>
-                      <div className="flex-1 h-12 bg-foreground/5 dark:bg-foreground/10 border border-border/50 rounded-xl flex items-center justify-center text-xs font-semibold text-muted-foreground shadow-sm">
-                        View
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </TabsContent>
-
-            {/* Borrower Tab Content */}
-            <TabsContent value="borrower">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="grid md:grid-cols-2 gap-12 items-center"
-              >
-                <div className="order-2 md:order-1 relative aspect-square flex items-center justify-center p-8">
-                  <div className="absolute inset-0 bg-accent/5 rounded-[3rem] rotate-3"></div>
-                  <div className="w-[280px] h-[550px] bg-card shadow-2xl rounded-[3rem] border-8 border-foreground/10 p-6 flex flex-col relative z-10 overflow-hidden items-center">
-                    <div className="w-16 h-4 bg-foreground/10 absolute top-0 rounded-b-xl"></div>
-                    <div className="w-20 h-20 bg-accent/20 rounded-full mt-12 mb-6 flex items-center justify-center text-accent">
-                      <CheckCircle2 className="w-10 h-10" />
-                    </div>
-                    <h4 className="text-xl font-bold mb-2">Loan Approved</h4>
-                    <p className="text-sm text-muted-foreground text-center mb-6">
-                      Your requested $5,000 has been verified.
-                    </p>
-                    <div className="w-full space-y-3">
-                      <div className="h-10 bg-foreground/5 dark:bg-foreground/10 w-full rounded-lg border border-border/50 flex items-center pl-3">
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          Verify Block
-                        </span>
-                      </div>
-                      <div className="h-10 bg-foreground/5 dark:bg-foreground/10 w-full rounded-lg border border-border/50 flex items-center pl-3">
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          Verify Block
-                        </span>
-                      </div>
-                      <div className="h-10 bg-foreground/5 dark:bg-foreground/10 w-full rounded-lg border border-border/50 flex items-center pl-3">
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          Verify Block
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-auto w-full h-12 bg-accent text-accent-foreground font-bold rounded-xl flex items-center justify-center">
-                      Accept Terms
-                    </div>
-                  </div>
-                </div>
-
-                <div className="order-1 md:order-2">
-                  <h3 className="text-3xl font-bold mb-4">
-                    Zero Friction for End Users
-                  </h3>
-                  <p className="text-lg text-muted-foreground mb-8">
-                    A smooth mobile experience translates to higher repayment
-                    rates and better customer satisfaction.
-                  </p>
-
-                  <div className="space-y-4">
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <Smartphone className="w-8 h-8 text-accent shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          React Native Performance
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Cross-platform natively compiled UI ensures perfectly
-                          smooth animations and interactions regardless of
-                          device.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-4 p-4 border border-border/50 rounded-xl bg-card/50">
-                      <Clock className="w-8 h-8 text-accent shrink-0" />
-                      <div>
-                        <h4 className="font-semibold text-lg">
-                          Reminders Engine
-                        </h4>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Automated push notifications and SMS integrations
-                          pre-warn borrowers ahead of repayment schedules.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </TabsContent>
-
-            {/* Security Tab Content */}
-            <TabsContent value="security">
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-12"
-              >
-                <div className="grid md:grid-cols-3 gap-8 w-full mt-8">
-                  <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                    <ShieldCheck className="w-12 h-12 text-primary mx-auto mb-4" />
-                    <h4 className="font-bold text-xl mb-2">
-                      End-to-End Encryption
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      All payload data moving between frontend and APIs is TLS
-                      1.3 secured and payload hashed.
-                    </p>
-                  </div>
-                  <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                    <Workflow className="w-12 h-12 text-primary mx-auto mb-4" />
-                    <h4 className="font-bold text-xl mb-2">
-                      Smart Contracts Mapping
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Coloanex commits loan metadata on-chain to provide an
-                      immutable, timestamped auditing verification layer.
-                    </p>
-                  </div>
-                  <div className="p-8 border border-primary/20 rounded-2xl bg-card shadow-lg hover:shadow-emerald-500/10 transition-shadow">
-                    <CheckCircle2 className="w-12 h-12 text-primary mx-auto mb-4" />
-                    <h4 className="font-bold text-xl mb-2">
-                      Continuous Pentesting
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Our microservices architectures strictly bound the attack
-                      surface, ensuring single point failures cannot cross the
-                      boundary.
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Global CTA */}
-        <div className="container mx-auto px-4">
+    <div className="w-full">
+      <div className="bg-background text-foreground pb-24 overflow-hidden">
+        
+        {/* Header */}
+        <div className="relative pt-12 pb-20 text-center">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={stagger}
-            className="bg-muted p-12 md:p-16 rounded-[2.5rem] border border-border flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl max-w-6xl mx-auto"
+            className="max-w-[1400px] mx-auto px-4"
           >
-            <div>
-              <h2 className="text-3xl font-bold mb-4">
-                See the API and Architecture
+            <motion.div variants={fadeIn}>
+              <Badge variant="outline" className="mb-6 py-1 px-4 border-primary/30 text-primary uppercase font-black tracking-widest">The Feature Suite</Badge>
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <h2 className="text-5xl md:text-7xl font-black mb-10 leading-none">
+                Infrastructure to <span className="text-primary">Scale</span>
               </h2>
-              <p className="text-lg text-muted-foreground max-w-xl">
-                Whether you integrate via our React SDK or raw REST API,
-                building with Coloanex happens in record time.
+            </motion.div>
+            <motion.div variants={fadeIn}>
+              <p className="text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto font-medium">
+                Coloanex was engineered for massive volume. Real-time synchronicity, mathematical trust, and professional-grade analytics.
+              </p>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        <div className="max-w-[1400px] mx-auto px-4 space-y-48 mt-12 mb-24">
+          
+          {/* 1. Web Management */}
+          <motion.section 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, margin: "-100px" }} 
+            variants={stagger} 
+            className="grid lg:grid-cols-2 gap-24 items-center"
+          >
+            <motion.div variants={fadeIn}>
+              <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-10">
+                <Workflow className="w-10 h-10" />
+              </div>
+              <h2 className="text-5xl font-black mb-10">Institutional Command Center</h2>
+              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
+                Administrate your entire lending pipeline from a unified dashboard. Customize interest policies, regional rules, and approval hierarchies with absolute control.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-primary mb-4">
+                    <Layers className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-2xl font-black">Multi-Tier Approval</h4>
+                  <p className="text-lg text-muted-foreground leading-relaxed">Cryptographic multi-sig authorization to prevent unauthorized rule changes.</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-primary mb-4">
+                    <BarChart3 className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-2xl font-black">Real-Time Data</h4>
+                  <p className="text-lg text-muted-foreground leading-relaxed">Live streaming updates as borrowers apply or make payments across regions.</p>
+                </div>
+              </div>
+            </motion.div>
+
+             <motion.div variants={fadeIn} className="relative group">
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-primary/5 blur-[120px] rounded-full scale-110 opacity-60" />
+                <div className="relative rounded-[3rem] overflow-hidden">
+                 <img
+                     src="/static/loan.png"
+                     alt="Management Dashboard"
+                     className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.03]"
+                 />
+                </div>
+             </motion.div>
+          </motion.section>
+
+          {/* 2. Borrower App */}
+          <motion.section 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, margin: "-100px" }} 
+            variants={stagger} 
+            className="grid lg:grid-cols-2 gap-24 items-center"
+          >
+            <motion.div variants={fadeIn} className="lg:order-2">
+              <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-10">
+                <Smartphone className="w-10 h-10" />
+              </div>
+              <h2 className="text-5xl font-black mb-10">Zero Friction Onboarding</h2>
+              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
+                Empower your borrowers with a premium mobile experience. Instant applications, transparent tracking, and biometrically secured repayments.
+              </p>
+
+              <div className="grid sm:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-emerald-500 mb-4">
+                    <Smartphone className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-2xl font-black">Native Native</h4>
+                  <p className="text-lg text-muted-foreground leading-relaxed">High-performance compiled UI for a buttery smooth 120Hz borrower experience.</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-emerald-500 mb-4">
+                    <Clock className="w-8 h-8" />
+                  </div>
+                  <h4 className="text-2xl font-black">Smart Lifecycle</h4>
+                  <p className="text-lg text-muted-foreground leading-relaxed">Intelligent push notifications ensure borrowers stay ahead of their schedules.</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeIn} className="lg:order-1 relative group">
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-emerald-500/5 blur-[120px] rounded-full scale-110 opacity-60" />
+                <div className="w-[300px] h-[620px] bg-card shadow-2xl rounded-[3.5rem] border-[12px] border-foreground/10 p-8 flex flex-col relative z-10 mx-auto overflow-hidden">
+                    <div className="w-28 h-6 bg-foreground/10 absolute top-0 left-1/2 -translate-x-1/2 rounded-b-3xl"></div>
+                    <div className="mt-16 space-y-8">
+                        <div className="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
+                            <CheckCircle2 className="w-12 h-12" />
+                        </div>
+                        <h4 className="text-3xl font-black">Loan Active</h4>
+                        <div className="space-y-4">
+                            <div className="h-4 bg-muted rounded-full w-full"></div>
+                            <div className="h-4 bg-muted rounded-full w-2/3"></div>
+                        </div>
+                        <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem]">
+                            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Progression</p>
+                            <p className="text-3xl font-black">88%</p>
+                            <div className="w-full h-3 bg-muted rounded-full mt-6 overflow-hidden">
+                                <div className="w-[88%] h-full bg-primary" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+          </motion.section>
+
+          {/* 3. Security Engine */}
+          <motion.section 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true, margin: "-100px" }} 
+            variants={stagger} 
+            className="grid lg:grid-cols-2 gap-24 items-center"
+          >
+            <motion.div variants={fadeIn}>
+              <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center text-accent mb-10">
+                <ShieldCheck className="w-10 h-10" />
+              </div>
+              <h2 className="text-5xl font-black mb-10">Hardened Infrastructure</h2>
+              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
+                Security isn't an afterthought. Every transaction and rule set is encrypted and mirrored across our distributed trust ledger.
+              </p>
+
+              <div className="space-y-10">
+                {[
+                  { icon: <ShieldCheck />, title: "Quantum-Safe Encryption", desc: "Military-grade AES-256 and TLS 1.3 secured data movement across all layers." },
+                  { icon: <Globe />, title: "Distributed Auditing", desc: "Automated reconciliation between standard databases and blockchain finality logs." },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-8">
+                    <div className="w-16 h-16 shrink-0 rounded-[1.5rem] bg-muted/50 flex items-center justify-center text-accent">
+                      {item.icon}
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-black mb-2">{item.title}</h4>
+                      <p className="text-lg text-muted-foreground leading-relaxed">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div variants={fadeIn} className="relative group">
+              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-accent/5 blur-[120px] rounded-full scale-110 opacity-60" />
+              <div className="relative rounded-[4rem] overflow-hidden">
+                <img
+                  src="/static/security_v3_white_bg_1776447306071.png"
+                  alt="Security Architecture"
+                  className="relative w-full h-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-[1.03]"
+                  style={{ maskImage: 'radial-gradient(circle, black 70%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 70%, transparent 100%)' }}
+                />
+              </div>
+            </motion.div>
+          </motion.section>
+
+        </div>
+
+        {/* Wide CTA */}
+        <div className="max-w-[1400px] mx-auto px-4 mt-40">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="bg-muted/30 p-16 md:p-24 rounded-[4rem] border border-border flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden"
+          >
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
+            <div className="relative z-10 max-w-2xl">
+              <h2 className="text-5xl font-black mb-6 leading-tight">
+                Integrate via SDK or REST API
+              </h2>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Whether you prefer our React Native UI components or direct server-to-server interaction, Coloanex adapts to your existing tech stack effortlessly.
               </p>
             </div>
             <Button
               size="lg"
-              className="rounded-full px-8 py-6 text-lg tracking-wide shrink-0 shadow-glow group"
+              className="h-20 px-12 text-xl rounded-full bg-foreground text-background font-black shadow-2xl hover:opacity-90 transition-transform hover:scale-105 shrink-0"
             >
-              Start Technical Integration
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              Start Integration
             </Button>
           </motion.div>
         </div>
       </div>
-    </PublicLayout>
+    </div>
   );
 }
