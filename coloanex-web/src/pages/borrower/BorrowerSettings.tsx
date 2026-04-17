@@ -17,6 +17,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
+  Activity,
   Loader2,
   User,
   Wallet,
@@ -60,6 +61,7 @@ import {
   useUpsertPaymentConfigMutation,
 } from "@/apis/paymentConfigsApi";
 import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 const gatewayLogoByType: Record<"ESEWA" | "KHALTI", string> = {
   ESEWA: "/images/esewa.png",
@@ -2093,45 +2095,290 @@ const BorrowerSettings = () => {
     );
   }
 
+  if (activeSection) {
+    const activeOption = settingsOptions.find(o => o.id === activeSection);
+    const Icon = activeOption?.icon || ArrowLeft;
+
+    return (
+      <BorrowerLayout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 animate-fade-in px-4">
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                onClick={() => setActiveSection(null)}
+                className="group -ml-4 mb-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                Back to Controls
+              </Button>
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-primary/10 text-primary">
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-foreground font-headline leading-none">
+                  {activeOption?.title}
+                </h1>
+              </div>
+              <p className="text-muted-foreground text-lg font-medium max-w-2xl pl-1">
+                {activeOption?.description}
+              </p>
+            </div>
+          </div>
+
+          <div className="animate-fade-up">
+            <Card className="bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardContent className="p-8 sm:p-12">
+                {activeSection === "account" && (
+                  <form onSubmit={handleAccountUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4 col-span-full">
+                       <h3 className="text-xl font-bold tracking-tight border-b border-border/20 pb-4 mb-4">Identity Details</h3>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-fullName" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Full Name</Label>
+                      <Input
+                        id="account-fullName"
+                        value={accountForm.fullName}
+                        onChange={(e) => setAccountForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                        className="h-14 rounded-2xl bg-surface/20 border-border/40 focus:ring-primary/20"
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-email" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Email Address</Label>
+                      <Input
+                        id="account-email"
+                        type="email"
+                        value={accountForm.email}
+                        onChange={(e) => setAccountForm((prev) => ({ ...prev, email: e.target.value }))}
+                        className="h-14 rounded-2xl bg-surface/20 border-border/40 focus:ring-primary/20"
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="account-phone" className="text-xs font-black uppercase tracking-widest text-muted-foreground">Contact Number</Label>
+                      <Input
+                        id="account-phone"
+                        value={accountForm.phone}
+                        onChange={(e) => setAccountForm((prev) => ({ ...prev, phone: e.target.value }))}
+                        className="h-14 rounded-2xl bg-surface/20 border-border/40 focus:ring-primary/20"
+                        placeholder="+1 234 567 890"
+                      />
+                    </div>
+                    <div className="col-span-full flex justify-end pt-8 border-t border-border/20 mt-8">
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                        className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20"
+                      >
+                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Commit Identity"}
+                      </Button>
+                    </div>
+                  </form>
+                )}
+
+                {activeSection === "wallet" && (
+                  <div className="space-y-12">
+                    <div className="bg-primary/5 border border-primary/20 rounded-3xl p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                       <div className="space-y-2 text-center sm:text-left">
+                          <h3 className="text-2xl font-black tracking-tight flex items-center gap-3">
+                             {walletConfigs.connectedAddress ? (
+                                <>Address Linked <ShieldCheck className="text-emerald-500 w-6 h-6" /></>
+                             ) : (
+                                <>Link Crypto Wallet <Wallet className="text-primary w-6 h-6" /></>
+                             )}
+                          </h3>
+                          <p className="text-muted-foreground font-medium max-w-sm">
+                             Authorize your blockchain identity to participate in on-chain lending protocols.
+                          </p>
+                       </div>
+                       {walletConfigs.connectedAddress ? (
+                          <div className="flex flex-col items-end gap-3">
+                             <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-4 py-2 rounded-xl font-black text-[10px] tracking-widest uppercase">
+                                Verified Connection
+                             </Badge>
+                             <div className="font-mono text-xs bg-surface/40 p-3 rounded-xl border border-border/20">
+                                {walletConfigs.connectedAddress}
+                             </div>
+                             <Button variant="ghost" onClick={handleDisconnectWallet} className="text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-xl font-bold text-xs">
+                                Disconnect Session
+                             </Button>
+                          </div>
+                       ) : (
+                          <Button 
+                            onClick={handleConnectWallet} 
+                            disabled={isWalletBusy}
+                            className="h-14 px-8 rounded-2xl bg-primary hover:scale-105 transition-transform shadow-xl shadow-primary/20 font-black text-xs uppercase tracking-widest"
+                          >
+                             Link Institutional Wallet
+                          </Button>
+                       )}
+                    </div>
+
+                    {walletConfigs.connectedAddress && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8">
+                         <div className="space-y-6">
+                            <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground pl-1">Gas Processing Mode</h4>
+                            <div className="grid gap-4">
+                               <button 
+                                 onClick={() => handleUpdateGasMode("WALLET_PAYMENT")}
+                                 className={cn(
+                                   "p-6 text-left rounded-3xl border-2 transition-all flex items-start gap-4 group",
+                                   walletConfigs.gasPaymentMode === "WALLET_PAYMENT" ? "border-primary bg-primary/5" : "border-border/20 hover:border-primary/50"
+                                 )}
+                               >
+                                  <div className={cn("p-2 rounded-lg", walletConfigs.gasPaymentMode === "WALLET_PAYMENT" ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                                     <Zap className="w-5 h-5" />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <p className="font-black text-sm uppercase tracking-tight">Standard Mode</p>
+                                     <p className="text-xs text-muted-foreground font-medium leading-relaxed">Execute operations directly from your linked wallet balance.</p>
+                                  </div>
+                               </button>
+                               <button 
+                                 onClick={() => handleUpdateGasMode("PLATFORM_WALLET")}
+                                 className={cn(
+                                   "p-6 text-left rounded-3xl border-2 transition-all flex items-start gap-4 group",
+                                   walletConfigs.gasPaymentMode === "PLATFORM_WALLET" ? "border-primary bg-primary/5" : "border-border/20 hover:border-primary/50"
+                                 )}
+                               >
+                                  <div className={cn("p-2 rounded-lg", walletConfigs.gasPaymentMode === "PLATFORM_WALLET" ? "bg-primary text-white" : "bg-muted text-muted-foreground")}>
+                                     <ShieldCheck className="w-5 h-5" />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <p className="font-black text-sm uppercase tracking-tight">Institutional Sponsorship</p>
+                                     <p className="text-xs text-muted-foreground font-medium leading-relaxed">Transactions are sponsored by the platform for zero gas frictions.</p>
+                                  </div>
+                               </button>
+                            </div>
+                         </div>
+
+                         <div className="bg-surface-container-low/20 rounded-[2rem] p-8 border border-border/20 space-y-6">
+                            <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Digital Assets Summary</h4>
+                            <div className="space-y-4">
+                               <div className="flex justify-between items-center bg-surface/40 p-4 rounded-2xl border border-border/10">
+                                  <span className="text-sm font-bold">Base Token Balance</span>
+                                  <span className="font-black text-primary">0.00 ETH</span>
+                               </div>
+                               <div className="flex justify-between items-center bg-surface/40 p-4 rounded-2xl border border-border/10">
+                                  <span className="text-sm font-bold">Authorized for Lending</span>
+                                  <Badge className="bg-emerald-500/10 text-emerald-500 border-none font-black text-[10px]">Verified</Badge>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeSection === "notifications" && (
+                   <div className="space-y-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         {[
+                            { id: "emailNotifications", title: "Global Intel", desc: "Institutional reports and market updates via secure email." },
+                            { id: "loanUpdates", title: "Commitment Alerts", desc: "Real-time verification of loan status and smart contract events." },
+                            { id: "kycUpdates", title: "Identity Tracking", desc: "Notification of KYC processing and periodic re-verification." },
+                            { id: "securityAlerts", title: "Threat Detection", desc: "Critical security notifications regarding institutional access." }
+                         ].map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-6 bg-surface-container-low/20 rounded-3xl border border-border/20 group hover:border-primary/30 transition-colors">
+                               <div className="space-y-1">
+                                  <Label className="text-base font-black tracking-tight cursor-pointer" htmlFor={item.id}>{item.title}</Label>
+                                  <p className="text-xs text-muted-foreground font-medium">{item.desc}</p>
+                               </div>
+                               <Switch
+                                  id={item.id}
+                                  checked={notificationSettings[item.id as keyof typeof notificationSettings]}
+                                  onCheckedChange={() => handleNotificationToggle(item.id as keyof typeof notificationSettings)}
+                                  className="data-[state=checked]:bg-primary"
+                               />
+                            </div>
+                         ))}
+                      </div>
+                   </div>
+                )}
+
+                {!["account", "wallet", "notifications"].includes(activeSection) && (
+                   <div className="py-20 flex flex-col items-center justify-center text-center space-y-6">
+                      <div className="p-6 rounded-full bg-primary/10 text-primary">
+                         <Icon className="w-12 h-12" />
+                      </div>
+                      <div className="space-y-2">
+                         <h3 className="text-2xl font-black tracking-tight">{activeOption?.title} Configuration</h3>
+                         <p className="text-muted-foreground max-w-sm font-medium">This module is currently undergoing institutional optimization for the new portal ecosystem.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => setActiveSection(null)} className="rounded-2xl px-8 h-12 font-black text-xs uppercase tracking-widest">
+                         Return to Control Center
+                      </Button>
+                   </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </BorrowerLayout>
+    );
+  }
+
   return (
     <BorrowerLayout
-      title="Settings"
-      description="Manage your account preferences, security, and wallet connections"
+      title="System Configurations"
+      description="Manage your institutional account settings, security, and global preferences."
     >
-      <Card>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {settingsOptions.map((option) => {
-              const Icon = option.icon;
-              return (
-                <div
-                  key={option.id}
-                  onClick={() => setActiveSection(option.id)}
-                  className="flex items-center gap-4 p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                >
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">
-                      {option.title}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {option.description}
-                    </p>
-                  </div>
-                  {option.badge && (
-                    <div className="flex-shrink-0">{option.badge}</div>
-                  )}
-                  <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+      <div className="space-y-16 animate-fade-up">
+        {/* Simplified Header / Actions */}
+        <div className="flex justify-start">
+           <Button
+             variant="ghost"
+             size="sm"
+             onClick={handleRefresh}
+             disabled={isRefreshing}
+             className="rounded-full px-6 bg-surface/40 backdrop-blur-md border border-border/40 hover:bg-primary/10 hover:text-primary transition-all font-black text-[10px] uppercase tracking-widest gap-2"
+           >
+             {isRefreshing ? (
+               <Loader2 className="w-3.5 h-3.5 animate-spin" />
+             ) : (
+               <Activity className="w-3.5 h-3.5" />
+             )}
+             Synchronize Session
+           </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {settingsOptions.map((option, idx) => {
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.id}
+                onClick={() => setActiveSection(option.id)}
+                className="group relative flex flex-col items-start text-left p-8 bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] hover:bg-surface/60 transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1 shadow-sm hover:shadow-2xl hover:shadow-primary/10"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="mb-6 p-4 rounded-2xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors duration-500">
+                  <Icon className="w-6 h-6" />
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center justify-between w-full">
+                    <h3 className="text-xl font-black tracking-tight">{option.title}</h3>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors translate-x-0 group-hover:translate-x-1 duration-300" />
+                  </div>
+                  <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                    {option.description}
+                  </p>
+                </div>
+
+                {option.badge && (
+                  <div className="mt-6 w-full pt-6 border-t border-border/20">
+                    {option.badge}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </BorrowerLayout>
   );
 };
