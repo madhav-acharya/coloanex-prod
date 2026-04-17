@@ -7,11 +7,9 @@ import BrowseLenders from "@/pages/borrower/BrowseLenders";
 import LenderDetails from "@/pages/borrower/LenderDetails";
 import MyLoans from "@/pages/borrower/MyLoans";
 import LoanDetails from "@/pages/borrower/LoanDetails";
-import BorrowerTransactions from "@/pages/borrower/BorrowerTransactions";
 import MakeRepayment from "@/pages/borrower/MakeRepayment";
-import BorrowerProfile from "@/pages/borrower/BorrowerProfile";
 import BorrowerSettings from "@/pages/borrower/BorrowerSettings";
-import BorrowerPricing from "@/pages/borrower/BorrowerPricing";
+import Pricing from "@/pages/public/Pricing";
 
 interface BorrowerRouteProps {
   children: React.ReactNode;
@@ -121,14 +119,6 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/profile"
-        element={
-          <BorrowerRouteWrapper>
-            <BorrowerProfile />
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
         path="/borrower/settings"
         element={
           <BorrowerRouteWrapper>
@@ -140,7 +130,7 @@ export const BorrowerRoutes = () => {
         path="/borrower/pricing"
         element={
           <BorrowerRouteWrapper>
-            <BorrowerPricing />
+            <Pricing />
           </BorrowerRouteWrapper>
         }
       />
