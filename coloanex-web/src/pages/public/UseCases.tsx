@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Factory, GraduationCap, Stethoscope, ShoppingBag, ArrowRight, Globe } from "lucide-react";
+import { Factory, GraduationCap, Stethoscope, ShoppingBag, ArrowRight, Globe, CheckCircle2 } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -14,134 +14,161 @@ export default function UseCases() {
     {
       title: "Manufacturing Supply Chains",
       desc: "Provide liquidity to suppliers instantly. Prevent production halts with on-the-spot factoring, automatically tracked on-chain for undeniable audit trails.",
-      icon: <Factory className="w-12 h-12 mb-4 text-primary" />,
-      color: "from-primary to-accent"
+      icon: <Factory className="w-12 h-12 mb-6" />,
+      color: "text-primary"
     },
     {
       title: "Educational Grants",
       desc: "Universities and independent lenders can offer structured, stage-based loans to students that only disburse when passing specific academic milestones.",
-      icon: <GraduationCap className="w-12 h-12 mb-4 text-primary" />,
-      color: "from-emerald-500 to-teal-400"
+      icon: <GraduationCap className="w-12 h-12 mb-6" />,
+      color: "text-emerald-500"
     },
     {
       title: "Medical Equipment Leasing",
       desc: "High-value machines can be financed seamlessly by private clinics. Multi-signature checks ensure equipment is verified before funds move.",
-      icon: <Stethoscope className="w-12 h-12 mb-4 text-accent" />,
-      color: "from-accent to-indigo-500"
+      icon: <Stethoscope className="w-12 h-12 mb-6" />,
+      color: "text-accent"
     },
     {
       title: "Retail Expansion Capital",
       desc: "Micro-loans to brick and mortar shops based on real-time integrated sales data. Adjust lending policies dynamically in the web tenant.",
-      icon: <ShoppingBag className="w-12 h-12 mb-4 text-purple-500" />,
-      color: "from-purple-500 to-fuchsia-500"
+      icon: <ShoppingBag className="w-12 h-12 mb-6" />,
+      color: "text-purple-500"
     },
     {
-        title: "Agricultural Micro-credits",
-        desc: "Empower farmers with seasonal credit for seeds and fertilizer. Repayment schedules can be tied to harvest cycles and market prices.",
-        icon: <Globe className="w-12 h-12 mb-4 text-emerald-600" />,
-        color: "from-emerald-600 to-green-400"
+      title: "Agricultural Micro-credits",
+      desc: "Empower farmers with seasonal credit for seeds and fertilizer. Repayment schedules can be tied to harvest cycles and market prices.",
+      icon: <Globe className="w-12 h-12 mb-6" />,
+      color: "text-emerald-600"
     }
   ];
 
   return (
-    <PublicLayout>
-      <div className="bg-background text-foreground transition-colors duration-300 pb-32">
-        <div className="relative pt-32 pb-24 text-center">
-          <motion.div initial="hidden" animate="visible" variants={stagger} className="container mx-auto px-4 max-w-5xl">
+    <div className="w-full">
+      <div className="bg-background text-foreground pb-24 overflow-hidden">
+
+        {/* Header */}
+        <div className="relative pt-12 pb-20 text-center">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="max-w-[1400px] mx-auto px-4">
             <motion.div variants={fadeIn}>
-              <Badge variant="outline" className="mb-6 py-1.5 px-6 text-sm bg-primary/10 text-primary border-primary/20 shadow-glow">
-                Industry Applications
-              </Badge>
+              <Badge variant="outline" className="mb-6 py-1 px-4 border-primary/30 text-primary uppercase font-black tracking-widest">Industry Verticals</Badge>
             </motion.div>
             <motion.div variants={fadeIn}>
-              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter mb-8 text-foreground leading-[1.1]">
-                Revolutionizing <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Use Cases</span> Everywhere
-              </h1>
+              <h2 className="text-5xl md:text-7xl font-black mb-10 leading-none">
+                Unlimited <span className="text-primary">Use Cases</span>
+              </h2>
             </motion.div>
             <motion.div variants={fadeIn}>
-              <p className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-3xl mx-auto">
-                Coloanex isn't just for traditional microfinance. Because of our isolated tenant architecture, any enterprise can become their own specialized lending facility.
+              <p className="text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto font-medium">
+                Coloanex isn't just for traditional microfinance. Our isolated tenant architecture allows any enterprise to become a specialized lending facility.
               </p>
             </motion.div>
           </motion.div>
         </div>
 
-        <div className="container mx-auto px-4 max-w-7xl">
-          <motion.div initial="hidden" animate="visible" variants={stagger} className="grid md:grid-cols-2 gap-8">
+        {/* Main Cases Grid */}
+        <div className="max-w-[1400px] mx-auto px-4">
+          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger} className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
             {cases.map((useCase, idx) => (
-              <motion.div key={idx} variants={fadeIn} className="group h-full">
-                <Card className="h-full bg-card hover:bg-muted/50 transition-colors border-border/50 overflow-hidden relative">
-                  <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${useCase.color} rounded-full blur-[80px] opacity-20 group-hover:opacity-40 transition-opacity`}></div>
-                  <CardContent className="p-10 flex flex-col h-full relative z-10">
-                    {useCase.icon}
-                    <h3 className="text-2xl font-bold mb-4">{useCase.title}</h3>
-                    <p className="text-lg text-muted-foreground mb-8 flex-1">{useCase.desc}</p>
-                    <div className="mt-auto">
-                      <Button variant="link" className="p-0 text-foreground group-hover:text-primary transition-colors">
-                        Learn more about this integration <ArrowRight className="ml-2 w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+              <motion.div key={idx} variants={fadeIn} className="group p-10 rounded-[3rem] hover:bg-muted/50 transition-all">
+                <div className={`${useCase.color}`}>
+                  {useCase.icon}
+                </div>
+                <h3 className="text-3xl font-black mb-4 tracking-tight">{useCase.title}</h3>
+                <p className="text-xl text-muted-foreground mb-8 leading-relaxed">{useCase.desc}</p>
+                <Button variant="link" className="p-0 text-foreground font-black group-hover:text-primary transition-colors text-lg font-black h-auto">
+                  Explore Implementation <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
               </motion.div>
             ))}
           </motion.div>
         </div>
-      
-        <div className="container mx-auto px-4 max-w-7xl mt-32">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Optimized for Diverse Scale</h2>
-            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-              Our infrastructure doesn’t just conform to one set of rules. We built Coloanex to be entirely agnostic to lending environments, dynamically routing KYC verifications, risk analysis, and smart-contract execution according to each tenant’s specified parameters.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-card p-8 rounded-[2rem] border shadow-glow transition-all hover:-translate-y-2 cursor-pointer">
-              <h3 className="text-xl font-bold mb-3">Enterprise Consortia</h3>
-              <p className="text-muted-foreground mb-4">
-                Pool liquidity across multiple legal entities and automate loan allocations through round-robin or proportionate fractional algorithms, ensuring zero single-point failure alongside immutable record-keeping.
-              </p>
-              <ul className="space-y-2 text-sm font-medium">
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Tiered admin approvals</li>
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Global compliance integration</li>
-              </ul>
-            </div>
-            <div className="bg-card p-8 rounded-[2rem] border shadow-glow transition-all hover:-translate-y-2 cursor-pointer">
-              <h3 className="text-xl font-bold mb-3">P2P Marketplaces</h3>
-              <p className="text-muted-foreground mb-4">
-                Run fully fledged matching engines. Borrowers submit requests; retail lenders supply partial or complete funds. We orchestrate the escrow and milestone disbursements.
-              </p>
-              <ul className="space-y-2 text-sm font-medium">
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Fractional investments</li>
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Decentralized settlements</li>
-              </ul>
-            </div>
-            <div className="bg-card p-8 rounded-[2rem] border shadow-glow transition-all hover:-translate-y-2 cursor-pointer">
-              <h3 className="text-xl font-bold mb-3">Microfinance Foundations</h3>
-              <p className="text-muted-foreground mb-4">
-                Operate gracefully in rural or low-bandwidth environments. Empower field-agents with specialized mobile capabilities while head-office maintains complete macroeconomic analytics over regional activities.
-              </p>
-              <ul className="space-y-2 text-sm font-medium">
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Offline mode syncing</li>
-                <li className="flex items-center text-primary"><ArrowRight className="w-4 h-4 mr-2" /> Mobile gateway payments</li>
-              </ul>
-            </div>
+
+        {/* Bottom Detailed Section */}
+        <div className="max-w-[1400px] mx-auto px-4 mt-48">
+          <div className="grid lg:grid-cols-2 gap-24 items-center">
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={stagger}
+              className="space-y-12"
+            >
+              <motion.div variants={fadeIn}>
+                <h2 className="text-5xl font-black mb-8 leading-tight">Optimized for Scaling Any Model</h2>
+                <p className="text-xl text-muted-foreground leading-relaxed">
+                  Our infrastructure is agnostic to lending environments, dynamically routing KYC verifications, risk analysis, and smart-contract execution according to each tenant’s specified parameters.
+                </p>
+              </motion.div>
+
+              <div className="space-y-12">
+                {[
+                  { title: "Enterprise Consortia", desc: "Pool liquidity across multiple legal entities and automate loan allocations through round-robin or proportionate fractional algorithms." },
+                  { title: "P2P Marketplaces", desc: "Run fully fledged matching engines. Borrowers submit requests; retail lenders supply partial or complete funds with escrow management." },
+                  { title: "Microfinance Foundations", desc: "Empower field-agents with specialized mobile capabilities while head-office maintains complete macroeconomic analytics." }
+                ].map((item, i) => (
+                  <motion.div key={i} variants={fadeIn} className="flex gap-8">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0 mt-1">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-2xl font-black mb-2">{item.title}</h4>
+                      <p className="text-lg text-muted-foreground leading-relaxed">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={fadeIn}
+              className="relative group p-12 lg:p-0"
+            >
+              <div className="absolute inset-0 bg-primary/5 rounded-full blur-[120px] scale-110 opacity-50" />
+              <div className="relative rounded-[4rem] overflow-hidden">
+                <img
+                  src="/static/use_cases_v3_white_bg_1776447287341.png"
+                  alt="Use Cases Overview"
+                  className="w-full h-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
+                  style={{ maskImage: 'radial-gradient(circle, black 70%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 70%, transparent 100%)' }}
+                />
+              </div>
+            </motion.div>
+
           </div>
         </div>
 
-        {/* Closing CTA */}
-        <div className="container mx-auto px-4 max-w-7xl mt-32 text-center pb-12">
-          <div className="bg-primary/5 p-12 rounded-[3rem] border border-primary/20 backdrop-blur-sm">
-            <h2 className="text-3xl font-extrabold mb-6">Discover the Specifics for Your Model</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-10">
-              Don’t see your exact use case represented? Our Tenant Rules Engine is Turing-complete for conditional logic.
-            </p>
-            <Button size="lg" className="rounded-full px-8 py-6 text-lg cursor-pointer">
-               Discuss Your Requirements <ArrowRight className="w-6 h-6 ml-3" />
-            </Button>
-          </div>
+        {/* Global CTA */}
+        <div className="max-w-[1400px] mx-auto px-4 mt-48">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="bg-primary p-16 md:p-24 rounded-[4rem] text-primary-foreground flex flex-col lg:flex-row items-center justify-between gap-12 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
+            <div className="relative z-10 max-w-2xl text-center lg:text-left">
+              <h2 className="text-5xl font-black mb-8 text-white leading-tight">
+                Ready to Define Your Own Lending Rules?
+              </h2>
+              <p className="text-xl text-white/80 leading-relaxed font-medium">
+                Don’t see your exact use case? Our Tenant Rules Engine is Turing-complete for conditional logic. Build your future today.
+              </p>
+            </div>
+            <div className="relative z-10 shrink-0">
+              <Button size="lg" className="h-20 px-14 text-xl bg-white text-primary hover:bg-white/90 rounded-full font-black shadow-2xl transition-transform hover:scale-105">
+                Start Technical Trial
+              </Button>
+            </div>
+          </motion.div>
         </div>
+
       </div>
-    </PublicLayout>
+    </div>
   );
 }
