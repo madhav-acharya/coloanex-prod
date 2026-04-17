@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
@@ -23,7 +23,14 @@ export default function BorrowerLayout({
   hideSidebar = false
 }: BorrowerLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navItems = [
     { name: "Home", path: "/borrower/dashboard" },
@@ -34,9 +41,14 @@ export default function BorrowerLayout({
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-dark backdrop-blur-xl border-b border-border">
-        <div className="max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-8rem)] mx-auto px-4 sm:px-6 lg:px-8">
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled || mobileMenuOpen
+            ? "bg-black/60 backdrop-blur-md shadow-lg"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <Link to="/borrower/dashboard" className="flex items-center gap-2 cursor-pointer">
@@ -102,8 +114,7 @@ export default function BorrowerLayout({
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Sidebar Content */}
-          <div className="relative w-[90%] sm:w-[85%] max-w-sm h-full bg-gradient-dark border-r border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+          <div className="relative w-[90%] sm:w-[85%] max-w-sm h-full bg-black/90 border-r border-white/10 shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
             {/* Mobile Sidebar Header */}
             <div className="flex items-center justify-between px-4 h-16 border-b border-white/10">
               <div className="flex items-center gap-2">
@@ -162,18 +173,28 @@ export default function BorrowerLayout({
       )}
 
       {/* Main Content */}
-      <main className={cn("flex-1 pt-14", className)}>
-        {(title || description) ? (
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="flex flex-col gap-1 mb-8">
-              {title && <h1 className="text-3xl font-bold tracking-tight">{title}</h1>}
-              {description && <p className="text-muted-foreground">{description}</p>}
+      <main className={cn("flex-1 min-h-screen pt-14 flex flex-col relative", className)}>
+        {/* Decorative Background Elements */}
+        <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px] pointer-events-none translate-y-1/4 -translate-x-1/4" />
+        
+        <div className="flex-1 flex flex-col">
+          {(title || description) ? (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-1">
+              <div className="flex flex-col gap-2 mb-10 animate-fade-in">
+                {title && <h1 className="text-4xl sm:text-5xl font-black tracking-tight font-headline">{title}</h1>}
+                {description && <p className="text-muted-foreground text-lg sm:text-xl font-medium max-w-2xl">{description}</p>}
+              </div>
+              <div className="animate-fade-up">
+                {children}
+              </div>
             </div>
-            {children}
-          </div>
-        ) : (
-          children
-        )}
+          ) : (
+            <div className="flex-1 flex flex-col w-full">
+              {children}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Footer */}
@@ -266,14 +287,6 @@ export default function BorrowerLayout({
                       className="hover:text-white transition-colors"
                     >
                       My Loans
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/borrower/transactions"
-                      className="hover:text-white transition-colors"
-                    >
-                      Transactions
                     </Link>
                   </li>
                 </ul>
