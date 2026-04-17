@@ -1,8 +1,6 @@
-import { Link, useNavigate } from "react-router-dom";
-import { X, ArrowLeft } from "lucide-react";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import PublicLayout from "@/components/layouts/PublicLayout";
-import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,24 +32,24 @@ const planAccentByCode: Record<
   { card: string; button: string; chip: string }
 > = {
   free: {
-    card: "border-primary/40 bg-gradient-to-br from-emerald-500/10 to-transparent",
+    card: "bg-gradient-to-br from-emerald-500/5 to-transparent",
     button:
       "bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/80",
     chip: "bg-primary/10 text-emerald-600 dark:text-emerald-400 font-bold",
   },
   premium: {
-    card: "border-sky-400/40 bg-gradient-to-br from-sky-500/10 to-transparent",
+    card: "bg-gradient-to-br from-sky-500/5 to-transparent",
     button: "bg-sky-600 hover:bg-sky-700 text-white border border-sky-500/80",
     chip: "bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold",
   },
   pro: {
-    card: "border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-transparent",
+    card: "bg-gradient-to-br from-amber-500/5 to-transparent",
     button:
       "bg-amber-600 hover:bg-amber-700 text-white border border-amber-500/80",
     chip: "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold",
   },
   enterprise: {
-    card: "border-fuchsia-400/40 bg-gradient-to-br from-fuchsia-500/10 to-transparent",
+    card: "bg-gradient-to-br from-fuchsia-500/5 to-transparent",
     button:
       "bg-fuchsia-600 hover:bg-fuchsia-700 text-white border border-fuchsia-500/80",
     chip: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 font-bold",
@@ -235,7 +233,7 @@ export default function Pricing() {
             return (
               <Card
                 key={plan.id}
-                className={`flex flex-col relative overflow-hidden transition-all hover:shadow-lg ${accent.card}`}
+                className={`flex flex-col relative overflow-hidden transition-all border-none bg-transparent shadow-none group ${accent.card}`}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -304,7 +302,7 @@ export default function Pricing() {
           })}
       </div>
 
-      <Card className="border-border/60 overflow-hidden">
+      <div className="rounded-[3rem] overflow-hidden border border-border/40 bg-muted/10">
         <CardHeader className="bg-muted/30 border-b">
           <CardTitle>Compare Features</CardTitle>
         </CardHeader>
@@ -351,7 +349,7 @@ export default function Pricing() {
             </table>
           </div>
         </CardContent>
-      </Card>
+      </div>
 
       {pendingPurchase && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -403,18 +401,27 @@ export default function Pricing() {
   );
 
   return (
-    <PublicLayout>
-      <section className="py-20 px-4 bg-muted/30">
+    <div className="w-full">
+      <section className="pt-8 pb-12 px-4 bg-background">
         <div className="max-w-7xl mx-auto">
           {!isAuthenticated ? (
-            <div className="text-center mb-16">
-              <h1 className="text-4xl font-bold mb-4">
+            <div className="text-center mb-8">
+              <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
                 Flexible Scaling for Lending
-              </h1>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              </h2>
+              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-12">
                 Start free and scale your operations globally with our
-                multi-tenant blockchain infrastructure.
+                multi-tenant blockchain infrastructure tailored for your needs.
               </p>
+              <div className="relative group overflow-hidden rounded-[3rem]">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-110 opacity-30" />
+                <img
+                  src="/static/pricing_illustration_transparent_1776446471410.png"
+                  alt="Pricing Plans Illustration"
+                  className="relative w-full max-w-4xl mx-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
+                  style={{ maskImage: 'radial-gradient(circle, black 75%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 75%, transparent 100%)' }}
+                />
+              </div>
             </div>
           ) : (
             <div className="mb-10 text-center">
@@ -424,28 +431,28 @@ export default function Pricing() {
               </p>
             </div>
           )}
-          
+
           {plans.length === 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-               {[1, 2, 3, 4].map(idx => (
-                 <div key={idx} className="h-[450px] rounded-xl border border-border/50 bg-card p-6 flex flex-col gap-4 shadow-sm">
-                   <Skeleton className="h-6 w-3/4 mb-2" />
-                   <Skeleton className="h-10 w-1/2 mb-8" />
-                   <div className="space-y-4 flex-1">
-                     <Skeleton className="h-4 w-full" />
-                     <Skeleton className="h-4 w-full" />
-                     <Skeleton className="h-4 w-full" />
-                     <Skeleton className="h-4 w-3/4" />
-                   </div>
-                   <Skeleton className="h-12 w-full mt-auto" />
-                 </div>
-               ))}
+              {[1, 2, 3, 4].map(idx => (
+                <div key={idx} className="h-[450px] rounded-xl border border-border/50 bg-card p-6 flex flex-col gap-4 shadow-sm">
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-10 w-1/2 mb-8" />
+                  <div className="space-y-4 flex-1">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                  <Skeleton className="h-12 w-full mt-auto" />
+                </div>
+              ))}
             </div>
           ) : (
             PricingContent
           )}
         </div>
       </section>
-    </PublicLayout>
+    </div>
   );
 }

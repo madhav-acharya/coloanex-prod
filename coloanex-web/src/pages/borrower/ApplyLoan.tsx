@@ -177,7 +177,7 @@ export function ApplyLoanModal({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
+      <DialogContent className="max-w-7xl p-0 overflow-hidden bg-background border-border/40 shadow-2xl rounded-[2.5rem]">
         <DialogHeader className="sr-only">
            <DialogTitle>Apply for a Loan</DialogTitle>
         </DialogHeader>
@@ -214,7 +214,7 @@ export function ApplyLoanModal({
                         "text-xs font-medium absolute -bottom-6 w-max text-center",
                         step >= num ? "text-foreground" : "text-muted-foreground"
                      )}>
-                        {num === 1 ? "Lender & Amount" : num === 2 ? "Purpose & Term" : "Collateral"}
+                        {num === 1 ? (isLockedTenant ? "Amount" : "Lender & Amount") : num === 2 ? "Purpose & Term" : "Collateral"}
                      </span>
                   </div>
                ))}
@@ -225,7 +225,7 @@ export function ApplyLoanModal({
             {step === 1 && (
                <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-4">
                   <CardContent className="p-8 space-y-6">
-                     <h2 className="text-xl font-bold">Step 1: Lender & Amount</h2>
+                     <h2 className="text-xl font-bold">Step 1: {isLockedTenant ? "Amount" : "Lender & Amount"}</h2>
                      <div className="space-y-4 pt-2">
                         {!isLockedTenant && (
                           <div className="space-y-2">

@@ -76,11 +76,46 @@ export const PublicRoutes = () => {
           </PublicRouteWrapper>
         }
       />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/features" element={<Features />} />
-      <Route path="/use-cases" element={<UseCases />} />
-      <Route path="/security" element={<Security />} />
-      <Route path="/how-it-works" element={<HowItWorks />} />
+      <Route
+        path="/pricing"
+        element={
+          <PublicRouteWrapper>
+            <Landing />
+          </PublicRouteWrapper>
+        }
+      />
+      <Route
+        path="/features"
+        element={
+          <PublicRouteWrapper>
+            <Landing />
+          </PublicRouteWrapper>
+        }
+      />
+      <Route
+        path="/use-cases"
+        element={
+          <PublicRouteWrapper>
+            <Landing />
+          </PublicRouteWrapper>
+        }
+      />
+      <Route
+        path="/security"
+        element={
+          <PublicRouteWrapper>
+            <Landing />
+          </PublicRouteWrapper>
+        }
+      />
+      <Route
+        path="/how-it-works"
+        element={
+          <PublicRouteWrapper>
+            <Landing />
+          </PublicRouteWrapper>
+        }
+      />
     </Routes>
   );
 };

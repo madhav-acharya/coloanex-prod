@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useGetTenantQuery } from "@/apis/tenantsApi";
 import { useParams, Link } from "react-router-dom";
-import { MapPin, Building2, Calendar, Globe, ArrowRight, FileText, ShieldAlert } from "lucide-react";
+import { MapPin, Building2, Calendar, Globe, ArrowRight, FileText, ShieldAlert, ChevronRight, ShieldCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApplyLoanModal } from "./ApplyLoan";
 import { KycVerificationModal } from "./KycVerification";
 import { useGetKycsQuery } from "@/apis/kycApi";
 import { KycStatus } from "@/types/kyc";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/badge";
 
 export default function LenderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -44,111 +45,123 @@ export default function LenderDetails() {
   }
 
   return (
-    <BorrowerLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div>
-           <Link to="/borrower/lenders" className="text-sm text-primary hover:underline mb-2 block">&larr; Back to Browse Lenders</Link>
+    <BorrowerLayout
+      title={lender?.name || "Lender Profile"}
+      description={(lender as any)?.description || "Institutional lending partner providing decentralized credit facilities."}
+    >
+      <div className="space-y-12 animate-fade-up">
+        {/* Navigation & Breadcrumbs */}
+        <div className="flex items-center justify-between">
+           <Button 
+             variant="ghost" 
+             onClick={() => navigate("/borrower/lenders")} 
+             className="group text-muted-foreground hover:text-primary -ml-4 rounded-full px-6"
+           >
+              <ChevronRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform mr-2" />
+              Back to Marketplace
+           </Button>
+           <div className="flex items-center gap-3">
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-none rounded-full font-black text-[10px] tracking-widest uppercase px-4 py-1.5 shadow-sm">Certified</Badge>
+              <Badge variant="outline" className="rounded-full px-4 py-1.5 border-border/40 text-muted-foreground font-black text-[10px] tracking-widest uppercase">
+                 Institutional Profile
+              </Badge>
+           </div>
         </div>
-        
+
         {isLoading || !lender ? (
-           <div className="space-y-8">
-             <Card>
-                <CardContent className="p-8 flex items-start gap-6">
-                   <Skeleton className="w-24 h-24 rounded-2xl" />
-                   <div className="space-y-4 flex-1">
-                      <Skeleton className="h-8 w-1/3" />
-                      <Skeleton className="h-4 w-1/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                   </div>
-                </CardContent>
-             </Card>
-             <Card>
-                <CardContent className="p-8 space-y-4">
-                   <Skeleton className="h-6 w-1/4" />
-                   <Skeleton className="h-24 w-full" />
-                </CardContent>
-             </Card>
+           <div className="space-y-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 <Skeleton className="h-64 col-span-2 rounded-[2.5rem]" />
+                 <Skeleton className="h-64 rounded-[2.5rem]" />
+              </div>
            </div>
         ) : (
-           <div className="space-y-8">
-             {/* Header Card */}
-             <Card className="bg-surface-container-low/40 backdrop-blur-xl border border-outline-variant/15 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3" />
-                <CardContent className="p-8 sm:p-10 flex flex-col sm:flex-row items-start sm:items-center gap-8 relative z-10">
-                   <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex flex-shrink-0 items-center justify-center text-primary font-bold text-4xl shadow-inner shadow-primary/20">
-                     {lender.name.charAt(0).toUpperCase()}
-                   </div>
-                   
-                   <div className="flex-1 space-y-4">
-                      <div>
-                         <div className="flex items-center gap-3 mb-1">
-                            <h1 className="text-3xl font-bold font-plus-jakarta text-foreground tracking-tight">{lender.name}</h1>
-                            {lender.isActive && (
-                               <span className="px-2.5 py-0.5 text-[10px] uppercase font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full">Active</span>
-                            )}
-                         </div>
-                         <p className="flex items-center gap-1.5 text-muted-foreground mt-2">
-                            <MapPin className="w-4 h-4" /> {lender.contactEmail || "Online"}
-                         </p>
-                      </div>
-                      
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-foreground/80">
-                         <div className="flex items-center gap-1.5 bg-surface/50 px-3 py-1.5 rounded-lg border border-outline-variant/10">
-                            <Building2 className="w-4 h-4 text-primary" /> Institution
-                         </div>
-                         <div className="flex items-center gap-1.5 bg-surface/50 px-3 py-1.5 rounded-lg border border-outline-variant/10">
-                            <Globe className="w-4 h-4 text-primary" /> On-chain Verified
-                         </div>
-                         <div className="flex items-center gap-1.5 bg-surface/50 px-3 py-1.5 rounded-lg border border-outline-variant/10">
-                            <Calendar className="w-4 h-4 text-primary" /> Joined {new Date(lender.createdAt).getFullYear()}
-                         </div>
-                      </div>
-                   </div>
-
-                    <div className="w-full sm:w-auto self-stretch sm:self-auto flex flex-col justify-center sm:pl-8 sm:border-l border-border/40 gap-3">
-                       <div className="flex flex-col gap-3">
-                          {isKycVerified ? (
-                             <Button className="w-full gap-2 text-sm" onClick={() => setShowApply(true)}>
-                                <FileText className="w-4 h-4" /> Apply for Loan
-                             </Button>
-                          ) : (
-                             <Button className="w-full gap-2 text-sm bg-amber-500 hover:bg-amber-600 border-none" onClick={() => setShowKyc(true)}>
-                                <ShieldAlert className="w-4 h-4" /> Verify KYC to Apply
-                             </Button>
-                          )}
-                          <p className="text-[10px] text-center text-muted-foreground">
-                             {isKycVerified ? "You are verified for this lender" : "Verification required for this specific lender"}
-                          </p>
+           <div className="space-y-12">
+              {/* Action Bar */}
+              <div className="bg-surface/40 backdrop-blur-xl p-8 rounded-[2.5rem] border border-border/40 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
+                 <div className="flex items-center gap-8">
+                    <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-primary/30 to-primary/5 border border-primary/20 flex flex-shrink-0 items-center justify-center text-primary font-black text-4xl shadow-inner">
+                       {lender.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="space-y-2">
+                       <div className="flex items-center gap-4 text-muted-foreground font-medium">
+                          <div className="flex items-center gap-2">
+                             <MapPin className="w-4 h-4 text-primary" /> {lender.address || "On-Chain Registry"}
+                          </div>
+                          <div className="flex items-center gap-2">
+                             <Globe className="w-4 h-4 text-primary" /> {lender.contactEmail || "Secure Communications"}
+                          </div>
+                       </div>
+                       <div className="flex gap-4">
+                          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                             <Building2 className="w-3.5 h-3.5 text-primary" /> Regulated Tier I
+                          </div>
+                          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                             <Calendar className="w-3.5 h-3.5 text-primary" /> Since {new Date(lender.createdAt).getFullYear()}
+                          </div>
                        </div>
                     </div>
-                </CardContent>
-             </Card>
+                 </div>
 
-             {/* About Section */}
-             <Card className="bg-surface-container-low/40 backdrop-blur-xl border border-outline-variant/15">
-                <CardContent className="p-8 sm:p-10 space-y-6">
-                   <h2 className="text-xl font-bold font-plus-jakarta border-b border-border/40 pb-3">About {lender.name}</h2>
-                   <div className="prose prose-invert max-w-none text-muted-foreground leading-relaxed">
-                         <p>{lender.name} is a verified lending institution on the CoLoanEx platform. They operate within their jurisdiction's regulatory boundaries to provide secure, on-chain lending solutions to verified borrowers. Their operations are fully tracked through the CoLoanEx smart contract system, ensuring transparency and accountability for all parties involved.</p>
-                      
-                      <h3 className="text-lg font-semibold text-foreground mt-8 mb-4">Lending Criteria</h3>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 list-none p-0 mx-0 mt-4">
-                         <li className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Require verified KYC identity
-                         </li>
-                         <li className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Require digital wallet connection
-                         </li>
-                         <li className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Supported collateral: Digital & Physical
-                         </li>
-                         <li className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary" /> Smart contract based agreements
-                         </li>
-                      </ul>
-                   </div>
-                </CardContent>
-             </Card>
+                 <div className="flex flex-col items-center gap-3">
+                    {isKycVerified ? (
+                       <Button size="lg" className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs uppercase tracking-widest shadow-xl shadow-primary/20 transition-all" onClick={() => setShowApply(true)}>
+                          <FileText className="w-5 h-5 mr-3" /> Commit Capital Request
+                       </Button>
+                    ) : (
+                       <Button size="lg" className="h-14 px-10 rounded-2xl bg-amber-500 hover:bg-amber-600 border-none text-white font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 transition-all" onClick={() => setShowKyc(true)}>
+                          <ShieldAlert className="w-5 h-5 mr-3" /> Establish Identity
+                       </Button>
+                    )}
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] opacity-60">
+                       {isKycVerified ? "Identity Fully Verified" : "Verification Mandatory"}
+                    </p>
+                 </div>
+              </div>
+
+              {/* Strategy & About Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                 <Card className="lg:col-span-2 bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] overflow-hidden">
+                    <CardContent className="p-10 sm:p-14 space-y-8">
+                       <div className="space-y-2">
+                          <h2 className="text-3xl font-black tracking-tighter text-foreground font-headline">Institutional Strategy</h2>
+                          <div className="h-1 w-20 bg-primary rounded-full" />
+                       </div>
+                       <div className="prose prose-invert max-w-none">
+                          <p className="text-lg text-muted-foreground font-medium leading-relaxed">
+                             {lender.name} delivers institutional-grade capital via secure, smart-contract governed liquidity pools. By integrating jurisdictional compliance with Decentralized Finance (DeFi) primitives, we empower verified borrowers to access global credit markets with unparalleled speed and legal certainty.
+                          </p>
+                          <p className="text-muted-foreground font-medium leading-relaxed mt-4">
+                             As a core partner in the CoLoanEx ecosystem, our operations are fully auditable on-chain, providing a transparent record of commitment, execution, and settlement for all institutional participants.
+                          </p>
+                       </div>
+                    </CardContent>
+                 </Card>
+
+                 <Card className="bg-surface/40 backdrop-blur-xl border border-border/40 rounded-[2.5rem] overflow-hidden">
+                   <CardContent className="p-10 space-y-8">
+                      <div className="space-y-2">
+                         <h2 className="text-xl font-black tracking-tight text-foreground font-headline uppercase leading-none">Mandatory Criteria</h2>
+                         <p className="text-xs text-muted-foreground font-black tracking-widest uppercase">Pre-commitment checklist</p>
+                      </div>
+                      <div className="space-y-4">
+                         {[
+                            "Verified Institutional KYC",
+                            "Linked Decentralized Wallet",
+                            "Multi-Asset Collateral Support",
+                            "Deterministic Smart Contracts"
+                         ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-4 p-4 rounded-3xl bg-surface/30 border border-border/20 group hover:border-primary/40 transition-colors">
+                               <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                  <ShieldCheck className="w-4 h-4" />
+                               </div>
+                               <span className="text-sm font-bold text-foreground/90">{item}</span>
+                            </div>
+                         ))}
+                      </div>
+                   </CardContent>
+                 </Card>
+              </div>
            </div>
         )}
       </div>
