@@ -52,7 +52,7 @@ export function KycVerificationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border-border/40">
+      <DialogContent className="max-w-7xl p-0 overflow-hidden bg-background border-border/40 shadow-2xl rounded-[2.5rem]">
         <DialogHeader className="sr-only">
            <DialogTitle>KYC Verification</DialogTitle>
         </DialogHeader>
