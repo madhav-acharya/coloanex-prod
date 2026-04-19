@@ -1,156 +1,196 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ShieldCheck, Lock, HardDrive, Key, FileCheck, ArrowRight, Eye, KeyRound, Server } from "lucide-react";
+import { 
+  ShieldCheck, 
+  Lock, 
+  Eye, 
+  Server, 
+  Database, 
+  Globe,
+  Key,
+  Fingerprint,
+  Star
+} from "lucide-react";
+import { motion, useScroll, useTransform } from "framer-motion";
 import PublicLayout from "@/components/layouts/PublicLayout";
-import { motion } from "framer-motion";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
 
-const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.6 } } };
-const stagger = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.15 } } };
+interface SecurityProps {
+  isSubcomponent?: boolean;
+  showFooter?: boolean;
+}
 
-export default function Security() {
-  return (
-    <div className="w-full">
-      <div className="bg-background text-foreground pb-24 overflow-hidden">
-        
-        {/* Core Header */}
-        <div className="relative pt-12 pb-20 text-center">
-          <div className="absolute inset-x-0 top-0 h-[600px] bg-gradient-to-b from-emerald-500/10 to-transparent -z-10" />
-          <motion.div initial="hidden" animate="visible" variants={stagger} className="max-w-[1400px] mx-auto px-4">
-            <motion.div variants={fadeIn}>
-              <Badge variant="outline" className="mb-8 py-1.5 px-6 text-sm bg-emerald-500/10 text-emerald-600 border-emerald-500/20 uppercase font-black tracking-widest">
-                Mission Critical Defense
-              </Badge>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <h1 className="text-6xl md:text-8xl font-black mb-10 leading-none">
-                Hardened <span className="text-emerald-500">Security</span>
-              </h1>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <p className="text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto font-medium">
-                No single point of failure. We combine microservice isolation, cryptographic guarantees on the blockchain, and rigorous continuous pentesting.
-              </p>
-            </motion.div>
+export default function Security({ isSubcomponent = false, showFooter = true }: SecurityProps) {
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, -50]);
+  const y2 = useTransform(scrollY, [0, 500], [0, 90]);
+
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+  };
+
+  const stagger = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const securityFeatures = [
+    {
+      icon: <Lock className="w-5 h-5" />,
+      title: "AES-256 Encryption",
+      desc: "All data at rest and in transit is encrypted using military-grade AES-256 protocols."
+    },
+    {
+      icon: <Fingerprint className="w-5 h-5" />,
+      title: "Biometric Auth",
+      desc: "Native support for FaceID and TouchID to ensure only authorized personnel access the ledger."
+    },
+    {
+      icon: <Database className="w-5 h-5" />,
+      title: "Immutable Ledger",
+      desc: "Every loan event is notarized on a private blockchain, making historical data impossible to alter."
+    },
+    {
+      icon: <Eye className="w-5 h-5" />,
+      title: "Real-time Monitoring",
+      desc: "Continuous automated scanning for anomalous transaction patterns and multi-sig failures."
+    }
+  ];
+
+  const content = (
+    <div className="bg-background text-foreground scroll-smooth overflow-x-hidden relative min-h-screen">
+      {/* Parallax Background Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <motion.div 
+          style={{ y: y1 }}
+          className="absolute top-[10%] left-[10%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-emerald-500/10 md:bg-emerald-500/5 rounded-full blur-[60px] opacity-40 will-change-transform" 
+        />
+        <motion.div 
+          style={{ y: y2 }}
+          className="absolute bottom-[20%] right-[10%] w-[400px] md:w-[600px] h-[400px] md:h-[600px] bg-primary/10 md:bg-primary/5 rounded-full blur-[80px] opacity-50 will-change-transform" 
+        />
+      </div>
+
+      {/* Hero Section */}
+      <div className="relative z-10 pt-20 pb-8 md:pt-32 md:pb-12 text-center overflow-hidden">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="max-w-4xl mx-auto px-6"
+        >
+          <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-emerald-500/10 rounded-full px-4 py-1.5 mb-6">
+            <ShieldCheck className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
+            <span className="text-emerald-500 text-[10px] md:text-xs font-black tracking-widest uppercase">
+              Bank-Grade Protection
+            </span>
           </motion.div>
-        </div>
+          <motion.div variants={fadeIn}>
+            <h1 className="text-3xl md:text-5xl font-black mb-6 leading-[1.1] uppercase tracking-widest">
+              Hardened <span className="text-primary">Protocols</span>
+            </h1>
+          </motion.div>
+          <motion.div variants={fadeIn}>
+            <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
+              Our infrastructure is built on a foundation of zero-trust architecture and cryptographic finality.
+            </p>
+          </motion.div>
+        </motion.div>
+      </div>
 
-        <div className="max-w-[1400px] mx-auto px-4 space-y-48 mt-20">
-          
-          {/* Section 1: Encryption */}
-          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger} className="grid lg:grid-cols-2 gap-24 items-center">
-            <motion.div variants={fadeIn}>
-              <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-10">
-                <Lock className="w-10 h-10" />
+      <div className="relative z-10 max-w-7xl mx-auto px-6 pb-20 md:pb-32">
+        {/* Security Banner */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeIn}
+          className="relative h-[200px] md:h-[350px] rounded-[2.5rem] md:rounded-[3rem] overflow-hidden mb-12 md:mb-20 no-spotlight"
+        >
+          <img 
+            src="/static/anyone.png" 
+            className="w-full h-full object-cover opacity-60 scale-105"
+            alt="Security Infrastructure"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+          <div className="absolute bottom-8 md:bottom-12 left-8 md:left-12 max-w-lg">
+            <h2 className="text-xl md:text-3xl font-black uppercase tracking-widest text-foreground">
+              Zero-Trust <span className="text-emerald-500 underline decoration-primary decoration-4 underline-offset-8">Philosophy</span>
+            </h2>
+          </div>
+        </motion.div>
+
+        {/* Security Features Grid */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={stagger}
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6"
+        >
+          {securityFeatures.map((feature, idx) => (
+            <motion.div
+              key={idx}
+              variants={fadeIn}
+              className="bg-surface/30 backdrop-blur-md p-6 md:p-8 rounded-3xl transition-all group no-spotlight"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform shadow-soft">
+                {feature.icon}
               </div>
-              <h2 className="text-5xl font-black mb-10">Encryption & Vaulting</h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
-                Your sensitive data is fragmented and encrypted using AES-256 for storage, while Multi-Party Computation (MPC) ensures that lending keys are never exposed in a single environment.
+              <h3 className="text-sm md:text-base font-black mb-3 uppercase tracking-widest group-hover:text-primary transition-colors">
+                {feature.title}
+              </h3>
+              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-semibold">
+                {feature.desc}
               </p>
-              
-              <Accordion type="single" collapsible className="w-full space-y-6">
-                <AccordionItem value="item-1" className="border rounded-[2rem] px-8 py-2 bg-muted/30">
-                  <AccordionTrigger className="text-2xl font-black hover:no-underline hover:text-emerald-500 transition-colors">Zero-Knowledge Storage</AccordionTrigger>
-                  <AccordionContent className="text-xl text-muted-foreground leading-relaxed pt-4 pb-4">
-                    We leverage ZK-proofs to verify user eligibility without ever storing persistent plaintext copies of identity documents in our centralized databases.
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="item-2" className="border rounded-[2rem] px-8 py-2 bg-muted/30">
-                  <AccordionTrigger className="text-2xl font-black hover:no-underline hover:text-emerald-500 transition-colors">Hardware Security Modules</AccordionTrigger>
-                  <AccordionContent className="text-xl text-muted-foreground leading-relaxed pt-4 pb-4">
-                    Financial signing keys are protected within FIPS 140-2 Level 3 compliant hardware, ensuring absolute isolation from the application layer.
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
             </motion.div>
-            
-            <motion.div variants={fadeIn} className="relative group">
-              <div className="absolute inset-0 bg-emerald-500/5 rounded-full blur-[120px] scale-110 opacity-50" />
-              <div className="relative rounded-[4rem] overflow-hidden">
-                <img
-                  src="/static/security_v3_white_bg_1776447306071.png"
-                  alt="Security Infrastructure"
-                  className="w-full h-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
-                  style={{ maskImage: 'radial-gradient(circle, black 70%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 70%, transparent 100%)' }}
-                />
-              </div>
-            </motion.div>
-          </motion.section>
+          ))}
+        </motion.div>
 
-          {/* Section 2: Immutability */}
-          <motion.section initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger} className="grid lg:grid-cols-2 gap-24 items-center">
-            <motion.div variants={fadeIn} className="order-2 lg:order-1 relative group">
-              <div className="absolute inset-0 bg-primary/5 rounded-full blur-[120px] scale-110 opacity-50" />
-              <div className="relative rounded-[4rem] overflow-hidden">
-                <img
-                  src="/static/smart-contract.png"
-                  alt="On-Chain Immutability"
-                  className="w-full h-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
-                />
+        {/* Compliance Card */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeIn}
+          className="mt-20 md:mt-32 bg-primary/5 rounded-[2.5rem] p-12 md:p-20 text-center relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px]" />
+          <div className="max-w-3xl mx-auto">
+            <Badge className="bg-emerald-500/20 text-emerald-500 mb-6 px-4 py-1 text-[10px] font-black uppercase tracking-widest">
+              Global Compliance
+            </Badge>
+            <h2 className="text-2xl md:text-4xl font-black mb-8 uppercase tracking-widest text-foreground">
+              Built for <span className="text-primary">Jurisdictional</span> Flexibility
+            </h2>
+            <p className="text-sm md:text-lg text-muted-foreground mb-12 leading-relaxed font-medium">
+              Our protocol supports regional data sovereignty requirements, ensuring that sensitive borrower information never leaves your specified jurisdiction.
+            </p>
+            <div className="flex justify-center gap-8 md:gap-16 opacity-60 flex-wrap">
+              <div className="flex flex-col items-center gap-2">
+                <Globe className="w-8 h-8 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">GDPR Ready</span>
               </div>
-            </motion.div>
-
-            <motion.div variants={fadeIn} className="order-1 lg:order-2">
-              <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-10">
-                <ShieldCheck className="w-10 h-10" />
+              <div className="flex flex-col items-center gap-2">
+                <ShieldCheck className="w-8 h-8 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">SOC2 Compliant</span>
               </div>
-              <h2 className="text-5xl font-black mb-10">Immutable Trust</h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
-                Every transaction and loan state transition is notarized on the blockchain. This creates a transparent, non-repudiable history for both lenders and borrowers.
-              </p>
-              
-              <div className="space-y-12">
-                {[
-                  { icon: <Eye />, title: "Real-time Verification", desc: "Auditors can verify platform solvency and debt-to-equity ratios in real-time via public explorers." },
-                  { icon: <Server />, title: "Contract Finality", desc: "Logic governing repayments is immutable once deployed, preventing arbitrary changes by any rogue actor." }
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-8">
-                    <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-primary shrink-0">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-black mb-2">{item.title}</h4>
-                      <p className="text-lg text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.section>
-
-        </div>
-
-        {/* Global CTA */}
-        <div className="max-w-[1400px] mx-auto px-4 mt-48">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="bg-emerald-600 p-16 md:p-24 rounded-[4rem] text-white flex flex-col items-center text-center relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
-            <div className="relative z-10">
-              <h2 className="text-5xl md:text-7xl font-black mb-8 text-white leading-tight">
-                Secure from Day One.<br />Guaranteed Forever.
-              </h2>
-              <p className="text-xl md:text-2xl text-white/80 max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
-                Our architecture exceeds ISO 27001 and SOC2 Type II standards. Your lending operations deserve nothing less.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-8 justify-center">
-                <Button size="lg" className="h-[72px] px-14 text-xl bg-white text-emerald-600 hover:bg-white/90 rounded-full font-black shadow-2xl transition-transform hover:scale-105">
-                  Read Technical Whitepaper
-                </Button>
-                <Button size="lg" variant="outline" className="h-[72px] px-14 text-xl border-white/30 text-white hover:bg-white/10 rounded-full font-black">
-                  Security Deep Dive
-                </Button>
+              <div className="flex flex-col items-center gap-2">
+                <Key className="w-8 h-8 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-tighter">ISO 27001</span>
               </div>
             </div>
-          </motion.div>
-        </div>
-
+          </div>
+        </motion.div>
       </div>
     </div>
+  );
+
+  if (isSubcomponent) return content;
+
+  return (
+    <PublicLayout showFooter={showFooter}>
+      {content}
+    </PublicLayout>
   );
 }
