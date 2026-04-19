@@ -1,243 +1,235 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Workflow,
-  Layers,
-  ShieldCheck,
-  Globe,
-  Smartphone,
-  BarChart3,
-  Clock,
-  CheckCircle2,
+import { 
+  Zap, 
+  Shield, 
+  BarChart3, 
+  Smartphone, 
+  Globe, 
+  Lock,
   ArrowRight,
+  Sparkles
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
+import PublicLayout from "@/components/layouts/PublicLayout";
+import { cn } from "@/lib/utils";
 
-const fadeIn = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
-const stagger = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-};
+interface FeaturesProps {
+  showHeader?: boolean;
+  showFooter?: boolean;
+  isSubcomponent?: boolean;
+}
 
-export default function Features() {
-  return (
-    <div className="w-full">
-      <div className="bg-background text-foreground pb-24 overflow-hidden">
-        
-        {/* Header */}
-        <div className="relative pt-12 pb-20 text-center">
+export default function Features({ 
+  showHeader = true, 
+  showFooter = true,
+  isSubcomponent = false 
+}: FeaturesProps) {
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, -60]);
+  const y2 = useTransform(scrollY, [0, 500], [0, 100]);
+
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
+  };
+
+  const stagger = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  };
+
+  const featureGroups = [
+    {
+      title: "Core Infrastructure",
+      features: [
+        {
+          icon: <Shield className="w-5 h-5" />,
+          title: "Multi-Tenant Architecture",
+          desc: "Complete logical isolation for each lending partner with dedicated resource allocation.",
+        },
+        {
+          icon: <Lock className="w-5 h-5" />,
+          title: "Immutable Ledger",
+          desc: "Every loan lifecycle event is cryptographically signed and committed to a private blockchain.",
+        },
+        {
+          icon: <Sparkles className="w-5 h-5" />,
+          title: "AI Risk Engine",
+          desc: "Automated document verification and credit scoring using advanced machine learning models.",
+        }
+      ]
+    },
+    {
+      title: "Operational Excellence",
+      features: [
+        {
+          icon: <Zap className="w-5 h-5" />,
+          title: "Instant Settlement",
+          desc: "Disbursement and repayment processing in real-time through integrated payment rails.",
+        },
+        {
+          icon: <BarChart3 className="w-5 h-5" />,
+          title: "Deep Analytics",
+          desc: "Comprehensive dashboard with LP performance, portfolio health, and delinquency tracking.",
+        },
+        {
+          icon: <Smartphone className="w-5 h-5" />,
+          title: "Omnichannel Access",
+          desc: "Fully responsive borrower portal and admin console optimized for mobile and desktop.",
+        }
+      ]
+    }
+  ];
+
+  const content = (
+    <div className={cn(
+      "bg-background text-foreground scroll-smooth overflow-x-hidden relative min-h-screen",
+      isSubcomponent && "min-h-0 py-12 md:py-24"
+    )}>
+      {/* Parallax Background Glows */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <motion.div 
+          style={{ y: y1 }}
+          className="absolute top-[10%] right-[15%] w-[350px] md:w-[550px] h-[350px] md:h-[550px] bg-primary/5 rounded-full blur-[100px] opacity-30" 
+        />
+        <motion.div 
+          style={{ y: y2 }}
+          className="absolute bottom-[20%] left-[5%] w-[450px] md:w-[650px] h-[450px] md:h-[650px] bg-emerald-500/5 rounded-full blur-[120px] opacity-40" 
+        />
+      </div>
+
+      {/* Hero Section */}
+      {!isSubcomponent && (
+        <div className="relative z-10 pt-20 pb-8 md:pt-32 md:pb-12 text-center overflow-hidden">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={stagger}
-            className="max-w-[1400px] mx-auto px-4"
+            className="max-w-4xl mx-auto px-6"
           >
-            <motion.div variants={fadeIn}>
-              <Badge variant="outline" className="mb-6 py-1 px-4 border-primary/30 text-primary uppercase font-black tracking-widest">The Feature Suite</Badge>
+            <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-primary/5 border border-primary/10 rounded-full px-4 py-1.5 mb-6">
+              <Zap className="w-4 h-4 text-primary fill-primary" />
+              <span className="text-primary text-[10px] md:text-xs font-black tracking-widest uppercase">
+                Enterprise Features
+              </span>
             </motion.div>
             <motion.div variants={fadeIn}>
-              <h2 className="text-5xl md:text-7xl font-black mb-10 leading-none">
-                Infrastructure to <span className="text-primary">Scale</span>
-              </h2>
+              <h1 className="text-3xl md:text-5xl font-black mb-6 leading-[1.1] uppercase tracking-widest">
+                Modular <span className="text-primary">Capabilities</span>
+              </h1>
             </motion.div>
             <motion.div variants={fadeIn}>
-              <p className="text-2xl text-muted-foreground leading-relaxed max-w-4xl mx-auto font-medium">
-                Coloanex was engineered for massive volume. Real-time synchronicity, mathematical trust, and professional-grade analytics.
+              <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
+                The most advanced infrastructure for decentralized lending operations at institutional scale.
               </p>
             </motion.div>
           </motion.div>
         </div>
+      )}
 
-        <div className="max-w-[1400px] mx-auto px-4 space-y-48 mt-12 mb-24">
-          
-          {/* 1. Web Management */}
-          <motion.section 
-            initial="hidden" 
-            whileInView="visible" 
-            viewport={{ once: true, margin: "-100px" }} 
-            variants={stagger} 
-            className="grid lg:grid-cols-2 gap-24 items-center"
-          >
-            <motion.div variants={fadeIn}>
-              <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-10">
-                <Workflow className="w-10 h-10" />
-              </div>
-              <h2 className="text-5xl font-black mb-10">Institutional Command Center</h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
-                Administrate your entire lending pipeline from a unified dashboard. Customize interest policies, regional rules, and approval hierarchies with absolute control.
-              </p>
-
-              <div className="grid sm:grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-primary mb-4">
-                    <Layers className="w-8 h-8" />
-                  </div>
-                  <h4 className="text-2xl font-black">Multi-Tier Approval</h4>
-                  <p className="text-lg text-muted-foreground leading-relaxed">Cryptographic multi-sig authorization to prevent unauthorized rule changes.</p>
-                </div>
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-primary mb-4">
-                    <BarChart3 className="w-8 h-8" />
-                  </div>
-                  <h4 className="text-2xl font-black">Real-Time Data</h4>
-                  <p className="text-lg text-muted-foreground leading-relaxed">Live streaming updates as borrowers apply or make payments across regions.</p>
-                </div>
-              </div>
-            </motion.div>
-
-             <motion.div variants={fadeIn} className="relative group">
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-primary/5 blur-[120px] rounded-full scale-110 opacity-60" />
-                <div className="relative rounded-[3rem] overflow-hidden">
-                 <img
-                     src="/static/loan.png"
-                     alt="Management Dashboard"
-                     className="w-full h-auto object-contain transition-transform duration-700 group-hover:scale-[1.03]"
-                 />
-                </div>
-             </motion.div>
-          </motion.section>
-
-          {/* 2. Borrower App */}
-          <motion.section 
-            initial="hidden" 
-            whileInView="visible" 
-            viewport={{ once: true, margin: "-100px" }} 
-            variants={stagger} 
-            className="grid lg:grid-cols-2 gap-24 items-center"
-          >
-            <motion.div variants={fadeIn} className="lg:order-2">
-              <div className="w-20 h-20 rounded-3xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-10">
-                <Smartphone className="w-10 h-10" />
-              </div>
-              <h2 className="text-5xl font-black mb-10">Zero Friction Onboarding</h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
-                Empower your borrowers with a premium mobile experience. Instant applications, transparent tracking, and biometrically secured repayments.
-              </p>
-
-              <div className="grid sm:grid-cols-2 gap-10">
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-emerald-500 mb-4">
-                    <Smartphone className="w-8 h-8" />
-                  </div>
-                  <h4 className="text-2xl font-black">Native Native</h4>
-                  <p className="text-lg text-muted-foreground leading-relaxed">High-performance compiled UI for a buttery smooth 120Hz borrower experience.</p>
-                </div>
-                <div className="space-y-4">
-                  <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center text-emerald-500 mb-4">
-                    <Clock className="w-8 h-8" />
-                  </div>
-                  <h4 className="text-2xl font-black">Smart Lifecycle</h4>
-                  <p className="text-lg text-muted-foreground leading-relaxed">Intelligent push notifications ensure borrowers stay ahead of their schedules.</p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeIn} className="lg:order-1 relative group">
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-emerald-500/5 blur-[120px] rounded-full scale-110 opacity-60" />
-                <div className="w-[300px] h-[620px] bg-card shadow-2xl rounded-[3.5rem] border-[12px] border-foreground/10 p-8 flex flex-col relative z-10 mx-auto overflow-hidden">
-                    <div className="w-28 h-6 bg-foreground/10 absolute top-0 left-1/2 -translate-x-1/2 rounded-b-3xl"></div>
-                    <div className="mt-16 space-y-8">
-                        <div className="w-20 h-20 bg-primary/20 rounded-2xl flex items-center justify-center text-primary">
-                            <CheckCircle2 className="w-12 h-12" />
-                        </div>
-                        <h4 className="text-3xl font-black">Loan Active</h4>
-                        <div className="space-y-4">
-                            <div className="h-4 bg-muted rounded-full w-full"></div>
-                            <div className="h-4 bg-muted rounded-full w-2/3"></div>
-                        </div>
-                        <div className="p-6 bg-primary/5 border border-primary/20 rounded-[2rem]">
-                            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-3">Progression</p>
-                            <p className="text-3xl font-black">88%</p>
-                            <div className="w-full h-3 bg-muted rounded-full mt-6 overflow-hidden">
-                                <div className="w-[88%] h-full bg-primary" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-          </motion.section>
-
-          {/* 3. Security Engine */}
-          <motion.section 
-            initial="hidden" 
-            whileInView="visible" 
-            viewport={{ once: true, margin: "-100px" }} 
-            variants={stagger} 
-            className="grid lg:grid-cols-2 gap-24 items-center"
-          >
-            <motion.div variants={fadeIn}>
-              <div className="w-20 h-20 rounded-3xl bg-accent/10 flex items-center justify-center text-accent mb-10">
-                <ShieldCheck className="w-10 h-10" />
-              </div>
-              <h2 className="text-5xl font-black mb-10">Hardened Infrastructure</h2>
-              <p className="text-xl text-muted-foreground mb-12 leading-relaxed">
-                Security isn't an afterthought. Every transaction and rule set is encrypted and mirrored across our distributed trust ledger.
-              </p>
-
-              <div className="space-y-10">
-                {[
-                  { icon: <ShieldCheck />, title: "Quantum-Safe Encryption", desc: "Military-grade AES-256 and TLS 1.3 secured data movement across all layers." },
-                  { icon: <Globe />, title: "Distributed Auditing", desc: "Automated reconciliation between standard databases and blockchain finality logs." },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-8">
-                    <div className="w-16 h-16 shrink-0 rounded-[1.5rem] bg-muted/50 flex items-center justify-center text-accent">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-black mb-2">{item.title}</h4>
-                      <p className="text-lg text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            <motion.div variants={fadeIn} className="relative group">
-              <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[120%] bg-accent/5 blur-[120px] rounded-full scale-110 opacity-60" />
-              <div className="relative rounded-[4rem] overflow-hidden">
-                <img
-                  src="/static/security_v3_white_bg_1776447306071.png"
-                  alt="Security Architecture"
-                  className="relative w-full h-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-[1.03]"
-                  style={{ maskImage: 'radial-gradient(circle, black 70%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 70%, transparent 100%)' }}
-                />
-              </div>
-            </motion.div>
-          </motion.section>
-
-        </div>
-
-        {/* Wide CTA */}
-        <div className="max-w-[1400px] mx-auto px-4 mt-40">
+      {/* Feature Grid */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 pb-20 md:pb-32">
+        {isSubcomponent && (
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={stagger}
-            className="bg-muted/30 p-16 md:p-24 rounded-[4rem] border border-border flex flex-col md:flex-row items-center justify-between gap-12 relative overflow-hidden"
+            className="mb-16 text-center"
           >
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
-            <div className="relative z-10 max-w-2xl">
-              <h2 className="text-5xl font-black mb-6 leading-tight">
-                Integrate via SDK or REST API
-              </h2>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                Whether you prefer our React Native UI components or direct server-to-server interaction, Coloanex adapts to your existing tech stack effortlessly.
-              </p>
-            </div>
-            <Button
-              size="lg"
-              className="h-20 px-12 text-xl rounded-full bg-foreground text-background font-black shadow-2xl hover:opacity-90 transition-transform hover:scale-105 shrink-0"
+             <Badge variant="outline" className="mb-4 py-1.5 px-4 text-[10px] bg-primary/10 text-primary border-primary/20 uppercase font-black tracking-widest">
+                Infrastructure
+             </Badge>
+             <h2 className="text-2xl md:text-3xl font-black uppercase tracking-widest leading-tight">
+                Enterprise <span className="text-primary">Grade</span>
+             </h2>
+          </motion.div>
+        )}
+        {featureGroups.map((group, groupIdx) => (
+          <div key={groupIdx} className="mt-12 md:mt-24 first:mt-0">
+            <motion.h2 
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="text-xl md:text-2xl font-black mb-8 md:mb-12 uppercase tracking-widest border-l-4 border-primary pl-4"
             >
-              Start Integration
-            </Button>
-          </motion.div>
-        </div>
+              {group.title}
+            </motion.h2>
+            <motion.div
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              variants={stagger}
+              className="grid md:grid-cols-3 gap-6 md:gap-8"
+            >
+              {group.features.map((feature, idx) => (
+                <motion.div
+                  key={idx}
+                  variants={fadeIn}
+                  className="group bg-surface/40 backdrop-blur-md p-6 md:p-8 rounded-3xl transition-all duration-500 hover:-translate-y-2 no-spotlight"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center text-primary mb-6 transition-transform group-hover:scale-110 group-hover:rotate-3 shadow-soft">
+                    {feature.icon}
+                  </div>
+                  <h3 className="text-lg font-black mb-4 uppercase tracking-widest group-hover:text-primary transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">
+                    {feature.desc}
+                  </p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+        ))}
+
+        {/* Feature Highlight */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeIn}
+          className="mt-20 md:mt-32 bg-primary/5 rounded-[2.5rem] p-8 md:p-16 flex flex-col md:flex-row items-center gap-12"
+        >
+          <div className="flex-1 text-center md:text-left">
+            <Badge className="bg-primary/20 text-primary mb-6 px-4 py-1 text-[10px] font-black uppercase tracking-widest font-headline">
+              Infrastructure Peek
+            </Badge>
+            <h2 className="text-2xl md:text-4xl font-black mb-6 uppercase tracking-widest leading-tight">
+              Built for <span className="text-primary">Performance</span>
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground mb-10 leading-relaxed font-medium">
+              Our architecture handles thousands of concurrent transactions with sub-second finality. Scale your lending business without infrastructure bottlenecks.
+            </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-4">
+              <div className="flex items-center gap-2 bg-background/50 px-4 py-2 rounded-xl border border-border/10">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-tighter">99.9% Uptime</span>
+              </div>
+              <div className="flex items-center gap-2 bg-background/50 px-4 py-2 rounded-xl border border-border/10">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-[10px] font-black uppercase tracking-tighter">AES-256 Encryption</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1 relative no-spotlight flex justify-center">
+            <img 
+              src="/static/blocks.png" 
+              alt="Performance UI" 
+              className="w-full h-auto max-w-[450px] object-contain organic-glow rotate-2"
+            />
+          </div>
+        </motion.div>
       </div>
     </div>
+  );
+
+  if (isSubcomponent) return content;
+
+  return (
+    <PublicLayout showHeader={showHeader} showFooter={showFooter}>
+      {content}
+    </PublicLayout>
   );
 }
