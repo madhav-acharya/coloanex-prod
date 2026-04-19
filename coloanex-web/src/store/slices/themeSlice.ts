@@ -47,29 +47,33 @@ const themeSlice = createSlice({
       }
     },
     setSystemTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
+      // Only react to system theme changes if we are in 'system' mode
       if (state.mode === 'system') {
-        state.isDark = action.payload === 'dark';
-        
-        // Update document class
-        if (state.isDark) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
+        const nextIsDark = action.payload === 'dark';
+        if (state.isDark !== nextIsDark) {
+          state.isDark = nextIsDark;
+          applyThemeClass(state.isDark);
         }
       }
     },
     initializeTheme: (state) => {
-      state.isDark = getInitialIsDark(state.mode);
-      
-      // Update document class
-      if (state.isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      const mode = (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
+      state.mode = mode;
+      state.isDark = getInitialIsDark(mode);
+      applyThemeClass(state.isDark);
     },
   },
 });
+
+const applyThemeClass = (isDark: boolean) => {
+  if (typeof document !== 'undefined') {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
+};
 
 export const { setThemeMode, setSystemTheme, initializeTheme } = themeSlice.actions;
 export default themeSlice.reducer;

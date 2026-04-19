@@ -5,7 +5,6 @@ import Landing from "@/pages/public/Landing";
 import Login from "@/pages/public/Login";
 import Signup from "@/pages/public/Signup";
 import Features from "@/pages/public/Features";
-import UseCases from "@/pages/public/UseCases";
 import HowItWorks from "@/pages/public/HowItWorks";
 import Security from "@/pages/public/Security";
 import Pricing from "@/pages/public/Pricing";
@@ -42,7 +41,9 @@ export const PublicRouteWrapper = ({ children }: PublicRouteProps) => {
     );
   }
 
-  if (isAuthenticated && user) {
+  const isAuthPage = window.location.pathname === "/login" || window.location.pathname === "/signup";
+
+  if (isAuthenticated && user && isAuthPage) {
     return <Navigate to={getHomeRoute(user)} replace />;
   }
 
@@ -80,7 +81,7 @@ export const PublicRoutes = () => {
         path="/pricing"
         element={
           <PublicRouteWrapper>
-            <Landing />
+            <Pricing />
           </PublicRouteWrapper>
         }
       />
@@ -88,15 +89,7 @@ export const PublicRoutes = () => {
         path="/features"
         element={
           <PublicRouteWrapper>
-            <Landing />
-          </PublicRouteWrapper>
-        }
-      />
-      <Route
-        path="/use-cases"
-        element={
-          <PublicRouteWrapper>
-            <Landing />
+            <Features />
           </PublicRouteWrapper>
         }
       />
@@ -104,7 +97,7 @@ export const PublicRoutes = () => {
         path="/security"
         element={
           <PublicRouteWrapper>
-            <Landing />
+            <Security />
           </PublicRouteWrapper>
         }
       />
@@ -112,7 +105,7 @@ export const PublicRoutes = () => {
         path="/how-it-works"
         element={
           <PublicRouteWrapper>
-            <Landing />
+            <HowItWorks />
           </PublicRouteWrapper>
         }
       />

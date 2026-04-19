@@ -128,10 +128,10 @@ const Signup = () => {
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm text-center">
                 {"data" in error &&
-                typeof error.data === "object" &&
-                "message" in error.data
+                  typeof error.data === "object" &&
+                  "message" in error.data
                   ? (error.data as { message?: string }).message ||
-                    "Registration failed"
+                  "Registration failed"
                   : "Registration failed"}
               </div>
             )}
@@ -143,11 +143,10 @@ const Signup = () => {
                 .map((dotStep) => (
                   <div
                     key={dotStep}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      step === dotStep
-                        ? "w-8 bg-primary"
-                        : "w-2 bg-primary/20"
-                    }`}
+                    className={`h-2 rounded-full transition-all duration-300 ${step === dotStep
+                      ? "w-8 bg-primary"
+                      : "w-2 bg-primary/20"
+                      }`}
                   />
                 ))}
             </div>
@@ -157,11 +156,10 @@ const Signup = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card
                   onClick={() => setFormData((prev) => ({ ...prev, role: "lender" }))}
-                  className={`cursor-pointer transition-all border-2 overflow-hidden ${
-                    formData.role === "lender"
-                      ? "border-primary bg-primary/5 shadow-md shadow-primary/20 scale-[1.02]"
-                      : "border-border/50 hover:border-primary/50 hover:bg-muted/50"
-                  }`}
+                  className={`cursor-pointer transition-all border-2 overflow-hidden ${formData.role === "lender"
+                    ? "border-primary bg-primary/5 shadow-md shadow-primary/20 scale-[1.02]"
+                    : "border-border/50 hover:border-primary/50 hover:bg-muted/50"
+                    }`}
                 >
                   <CardContent className="p-8 flex flex-col items-center justify-center space-y-4 text-center">
                     <div className={`p-4 rounded-full transition-colors ${formData.role === "lender" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
@@ -178,11 +176,10 @@ const Signup = () => {
 
                 <Card
                   onClick={() => setFormData((prev) => ({ ...prev, role: "borrower" }))}
-                  className={`cursor-pointer transition-all border-2 overflow-hidden ${
-                    formData.role === "borrower"
-                      ? "border-blue-500 bg-blue-500/5 shadow-md shadow-blue-500/20 scale-[1.02]"
-                      : "border-border/50 hover:border-blue-500/50 hover:bg-muted/50"
-                  }`}
+                  className={`cursor-pointer transition-all border-2 overflow-hidden ${formData.role === "borrower"
+                    ? "border-blue-500 bg-blue-500/5 shadow-md shadow-blue-500/20 scale-[1.02]"
+                    : "border-border/50 hover:border-blue-500/50 hover:bg-muted/50"
+                    }`}
                 >
                   <CardContent className="p-8 flex flex-col items-center justify-center space-y-4 text-center">
                     <div className={`p-4 rounded-full transition-colors ${formData.role === "borrower" ? "bg-blue-500 text-white" : "bg-blue-500/10 text-blue-500"}`}>

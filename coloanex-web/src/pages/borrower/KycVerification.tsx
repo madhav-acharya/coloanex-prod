@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { Tenant } from "@/types/tenant";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -52,37 +53,37 @@ export function KycVerificationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl p-0 overflow-hidden bg-background border-border/40 shadow-2xl rounded-[2.5rem]">
+      <DialogContent className="max-w-7xl p-0 overflow-hidden bg-background border-border/60 shadow-card rounded-[2.5rem]">
         <DialogHeader className="sr-only">
-           <DialogTitle>KYC Verification</DialogTitle>
+           <DialogTitle>Compliance Verification</DialogTitle>
         </DialogHeader>
-        <div className="flex h-[80vh] flex-col p-8 bg-background overflow-y-auto w-full space-y-8 relative">
+        <div className="flex h-[80vh] flex-col p-10 bg-background overflow-y-auto w-full space-y-12 relative">
           {/* Header Section */}
-          <div className="flex flex-col gap-2 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.15)]">
-                <ShieldAlert className="w-6 h-6 text-amber-500" />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                <ShieldAlert className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">KYC Verification</h1>
-                <p className="text-muted-foreground mt-1">Complete identity verification for your chosen lender.</p>
+                <h1 className="text-2xl font-black tracking-tight text-foreground uppercase tracking-widest">Compliance Verification</h1>
+                <p className="text-sm text-muted-foreground mt-1 font-medium">Verify your organizational or personal identity for protocol access.</p>
               </div>
             </div>
           </div>
 
         {/* Stepper Header */}
-        <div className="mb-8">
-           <div className="flex items-center justify-between relative">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-muted rounded-full pointer-events-none" />
+        <div className="max-w-3xl">
+           <div className="flex items-center justify-between relative px-4">
+              <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1 bg-muted rounded-full pointer-events-none" />
               <div 
-                 className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full transition-all duration-300 pointer-events-none" 
-                 style={{ width: `${((step - 1) / 2) * 100}%` }} 
+                 className="absolute left-4 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full transition-all duration-300 pointer-events-none" 
+                 style={{ width: `calc(${((step - 1) / 2) * 100}% - 32px)` }} 
               />
               
               {[1, 2, 3].map((num) => (
-                 <div key={num} className="relative z-10 flex flex-col items-center gap-2">
+                 <div key={num} className="relative z-10 flex flex-col items-center gap-3">
                     <div className={cn(
-                       "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors",
+                       "w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border-2 transition-colors shadow-soft",
                        step > num ? "bg-primary border-primary text-primary-foreground" : 
                        step === num ? "bg-background border-primary text-primary" : 
                        "bg-background border-muted text-muted-foreground"
@@ -90,25 +91,25 @@ export function KycVerificationModal({
                        {step > num ? "✓" : num}
                     </div>
                     <span className={cn(
-                       "text-xs font-medium absolute -bottom-6 w-max text-center",
+                       "text-[10px] font-black uppercase tracking-widest absolute -bottom-6 w-max text-center",
                        step >= num ? "text-foreground" : "text-muted-foreground"
                     )}>
-                       {num === 1 ? "Select Lender" : num === 2 ? "Documents" : "Review"}
+                       {num === 1 ? "Protocol Node" : num === 2 ? "Artifacts" : "Verification"}
                     </span>
                  </div>
               ))}
            </div>
         </div>
 
-        <div className="mt-12">
+        <div className="mt-8">
            {step === 1 && (
-              <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-                 <CardContent className="p-6">
-                    <h2 className="text-xl font-bold mb-4">Step 1: Choose Your Lender</h2>
-                    <p className="text-muted-foreground mb-6">Select the lending institution you wish to submit your KYC documents to.</p>
+              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
+                 <CardContent className="p-8">
+                    <h2 className="text-lg font-black mb-2 uppercase tracking-wider">Select Infrastructure Host</h2>
+                    <p className="text-sm text-muted-foreground mb-8 font-medium">Select the lending institution you wish to submit your verification artifacts to.</p>
                     
                     {isLoadingTenants ? (
-                       <p className="text-sm text-muted-foreground">Loading lenders...</p>
+                       <p className="text-sm text-muted-foreground">Synchronizing nodes...</p>
                     ) : (
                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {tenants.map(tenant => (
@@ -116,19 +117,22 @@ export function KycVerificationModal({
                                key={tenant.id}
                                onClick={() => setSelectedTenantId(tenant.id)}
                                className={cn(
-                                 "p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-3",
+                                 "p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4",
                                  selectedTenantId === tenant.id 
-                                    ? "border-primary bg-primary/5" 
-                                    : "border-border/50 hover:border-primary/40 bg-surface/30"
+                                    ? "border-primary bg-primary/5 shadow-soft" 
+                                    : "border-border/40 hover:border-primary/20 bg-background"
                                )}
                              >
-                                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
                                    {tenant.name.charAt(0)}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                   <p className="font-semibold truncate">{tenant.name}</p>
-                                   <p className="text-xs text-muted-foreground truncate">{tenant.contactEmail || "Online Lender"}</p>
+                                   <p className="font-bold text-sm truncate">{tenant.name}</p>
+                                   <p className="text-xs text-muted-foreground truncate font-medium">{tenant.contactEmail || "Lending Institution"}</p>
                                 </div>
+                                {selectedTenantId === tenant.id && (
+                                  <div className="w-2 h-2 rounded-full bg-primary" />
+                                )}
                              </div>
                           ))}
                        </div>
@@ -138,74 +142,70 @@ export function KycVerificationModal({
            )}
 
            {step === 2 && (
-              <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-                 <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-xl font-bold">Step 2: Upload Documents</h2>
-                      <span className="text-sm font-medium text-primary">{progressPercent}% Complete</span>
+              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
+                 <CardContent className="p-8">
+                    <div className="flex items-center justify-between mb-8">
+                      <div>
+                        <h2 className="text-lg font-black uppercase tracking-wider">Artifact Submission</h2>
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">Upload clean photographic evidence of your government identification.</p>
+                      </div>
+                      <Badge className="bg-primary/10 text-primary border-none font-black text-xs px-4 py-1.5 rounded-full">{progressPercent}% Sync</Badge>
                     </div>
-                    <p className="text-muted-foreground mb-6">Please upload clear images of your government-issued ID.</p>
 
-                    <div className="space-y-6">
+                    <div className="grid sm:grid-cols-3 gap-8">
                        {/* Front ID */}
-                       <div className="space-y-3">
-                          <label className="text-sm font-medium text-foreground flex justify-between">
-                            Government ID (Front)
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+                            Internal Identity (Front)
                           </label>
                           {!frontImage ? (
-                            <label className="group relative w-full rounded-2xl border-2 border-dashed border-border/60 bg-surface/30 hover:bg-surface-container/50 hover:border-primary/40 transition-all cursor-pointer block">
+                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
                               <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFrontImage(e.target.files?.[0] || null)} />
-                              <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                                  <UploadCloud className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <p className="font-medium text-sm text-foreground">Upload Front ID</p>
-                              </div>
+                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                              <p className="font-bold text-xs">Upload Front</p>
                             </label>
                           ) : (
-                            <div className="w-full rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-center justify-between">
-                              <span className="text-sm font-medium truncate max-w-[200px]">{frontImage.name}</span>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-400" onClick={() => setFrontImage(null)}><X className="w-4 h-4" /></Button>
+                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
+                              <span className="text-xs font-bold truncate w-full mb-2">{frontImage.name}</span>
+                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setFrontImage(null)}>Replace</Button>
                             </div>
                           )}
                        </div>
 
                        {/* Back ID */}
-                       <div className="space-y-3">
-                          <label className="text-sm font-medium text-foreground flex justify-between">
-                            Government ID (Back)
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+                            Internal Identity (Back)
                           </label>
                           {!backImage ? (
-                            <label className="group relative w-full rounded-2xl border-2 border-dashed border-border/60 bg-surface/30 hover:bg-surface-container/50 hover:border-primary/40 transition-all cursor-pointer block">
+                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
                               <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setBackImage(e.target.files?.[0] || null)} />
-                              <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                                  <UploadCloud className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <p className="font-medium text-sm text-foreground">Upload Back ID</p>
-                              </div>
+                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                              <p className="font-bold text-xs">Upload Back</p>
                             </label>
                           ) : (
-                            <div className="w-full rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-center justify-between">
-                              <span className="text-sm font-medium truncate max-w-[200px]">{backImage.name}</span>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-400" onClick={() => setBackImage(null)}><X className="w-4 h-4" /></Button>
+                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
+                              <span className="text-xs font-bold truncate w-full mb-2">{backImage.name}</span>
+                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setBackImage(null)}>Replace</Button>
                             </div>
                           )}
                        </div>
 
                        {/* Selfie */}
-                       <div className="space-y-3">
-                          <label className="text-sm font-medium text-foreground flex justify-between">
-                            Selfie with ID
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+                            Face Liveness
                           </label>
                           {!selfie ? (
-                            <label className="group relative w-full rounded-2xl border-2 border-dashed border-border/60 bg-surface/30 hover:bg-surface-container/50 hover:border-primary/40 transition-all cursor-pointer block">
+                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
                               <input type="file" className="hidden" accept="image/*" onChange={(e) => setSelfie(e.target.files?.[0] || null)} />
-                              <div className="p-6 flex flex-col items-center justify-center text-center gap-2">
-                                  <UploadCloud className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                                  <p className="font-medium text-sm text-foreground">Upload Selfie</p>
-                              </div>
+                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                              <p className="font-bold text-xs">Upload Liveness</p>
                             </label>
                           ) : (
-                            <div className="w-full rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-center justify-between">
-                              <span className="text-sm font-medium truncate max-w-[200px]">{selfie.name}</span>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-400" onClick={() => setSelfie(null)}><X className="w-4 h-4" /></Button>
+                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
+                              <span className="text-xs font-bold truncate w-full mb-2">{selfie.name}</span>
+                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setSelfie(null)}>Replace</Button>
                             </div>
                           )}
                        </div>
@@ -215,64 +215,67 @@ export function KycVerificationModal({
            )}
 
            {step === 3 && (
-              <Card className="border-border/50 shadow-sm animate-in fade-in slide-in-from-bottom-4">
-                 <CardContent className="p-8 text-center space-y-4">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
+                 <CardContent className="p-12 text-center space-y-6">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/20">
                        <ShieldAlert className="w-8 h-8 text-primary" />
                     </div>
-                    <h2 className="text-xl font-bold">Review Application</h2>
-                    <p className="text-muted-foreground max-w-sm mx-auto">
-                       You are verifying your identity for the chosen lender. By clicking submit, you agree to our verification terms.
+                    <h2 className="text-xl font-black uppercase tracking-wider">Final Verification Proof</h2>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium">
+                       By submitting these artifacts, you confirm that all information provided is accurate and belongs to the specified identity.
                     </p>
-                    <div className="bg-surface/50 rounded-xl p-4 text-left inline-block w-full max-w-sm mt-4 border border-border/50">
-                       <p className="text-sm font-medium flex justify-between"><span className="text-muted-foreground">Lender:</span> {tenants.find(t => t.id === selectedTenantId)?.name}</p>
-                       <p className="text-sm font-medium flex justify-between mt-2"><span className="text-muted-foreground">Documents:</span> {completedCount}/3 Uploaded</p>
+                    <div className="bg-background rounded-2xl p-6 text-left inline-block w-full max-w-sm mt-4 border border-border/40 font-bold">
+                       <p className="text-xs flex justify-between items-center"><span className="text-muted-foreground uppercase tracking-widest text-[10px]">Recipient Node:</span> {tenants.find(t => t.id === selectedTenantId)?.name}</p>
+                       <div className="h-px bg-border/40 my-3" />
+                       <p className="text-xs flex justify-between items-center"><span className="text-muted-foreground uppercase tracking-widest text-[10px]">Artifacts:</span> 3/3 Staged</p>
                     </div>
                  </CardContent>
               </Card>
            )}
 
            {step === 4 && (
-              <Card className="border-border/50 shadow-sm animate-in zoom-in-95 duration-500">
-                 <CardContent className="p-12 text-center flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
+              <Card className="border-border/40 shadow-card bg-surface/30 animate-in zoom-in-95 duration-500 rounded-[3rem]">
+                 <CardContent className="p-20 text-center flex flex-col items-center justify-center">
+                    <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mb-10 shadow-soft">
                        <ShieldAlert className="w-10 h-10 text-emerald-500" />
                     </div>
-                    <h2 className="text-2xl font-bold mb-2">Submitted Successfully</h2>
-                    <p className="text-muted-foreground max-w-sm mb-8">
-                       Your KYC documents have been sent to the lender for review. You will be notified once verified!
+                    <h2 className="text-2xl font-black mb-4 uppercase tracking-widest">Protocol Finalized</h2>
+                    <p className="text-sm text-muted-foreground max-w-sm mb-12 font-medium leading-relaxed">
+                       Your verification artifacts have been securely transmitted to the lending node. The validation cycle is now active.
                     </p>
-                    <Button onClick={() => window.location.href = '/borrower/dashboard'} className="gap-2">
-                       Return to Dashboard
+                    <Button onClick={() => window.location.href = '/borrower/dashboard'} className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-sm transition-all shadow-soft">
+                       Return to Node Dashboard
                     </Button>
                  </CardContent>
               </Card>
            )}
 
            {step < 4 && (
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-border/40">
+              <div className="flex items-center justify-between mt-12 pt-8 border-t border-border/40">
                 <Button 
-                   variant="outline" 
+                   variant="ghost" 
                    onClick={handlePrev} 
+                   className="font-bold text-sm h-12 px-6 rounded-xl hover:bg-muted"
                    disabled={(isLockedTenant && step === 2) || step === 1 || isSubmitting}
                 >
-                   <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                   <ArrowLeft className="w-4 h-4 mr-2" /> Previous
                 </Button>
                 
                 {step < 3 ? (
                    <Button 
                       onClick={handleNext} 
+                      className="h-12 px-8 rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-soft hover:opacity-95"
                       disabled={(step === 1 && !selectedTenantId) || (step === 2 && !canSubmit)}
                    >
-                      Next Step <ArrowRight className="w-4 h-4 ml-2" />
+                      Continue <ArrowRight className="w-4 h-4 ml-2" />
                    </Button>
                 ) : (
                    <Button 
                       onClick={handleSubmit} 
                       disabled={isSubmitting}
-                      className="bg-primary hover:bg-primary/90"
+                      className="h-12 px-8 rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-soft hover:opacity-95"
                    >
-                      {isSubmitting ? "Submitting..." : "Submit Verification"}
+                      {isSubmitting ? "Committing..." : "Finalize Verification"}
                    </Button>
                 )}
               </div>
