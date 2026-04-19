@@ -56,12 +56,23 @@ const planAccentByCode: Record<
   },
 };
 
+const getPlanAccent = (code: string) => {
+  const normalizedCode = code.toLowerCase();
+  return planAccentByCode[normalizedCode] || planAccentByCode.free;
+};
+
+
 const normalizeFeature = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item)).filter(Boolean);
 };
 
-export default function Pricing() {
+interface PricingProps {
+  showFooter?: boolean;
+  isSubcomponent?: boolean;
+}
+
+export default function Pricing({ showFooter = true, isSubcomponent = false }: PricingProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -159,7 +170,6 @@ export default function Pricing() {
     if (!pendingPurchase) return;
 
     const { planCode, scope, planPrice } = pendingPurchase;
-    // Hide selector before redirect/start so processing modal is not obscured.
     setPendingPurchase(null);
     const pendingSubscriptionContext = {
       planCode,
@@ -227,8 +237,7 @@ export default function Pricing() {
             );
             const isCurrent = lifecycleStatus === "BOUGHT";
             const featureItems = normalizeFeature((plan as any).features);
-            const accent = planAccentByCode[plan.code.toLowerCase()] ||
-              planAccentByCode.free;
+            const accent = getPlanAccent(plan.code);
 
             return (
               <Card
@@ -302,15 +311,15 @@ export default function Pricing() {
           })}
       </div>
 
-      <div className="rounded-[3rem] overflow-hidden border border-border/40 bg-muted/10">
-        <CardHeader className="bg-muted/30 border-b">
+      <div className="rounded-[3rem] overflow-hidden bg-muted/10">
+        <CardHeader className="bg-muted/30">
           <CardTitle>Compare Features</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
-                <tr className="border-b">
+                <tr>
                   <th className="text-left p-4 font-semibold">Requirement</th>
                   {plans
                     .filter((p) => p.isActive)
@@ -373,7 +382,7 @@ export default function Pricing() {
                   className={`h-24 flex flex-col gap-2 transition-all ${gateway === "KHALTI" ? "border-primary bg-primary/5" : ""}`}
                   onClick={() => setGateway("KHALTI")}
                 >
-                  <img src="./images/khalti.png" alt="Khalti" className="h-8" />
+                  <img src="/images/khalti.png" alt="Khalti" className="h-8" />
                   <span className="text-xs">Khalti</span>
                 </Button>
                 <Button
@@ -381,7 +390,7 @@ export default function Pricing() {
                   className={`h-24 flex flex-col gap-2 transition-all ${gateway === "ESEWA" ? "border-primary bg-primary/5" : ""}`}
                   onClick={() => setGateway("ESEWA")}
                 >
-                  <img src="./images/esewa.png" alt="eSewa" className="h-8" />
+                  <img src="/images/esewa.png" alt="eSewa" className="h-8" />
                   <span className="text-xs">eSewa</span>
                 </Button>
               </div>
@@ -400,51 +409,59 @@ export default function Pricing() {
     </div>
   );
 
-  return (
-    <div className="w-full">
-      <section className="pt-8 pb-12 px-4 bg-background">
-        <div className="max-w-7xl mx-auto">
+  const content = (
+    <div className={`w-full ${showFooter ? 'pb-24' : ''}`}>
+      <section className="pt-24 pb-24 px-6 bg-background relative overflow-hidden">
+        {/* Optimized Parallax Background Glows for Pricing */}
+        {!isSubcomponent && (
+          <div className="fixed inset-0 pointer-events-none z-0">
+            <div className="absolute top-[5%] left-[20%] w-[350px] md:w-[600px] h-[350px] md:h-[600px] bg-primary/10 md:bg-primary/5 rounded-full blur-[60px] opacity-30 will-change-transform" />
+            <div className="absolute bottom-[10%] right-[15%] w-[450px] md:w-[700px] h-[450px] md:h-[700px] bg-emerald-500/10 md:bg-emerald-500/5 rounded-full blur-[80px] opacity-40 will-change-transform" />
+          </div>
+        )}
+
+        <div className="container max-w-7xl mx-auto relative z-10">
           {!isAuthenticated ? (
-            <div className="text-center mb-8">
-              <h2 className="text-4xl md:text-5xl font-extrabold mb-6">
-                Flexible Scaling for Lending
+            <div className="max-w-4xl mx-auto text-center px-4">
+              <Badge variant="outline" className="mb-4 py-1 px-3 bg-primary/5 text-primary text-[10px] font-black uppercase tracking-[0.2em] border-none">Institutional Pricing</Badge>
+              <h2 className="text-3xl font-black mb-6">
+                Scale Your <span className="text-primary">Lending</span>
               </h2>
-              <p className="text-muted-foreground text-xl max-w-3xl mx-auto mb-12">
-                Start free and scale your operations globally with our
-                multi-tenant blockchain infrastructure tailored for your needs.
+              <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-10 font-medium">
+                Autonomous multi-tenant infrastructure tailored for high-volume operations. Choose a plan that aligns with your growth.
               </p>
-              <div className="relative group overflow-hidden rounded-[3rem]">
-                <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl scale-110 opacity-30" />
+              <div className="relative group p-12 rounded-[3rem] text-center mb-12 max-w-4xl mx-auto overflow-visible hover-glow-bg">
+                <div className="absolute inset-0 bg-primary/10 blur-[80px] rounded-full scale-110 opacity-40 animate-pulse-slow will-change-transform" />
                 <img
-                  src="/static/pricing_illustration_transparent_1776446471410.png"
-                  alt="Pricing Plans Illustration"
-                  className="relative w-full max-w-4xl mx-auto object-contain mix-blend-multiply dark:mix-blend-normal transition-transform duration-700 group-hover:scale-105"
-                  style={{ maskImage: 'radial-gradient(circle, black 75%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle, black 75%, transparent 100%)' }}
+                  src="/static/loan.png"
+                  alt="Pricing Model"
+                  className="relative z-10 w-full max-w-[400px] h-auto object-contain mx-auto organic-glow"
                 />
               </div>
             </div>
           ) : (
-            <div className="mb-10 text-center">
-              <h1 className="text-3xl font-bold">Pricing & Plans</h1>
-              <p className="text-muted-foreground">
-                Manage your subscription and billing
+            <div className="mb-12 text-center">
+              <Badge variant="outline" className="mb-4 py-1 px-4 bg-primary/5 text-primary text-xs font-black uppercase tracking-[0.2em] border-none">Current Engagement</Badge>
+              <h1 className="text-3xl font-black">Lifecycle & Billing</h1>
+              <p className="text-muted-foreground text-base mt-2 font-medium">
+                Manage your institutional subscription and protocol access nodes.
               </p>
             </div>
           )}
 
           {plans.length === 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
               {[1, 2, 3, 4].map(idx => (
-                <div key={idx} className="h-[450px] rounded-xl border border-border/50 bg-card p-6 flex flex-col gap-4 shadow-sm">
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-10 w-1/2 mb-8" />
+                <div key={idx} className="h-[500px] rounded-[2rem] bg-surface p-8 flex flex-col gap-6 shadow-soft">
+                  <Skeleton className="h-8 w-3/4 mb-2 rounded-lg" />
+                  <Skeleton className="h-12 w-1/2 mb-8 rounded-lg" />
                   <div className="space-y-4 flex-1">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-full rounded-full" />
+                    <Skeleton className="h-4 w-full rounded-full" />
+                    <Skeleton className="h-4 w-full rounded-full" />
+                    <Skeleton className="h-4 w-3/4 rounded-full" />
                   </div>
-                  <Skeleton className="h-12 w-full mt-auto" />
+                  <Skeleton className="h-14 w-full mt-auto rounded-2xl" />
                 </div>
               ))}
             </div>
@@ -454,5 +471,13 @@ export default function Pricing() {
         </div>
       </section>
     </div>
+  );
+
+  if (isSubcomponent) return content;
+
+  return (
+    <PublicLayout showFooter={showFooter}>
+      {content}
+    </PublicLayout>
   );
 }
