@@ -81,9 +81,13 @@ export const ProtectedRouteWrapper = ({
   );
 
   const needsTenantId = !isSuperAdmin && isAdminOrLender && !user.tenantId;
-  const hasRequiredPermission = !requiredPermission || hasPermission(user, requiredPermission);
+  const hasRequiredPermission =
+    !requiredPermission || hasPermission(user, requiredPermission);
 
-  if (needsTenantId && !["/profile", "/settings"].includes(window.location.pathname)) {
+  if (
+    needsTenantId &&
+    !["/profile", "/settings"].includes(window.location.pathname)
+  ) {
     return <AccessRestricted />;
   }
 
@@ -194,6 +198,7 @@ export const ProtectedRoutes = () => {
           </ProtectedRouteWrapper>
         }
       />
+      <Route path="*" element={null} />
     </Routes>
   );
 };
