@@ -21,12 +21,33 @@ const getInitialIsDark = (mode: ThemeMode): boolean => {
   return mode === 'dark';
 };
 
-const initialState: ThemeState = {
-  mode: (localStorage.getItem('theme-mode') as ThemeMode) || 'system',
-  isDark: false,
+const applyThemeClass = (isDark: boolean) => {
+  if (typeof document !== 'undefined') {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }
 };
 
-initialState.isDark = getInitialIsDark(initialState.mode);
+const getInitialMode = (): ThemeMode => {
+  if (typeof localStorage !== 'undefined') {
+    return (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
+  }
+  return 'system';
+};
+
+const initialMode = getInitialMode();
+const initialIsDark = getInitialIsDark(initialMode);
+
+// Apply theme immediately on script load to prevent flash
+applyThemeClass(initialIsDark);
+
+const initialState: ThemeState = {
+  mode: initialMode,
+  isDark: initialIsDark,
+};
 
 const themeSlice = createSlice({
   name: 'theme',
@@ -37,14 +58,12 @@ const themeSlice = createSlice({
       state.isDark = getInitialIsDark(action.payload);
       
       // Persist to localStorage
-      localStorage.setItem('theme-mode', action.payload);
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('theme-mode', action.payload);
+      }
       
       // Update document class
-      if (state.isDark) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      applyThemeClass(state.isDark);
     },
     setSystemTheme: (state, action: PayloadAction<'light' | 'dark'>) => {
       // Only react to system theme changes if we are in 'system' mode
@@ -57,23 +76,13 @@ const themeSlice = createSlice({
       }
     },
     initializeTheme: (state) => {
-      const mode = (localStorage.getItem('theme-mode') as ThemeMode) || 'system';
+      const mode = getInitialMode();
       state.mode = mode;
       state.isDark = getInitialIsDark(mode);
       applyThemeClass(state.isDark);
     },
   },
 });
-
-const applyThemeClass = (isDark: boolean) => {
-  if (typeof document !== 'undefined') {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }
-};
 
 export const { setThemeMode, setSystemTheme, initializeTheme } = themeSlice.actions;
 export default themeSlice.reducer;
