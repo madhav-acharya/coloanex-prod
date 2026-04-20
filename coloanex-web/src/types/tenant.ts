@@ -1,6 +1,7 @@
 export interface Tenant {
   id: string;
   name: string;
+  logo?: string;
   isActive: boolean;
   isBanned: boolean;
   contactEmail: string;
@@ -44,6 +45,7 @@ export interface TenantsResponse {
 
 export interface CreateTenantDto {
   name: string;
+  logo?: string;
   isActive?: boolean;
   isBanned?: boolean;
   contactEmail: string;
@@ -54,6 +56,7 @@ export interface CreateTenantDto {
 
 export interface UpdateTenantDto {
   name?: string;
+  logo?: string;
   isActive?: boolean;
   isBanned?: boolean;
   contactEmail?: string;
