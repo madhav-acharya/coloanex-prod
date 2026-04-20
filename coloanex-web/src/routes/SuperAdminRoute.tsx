@@ -89,6 +89,7 @@ export const SuperAdminRoutes = () => {
           </SuperAdminRouteWrapper>
         }
       />
+      <Route path="*" element={null} />
     </Routes>
   );
 };
