@@ -1,48 +1,42 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate } from "react-router-dom";
-import { PlusCircle, FileText, Activity, Clock, XCircle, CheckCircle2, AlertCircle, Link as LinkIcon, Download, SlidersHorizontal, ArrowUpDown, ChevronDown, Plus, Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
-import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
-import { useGetLoansQuery } from "@/apis/loansApi";
-import { DataTable } from "@/components/shared/DataTable";
-import { Column } from "@/types/components";
 import { Badge } from "@/components/ui/badge";
-import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
-import type { Loan, LoanQuery } from "@/types/loan";
+import { Skeleton } from "@/components/ui/skeleton";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useGetLoansQuery } from "@/apis/loansApi";
+import {
+  useGetBorrowerAnalyticsQuery,
+  useGetBorrowerMonthlyLoansQuery,
+  useGetLoansByStatusQuery,
+} from "@/apis/analyticsApi";
+import { useGetTransactionsByEntityQuery } from "@/apis/transactionsApi";
+import type { LoanQuery } from "@/types/loan";
 import { LoanStatus } from "@/types/loan";
 import { format } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/hooks/useAuth";
-import { ApplyLoanModal } from "./ApplyLoan";
-import { useGetBorrowerAnalyticsQuery } from "@/apis/analyticsApi";
-import { useGetWalletSummaryQuery, useGetTransactionsByEntityQuery } from "@/apis/transactionsApi";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+  Activity,
+  AlertCircle,
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronDown,
+  Clock3,
+  History,
+  Search,
+  TrendingUp,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function MyLoans() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [showApply, setShowApply] = useState(false);
 
-  const { data: analytics, isLoading: isAnalyticsLoading } = useGetBorrowerAnalyticsQuery();
-  const { data: walletSummary, isLoading: isWalletSummaryLoading } = useGetWalletSummaryQuery();
-  const { data: transactionsData, isLoading: isTransactionsLoading } = useGetTransactionsByEntityQuery(user?.id || "", { skip: !user?.id });
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [filters, setFilters] = useState<LoanQuery>({
     page: 1,
@@ -51,371 +45,693 @@ export default function MyLoans() {
     sortOrder: "desc",
   });
 
-  const { data: loansData, isLoading, isFetching } = useGetLoansQuery(filters);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [searchInput]);
 
-  const loans = useMemo(() => loansData?.data || [], [loansData]);
-  const total = loansData?.total || 0;
-
-  const handlePageChange = (page: number) => {
-    setFilters((prev) => ({ ...prev, page }));
-  };
-
-  const handlePageSizeChange = (limit: number) => {
-    setFilters((prev) => ({ ...prev, limit, page: 1 }));
-  };
-
-  const handleSort = (key: string) => {
+  useEffect(() => {
     setFilters((prev) => ({
       ...prev,
-      sortBy: key,
-      sortOrder: prev.sortBy === key && prev.sortOrder === "asc" ? "desc" : "asc",
+      page: 1,
+      search: debouncedSearch || undefined,
     }));
-  };
+  }, [debouncedSearch]);
+
+  const { data: loansData, isLoading, isFetching } = useGetLoansQuery(filters);
+  const { data: analytics } = useGetBorrowerAnalyticsQuery();
+  const { data: monthlyLoans = [], isLoading: isMonthlyLoading } =
+    useGetBorrowerMonthlyLoansQuery({ months: 12 });
+  const { data: loansByStatus = [], isLoading: isStatusLoading } =
+    useGetLoansByStatusQuery();
+  const { data: transactionsData, isLoading: isTransactionsLoading } =
+    useGetTransactionsByEntityQuery(user?.id || "", { skip: !user?.id });
+
+  const loans = loansData?.data || [];
+  const total = loansData?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / (filters.limit || 10)));
+
+  const totalBorrowed = Number(analytics?.totalBorrowed || 0);
+  const totalPaid = Number(analytics?.totalPaid || 0);
+  const totalAmountDue = Number(analytics?.totalAmountDue || 0);
+  const totalInterest = Number(analytics?.totalInterest || 0);
+  const outstanding = Math.max(totalAmountDue - totalPaid, 0);
+
+  const maxMonthlyCount = Math.max(
+    ...monthlyLoans.map((m) => Number(m.count || 0)),
+    1,
+  );
+
+  const suggestions = useMemo(() => {
+    if (!searchInput.trim()) return [];
+    const q = searchInput.toLowerCase();
+    const seen = new Set<string>();
+    return loans
+      .filter((loan) => (loan.purpose || "").toLowerCase().includes(q))
+      .filter((loan) => {
+        const purpose = loan.purpose || "Loan";
+        if (seen.has(purpose)) return false;
+        seen.add(purpose);
+        return true;
+      })
+      .slice(0, 5)
+      .map((loan) => loan.purpose || "Loan");
+  }, [searchInput, loans]);
 
   const getStatusBadge = (status: LoanStatus) => {
-    const statusConfig: Record<LoanStatus, { className: string; label: string }> = {
-      [LoanStatus.DRAFT]: { className: "bg-gray-100 text-gray-700 border-gray-200", label: "Draft" },
-      [LoanStatus.SUBMITTED]: { className: "bg-blue-100 text-blue-700 border-blue-200", label: "Submitted" },
-      [LoanStatus.UNDER_REVIEW]: { className: "bg-amber-100 text-amber-700 border-amber-200", label: "Under Review" },
-      [LoanStatus.APPROVED]: { className: "bg-green-100 text-green-700 border-green-200", label: "Approved" },
-      [LoanStatus.REJECTED]: { className: "bg-red-100 text-red-700 border-red-200", label: "Rejected" },
-      [LoanStatus.CONTRACT_GENERATED]: { className: "bg-purple-100 text-purple-700 border-purple-200", label: "Contract Generated" },
-      [LoanStatus.CONTRACT_SIGNED]: { className: "bg-indigo-100 text-indigo-700 border-indigo-200", label: "Contract Signed" },
-      [LoanStatus.LOAN_PROVIDED]: { className: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "Loan Provided" },
-      [LoanStatus.PARTIALLY_PAID]: { className: "bg-orange-100 text-orange-700 border-orange-200", label: "Partially Paid" },
-      [LoanStatus.PAID]: { className: "bg-green-100 text-green-700 border-green-200", label: "Paid" },
+    const statusConfig: Record<
+      LoanStatus,
+      { className: string; label: string }
+    > = {
+      [LoanStatus.DRAFT]: {
+        className: "bg-gray-100 text-gray-700 border-gray-200",
+        label: "Draft",
+      },
+      [LoanStatus.SUBMITTED]: {
+        className: "bg-blue-100 text-blue-700 border-blue-200",
+        label: "Submitted",
+      },
+      [LoanStatus.UNDER_REVIEW]: {
+        className: "bg-amber-100 text-amber-700 border-amber-200",
+        label: "Under review",
+      },
+      [LoanStatus.APPROVED]: {
+        className: "bg-green-100 text-green-700 border-green-200",
+        label: "Approved",
+      },
+      [LoanStatus.REJECTED]: {
+        className: "bg-red-100 text-red-700 border-red-200",
+        label: "Rejected",
+      },
+      [LoanStatus.CONTRACT_GENERATED]: {
+        className: "bg-purple-100 text-purple-700 border-purple-200",
+        label: "Contract generated",
+      },
+      [LoanStatus.CONTRACT_SIGNED]: {
+        className: "bg-indigo-100 text-indigo-700 border-indigo-200",
+        label: "Contract signed",
+      },
+      [LoanStatus.LOAN_PROVIDED]: {
+        className: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        label: "Loan provided",
+      },
+      [LoanStatus.PARTIALLY_PAID]: {
+        className: "bg-orange-100 text-orange-700 border-orange-200",
+        label: "Partially paid",
+      },
+      [LoanStatus.PAID]: {
+        className: "bg-green-100 text-green-700 border-green-200",
+        label: "Paid",
+      },
     };
     const config = statusConfig[status] || statusConfig[LoanStatus.DRAFT];
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
-  const columns: Column<Loan>[] = [
-    {
-      key: "purpose",
-      label: "Purpose",
-      sortable: false,
-      render: (loan) => loan.purpose ? loan.purpose : "N/A",
-    },
-    {
-      key: "requestedAmount",
-      label: "Requested Amount",
-      sortable: true,
-      render: (loan) => (
-        <span className="flex items-center gap-1">
-          <IconCurrencyRupeeNepalese className="inline h-4 w-4" />
-          {Number(loan.requestedAmount).toLocaleString('en-IN')}
-        </span>
-      ),
-    },
-    {
-      key: "requestedTermMonths",
-      label: "Term",
-      sortable: true,
-      render: (loan) => `${loan.requestedTermMonths} months`,
-    },
-    {
-      key: "status",
-      label: "Status",
-      sortable: true,
-      render: (loan) => getStatusBadge(loan.status),
-    },
-    {
-      key: "blockchainTxHash",
-      label: "Blockchain",
-      sortable: false,
-      render: (c) => <BlockchainStatusBadge blockchainTxHash={(c as any).blockchainTxHash || (c as any).blockchain_tx_hash} />,
-    },
-    {
-      key: "createdAt",
-      label: "Applied On",
-      sortable: true,
-      render: (loan) => loan.createdAt ? format(new Date(loan.createdAt), "MMM dd, yyyy") : "N/A",
-    },
-  ];
+  const renderSearch = (className?: string) => (
+    <div className={cn("relative", className)}>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <input
+        value={searchInput}
+        onFocus={() => setShowSuggestions(true)}
+        onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+        onChange={(e) => setSearchInput(e.target.value)}
+        placeholder="Search loans by purpose"
+        className="h-10 w-full rounded-lg border border-border/30 bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/70"
+      />
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-border/30 bg-card shadow-lg overflow-hidden">
+          {suggestions.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className="w-full text-left px-3 py-2 hover:bg-muted/40 transition-colors"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setSearchInput(item);
+                setDebouncedSearch(item);
+                setShowSuggestions(false);
+              }}
+            >
+              <p className="text-sm text-foreground truncate">{item}</p>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const currentPage = filters.page || 1;
+    return (
+      <div className="flex justify-center">
+        <div className="flex items-center gap-1 p-1 rounded-lg border border-border/20 bg-card">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage === 1}
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, page: currentPage - 1 }))
+            }
+          >
+            <ChevronDown className="w-4 h-4 -rotate-90" />
+          </Button>
+          {Array.from({ length: totalPages })
+            .slice(0, 7)
+            .map((_, i) => {
+              const pageNo = i + 1;
+              return (
+                <Button
+                  key={pageNo}
+                  variant={currentPage === pageNo ? "default" : "ghost"}
+                  className={cn(
+                    "h-7 w-7 text-xs px-0",
+                    currentPage === pageNo &&
+                      "bg-primary text-primary-foreground",
+                  )}
+                  onClick={() =>
+                    setFilters((prev) => ({ ...prev, page: pageNo }))
+                  }
+                >
+                  {pageNo}
+                </Button>
+              );
+            })}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage === totalPages}
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, page: currentPage + 1 }))
+            }
+          >
+            <ChevronDown className="w-4 h-4 rotate-90" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <BorrowerLayout
-      title="Credit Ledger"
-      description="Real-time analytics and transaction history for your institutional credit lines."
+      title="My Loans"
+      description="Loans, repayments, and portfolio analytics in one place"
     >
-      <div className="space-y-12">
-        {/* Action Bar */}
-        <div className="flex justify-end animate-fade-in no-spotlight">
-          <Button 
-            size="lg"
-            onClick={() => navigate("/borrower/lenders")}
-            className="rounded-2xl px-10 h-14 font-black uppercase tracking-widest gap-2 bg-primary hover:bg-primary/90 transition-all shadow-soft"
-          >
-            Request Capital <Plus className="w-5 h-5" />
-          </Button>
-        </div>
+      <div className="space-y-5 lg:space-y-7">
+        <div className="space-y-3 lg:hidden">
+          {renderSearch()}
 
-        {/* Analytics Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-up">
-          {/* Summary Stats */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="bg-surface/20 backdrop-blur-md border border-border/10 rounded-[2.5rem] p-8 relative overflow-hidden group no-spotlight shadow-soft">
-               <div className="relative z-10 space-y-8">
-                  <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary">
-                        <Wallet className="w-6 h-6" />
-                     </div>
-                     <h3 className="font-black text-lg uppercase tracking-widest">Cap Table</h3>
+          <Card className="border-border/30 bg-card">
+            <CardContent className="p-3">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  {
+                    label: "Borrowed",
+                    value: totalBorrowed,
+                    icon: ArrowUpRight,
+                    color: "text-primary",
+                  },
+                  {
+                    label: "Paid",
+                    value: totalPaid,
+                    icon: ArrowDownRight,
+                    color: "text-emerald-500",
+                  },
+                  {
+                    label: "Outstanding",
+                    value: outstanding,
+                    icon: Clock3,
+                    color: "text-amber-500",
+                  },
+                  {
+                    label: "Interest",
+                    value: totalInterest,
+                    icon: AlertCircle,
+                    color: "text-rose-500",
+                  },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="rounded-lg border border-border/20 bg-muted/10 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] text-muted-foreground">
+                        {item.label}
+                      </p>
+                      <item.icon className={cn("w-3.5 h-3.5", item.color)} />
+                    </div>
+                    <p className="mt-1 text-sm font-semibold text-foreground flex items-center gap-1">
+                      <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
+                      {item.value.toLocaleString("en-IN")}
+                    </p>
                   </div>
-                  <div className="space-y-6">
-                     <div className="space-y-1">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Portfolio Value</p>
-                        <p className="text-4xl font-black text-foreground tracking-tighter flex items-center gap-1">
-                           <IconCurrencyRupeeNepalese className="w-8 h-8 text-primary" />
-                           {Number(analytics?.totalBorrowed || 0).toLocaleString()}
-                        </p>
-                     </div>
-                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Settled</p>
-                           <p className="text-xl font-black text-emerald-500 uppercase tracking-tight">+{Number(analytics?.totalPaid || 0).toLocaleString()}</p>
-                        </div>
-                        <div className="space-y-1 text-right">
-                           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Owed</p>
-                           <p className="text-xl font-black text-rose-500 uppercase tracking-tight">-{Number(analytics?.pendingAmount || 0).toLocaleString()}</p>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
-            <div className="grid grid-cols-2 gap-6">
-               <Card className="bg-surface/10 backdrop-blur-sm border border-border/10 rounded-[2rem] p-6 text-center group transition-colors no-spotlight">
-                  <div className="w-10 h-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center mx-auto mb-3 border border-primary/10">
-                     <Activity className="w-5 h-5" />
+          <Card className="border-border/30 bg-card">
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  Loans by Status
+                </p>
+                <Activity className="w-4 h-4 text-primary" />
+              </div>
+              {isStatusLoading ? (
+                <Skeleton className="h-20 w-full rounded-lg" />
+              ) : loansByStatus.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No status records found.
+                </p>
+              ) : (
+                loansByStatus.slice(0, 5).map((item) => (
+                  <div
+                    key={item.status}
+                    className="rounded-lg border border-border/20 px-2.5 py-2 flex items-center justify-between"
+                  >
+                    <span className="text-xs text-foreground">
+                      {item.status.replace(/_/g, " ")}
+                    </span>
+                    <span className="text-xs font-semibold text-primary">
+                      {item.count}
+                    </span>
                   </div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1">Active</p>
-                  <p className="text-2xl font-black text-foreground tracking-tighter">{analytics?.activeLoans || 0}</p>
-               </Card>
-               <Card className="bg-surface/10 backdrop-blur-sm border border-border/10 rounded-[2rem] p-6 text-center group transition-colors no-spotlight">
-                  <div className="w-10 h-10 rounded-xl bg-primary/5 text-primary flex items-center justify-center mx-auto mb-3 border border-primary/10">
-                     <AlertCircle className="w-5 h-5" />
-                  </div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 mb-1">Alerts</p>
-                  <p className="text-2xl font-black text-foreground tracking-tighter">{analytics?.overduePayments || 0}</p>
-               </Card>
-            </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/30 bg-card">
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  Monthly Loan Trend
+                </p>
+                <TrendingUp className="w-4 h-4 text-primary" />
+              </div>
+              {isMonthlyLoading ? (
+                <Skeleton className="h-20 w-full rounded-lg" />
+              ) : monthlyLoans.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No monthly trend records found.
+                </p>
+              ) : (
+                monthlyLoans.map((row) => {
+                  const width = Math.max(
+                    (Number(row.count || 0) / maxMonthlyCount) * 100,
+                    4,
+                  );
+                  return (
+                    <div
+                      key={row.month}
+                      className="grid grid-cols-[56px_1fr_auto] gap-2 items-center"
+                    >
+                      <span className="text-[11px] text-muted-foreground">
+                        {row.month}
+                      </span>
+                      <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{ width: `${width}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-semibold text-foreground">
+                        {row.count}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-foreground">My Loans</p>
+            <Button
+              size="sm"
+              className="h-8"
+              onClick={() => navigate("/borrower/lenders")}
+            >
+              Request
+            </Button>
           </div>
 
-          {/* Charts */}
-          <Card className="lg:col-span-2 bg-surface/20 backdrop-blur-md border border-border/10 rounded-[2.5rem] overflow-hidden flex flex-col no-spotlight shadow-soft">
-            <CardHeader className="px-8 pt-8 pb-0 flex flex-row items-center justify-between">
-               <div className="space-y-1">
-                  <CardTitle className="text-lg font-black tracking-widest uppercase">Velocity</CardTitle>
-                  <p className="text-[10px] text-muted-foreground/60 font-black uppercase tracking-[0.2em]">Repayment Flow</p>
-               </div>
-               <TrendingUp className="w-5 h-5 text-primary opacity-30" />
-            </CardHeader>
-            <CardContent className="p-8 flex-1">
-               <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                     <LineChart data={walletSummary?.toGiveSeries || []}>
-                        <defs>
-                           <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#22C55E" stopOpacity={0.1}/>
-                              <stop offset="95%" stopColor="#22C55E" stopOpacity={0}/>
-                           </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.02)" />
-                        <XAxis 
-                           dataKey="month" 
-                           axisLine={false} 
-                           tickLine={false} 
-                           tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 900 }}
-                           dy={10}
-                        />
-                        <YAxis 
-                           axisLine={false} 
-                           tickLine={false} 
-                           tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))', fontWeight: 900 }}
-                        />
-                        <Tooltip 
-                           contentStyle={{ 
-                              backgroundColor: 'rgba(23, 23, 23, 0.9)', 
-                              backdropFilter: 'blur(20px)',
-                              border: '1px solid rgba(255,255,255,0.05)',
-                              borderRadius: '20px',
-                           }}
-                           itemStyle={{ fontWeight: 900, fontSize: '11px', textTransform: 'uppercase' }}
-                           labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '8px', fontWeight: 900, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.2em' }}
-                        />
-                        <Line 
-                           type="monotone" 
-                           dataKey="value" 
-                           stroke="#22C55E" 
-                           strokeWidth={3} 
-                           dot={{ fill: '#22C55E', strokeWidth: 1.5, r: 3, stroke: 'white' }}
-                           activeDot={{ r: 6, strokeWidth: 0 }}
-                           name="Payments"
-                        />
-                     </LineChart>
-                  </ResponsiveContainer>
-               </div>
+          {isLoading || isFetching ? (
+            <div className="space-y-2.5">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-28 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : loans.length === 0 ? (
+            <Card className="border-border/30 bg-card">
+              <CardContent className="p-4 text-center">
+                <p className="text-sm text-muted-foreground">No loans found</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2.5">
+              {loans.map((loan) => (
+                <Card
+                  key={loan.id}
+                  className="border-border/30 bg-card cursor-pointer"
+                  onClick={() => navigate(`/borrower/my-loans/${loan.id}`)}
+                >
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {loan.purpose || "Loan facility"}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {loan.createdAt
+                            ? format(new Date(loan.createdAt), "MMM dd, yyyy")
+                            : "N/A"}
+                        </p>
+                      </div>
+                      {getStatusBadge(loan.status)}
+                    </div>
+                    <div className="rounded-lg border border-border/20 p-2.5 bg-muted/10 flex items-center justify-between">
+                      <div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Amount
+                        </p>
+                        <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                          <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
+                          {Number(loan.requestedAmount).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[11px] text-muted-foreground">
+                          Term
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {loan.requestedTermMonths} mo
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {renderPagination()}
+
+          <Card className="border-border/30 bg-card">
+            <CardContent className="p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">
+                  Recent Transactions
+                </p>
+                <History className="w-4 h-4 text-primary" />
+              </div>
+              {isTransactionsLoading ? (
+                <Skeleton className="h-20 w-full rounded-lg" />
+              ) : !transactionsData || transactionsData.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No recent transactions
+                </p>
+              ) : (
+                transactionsData.slice(0, 5).map((tx: any) => (
+                  <div
+                    key={tx.id}
+                    className="rounded-lg border border-border/20 px-2.5 py-2 flex items-center justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs text-foreground truncate">
+                        {String(tx.type || "TRANSACTION").replace(/_/g, " ")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {format(new Date(tx.createdAt), "MMM dd, yyyy")}
+                      </p>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground flex items-center gap-1 shrink-0 ml-2">
+                      <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
+                      {Number(tx.amount || 0).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Portfolio Section */}
-        <div className="space-y-8">
-          <div className="flex items-center justify-between px-2">
-            <h2 className="text-lg font-black text-foreground uppercase tracking-[0.2em]">Live Contracts</h2>
-            <div className="h-px flex-1 mx-6 bg-border/20 hidden sm:block" />
+        <div className="hidden lg:block space-y-5">
+          <div className="rounded-xl border border-border/30 bg-card px-4 py-3 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Loan Portfolio</span>
+            <span>{total} total records</span>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up">
-            {isLoading || isFetching ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 w-full rounded-[2.5rem]" />
-              ))
-            ) : loans.length === 0 ? (
-              <div className="col-span-full py-24 bg-surface/10 rounded-[2.5rem] border border-dashed border-border/10 flex flex-col items-center justify-center text-center no-spotlight">
-                 <Activity className="w-12 h-12 mb-6 text-primary opacity-10" />
-                 <h3 className="text-base font-black uppercase tracking-widest">No active deployments</h3>
-                 <p className="text-xs text-muted-foreground/60 max-w-xs mx-auto mt-3 font-medium">Initialize your first credit facility through the marketplace.</p>
-                 <Button variant="link" onClick={() => navigate("/borrower/lenders")} className="mt-6 font-black text-primary hover:opacity-80 uppercase tracking-widest text-[10px]">
-                   Open Marketplace &rarr;
-                 </Button>
-              </div>
-            ) : (
-              loans.map((loan) => (
-                <Card 
-                  key={loan.id} 
-                  className="group bg-surface/20 backdrop-blur-md border border-border/10 hover:border-primary/20 transition-all duration-700 rounded-[2.5rem] overflow-hidden flex flex-col relative no-spotlight"
-                >
-                   <CardContent className="p-8 space-y-6 flex-1 flex flex-col relative z-10">
-                      <div className="flex items-start justify-between">
-                         <div className="space-y-1">
-                            <h3 className="font-black text-lg text-foreground line-clamp-1 group-hover:text-primary transition-colors uppercase tracking-widest">{loan.purpose || "Facility"}</h3>
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 flex items-center gap-2">
-                               <Clock className="w-3 h-3 text-primary" />
-                               {loan.createdAt ? format(new Date(loan.createdAt), "MMM dd, yyyy") : "N/A"}
-                            </p>
-                         </div>
-                         <div className="scale-90 origin-right">
-                          {getStatusBadge(loan.status)}
-                         </div>
-                      </div>
 
-                      <div className="py-5 px-6 bg-surface/10 rounded-[1.5rem] border border-border/5 flex items-center justify-between group-hover:bg-primary/5 transition-colors">
-                         <div className="space-y-1">
-                            <p className="text-[9px] uppercase font-black text-muted-foreground/40 tracking-[0.2em]">Principal</p>
-                            <div className="flex items-center gap-1 text-2xl font-black text-foreground tracking-tighter">
-                               <IconCurrencyRupeeNepalese className="w-5 h-5 text-primary" />
-                               {Number(loan.requestedAmount).toLocaleString()}
+          <div className="grid grid-cols-12 gap-4 items-start">
+            <div className="col-span-8 space-y-4">
+              <Card className="border-border/20 bg-card">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-4">
+                    {renderSearch("w-full")}
+                    <Button
+                      className="h-9 px-4"
+                      onClick={() => navigate("/borrower/lenders")}
+                    >
+                      Request Loan
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {isLoading || isFetching ? (
+                      Array.from({ length: 4 }).map((_, idx) => (
+                        <Skeleton
+                          key={idx}
+                          className="h-20 w-full rounded-lg"
+                        />
+                      ))
+                    ) : loans.length === 0 ? (
+                      <div className="rounded-lg border border-border/20 bg-muted/10 p-6 text-center">
+                        <p className="text-sm text-muted-foreground">
+                          No loans found
+                        </p>
+                      </div>
+                    ) : (
+                      loans.map((loan) => (
+                        <button
+                          key={loan.id}
+                          type="button"
+                          onClick={() =>
+                            navigate(`/borrower/my-loans/${loan.id}`)
+                          }
+                          className="w-full rounded-lg border border-border/20 bg-muted/5 px-3.5 py-3 text-left hover:bg-muted/10 transition-colors"
+                        >
+                          <div className="grid grid-cols-[1.5fr_1fr_80px_130px] gap-3 items-center">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground truncate">
+                                {loan.purpose || "Loan facility"}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {loan.createdAt
+                                  ? format(
+                                      new Date(loan.createdAt),
+                                      "MMM dd, yyyy",
+                                    )
+                                  : "N/A"}
+                              </p>
                             </div>
-                         </div>
-                         <div className="text-right space-y-1">
-                            <p className="text-[9px] uppercase font-black text-muted-foreground/40 tracking-[0.2em]">Tenor</p>
-                            <p className="font-black text-xl text-foreground tracking-tighter uppercase">{loan.requestedTermMonths} <span className="text-[10px] font-black text-muted-foreground/60">Mo</span></p>
-                         </div>
-                      </div>
+                            <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                              <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
+                              {Number(loan.requestedAmount).toLocaleString(
+                                "en-IN",
+                              )}
+                            </p>
+                            <p className="text-sm font-semibold text-foreground">
+                              {loan.requestedTermMonths} mo
+                            </p>
+                            <div className="justify-self-end">
+                              {getStatusBadge(loan.status)}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-                      <div className="flex items-center justify-between pt-4 mt-auto">
-                         <div className="scale-75 origin-left opacity-90">
-                           <BlockchainStatusBadge blockchainTxHash={(loan as any).blockchainTxHash || (loan as any).blockchain_tx_hash} />
-                         </div>
-                         <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 rounded-xl px-4 text-[9px] font-black uppercase tracking-widest gap-2 hover:bg-primary/5 hover:text-primary transition-all group/btn" 
-                            onClick={() => navigate(`/borrower/loans/${loan.id}`)}
-                         >
-                            Audit <ChevronDown className="w-3 h-3 -rotate-90 group-hover/btn:translate-x-1 transition-transform" />
-                         </Button>
+              {renderPagination()}
+
+              <Card className="border-border/20 bg-card">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">
+                      Recent Transactions
+                    </p>
+                    <History className="w-4 h-4 text-primary" />
+                  </div>
+                  {isTransactionsLoading ? (
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                  ) : !transactionsData || transactionsData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No recent transactions
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {transactionsData.slice(0, 6).map((tx: any) => (
+                        <div
+                          key={tx.id}
+                          className="rounded-lg border border-border/20 px-3 py-2.5 flex items-center justify-between"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-xs text-foreground truncate">
+                              {String(tx.type || "TRANSACTION").replace(
+                                /_/g,
+                                " ",
+                              )}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {format(new Date(tx.createdAt), "MMM dd, yyyy")}
+                            </p>
+                          </div>
+                          <p className="text-xs font-semibold text-foreground flex items-center gap-1 shrink-0 ml-2">
+                            <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
+                            {Number(tx.amount || 0).toLocaleString("en-IN")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="col-span-4 space-y-4 sticky top-28">
+              <Card className="border-border/20 bg-card">
+                <CardContent className="p-4 space-y-3">
+                  <p className="text-sm font-semibold text-foreground">
+                    Portfolio Summary
+                  </p>
+                  {[
+                    {
+                      label: "Borrowed",
+                      value: totalBorrowed,
+                      icon: ArrowUpRight,
+                      color: "text-primary",
+                    },
+                    {
+                      label: "Paid",
+                      value: totalPaid,
+                      icon: ArrowDownRight,
+                      color: "text-emerald-500",
+                    },
+                    {
+                      label: "Outstanding",
+                      value: outstanding,
+                      icon: Clock3,
+                      color: "text-amber-500",
+                    },
+                    {
+                      label: "Interest",
+                      value: totalInterest,
+                      icon: AlertCircle,
+                      color: "text-rose-500",
+                    },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                        <item.icon className={cn("w-3.5 h-3.5", item.color)} />
+                        {item.label}
+                      </span>
+                      <span className="font-semibold text-foreground inline-flex items-center gap-1">
+                        <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
+                        {item.value.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/20 bg-card">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">
+                      Loans by Status
+                    </p>
+                    <Activity className="w-4 h-4 text-primary" />
+                  </div>
+                  {isStatusLoading ? (
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                  ) : loansByStatus.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No status records found.
+                    </p>
+                  ) : (
+                    loansByStatus.slice(0, 6).map((item) => (
+                      <div
+                        key={item.status}
+                        className="rounded-lg border border-border/20 px-3 py-2 flex items-center justify-between"
+                      >
+                        <span className="text-sm text-foreground">
+                          {item.status.replace(/_/g, " ")}
+                        </span>
+                        <span className="text-sm font-semibold text-primary">
+                          {item.count}
+                        </span>
                       </div>
-                   </CardContent>
-                </Card>
-              ))
-            )}
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/20 bg-card">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">
+                      Monthly Trend
+                    </p>
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                  </div>
+                  {isMonthlyLoading ? (
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                  ) : monthlyLoans.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No monthly trend records found.
+                    </p>
+                  ) : (
+                    monthlyLoans.map((row) => {
+                      const width = Math.max(
+                        (Number(row.count || 0) / maxMonthlyCount) * 100,
+                        4,
+                      );
+                      return (
+                        <div
+                          key={row.month}
+                          className="grid grid-cols-[58px_1fr_auto] items-center gap-2.5"
+                        >
+                          <span className="text-xs text-muted-foreground">
+                            {row.month}
+                          </span>
+                          <div className="h-2 rounded-full bg-muted/30 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${width}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-semibold text-foreground">
+                            {row.count}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-
-        {/* Audit Log */}
-        <div className="space-y-8 pb-12">
-           <div className="flex items-center justify-between px-2">
-              <h2 className="text-lg font-black text-foreground uppercase tracking-[0.2em]">Audit Log</h2>
-              <div className="h-px flex-1 mx-6 bg-border/20 hidden sm:block" />
-           </div>
-
-           <Card className="bg-surface/20 backdrop-blur-md border border-border/10 rounded-[2.5rem] overflow-hidden no-spotlight shadow-soft">
-              <CardContent className="p-0">
-                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                       <thead>
-                          <tr className="border-b border-border/5 bg-surface/10">
-                             <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Registry.tx</th>
-                             <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Balance.val</th>
-                             <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">State.obj</th>
-                             <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Timestamp</th>
-                             <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 text-right">Verification</th>
-                          </tr>
-                       </thead>
-                       <tbody className="divide-y divide-border/5">
-                          {isTransactionsLoading ? (
-                             Array.from({ length: 5 }).map((_, i) => (
-                                <tr key={i}>
-                                   <td className="px-8 py-6"><Skeleton className="h-3 w-24" /></td>
-                                   <td className="px-8 py-6"><Skeleton className="h-3 w-16" /></td>
-                                   <td className="px-8 py-6"><Skeleton className="h-3 w-16" /></td>
-                                   <td className="px-8 py-6"><Skeleton className="h-3 w-24" /></td>
-                                   <td className="px-8 py-6"><Skeleton className="h-3 w-32 ml-auto" /></td>
-                                </tr>
-                             ))
-                          ) : transactionsData?.length === 0 ? (
-                             <tr>
-                                <td colSpan={5} className="px-8 py-16 text-center text-muted-foreground/60 font-black uppercase tracking-widest text-[10px]">
-                                   Network synchronization complete. 0 logs found.
-                                </td>
-                             </tr>
-                          ) : (
-                             transactionsData?.slice(0, 8).map((tx: any) => (
-                                <tr key={tx.id} className="group hover:bg-primary/5 transition-all">
-                                   <td className="px-8 py-5">
-                                      <div className="flex items-center gap-3">
-                                         <div className={cn(
-                                            "w-7 h-7 rounded-lg flex items-center justify-center text-xs border border-current/10",
-                                            tx.type === 'DISBURSEMENT' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
-                                         )}>
-                                            {tx.type === 'DISBURSEMENT' ? <ArrowDownRight className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
-                                         </div>
-                                         <span className="font-black text-[10px] tracking-widest uppercase">{tx.type.replace('_', ' ')}</span>
-                                      </div>
-                                   </td>
-                                   <td className="px-8 py-5">
-                                      <span className="font-black text-xs tracking-tighter flex items-center gap-1">
-                                         <IconCurrencyRupeeNepalese className="w-3 h-3 text-primary" />
-                                         {Number(tx.amount).toLocaleString()}
-                                      </span>
-                                   </td>
-                                   <td className="px-8 py-5">
-                                      <Badge className={cn(
-                                         "rounded-full text-[8px] font-black px-2 py-0.5 uppercase tracking-widest border-none",
-                                         tx.status === 'COMPLETED' ? "bg-emerald-500/10 text-emerald-500" : "bg-orange-500/10 text-orange-500"
-                                      )}>
-                                         {tx.status}
-                                      </Badge>
-                                   </td>
-                                   <td className="px-8 py-5 text-[10px] text-muted-foreground/80 font-black uppercase tracking-widest">
-                                      {format(new Date(tx.createdAt), "MMM dd, yy")}
-                                   </td>
-                                   <td className="px-8 py-5 text-right">
-                                      <div className="flex justify-end scale-[0.65] origin-right opacity-80 group-hover:opacity-100 transition-opacity">
-                                         <BlockchainStatusBadge blockchainTxHash={tx.blockchainTxHash} />
-                                      </div>
-                                   </td>
-                                </tr>
-                             ))
-                          )}
-                       </tbody>
-                    </table>
-                 </div>
-              </CardContent>
-           </Card>
         </div>
       </div>
     </BorrowerLayout>
