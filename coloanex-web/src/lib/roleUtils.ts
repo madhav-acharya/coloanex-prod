@@ -1,7 +1,12 @@
 import type { AuthUser } from "@/types/auth";
 
-const hasRole = (user: AuthUser | null | undefined, roleName: string): boolean =>
-  user?.roles?.some((ur) => ur.role?.name?.toLowerCase() === roleName.toLowerCase()) ?? false;
+const hasRole = (
+  user: AuthUser | null | undefined,
+  roleName: string,
+): boolean =>
+  user?.roles?.some(
+    (ur) => ur.role?.name?.toLowerCase() === roleName.toLowerCase(),
+  ) ?? false;
 
 export const getRoles = (user: AuthUser | null | undefined) => ({
   isSuperAdmin: hasRole(user, "Super Admin"),
@@ -16,16 +21,22 @@ export const getHomeRoute = (user: AuthUser | null | undefined): string => {
   return "/borrower/dashboard";
 };
 
-export const canAccessAdminRoutes = (user: AuthUser | null | undefined): boolean => {
+export const canAccessAdminRoutes = (
+  user: AuthUser | null | undefined,
+): boolean => {
   const { isSuperAdmin, isAdmin, isLender } = getRoles(user);
   return isSuperAdmin || isAdmin || isLender;
 };
 
-export const canAccessBorrowerRoutes = (user: AuthUser | null | undefined): boolean => {
-  const { isSuperAdmin, isAdmin, isLender, isBorrower } = getRoles(user);
-  return isSuperAdmin || isAdmin || isLender || isBorrower;
+export const canAccessBorrowerRoutes = (
+  user: AuthUser | null | undefined,
+): boolean => {
+  const { isBorrower } = getRoles(user);
+  return isBorrower;
 };
 
-export const canAccessSuperAdminRoutes = (user: AuthUser | null | undefined): boolean => {
+export const canAccessSuperAdminRoutes = (
+  user: AuthUser | null | undefined,
+): boolean => {
   return hasRole(user, "Super Admin");
 };
