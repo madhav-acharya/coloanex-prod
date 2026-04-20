@@ -15,10 +15,12 @@ interface PublicRouteProps {
 
 const getHomeRoute = (user: any): string => {
   if (!user?.roles?.length) return "/dashboard";
-  const isSuperAdmin = user.roles.some((ur: any) => ur.role?.name === "Super Admin");
+  const isSuperAdmin = user.roles.some(
+    (ur: any) => ur.role?.name === "Super Admin",
+  );
   if (isSuperAdmin) return "/dashboard";
   const isAdminOrLender = user.roles.some(
-    (ur: any) => ur.role?.name === "Admin" || ur.role?.name === "Lender"
+    (ur: any) => ur.role?.name === "Admin" || ur.role?.name === "Lender",
   );
   if (isAdminOrLender) return "/dashboard";
   const isBorrower = user.roles.some((ur: any) => ur.role?.name === "Borrower");
@@ -41,7 +43,9 @@ export const PublicRouteWrapper = ({ children }: PublicRouteProps) => {
     );
   }
 
-  const isAuthPage = window.location.pathname === "/login" || window.location.pathname === "/signup";
+  const isAuthPage =
+    window.location.pathname === "/login" ||
+    window.location.pathname === "/signup";
 
   if (isAuthenticated && user && isAuthPage) {
     return <Navigate to={getHomeRoute(user)} replace />;
@@ -109,6 +113,7 @@ export const PublicRoutes = () => {
           </PublicRouteWrapper>
         }
       />
+      <Route path="*" element={null} />
     </Routes>
   );
 };
