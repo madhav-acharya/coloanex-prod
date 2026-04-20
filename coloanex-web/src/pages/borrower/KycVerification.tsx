@@ -1,286 +1,1122 @@
-import { useState } from "react";
-import BorrowerLayout from "@/components/layouts/BorrowerLayout";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, UploadCloud, X, ArrowRight, ArrowLeft, Building2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
-import { Tenant } from "@/types/tenant";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { useCreateKycMutation } from "@/apis/kycApi";
+import { useUploadSingleMutation } from "@/apis/uploadApi";
+import { KycFileType } from "@/types/kyc";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  FileBadge,
+  FileScan,
+  Home,
+  Upload,
+  UserCircle2,
+} from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+const GENDER_OPTIONS = ["Male", "Female", "Other"];
+const MARITAL_STATUS_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
+const DOCUMENT_TYPE_OPTIONS = [
+  {
+    label: "Citizenship",
+    value: "CITIZENSHIP",
+    numberLabel: "Citizenship Number",
+  },
+  { label: "Passport", value: "PASSPORT", numberLabel: "Passport Number" },
+  {
+    label: "Driving License",
+    value: "DRIVING_LICENSE",
+    numberLabel: "License Number",
+  },
+  { label: "PAN", value: "PAN", numberLabel: "PAN Number" },
+] as const;
 
-export function KycVerificationModal({ 
-  open, 
+type DocumentType = (typeof DOCUMENT_TYPE_OPTIONS)[number]["value"];
+
+type DocumentInfo = {
+  documentNumber: string;
+  issueDate: string;
+  expiryDate: string;
+  issueDistrict: string;
+  frontImage: string;
+  backImage: string;
+};
+
+export function KycVerificationModal({
+  open,
   onOpenChange,
   defaultTenantId = "",
-  isLockedTenant = false
-}: { 
-  open: boolean, 
-  onOpenChange: (open: boolean) => void,
-  defaultTenantId?: string,
-  isLockedTenant?: boolean
+  isLockedTenant = false,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultTenantId?: string;
+  isLockedTenant?: boolean;
 }) {
   const { user } = useAuth();
-  
-  const [step, setStep] = useState(isLockedTenant ? 2 : 1);
-  const [selectedTenantId, setSelectedTenantId] = useState<string>(defaultTenantId);
-  const [frontImage, setFrontImage] = useState<File | null>(null);
-  const [backImage, setBackImage] = useState<File | null>(null);
-  const [selfie, setSelfie] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
+  const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
 
-  const { data: tenantsData, isLoading: isLoadingTenants } = useGetTenantsQuery({ limit: 50, isActive: "true" });
+  const { data: tenantsData } = useGetTenantsQuery({
+    page: 1,
+    limit: 100,
+    isActive: "true",
+  });
+
   const tenants = tenantsData?.data || [];
 
-  const completedCount = [frontImage, backImage, selfie].filter(Boolean).length;
-  const canSubmit = Boolean(frontImage && backImage && selfie);
-  const progressPercent = Math.round((completedCount / 3) * 100);
+  const [form, setForm] = useState({
+    tenantId: defaultTenantId,
+    firstName: user?.fullName?.split(" ")[0] || "",
+    middleName: "",
+    lastName: user?.fullName?.split(" ").slice(1).join(" ") || "",
+    dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    fatherName: "",
+    motherName: "",
+    grandfatherName: "",
+    province: "",
+    district: "",
+    municipality: "",
+    ward: "",
+    tole: "",
+    occupation: "",
+    monthlyIncome: "",
+    bankName: "",
+    bankAccountNumber: "",
+    bankBranch: "",
+  });
 
-  const handleNext = () => setStep(prev => prev + 1);
-  const handlePrev = () => setStep(prev => prev - 1);
+  const [passportPhoto, setPassportPhoto] = useState("");
+  const [selfie, setSelfie] = useState("");
+  const [selectedDocumentTypes, setSelectedDocumentTypes] = useState<
+    DocumentType[]
+  >([]);
+  const [activeDocumentType, setActiveDocumentType] = useState<
+    DocumentType | ""
+  >("");
+  const [documentDetails, setDocumentDetails] = useState<
+    Record<string, DocumentInfo>
+  >({});
 
-  const handleSubmit = () => {
-     setIsSubmitting(true);
-     setTimeout(() => {
-        setIsSubmitting(false);
-        setStep(4); // Success step
-     }, 2000);
+  const isSubmitting = isCreating || isUploading;
+
+  const getDocumentDetail = (docType: DocumentType): DocumentInfo =>
+    documentDetails[docType] || {
+      documentNumber: "",
+      issueDate: "",
+      expiryDate: "",
+      issueDistrict: "",
+      frontImage: "",
+      backImage: "",
+    };
+
+  const updateDocumentDetail = (
+    docType: DocumentType,
+    key: keyof DocumentInfo,
+    value: string,
+  ) => {
+    setDocumentDetails((prev) => ({
+      ...prev,
+      [docType]: {
+        ...getDocumentDetail(docType),
+        [key]: value,
+      },
+    }));
   };
 
-  const currentStepLabel = step === 1 ? "Select Lender" : step === 2 ? "Upload Documents" : step === 3 ? "Review & Submit" : "Complete";
+  const canSubmit = useMemo(() => {
+    const hasTenant = isLockedTenant
+      ? Boolean(defaultTenantId)
+      : Boolean(form.tenantId);
+    return (
+      hasTenant &&
+      Boolean(form.firstName.trim()) &&
+      Boolean(form.lastName.trim()) &&
+      Boolean(form.dateOfBirth) &&
+      Boolean(form.province.trim()) &&
+      Boolean(form.district.trim()) &&
+      Boolean(form.municipality.trim()) &&
+      Boolean(form.ward.trim()) &&
+      Boolean(form.occupation.trim()) &&
+      Boolean(form.monthlyIncome) &&
+      Boolean(selectedDocumentTypes.length) &&
+      Boolean(passportPhoto) &&
+      Boolean(selfie) &&
+      selectedDocumentTypes.every((docType) => {
+        const detail = getDocumentDetail(docType);
+        return (
+          Boolean(detail.documentNumber.trim()) &&
+          Boolean(detail.frontImage) &&
+          (docType === "PAN" || Boolean(detail.backImage))
+        );
+      })
+    );
+  }, [
+    defaultTenantId,
+    form,
+    getDocumentDetail,
+    isLockedTenant,
+    passportPhoto,
+    selectedDocumentTypes,
+    selfie,
+  ]);
+
+  const uploadDoc = async (file: File) => {
+    const data = new FormData();
+    data.append("file", file);
+    data.append("category", "kyc");
+    const uploaded = await uploadSingle(data).unwrap();
+    return uploaded.url;
+  };
+
+  const uploadImage = async (
+    file: File | null,
+    target: "passportPhoto" | "selfie" | "frontImage" | "backImage",
+    docType?: DocumentType,
+  ) => {
+    if (!file) return;
+    try {
+      const url = await uploadDoc(file);
+      if (target === "passportPhoto") setPassportPhoto(url);
+      if (target === "selfie") setSelfie(url);
+      if (docType && (target === "frontImage" || target === "backImage")) {
+        updateDocumentDetail(docType, target, url);
+      }
+      toast({ title: "Uploaded", description: "Image uploaded successfully." });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error?.data?.message || "Unable to upload image.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stepValid = (currentStep: number) => {
+    if (currentStep === 1) {
+      return (
+        (isLockedTenant ? Boolean(defaultTenantId) : Boolean(form.tenantId)) &&
+        Boolean(form.firstName.trim()) &&
+        Boolean(form.lastName.trim()) &&
+        Boolean(form.dateOfBirth)
+      );
+    }
+    if (currentStep === 2) {
+      return (
+        Boolean(form.province.trim()) &&
+        Boolean(form.district.trim()) &&
+        Boolean(form.municipality.trim()) &&
+        Boolean(form.ward.trim())
+      );
+    }
+    if (currentStep === 3) {
+      return Boolean(form.occupation.trim()) && Boolean(form.monthlyIncome);
+    }
+    if (currentStep === 4) {
+      return (
+        Boolean(selectedDocumentTypes.length) && Boolean(activeDocumentType)
+      );
+    }
+    return canSubmit;
+  };
+
+  const handleToggleDocType = (docType: DocumentType) => {
+    setSelectedDocumentTypes((prev) => {
+      if (prev.includes(docType)) {
+        const next = prev.filter((d) => d !== docType);
+        if (activeDocumentType === docType) {
+          setActiveDocumentType(next[0] || "");
+        }
+        return next;
+      }
+      const next = [...prev, docType];
+      if (!activeDocumentType) setActiveDocumentType(docType);
+      return next;
+    });
+  };
+
+  const activeDocDetail = activeDocumentType
+    ? getDocumentDetail(activeDocumentType)
+    : null;
+
+  const activeDocMeta = DOCUMENT_TYPE_OPTIONS.find(
+    (opt) => opt.value === activeDocumentType,
+  );
+
+  const nextStep = () => {
+    if (!stepValid(step)) {
+      toast({
+        title: "Missing fields",
+        description: "Please complete required fields before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setStep((prev) => Math.min(prev + 1, 5));
+  };
+
+  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+
+    try {
+      const fullName = [form.firstName, form.middleName, form.lastName]
+        .filter(Boolean)
+        .join(" ");
+
+      const files = [
+        {
+          fileType: KycFileType.SELFIE,
+          fileUrl: selfie,
+          documentMetadata: {},
+        },
+        ...selectedDocumentTypes.flatMap((docType) => {
+          const detail = getDocumentDetail(docType);
+          const baseMeta = {
+            documentType: docType,
+            documentNumber: detail.documentNumber,
+            issueDate: detail.issueDate || undefined,
+            expiryDate: detail.expiryDate || undefined,
+            issueDistrict: detail.issueDistrict || undefined,
+          };
+
+          if (docType === "CITIZENSHIP") {
+            return [
+              {
+                fileType: KycFileType.CITIZENSHIP_FRONT,
+                fileUrl: detail.frontImage,
+                documentMetadata: baseMeta,
+              },
+              {
+                fileType: KycFileType.CITIZENSHIP_BACK,
+                fileUrl: detail.backImage,
+                documentMetadata: baseMeta,
+              },
+            ];
+          }
+
+          if (docType === "DRIVING_LICENSE") {
+            return [
+              {
+                fileType: KycFileType.LICENSE_FRONT,
+                fileUrl: detail.frontImage,
+                documentMetadata: baseMeta,
+              },
+              {
+                fileType: KycFileType.LICENSE_BACK,
+                fileUrl: detail.backImage,
+                documentMetadata: baseMeta,
+              },
+            ];
+          }
+
+          if (docType === "PASSPORT") {
+            return [
+              {
+                fileType: KycFileType.PASSPORT,
+                fileUrl: detail.frontImage,
+                documentMetadata: baseMeta,
+              },
+            ];
+          }
+
+          return [
+            {
+              fileType: KycFileType.PAN,
+              fileUrl: detail.frontImage,
+              documentMetadata: baseMeta,
+            },
+          ];
+        }),
+      ];
+
+      await createKyc({
+        tenantId: isLockedTenant ? defaultTenantId : form.tenantId,
+        fullName,
+        dateOfBirth: form.dateOfBirth,
+        photoUrl: passportPhoto,
+        personalDetails: {
+          firstName: form.firstName,
+          middleName: form.middleName,
+          lastName: form.lastName,
+          gender: form.gender,
+          maritalStatus: form.maritalStatus,
+          fatherName: form.fatherName,
+          motherName: form.motherName,
+          grandfatherName: form.grandfatherName,
+          source: "borrower-web",
+        },
+        permanentAddress: {
+          province: form.province,
+          district: form.district,
+          municipality: form.municipality,
+          ward: form.ward,
+          tole: form.tole,
+        },
+        occupation: form.occupation,
+        monthlyIncome: Number(form.monthlyIncome),
+        bankDetails: {
+          bankName: form.bankName,
+          bankAccountNumber: form.bankAccountNumber,
+          bankBranch: form.bankBranch,
+        },
+        files,
+      }).unwrap();
+
+      toast({
+        title: "KYC submitted",
+        description: "Your request has been submitted for review.",
+      });
+
+      onOpenChange(false);
+      setStep(1);
+    } catch (error: any) {
+      toast({
+        title: "KYC submission failed",
+        description: error?.data?.message || "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl p-0 overflow-hidden bg-background border-border/60 shadow-card rounded-[2.5rem]">
-        <DialogHeader className="sr-only">
-           <DialogTitle>Compliance Verification</DialogTitle>
+      <DialogContent
+        className="sm:max-w-2xl p-0 max-h-[92vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <div className="px-6 pt-6">
+            <DialogTitle>Verify KYC</DialogTitle>
+            <DialogDescription>
+              Complete verification for this lender before applying for a loan.
+            </DialogDescription>
+          </div>
         </DialogHeader>
-        <div className="flex h-[80vh] flex-col p-10 bg-background overflow-y-auto w-full space-y-12 relative">
-          {/* Header Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
-                <ShieldAlert className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black tracking-tight text-foreground uppercase tracking-widest">Compliance Verification</h1>
-                <p className="text-sm text-muted-foreground mt-1 font-medium">Verify your organizational or personal identity for protocol access.</p>
-              </div>
+        <div className="px-6 pb-6">
+          <div className="mb-5 space-y-3">
+            <div className="text-xs font-semibold text-muted-foreground">
+              Step {step} of 5
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                { id: 1, label: "Identity", icon: UserCircle2 },
+                { id: 2, label: "Address", icon: Home },
+                { id: 3, label: "Income", icon: IconCurrencyRupeeNepalese },
+                { id: 4, label: "Document", icon: FileBadge },
+                { id: 5, label: "Upload", icon: FileScan },
+              ].map((item) => (
+                <div key={item.id} className="space-y-1">
+                  <div className="flex justify-center">
+                    <item.icon
+                      className={`w-3.5 h-3.5 ${
+                        step >= item.id
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  </div>
+                  <div
+                    className={`h-8 rounded-md border text-[11px] font-semibold flex items-center justify-center transition-colors ${
+                      step >= item.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/40 text-muted-foreground border-border"
+                    }`}
+                  >
+                    {item.id}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center truncate">
+                    {item.label}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 
-        {/* Stepper Header */}
-        <div className="max-w-3xl">
-           <div className="flex items-center justify-between relative px-4">
-              <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 h-1 bg-muted rounded-full pointer-events-none" />
-              <div 
-                 className="absolute left-4 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full transition-all duration-300 pointer-events-none" 
-                 style={{ width: `calc(${((step - 1) / 2) * 100}% - 32px)` }} 
-              />
-              
-              {[1, 2, 3].map((num) => (
-                 <div key={num} className="relative z-10 flex flex-col items-center gap-3">
-                    <div className={cn(
-                       "w-10 h-10 rounded-full flex items-center justify-center text-xs font-black border-2 transition-colors shadow-soft",
-                       step > num ? "bg-primary border-primary text-primary-foreground" : 
-                       step === num ? "bg-background border-primary text-primary" : 
-                       "bg-background border-muted text-muted-foreground"
-                    )}>
-                       {step > num ? "✓" : num}
-                    </div>
-                    <span className={cn(
-                       "text-[10px] font-black uppercase tracking-widest absolute -bottom-6 w-max text-center",
-                       step >= num ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                       {num === 1 ? "Protocol Node" : num === 2 ? "Artifacts" : "Verification"}
-                    </span>
-                 </div>
-              ))}
-           </div>
-        </div>
-
-        <div className="mt-8">
-           {step === 1 && (
-              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
-                 <CardContent className="p-8">
-                    <h2 className="text-lg font-black mb-2 uppercase tracking-wider">Select Infrastructure Host</h2>
-                    <p className="text-sm text-muted-foreground mb-8 font-medium">Select the lending institution you wish to submit your verification artifacts to.</p>
-                    
-                    {isLoadingTenants ? (
-                       <p className="text-sm text-muted-foreground">Synchronizing nodes...</p>
-                    ) : (
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {tenants.map(tenant => (
-                             <div 
-                               key={tenant.id}
-                               onClick={() => setSelectedTenantId(tenant.id)}
-                               className={cn(
-                                 "p-5 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4",
-                                 selectedTenantId === tenant.id 
-                                    ? "border-primary bg-primary/5 shadow-soft" 
-                                    : "border-border/40 hover:border-primary/20 bg-background"
-                               )}
-                             >
-                                <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black">
-                                   {tenant.name.charAt(0)}
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                   <p className="font-bold text-sm truncate">{tenant.name}</p>
-                                   <p className="text-xs text-muted-foreground truncate font-medium">{tenant.contactEmail || "Lending Institution"}</p>
-                                </div>
-                                {selectedTenantId === tenant.id && (
-                                  <div className="w-2 h-2 rounded-full bg-primary" />
-                                )}
-                             </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
+              {step === 1 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <Building2 className="w-4 h-4 text-primary" />
+                    Identity Information
+                  </div>
+                  {!isLockedTenant && (
+                    <div className="space-y-2">
+                      <Label>
+                        Lender <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={form.tenantId}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({ ...prev, tenantId: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select lender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants.map((tenant) => (
+                            <SelectItem key={tenant.id} value={tenant.id}>
+                              {tenant.name}
+                            </SelectItem>
                           ))}
-                       </div>
-                    )}
-                 </CardContent>
-              </Card>
-           )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-           {step === 2 && (
-              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
-                 <CardContent className="p-8">
-                    <div className="flex items-center justify-between mb-8">
-                      <div>
-                        <h2 className="text-lg font-black uppercase tracking-wider">Artifact Submission</h2>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">Upload clean photographic evidence of your government identification.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>
+                        First Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.firstName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            firstName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Middle Name</Label>
+                      <Input
+                        value={form.middleName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            middleName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Last Name <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.lastName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            lastName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>
+                        Date of Birth{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="date"
+                        value={form.dateOfBirth}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            dateOfBirth: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Gender</Label>
+                      <Select
+                        value={form.gender}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({ ...prev, gender: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {GENDER_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Marital Status</Label>
+                      <Select
+                        value={form.maritalStatus}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({ ...prev, maritalStatus: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select marital status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MARITAL_STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <Home className="w-4 h-4 text-primary" />
+                    Family & Address Details
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>Father&apos;s Name</Label>
+                      <Input
+                        value={form.fatherName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            fatherName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Mother&apos;s Name</Label>
+                      <Input
+                        value={form.motherName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            motherName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Grandfather&apos;s Name</Label>
+                      <Input
+                        value={form.grandfatherName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            grandfatherName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>
+                        Province <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.province}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            province: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        District <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.district}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            district: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Municipality <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.municipality}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            municipality: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Ward <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.ward}
+                        onChange={(e) =>
+                          setForm((prev) => ({ ...prev, ward: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tole/Street</Label>
+                    <Input
+                      value={form.tole}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, tole: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
+                    Occupation & Banking
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>
+                        Occupation <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        value={form.occupation}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            occupation: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>
+                        Monthly Income (NPR){" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        value={form.monthlyIncome}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            monthlyIncome: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Bank Name</Label>
+                      <Input
+                        value={form.bankName}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            bankName: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Bank Account Number</Label>
+                      <Input
+                        value={form.bankAccountNumber}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            bankAccountNumber: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Bank Branch</Label>
+                    <Input
+                      value={form.bankBranch}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          bankBranch: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {step === 4 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <FileBadge className="w-4 h-4 text-primary" />
+                    Document Selection
+                  </div>
+                  <div className="space-y-2">
+                    <Label>
+                      Select Document Type(s){" "}
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      {DOCUMENT_TYPE_OPTIONS.map((option) => {
+                        const selected = selectedDocumentTypes.includes(
+                          option.value,
+                        );
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => handleToggleDocType(option.value)}
+                            className={`px-3 py-1.5 rounded-full text-xs border ${
+                              selected
+                                ? "bg-primary/10 border-primary text-primary"
+                                : "bg-muted/20 border-border text-muted-foreground"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {selectedDocumentTypes.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label>Active Document</Label>
+                        <Select
+                          value={activeDocumentType}
+                          onValueChange={(value) =>
+                            setActiveDocumentType(value as DocumentType)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose document to fill" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {selectedDocumentTypes.map((docType) => {
+                              const label =
+                                DOCUMENT_TYPE_OPTIONS.find(
+                                  (d) => d.value === docType,
+                                )?.label || docType;
+                              return (
+                                <SelectItem key={docType} value={docType}>
+                                  {label}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Badge className="bg-primary/10 text-primary border-none font-black text-xs px-4 py-1.5 rounded-full">{progressPercent}% Sync</Badge>
+
+                      {activeDocumentType &&
+                        activeDocDetail &&
+                        activeDocMeta && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label>
+                                {activeDocMeta.numberLabel}{" "}
+                                <span className="text-destructive">*</span>
+                              </Label>
+                              <Input
+                                value={activeDocDetail.documentNumber}
+                                onChange={(e) =>
+                                  updateDocumentDetail(
+                                    activeDocumentType,
+                                    "documentNumber",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Issue Date</Label>
+                              <Input
+                                type="date"
+                                value={activeDocDetail.issueDate}
+                                onChange={(e) =>
+                                  updateDocumentDetail(
+                                    activeDocumentType,
+                                    "issueDate",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Expiry Date</Label>
+                              <Input
+                                type="date"
+                                value={activeDocDetail.expiryDate}
+                                onChange={(e) =>
+                                  updateDocumentDetail(
+                                    activeDocumentType,
+                                    "expiryDate",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2 sm:col-span-2">
+                              <Label>Issue District</Label>
+                              <Input
+                                value={activeDocDetail.issueDistrict}
+                                onChange={(e) =>
+                                  updateDocumentDetail(
+                                    activeDocumentType,
+                                    "issueDistrict",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {step === 5 && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                    <FileScan className="w-4 h-4 text-primary" />
+                    Upload Verification Files
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>
+                        Passport Size Photo{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <label className="h-36 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) =>
+                            uploadImage(
+                              e.target.files?.[0] || null,
+                              "passportPhoto",
+                            )
+                          }
+                        />
+                        {passportPhoto ? (
+                          <img
+                            src={passportPhoto}
+                            alt="Passport"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                            <Upload className="w-4 h-4" /> Upload Image
+                          </div>
+                        )}
+                      </label>
                     </div>
 
-                    <div className="grid sm:grid-cols-3 gap-8">
-                       {/* Front ID */}
-                       <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-                            Internal Identity (Front)
-                          </label>
-                          {!frontImage ? (
-                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
-                              <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFrontImage(e.target.files?.[0] || null)} />
-                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                              <p className="font-bold text-xs">Upload Front</p>
-                            </label>
+                    <div className="space-y-2">
+                      <Label>
+                        Selfie <span className="text-destructive">*</span>
+                      </Label>
+                      <label className="h-36 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) =>
+                            uploadImage(e.target.files?.[0] || null, "selfie")
+                          }
+                        />
+                        {selfie ? (
+                          <img
+                            src={selfie}
+                            alt="Selfie"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                            <Upload className="w-4 h-4" /> Upload Image
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+
+                  {activeDocumentType && activeDocDetail && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>
+                          Document Front{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <label className="h-28 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                          <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={(e) =>
+                              uploadImage(
+                                e.target.files?.[0] || null,
+                                "frontImage",
+                                activeDocumentType,
+                              )
+                            }
+                          />
+                          {activeDocDetail.frontImage ? (
+                            <img
+                              src={activeDocDetail.frontImage}
+                              alt="Document front"
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
-                              <span className="text-xs font-bold truncate w-full mb-2">{frontImage.name}</span>
-                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setFrontImage(null)}>Replace</Button>
+                            <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                              <Upload className="w-4 h-4" /> Upload Front
                             </div>
                           )}
-                       </div>
-
-                       {/* Back ID */}
-                       <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-                            Internal Identity (Back)
+                        </label>
+                      </div>
+                      {activeDocumentType !== "PAN" && (
+                        <div className="space-y-2">
+                          <Label>
+                            Document Back{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <label className="h-28 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="hidden"
+                              onChange={(e) =>
+                                uploadImage(
+                                  e.target.files?.[0] || null,
+                                  "backImage",
+                                  activeDocumentType,
+                                )
+                              }
+                            />
+                            {activeDocDetail.backImage ? (
+                              <img
+                                src={activeDocDetail.backImage}
+                                alt="Document back"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+                                <Upload className="w-4 h-4" /> Upload Back
+                              </div>
+                            )}
                           </label>
-                          {!backImage ? (
-                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
-                              <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setBackImage(e.target.files?.[0] || null)} />
-                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                              <p className="font-bold text-xs">Upload Back</p>
-                            </label>
-                          ) : (
-                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
-                              <span className="text-xs font-bold truncate w-full mb-2">{backImage.name}</span>
-                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setBackImage(null)}>Replace</Button>
-                            </div>
-                          )}
-                       </div>
-
-                       {/* Selfie */}
-                       <div className="space-y-4">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
-                            Face Liveness
-                          </label>
-                          {!selfie ? (
-                            <label className="group relative w-full aspect-[4/3] rounded-3xl border-2 border-dashed border-border/60 bg-background hover:bg-muted/30 hover:border-primary/40 transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center">
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => setSelfie(e.target.files?.[0] || null)} />
-                              <UploadCloud className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                              <p className="font-bold text-xs">Upload Liveness</p>
-                            </label>
-                          ) : (
-                            <div className="w-full aspect-[4/3] rounded-3xl border border-primary/30 bg-primary/5 p-4 flex flex-col items-center justify-center text-center relative">
-                              <span className="text-xs font-bold truncate w-full mb-2">{selfie.name}</span>
-                              <Button variant="ghost" size="sm" className="h-8 rounded-full text-foreground/60 hover:text-red-500 font-bold text-xs" onClick={() => setSelfie(null)}>Replace</Button>
-                            </div>
-                          )}
-                       </div>
+                        </div>
+                      )}
                     </div>
-                 </CardContent>
-              </Card>
-           )}
+                  )}
 
-           {step === 3 && (
-              <Card className="border-border/40 shadow-soft bg-surface/30 animate-in fade-in slide-in-from-bottom-2 rounded-3xl">
-                 <CardContent className="p-12 text-center space-y-6">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4 border border-primary/20">
-                       <ShieldAlert className="w-8 h-8 text-primary" />
-                    </div>
-                    <h2 className="text-xl font-black uppercase tracking-wider">Final Verification Proof</h2>
-                    <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium">
-                       By submitting these artifacts, you confirm that all information provided is accurate and belongs to the specified identity.
-                    </p>
-                    <div className="bg-background rounded-2xl p-6 text-left inline-block w-full max-w-sm mt-4 border border-border/40 font-bold">
-                       <p className="text-xs flex justify-between items-center"><span className="text-muted-foreground uppercase tracking-widest text-[10px]">Recipient Node:</span> {tenants.find(t => t.id === selectedTenantId)?.name}</p>
-                       <div className="h-px bg-border/40 my-3" />
-                       <p className="text-xs flex justify-between items-center"><span className="text-muted-foreground uppercase tracking-widest text-[10px]">Artifacts:</span> 3/3 Staged</p>
-                    </div>
-                 </CardContent>
-              </Card>
-           )}
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDocumentTypes.map((docType) => {
+                      const detail = getDocumentDetail(docType);
+                      const done = Boolean(
+                        detail.documentNumber &&
+                        detail.frontImage &&
+                        (docType === "PAN" || detail.backImage),
+                      );
+                      const label =
+                        DOCUMENT_TYPE_OPTIONS.find((d) => d.value === docType)
+                          ?.label || docType;
+                      return (
+                        <Badge
+                          key={docType}
+                          variant="outline"
+                          className={
+                            done ? "border-emerald-500 text-emerald-600" : ""
+                          }
+                        >
+                          {done ? <Check className="w-3 h-3 mr-1" /> : null}
+                          {label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
 
-           {step === 4 && (
-              <Card className="border-border/40 shadow-card bg-surface/30 animate-in zoom-in-95 duration-500 rounded-[3rem]">
-                 <CardContent className="p-20 text-center flex flex-col items-center justify-center">
-                    <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mb-10 shadow-soft">
-                       <ShieldAlert className="w-10 h-10 text-emerald-500" />
-                    </div>
-                    <h2 className="text-2xl font-black mb-4 uppercase tracking-widest">Protocol Finalized</h2>
-                    <p className="text-sm text-muted-foreground max-w-sm mb-12 font-medium leading-relaxed">
-                       Your verification artifacts have been securely transmitted to the lending node. The validation cycle is now active.
-                    </p>
-                    <Button onClick={() => window.location.href = '/borrower/dashboard'} className="h-14 px-10 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black text-sm transition-all shadow-soft">
-                       Return to Node Dashboard
-                    </Button>
-                 </CardContent>
-              </Card>
-           )}
-
-           {step < 4 && (
-              <div className="flex items-center justify-between mt-12 pt-8 border-t border-border/40">
-                <Button 
-                   variant="ghost" 
-                   onClick={handlePrev} 
-                   className="font-bold text-sm h-12 px-6 rounded-xl hover:bg-muted"
-                   disabled={(isLockedTenant && step === 2) || step === 1 || isSubmitting}
+            <div className="flex justify-between gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={step === 1 || isSubmitting}
                 >
-                   <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
                 </Button>
-                
-                {step < 3 ? (
-                   <Button 
-                      onClick={handleNext} 
-                      className="h-12 px-8 rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-soft hover:opacity-95"
-                      disabled={(step === 1 && !selectedTenantId) || (step === 2 && !canSubmit)}
-                   >
-                      Continue <ArrowRight className="w-4 h-4 ml-2" />
-                   </Button>
+                {step < 5 ? (
+                  <Button
+                    type="button"
+                    onClick={nextStep}
+                    disabled={isSubmitting}
+                  >
+                    Next <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
                 ) : (
-                   <Button 
-                      onClick={handleSubmit} 
-                      disabled={isSubmitting}
-                      className="h-12 px-8 rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-soft hover:opacity-95"
-                   >
-                      {isSubmitting ? "Committing..." : "Finalize Verification"}
-                   </Button>
+                  <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                    {isSubmitting ? "Submitting..." : "Submit KYC"}
+                  </Button>
                 )}
               </div>
-           )}
-         </div>
+            </div>
+          </form>
         </div>
       </DialogContent>
     </Dialog>
