@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, SlidersHorizontal, ChevronRight } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Search, SlidersHorizontal, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -14,158 +14,338 @@ import {
 } from "@/components/ui/select";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApplyLoanModal } from "./ApplyLoan";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { TenantSimpleCard } from "@/components/shared/TenantSimpleCard";
 
 export default function BrowseLenders() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [statusFilter, setStatusFilter] = useState("active");
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 350);
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   const { data: tenantsData, isLoading } = useGetTenantsQuery({
     page,
     limit: 10,
-    search,
+    search: debouncedSearch,
   });
 
-  const lenderTenants = tenantsData?.data?.filter(t => statusFilter === "all" ? true : t.isActive === (statusFilter === "active")) || [];
+  const lenderTenants =
+    tenantsData?.data?.filter((t) =>
+      statusFilter === "all"
+        ? true
+        : t.isActive === (statusFilter === "active"),
+    ) || [];
   const totalPages = Math.ceil((tenantsData?.total || 0) / 10);
+  const suggestions = useMemo(() => {
+    if (!search.trim()) return [];
+    const q = search.toLowerCase();
+    const seen = new Set<string>();
+    return lenderTenants
+      .filter((l) => l.name.toLowerCase().includes(q))
+      .filter((l) => {
+        if (seen.has(l.name)) return false;
+        seen.add(l.name);
+        return true;
+      })
+      .slice(0, 5);
+  }, [search, lenderTenants]);
 
   return (
     <BorrowerLayout
-      title="Credit Marketplace"
-      description="Partner with institutional lenders secured by institutional-grade blockchain infrastructure."
+      title="Lenders"
+      description="Search and choose lending partners"
     >
-      <div className="space-y-12">
-
-        {/* Filters row */}
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface/30 backdrop-blur-xl p-4 md:p-6 rounded-[2.5rem] border border-border/10 sticky top-24 z-30 animate-fade-up no-spotlight shadow-soft">
-           <div className="relative w-full md:max-w-xl">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-primary opacity-60" />
-              <Input 
-                placeholder="Locate institutional partners..." 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-14 h-14 bg-surface/20 border-transparent focus-visible:ring-primary/10 rounded-2xl text-base font-bold placeholder:text-muted-foreground/30 transition-all font-medium"
-              />
-           </div>
-           
-           <div className="flex items-center gap-4 w-full md:w-auto">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                 <SelectTrigger className="h-14 w-full md:w-[200px] bg-surface/20 border-transparent rounded-2xl font-black text-[10px] uppercase tracking-widest">
-                    <div className="flex items-center gap-3">
-                      <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
-                      <SelectValue placeholder="Status" />
-                    </div>
-                 </SelectTrigger>
-                 <SelectContent className="rounded-2xl border-border/10 backdrop-blur-xl bg-surface/90">
-                    <SelectItem value="all" className="rounded-xl font-bold uppercase tracking-widest text-[9px]">All Entities</SelectItem>
-                    <SelectItem value="active" className="rounded-xl font-bold uppercase tracking-widest text-[9px]">Verified</SelectItem>
-                    <SelectItem value="inactive" className="rounded-xl font-bold uppercase tracking-widest text-[9px]">Inactive</SelectItem>
-                 </SelectContent>
-              </Select>
-           </div>
-        </div>
-
-        {/* Lender Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up delay-100">
-          {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-80 w-full rounded-[2.5rem]" />
-            ))
-          ) : lenderTenants.length === 0 ? (
-             <div className="col-span-full py-24 text-center border border-dashed border-border/10 rounded-[2.5rem] bg-surface/10 animate-fade-in no-spotlight">
-                <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
-                   <Search className="w-8 h-8 text-primary opacity-20" />
-                </div>
-                <h3 className="text-xl font-black uppercase tracking-widest">Zero Match Found</h3>
-                <p className="text-muted-foreground font-medium text-sm mt-4">Refine your institutional search criteria.</p>
-             </div>
-          ) : lenderTenants.map((lender) => (
-            <Card 
-              key={lender.id} 
-              className="group bg-surface/20 backdrop-blur-md border border-border/10 hover:border-primary/20 transition-all duration-700 rounded-[2.5rem] overflow-hidden flex flex-col relative no-spotlight"
-              onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-            >
-              <CardContent className="p-8 flex flex-col flex-1 relative z-10">
-                 <div className="flex items-start justify-between mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary font-black text-2xl group-hover:scale-105 transition-all duration-500">
-                      {lender.name.charAt(0).toUpperCase()}
-                    </div>
-                    {lender.isActive ? (
-                       <Badge className="bg-emerald-500/10 text-emerald-500 border-none rounded-full font-black text-[9px] tracking-widest uppercase px-3 py-1">Verified</Badge>
-                    ) : (
-                       <Badge variant="outline" className="rounded-full font-black text-[9px] tracking-widest uppercase px-3 py-1 border-border/10 text-muted-foreground/60">Registry</Badge>
-                    )}
-                 </div>
-
-                 <div className="space-y-3 mb-8 flex-1">
-                    <div>
-                       <h3 className="text-lg font-black text-foreground group-hover:text-primary transition-colors leading-tight uppercase tracking-widest">{lender.name}</h3>
-                       <p className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground/60 mt-3 uppercase tracking-[0.1em]">
-                          <MapPin className="w-3 h-3 text-primary" />
-                          {(lender as any).contactEmail || "On-Chain Participant"}
-                       </p>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed font-medium">
-                       {(lender as any).description || "Institutional lending partner providing decentralized credit facilities."}
+      <div className="space-y-8 lg:space-y-12">
+        <div className="lg:hidden space-y-4">
+          <div className="relative z-[120]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search lenders"
+              value={search}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10 h-11 bg-card border-border/30"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute z-[130] mt-1 w-full rounded-lg border border-border/30 bg-card shadow-lg overflow-hidden">
+                {suggestions.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSearch(item.name);
+                      setDebouncedSearch(item.name);
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {item.name}
                     </p>
-                 </div>
+                    <p className="text-[11px] text-muted-foreground truncate">
+                      {item.contactEmail || item.address || "Lender"}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-                 <div className="pt-6 border-t border-border/5 flex items-center justify-between group/action">
-                    <div className="space-y-0.5">
-                       <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Registered Since</p>
-                       <p className="text-xs font-black text-foreground uppercase tracking-wider">{new Date(lender.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                       <ChevronRight className="w-5 h-5" />
-                    </div>
-                 </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {[
+              { key: "all", label: "All" },
+              { key: "active", label: "Active" },
+              { key: "inactive", label: "Inactive" },
+            ].map((item) => (
+              <Button
+                key={item.key}
+                type="button"
+                size="sm"
+                variant={statusFilter === item.key ? "default" : "outline"}
+                className="h-8 px-3 whitespace-nowrap"
+                onClick={() => {
+                  setStatusFilter(item.key);
+                  setPage(1);
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+              ))}
+            </div>
+          ) : lenderTenants.length === 0 ? (
+            <Card className="border-border/30 bg-card">
+              <CardContent className="p-6 text-center">
+                <Search className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No lenders found
+                </p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              {lenderTenants.map((lender) => (
+                <TenantSimpleCard
+                  key={lender.id}
+                  className="rounded-2xl"
+                  narrow
+                  onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
+                  tenant={lender}
+                />
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 p-1.5 rounded-xl border border-border/20 bg-card">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={page === 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronRight className="w-4 h-4 rotate-180" />
+                </Button>
+                {Array.from({ length: totalPages })
+                  .slice(0, 5)
+                  .map((_, i) => {
+                    const pageNo = i + 1;
+                    return (
+                      <Button
+                        key={pageNo}
+                        variant={page === pageNo ? "default" : "ghost"}
+                        className={cn(
+                          "h-8 w-8 text-xs",
+                          page === pageNo &&
+                            "bg-primary text-primary-foreground",
+                        )}
+                        onClick={() => setPage(pageNo)}
+                      >
+                        {pageNo}
+                      </Button>
+                    );
+                  })}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={page === totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
-        
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center pt-8 animate-fade-in pb-12">
-             <div className="flex items-center gap-2 p-1.5 bg-surface/30 backdrop-blur-md rounded-2xl border border-border/10 no-spotlight shadow-soft">
-                <Button 
-                   variant="ghost" 
-                   size="icon" 
-                   className="rounded-xl w-9 h-9" 
-                   disabled={page === 1}
-                   onClick={(e) => { e.stopPropagation(); setPage(p => p - 1); }}
+
+        <div className="hidden lg:block space-y-10">
+          <Card className="border-border/15 bg-surface/20 backdrop-blur-xl shadow-soft overflow-visible">
+            <CardContent className="p-6 lg:p-8 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
+                <div className="relative z-[120]">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by lender name, city, or email"
+                    value={search}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() =>
+                      setTimeout(() => setShowSuggestions(false), 120)
+                    }
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="pl-11 h-12 bg-background/50 border-border/20"
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <div className="absolute z-[130] mt-1 w-full rounded-lg border border-border/30 bg-card shadow-lg overflow-hidden">
+                      {suggestions.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSearch(item.name);
+                            setDebouncedSearch(item.name);
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {item.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground truncate">
+                            {item.contactEmail || item.address || "Lender"}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-12 bg-background/50 border-border/20">
+                    <div className="flex items-center gap-2 text-sm">
+                      <SlidersHorizontal className="w-4 h-4 text-primary" />
+                      <SelectValue placeholder="Status" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All lenders</SelectItem>
+                    <SelectItem value="active">Verified only</SelectItem>
+                    <SelectItem value="inactive">Inactive only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-72 w-full rounded-2xl" />
+              ))
+            ) : lenderTenants.length === 0 ? (
+              <Card className="xl:col-span-2 border-dashed border-border/30 bg-card">
+                <CardContent className="py-20 text-center">
+                  <Search className="w-10 h-10 mx-auto text-muted-foreground/40" />
+                  <h3 className="mt-4 text-lg font-semibold text-foreground">
+                    No lenders matched your filters
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Try switching status filter or using a shorter search
+                    keyword.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              lenderTenants.map((lender) => (
+                <TenantSimpleCard
+                  key={lender.id}
+                  className="rounded-2xl"
+                  narrow
+                  onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
+                  tenant={lender}
+                />
+              ))
+            )}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex justify-center pb-2">
+              <div className="flex items-center gap-2 p-1.5 rounded-xl border border-border/20 bg-card">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={page === 1}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPage((p) => p - 1);
+                  }}
                 >
                   <ChevronRight className="w-4 h-4 rotate-180" />
                 </Button>
                 {Array.from({ length: totalPages }).map((_, i) => (
-                  <Button 
+                  <Button
                     key={i}
                     variant={page === i + 1 ? "default" : "ghost"}
                     className={cn(
-                       "w-9 h-9 rounded-xl font-black text-[10px] uppercase",
-                       page === i + 1 ? "bg-primary text-white" : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
+                      "h-8 w-8 text-xs",
+                      page === i + 1 && "bg-primary text-primary-foreground",
                     )}
-                    onClick={(e) => { e.stopPropagation(); setPage(i + 1); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPage(i + 1);
+                    }}
                   >
                     {i + 1}
                   </Button>
                 ))}
-                <Button 
-                   variant="ghost" 
-                   size="icon"
-                   className="rounded-xl w-9 h-9"
-                   disabled={page === totalPages}
-                   onClick={(e) => { e.stopPropagation(); setPage(p => p + 1); }}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  disabled={page === totalPages}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPage((p) => p + 1);
+                  }}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
-             </div>
-          </div>
-        )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </BorrowerLayout>
   );
