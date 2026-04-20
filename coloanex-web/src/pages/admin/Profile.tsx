@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUpdateUserMutation } from "@/apis/usersApi";
-import { useUploadSingleMutation } from "@/apis/uploadApi";
+import { useGetTenantQuery, useUpdateTenantMutation } from "@/apis/tenantsApi";
+import { FileUploader } from "@/components/shared/FileUploader";
+import type { UploadedFile } from "@/types/upload";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -19,16 +21,18 @@ import {
   Calendar,
   Shield,
   Lock,
-  Camera,
 } from "lucide-react";
 
 const Profile = () => {
   const { user } = useAuth();
   const [updateUser, { isLoading }] = useUpdateUserMutation();
-  const [uploadFile, { isLoading: isUploading }] = useUploadSingleMutation();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string>("");
+  const [updateTenant, { isLoading: isUpdatingTenant }] =
+    useUpdateTenantMutation();
+  const { data: tenant } = useGetTenantQuery(user?.tenantId || "", {
+    skip: !user?.tenantId,
+  });
+  const [profileImageUrl, setProfileImageUrl] = useState("");
+  const [tenantLogo, setTenantLogo] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
@@ -43,48 +47,17 @@ const Profile = () => {
         email: user.email || "",
         phone: user.phone || "",
       });
+      setProfileImageUrl(user.profileImage || "");
     }
   }, [user]);
+
+  useEffect(() => {
+    setTenantLogo(tenant?.logo || "");
+  }, [tenant?.logo]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select a valid image file");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
-      return;
-    }
-
-    try {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      const imageFormData = new FormData();
-      imageFormData.append("file", file);
-      imageFormData.append("category", "profile");
-
-      const uploadResponse = await uploadFile(imageFormData).unwrap();
-      setPreviewImage(uploadResponse.url);
-      toast.success("Image uploaded successfully");
-    } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to upload image");
-      setSelectedImage(null);
-      setPreviewImage("");
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,8 +75,8 @@ const Profile = () => {
       if (formData.phone && formData.phone !== user.phone) {
         updateData.phone = formData.phone;
       }
-      if (previewImage && previewImage !== user.profileImage) {
-        updateData.profileImage = previewImage;
+      if (profileImageUrl && profileImageUrl !== user.profileImage) {
+        updateData.profileImage = profileImageUrl;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -113,10 +86,15 @@ const Profile = () => {
         }).unwrap();
       }
 
+      if (user.tenantId && tenantLogo && tenantLogo !== tenant?.logo) {
+        await updateTenant({
+          id: user.tenantId,
+          data: { logo: tenantLogo },
+        }).unwrap();
+      }
+
       toast.success("Profile updated successfully");
       setIsEditing(false);
-      setSelectedImage(null);
-      setPreviewImage("");
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to update profile");
     }
@@ -128,10 +106,32 @@ const Profile = () => {
       email: user?.email || "",
       phone: user?.phone || "",
     });
-    setSelectedImage(null);
-    setPreviewImage("");
+    setProfileImageUrl(user?.profileImage || "");
+    setTenantLogo(tenant?.logo || "");
     setIsEditing(false);
   };
+
+  const profileFiles: UploadedFile[] = profileImageUrl
+    ? [
+        {
+          url: profileImageUrl,
+          fileName: "profile-image",
+          mimeType: "image/*",
+          sizeInBytes: 0,
+        },
+      ]
+    : [];
+
+  const tenantLogoFiles: UploadedFile[] = tenantLogo
+    ? [
+        {
+          url: tenantLogo,
+          fileName: "tenant-logo",
+          mimeType: "image/*",
+          sizeInBytes: 0,
+        },
+      ]
+    : [];
 
   if (!user) {
     return (
@@ -170,43 +170,17 @@ const Profile = () => {
                 <div className="relative group">
                   <Avatar className="w-20 h-20 shadow-lg">
                     <AvatarImage
-                      src={previewImage || user.profileImage}
+                      src={profileImageUrl || user.profileImage}
                       alt={user.fullName}
                     />
                     <AvatarFallback className="bg-gradient-hero text-white text-3xl font-bold">
                       {user.fullName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {isUploading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-full">
-                      <Loader2 className="w-8 h-8 text-white animate-spin" />
-                    </div>
-                  )}
-                  {isEditing && !isUploading && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    >
-                      <Camera className="w-6 h-6 text-white" />
-                    </button>
-                  )}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold">{user.fullName}</h3>
                   <p className="text-sm text-muted-foreground">{user.email}</p>
-                  {isUploading && (
-                    <p className="text-xs text-primary mt-1">
-                      Uploading image...
-                    </p>
-                  )}
                   <div className="flex items-center gap-2 mt-2">
                     <Badge
                       variant={user.isActive ? "default" : "destructive"}
@@ -214,14 +188,35 @@ const Profile = () => {
                     >
                       {user.isActive ? "Active" : "Inactive"}
                     </Badge>
-                    {selectedImage && (
-                      <Badge variant="secondary" className="text-xs">
-                        New image selected
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </div>
+
+              {isEditing && (
+                <FileUploader
+                  label="Profile Image"
+                  accept="image"
+                  maxFiles={1}
+                  value={profileFiles}
+                  onChange={(files) => setProfileImageUrl(files[0]?.url || "")}
+                  folder="profile"
+                />
+              )}
+
+              {user.tenantId && (
+                <div className="space-y-3 rounded-xl border border-border/70 p-4">
+                  <p className="text-sm font-medium">Organization Logo</p>
+                  <FileUploader
+                    label="Tenant Logo"
+                    accept="image"
+                    maxFiles={1}
+                    value={tenantLogoFiles}
+                    onChange={(files) => setTenantLogo(files[0]?.url || "")}
+                    folder="tenant"
+                    disabled={!isEditing || isUpdatingTenant}
+                  />
+                </div>
+              )}
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
@@ -292,16 +287,16 @@ const Profile = () => {
                     type="button"
                     variant="outline"
                     onClick={handleCancel}
-                    disabled={isLoading || isUploading}
+                    disabled={isLoading || isUpdatingTenant}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isLoading || isUploading}
+                    disabled={isLoading || isUpdatingTenant}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
-                    {isLoading || isUploading ? (
+                    {isLoading || isUpdatingTenant ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Saving...
@@ -326,80 +321,80 @@ const Profile = () => {
           <Separator />
           <CardContent className="pt-6">
             <div className="space-y-4">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
-                  <Shield className="w-5 h-5 text-primary" />
-                  Assigned Roles
-                </Label>
-                <div className="grid gap-3">
-                  {user.roles && user.roles.length > 0 ? (
-                    user.roles.map((roleWrapper) => (
-                      <div
-                        key={roleWrapper.role.id}
-                        className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
-                      >
-                        <p className="font-semibold text-sm">
-                          {roleWrapper.role.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1 lowercase first-letter:uppercase">
-                          {roleWrapper.role.description ||
-                            `Access level granted by ${roleWrapper.role.name} role`}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No roles assigned
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
-                  <Lock className="w-5 h-5 text-primary" />
-                  Specific Permissions
-                </Label>
-                <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
-                  {user.permissions && user.permissions.length > 0 ? (
-                    (Array.isArray(user.permissions)
-                      ? user.permissions
-                      : []
-                    ).map((permission: any, index: number) => {
-                      const permissionName =
-                        typeof permission === "string"
-                          ? permission
-                          : permission?.permission?.name ||
-                            permission?.name ||
-                            "Unknown";
-                      return (
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
+                    <Shield className="w-5 h-5 text-primary" />
+                    Assigned Roles
+                  </Label>
+                  <div className="grid gap-3">
+                    {user.roles && user.roles.length > 0 ? (
+                      user.roles.map((roleWrapper) => (
                         <div
-                          key={index}
+                          key={roleWrapper.role.id}
                           className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
                         >
                           <p className="font-semibold text-sm">
-                            {permissionName}
+                            {roleWrapper.role.name}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Allows you to {permissionName.toLowerCase()} within
-                            the platform
+                          <p className="text-xs text-muted-foreground mt-1 lowercase first-letter:uppercase">
+                            {roleWrapper.role.description ||
+                              `Access level granted by ${roleWrapper.role.name} role`}
                           </p>
                         </div>
-                      );
-                    })
-                  ) : (
-                    <div className="p-4 rounded-xl border border-dashed text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No individual permissions assigned
-                      </p>
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <div className="p-4 rounded-xl border border-dashed text-center">
+                        <p className="text-sm text-muted-foreground">
+                          No roles assigned
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="flex items-center gap-2 mb-3 text-base font-semibold">
+                    <Lock className="w-5 h-5 text-primary" />
+                    Specific Permissions
+                  </Label>
+                  <div className="grid gap-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted">
+                    {user.permissions && user.permissions.length > 0 ? (
+                      (Array.isArray(user.permissions)
+                        ? user.permissions
+                        : []
+                      ).map((permission: any, index: number) => {
+                        const permissionName =
+                          typeof permission === "string"
+                            ? permission
+                            : permission?.permission?.name ||
+                              permission?.name ||
+                              "Unknown";
+                        return (
+                          <div
+                            key={index}
+                            className="p-3 rounded-xl border border-border/70 bg-card/50 hover:bg-card transition-colors shadow-sm"
+                          >
+                            <p className="font-semibold text-sm">
+                              {permissionName}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Allows you to {permissionName.toLowerCase()}{" "}
+                              within the platform
+                            </p>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 rounded-xl border border-dashed text-center">
+                        <p className="text-sm text-muted-foreground">
+                          No individual permissions assigned
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
             </div>
           </CardContent>
         </Card>
