@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -10,16 +10,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Eye, EyeOff, Building2, UserSquare2, ChevronRight, ChevronLeft, ArrowRight } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Building2,
+  UserSquare2,
+  ChevronRight,
+  ChevronLeft,
+  ArrowRight,
+} from "lucide-react";
 import { setAuth, setUser } from "@/store/slices/authSlice";
 import { useRegisterMutation } from "@/apis/authApi";
 import { toast } from "sonner";
 import Landing from "./Landing";
 import { Card, CardContent } from "@/components/ui/card";
 import { getHomeRoute } from "@/lib/roleUtils";
+import { FileUploader } from "@/components/shared/FileUploader";
+import type { UploadedFile } from "@/types/upload";
 
 const Signup = () => {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    const saved = Number(sessionStorage.getItem("signup_step"));
+    return saved >= 1 && saved <= 3 ? saved : 1;
+  });
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -29,6 +42,7 @@ const Signup = () => {
     tenantName: "",
     tenantContactEmail: "",
     tenantContactPhone: "",
+    tenantLogo: "",
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -36,6 +50,16 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const [register, { isLoading, error }] = useRegisterMutation();
+  const tenantLogoFiles: UploadedFile[] = formData.tenantLogo
+    ? [
+        {
+          url: formData.tenantLogo,
+          fileName: "tenant-logo",
+          mimeType: "image/*",
+          sizeInBytes: 0,
+        },
+      ]
+    : [];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -43,8 +67,19 @@ const Signup = () => {
   };
 
   const handleClose = () => {
+    sessionStorage.removeItem("signup_step");
     navigate("/");
   };
+
+  useEffect(() => {
+    sessionStorage.setItem("signup_step", String(step));
+  }, [step]);
+
+  useEffect(() => {
+    if (formData.role !== "lender" && step === 3) {
+      setStep(2);
+    }
+  }, [formData.role, step]);
 
   const handleNextStep = () => {
     if (step === 1) {
@@ -77,11 +112,14 @@ const Signup = () => {
       localStorage.setItem("sessionId", response.sessionId);
 
       dispatch(setAuth({ token: response.accessToken }));
+      sessionStorage.removeItem("signup_step");
       if (response.user) {
         dispatch(setUser(response.user));
         navigate(getHomeRoute(response.user));
       } else {
-        navigate(formData.role === "borrower" ? "/borrower/dashboard" : "/dashboard");
+        navigate(
+          formData.role === "borrower" ? "/borrower/dashboard" : "/dashboard",
+        );
       }
 
       toast.success("Registration successful!");
@@ -110,7 +148,10 @@ const Signup = () => {
     <>
       <Landing />
       <Dialog open={true} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="sm:max-w-xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="text-2xl text-center">
               {step === 1 && "Choose Your Role"}
@@ -128,10 +169,10 @@ const Signup = () => {
             {error && (
               <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm text-center">
                 {"data" in error &&
-                  typeof error.data === "object" &&
-                  "message" in error.data
+                typeof error.data === "object" &&
+                "message" in error.data
                   ? (error.data as { message?: string }).message ||
-                  "Registration failed"
+                    "Registration failed"
                   : "Registration failed"}
               </div>
             )}
@@ -143,10 +184,9 @@ const Signup = () => {
                 .map((dotStep) => (
                   <div
                     key={dotStep}
-                    className={`h-2 rounded-full transition-all duration-300 ${step === dotStep
-                      ? "w-8 bg-primary"
-                      : "w-2 bg-primary/20"
-                      }`}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      step === dotStep ? "w-8 bg-primary" : "w-2 bg-primary/20"
+                    }`}
                   />
                 ))}
             </div>
@@ -155,40 +195,52 @@ const Signup = () => {
             {step === 1 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card
-                  onClick={() => setFormData((prev) => ({ ...prev, role: "lender" }))}
-                  className={`cursor-pointer transition-all border-2 overflow-hidden ${formData.role === "lender"
-                    ? "border-primary bg-primary/5 shadow-md shadow-primary/20 scale-[1.02]"
-                    : "border-border/50 hover:border-primary/50 hover:bg-muted/50"
-                    }`}
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, role: "lender" }))
+                  }
+                  className={`cursor-pointer transition-all border-2 overflow-hidden ${
+                    formData.role === "lender"
+                      ? "border-primary bg-primary/5 shadow-md shadow-primary/20 scale-[1.02]"
+                      : "border-border/50 hover:border-primary/50 hover:bg-muted/50"
+                  }`}
                 >
                   <CardContent className="p-8 flex flex-col items-center justify-center space-y-4 text-center">
-                    <div className={`p-4 rounded-full transition-colors ${formData.role === "lender" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}>
+                    <div
+                      className={`p-4 rounded-full transition-colors ${formData.role === "lender" ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"}`}
+                    >
                       <Building2 size={36} />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold mb-1">Lender</h3>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Manage your capital, evaluate applicants, and streamline digital lending operations.
+                        Manage your capital, evaluate applicants, and streamline
+                        digital lending operations.
                       </p>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card
-                  onClick={() => setFormData((prev) => ({ ...prev, role: "borrower" }))}
-                  className={`cursor-pointer transition-all border-2 overflow-hidden ${formData.role === "borrower"
-                    ? "border-blue-500 bg-blue-500/5 shadow-md shadow-blue-500/20 scale-[1.02]"
-                    : "border-border/50 hover:border-blue-500/50 hover:bg-muted/50"
-                    }`}
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, role: "borrower" }))
+                  }
+                  className={`cursor-pointer transition-all border-2 overflow-hidden ${
+                    formData.role === "borrower"
+                      ? "border-blue-500 bg-blue-500/5 shadow-md shadow-blue-500/20 scale-[1.02]"
+                      : "border-border/50 hover:border-blue-500/50 hover:bg-muted/50"
+                  }`}
                 >
                   <CardContent className="p-8 flex flex-col items-center justify-center space-y-4 text-center">
-                    <div className={`p-4 rounded-full transition-colors ${formData.role === "borrower" ? "bg-blue-500 text-white" : "bg-blue-500/10 text-blue-500"}`}>
+                    <div
+                      className={`p-4 rounded-full transition-colors ${formData.role === "borrower" ? "bg-blue-500 text-white" : "bg-blue-500/10 text-blue-500"}`}
+                    >
                       <UserSquare2 size={36} />
                     </div>
                     <div>
                       <h3 className="text-xl font-bold mb-1">Borrower</h3>
                       <p className="text-xs text-muted-foreground leading-relaxed">
-                        Seamlessly apply for loans, manage repayments, and track your history.
+                        Seamlessly apply for loans, manage repayments, and track
+                        your history.
                       </p>
                     </div>
                   </CardContent>
@@ -228,7 +280,9 @@ const Signup = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Phone (Optional)</label>
+                  <label className="text-sm font-medium">
+                    Phone (Optional)
+                  </label>
                   <Input
                     type="tel"
                     name="phone"
@@ -272,13 +326,15 @@ const Signup = () => {
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="rounded-md bg-muted/50 p-4 mb-4">
                   <p className="text-xs text-muted-foreground">
-                    As a Lender, you'll operate under an organization umbrella. Let's get your main tenant configured.
+                    As a Lender, you'll operate under an organization umbrella.
+                    Let's get your main tenant configured.
                   </p>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Organization Name <span className="text-destructive">*</span>
+                    Organization Name{" "}
+                    <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="text"
@@ -292,7 +348,8 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Organization Email <span className="text-destructive">*</span>
+                    Organization Email{" "}
+                    <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="email"
@@ -306,7 +363,8 @@ const Signup = () => {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">
-                    Organization Phone <span className="text-destructive">*</span>
+                    Organization Phone{" "}
+                    <span className="text-destructive">*</span>
                   </label>
                   <Input
                     type="tel"
@@ -315,6 +373,22 @@ const Signup = () => {
                     value={formData.tenantContactPhone}
                     onChange={handleInputChange}
                     required={step === 3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <FileUploader
+                    label="Organization Logo"
+                    accept="image"
+                    maxFiles={1}
+                    value={tenantLogoFiles}
+                    onChange={(files) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        tenantLogo: files[0]?.url || "",
+                      }))
+                    }
+                    folder="tenant"
                   />
                 </div>
               </div>
@@ -359,7 +433,11 @@ const Signup = () => {
               {(step === 3 || (step === 2 && formData.role !== "lender")) && (
                 <Button
                   type="submit"
-                  className={step > 1 ? "flex-[2] bg-primary hover:bg-primary/90" : "w-full bg-primary hover:bg-primary/90"}
+                  className={
+                    step > 1
+                      ? "flex-[2] bg-primary hover:bg-primary/90"
+                      : "w-full bg-primary hover:bg-primary/90"
+                  }
                   disabled={isLoading}
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}

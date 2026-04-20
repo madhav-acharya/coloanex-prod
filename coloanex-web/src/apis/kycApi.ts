@@ -32,6 +32,17 @@ export const kycApi = baseApi.injectEndpoints({
       providesTags: (result, error, id) => [{ type: "KycDocuments", id }],
     }),
 
+    getKycStatus: builder.query<
+      { status: string | null; hasKyc: boolean; kycId?: string },
+      { tenantId?: string } | void
+    >({
+      query: (params = {}) => ({
+        url: "/kyc/status",
+        params,
+      }),
+      providesTags: [{ type: "KycDocuments", id: "LIST" }],
+    }),
+
     createKyc: builder.mutation<Kyc, CreateKycDto>({
       query: (data) => ({
         url: "/kyc",
@@ -81,6 +92,7 @@ export const kycApi = baseApi.injectEndpoints({
 export const {
   useGetKycsQuery,
   useGetKycQuery,
+  useGetKycStatusQuery,
   useCreateKycMutation,
   useUpdateKycMutation,
   useDeleteKycMutation,

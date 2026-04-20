@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { PublicRoutes } from "@/routes/PublicRoute";
 import { ProtectedRoutes } from "@/routes/ProtectedRoute";
 import { SuperAdminRoutes } from "@/routes/SuperAdminRoute";
@@ -7,6 +7,17 @@ import { BorrowerRoutes } from "@/routes/BorrowerRoute";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import { useTheme } from "@/hooks/useTheme";
+import { useEffect } from "react";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname]);
+
+  return null;
+}
 
 function App() {
   useActivityLog();
@@ -14,6 +25,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
+      <ScrollToTop />
       <Suspense fallback={<Loader />}>
         <SuperAdminRoutes />
         <BorrowerRoutes />

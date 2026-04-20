@@ -1,11 +1,4 @@
-import {
-  LogOut,
-  User,
-  Settings,
-  ChevronDown,
-  CreditCard,
-  Wallet,
-} from "lucide-react";
+import { LogOut, User, Settings, CreditCard, Wallet } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,8 +15,13 @@ import {
   useListPlansQuery,
 } from "@/apis/subscriptionsApi";
 import { formatGasPaymentMode } from "@/utils/blockchainAccess";
+import { getRoles } from "@/lib/roleUtils";
 
-export function ProfileDropdown() {
+export function ProfileDropdown({
+  avatarOnly = false,
+}: {
+  avatarOnly?: boolean;
+}) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
@@ -39,6 +37,9 @@ export function ProfileDropdown() {
 
   const location = useLocation();
   const basePath = location.pathname.startsWith("/borrower") ? "/borrower" : "";
+  const isBorrowerContext = basePath === "/borrower";
+  const { isBorrower } = getRoles(user);
+  const avatarOnlyTrigger = avatarOnly || (isBorrowerContext && isBorrower);
 
   const handleLogout = () => {
     logout();
@@ -49,30 +50,47 @@ export function ProfileDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-auto rounded-xl px-2 py-1.5 bg-muted/40 hover:bg-muted/70 cursor-pointer border border-transparent hover:border-border/60"
-        >
-          <Avatar className="w-9 h-9 ring-2 ring-primary/20">
-            <AvatarImage src={user.profileImage} alt={user.fullName} />
-            <AvatarFallback className="bg-primary text-primary-foreground font-medium">
-              {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 text-left pr-1">
-            <p className="text-sm font-bold leading-tight truncate text-foreground">
-              {user.fullName}
-            </p>
-            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-              {user.email}
-            </p>
-          </div>
-          <ChevronDown className="w-4 h-4 text-muted-foreground/80" />
-        </Button>
+        {avatarOnlyTrigger ? (
+          <Button
+            variant="ghost"
+            className="h-auto rounded-xl p-1.5 bg-muted/40 hover:bg-muted/70 cursor-pointer border border-transparent hover:border-border/60"
+            aria-label="Open profile menu"
+          >
+            <Avatar className="w-8 h-8 sm:w-9 sm:h-9 ring-2 ring-primary/20">
+              <AvatarImage src={user.profileImage} alt={user.fullName} />
+              <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            className="h-auto rounded-xl px-2 py-1.5 bg-muted/50 hover:bg-muted/80 cursor-pointer border border-border/60"
+            aria-label="Open profile menu"
+          >
+            <div className="flex items-center gap-2.5 min-w-0 max-w-[230px]">
+              <Avatar className="w-8 h-8 ring-2 ring-primary/20 shrink-0">
+                <AvatarImage src={user.profileImage} alt={user.fullName} />
+                <AvatarFallback className="bg-primary text-primary-foreground font-medium">
+                  {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 text-left leading-tight">
+                <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
+                  {user.fullName}
+                </p>
+                <p className="text-[10px] text-muted-foreground/90 truncate mt-0.5">
+                  {user.email}
+                </p>
+              </div>
+            </div>
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-72 p-2 z-1000 rounded-xl border border-border/70 shadow-xl"
+        className="w-64 sm:w-72 p-2 z-[220] rounded-xl border border-border/70 shadow-xl"
       >
         <div className="rounded-lg border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 mb-2">
           <div className="flex items-center gap-3">
@@ -83,16 +101,25 @@ export function ProfileDropdown() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{user.fullName}</p>
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
+                {user.fullName}
+              </p>
+              <p className="text-[10px] text-muted-foreground/90 truncate mt-0.5">
                 {user.email}
               </p>
             </div>
           </div>
-          <div className="mt-3 space-y-2 text-xs">
+          <div className="mt-3 space-y-2 text-[11px]">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Gas Mode</span>
-              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold" style={{ backgroundColor: 'color-mix(in srgb, var(--color-info) 10%, transparent)', color: 'var(--color-info)' }}>
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-info) 10%, transparent)",
+                  color: "var(--color-info)",
+                }}
+              >
                 <Wallet className="h-3 w-3" />
                 {formatGasPaymentMode((user as any)?.gasPaymentMode)}
               </span>
@@ -107,22 +134,28 @@ export function ProfileDropdown() {
           </div>
         </div>
         <DropdownMenuItem
-          className="cursor-pointer rounded-md"
-          onClick={() => navigate(`${basePath}/profile`)}
+          className="cursor-pointer rounded-md text-xs"
+          onClick={() =>
+            navigate(
+              isBorrowerContext ? `${basePath}/profile` : `${basePath}/profile`,
+            )
+          }
         >
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className="cursor-pointer rounded-md"
-          onClick={() => navigate(`${basePath}/settings`)}
-        >
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
-        </DropdownMenuItem>
+        {!isBorrowerContext && (
+          <DropdownMenuItem
+            className="cursor-pointer rounded-md text-xs"
+            onClick={() => navigate(`${basePath}/settings`)}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
+        )}
         {isFreePlan && (
           <DropdownMenuItem
-            className="cursor-pointer rounded-md text-primary focus:text-primary"
+            className="cursor-pointer rounded-md text-xs text-primary focus:text-primary"
             onClick={() => navigate(`${basePath}/pricing`)}
           >
             <CreditCard className="mr-2 h-4 w-4" />
@@ -140,9 +173,11 @@ export function ProfileDropdown() {
             {topPlans.map((plan) => (
               <DropdownMenuItem
                 key={plan.id}
-                className="cursor-pointer rounded-md"
+                className="cursor-pointer rounded-md text-xs"
                 onClick={() =>
-                  navigate(`${basePath}/pricing?planCode=${encodeURIComponent(plan.code)}`)
+                  navigate(
+                    `${basePath}/pricing?planCode=${encodeURIComponent(plan.code)}`,
+                  )
                 }
               >
                 <CreditCard className="mr-2 h-4 w-4" />
@@ -156,7 +191,7 @@ export function ProfileDropdown() {
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          className="cursor-pointer rounded-md !text-red-500 hover:!bg-red-500/10 focus:!bg-red-500/10"
+          className="cursor-pointer rounded-md text-xs !text-red-500 hover:!bg-red-500/10 focus:!bg-red-500/10"
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

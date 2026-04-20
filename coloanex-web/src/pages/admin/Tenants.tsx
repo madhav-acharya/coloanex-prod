@@ -28,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FormLabel } from "@/components/ui/form-label";
+import { FileUploader } from "@/components/shared/FileUploader";
+import type { UploadedFile } from "@/types/upload";
 
 export default function Tenants() {
   const { toast } = useToast();
@@ -39,6 +41,18 @@ export default function Tenants() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<Tenant | null>(null);
   const [isDeletingTenant, setIsDeletingTenant] = useState(false);
+  const [tenantLogo, setTenantLogo] = useState("");
+
+  const tenantLogoFiles: UploadedFile[] = tenantLogo
+    ? [
+        {
+          url: tenantLogo,
+          fileName: "tenant-logo",
+          mimeType: "image/*",
+          sizeInBytes: 0,
+        },
+      ]
+    : [];
 
   const [filters, setFilters] = useState<TenantsQueryParams>({
     page: 1,
@@ -173,6 +187,7 @@ export default function Tenants() {
     setIsReadOnly(false);
     resetFields();
     setSelectedOwnerId("");
+    setTenantLogo("");
     setSheetOpen(true);
   };
 
@@ -186,6 +201,7 @@ export default function Tenants() {
       address: tenant.address || "",
     });
     setSelectedOwnerId(tenant.ownerUserId);
+    setTenantLogo(tenant.logo || "");
     setSheetOpen(true);
   };
 
@@ -199,6 +215,7 @@ export default function Tenants() {
       address: tenant.address || "",
     });
     setSelectedOwnerId(tenant.ownerUserId);
+    setTenantLogo(tenant.logo || "");
     setSheetOpen(true);
   };
 
@@ -251,7 +268,8 @@ export default function Tenants() {
       } catch (err: any) {
         toast({
           title: "Error",
-          description: err?.data?.message || "Failed to permanently delete tenant",
+          description:
+            err?.data?.message || "Failed to permanently delete tenant",
           variant: "destructive",
         });
       }
@@ -271,6 +289,7 @@ export default function Tenants() {
       if (selectedTenant) {
         const updateData = {
           name: fieldValues.name,
+          logo: tenantLogo || undefined,
           contactEmail: fieldValues.contactEmail,
           contactPhone: fieldValues.contactPhone,
           address: fieldValues.address || undefined,
@@ -288,6 +307,7 @@ export default function Tenants() {
       } else {
         const createData = {
           name: fieldValues.name,
+          logo: tenantLogo || undefined,
           contactEmail: fieldValues.contactEmail,
           contactPhone: fieldValues.contactPhone,
           address: fieldValues.address || undefined,
@@ -303,6 +323,7 @@ export default function Tenants() {
       setSelectedTenant(null);
       resetFields();
       setSelectedOwnerId("");
+      setTenantLogo("");
     } catch {
       return;
     }
@@ -314,6 +335,22 @@ export default function Tenants() {
       label: "Tenant Name",
       sortable: true,
       width: "20%",
+      render: (tenant) => (
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="h-8 w-8 rounded-md overflow-hidden border border-border/40 bg-muted/30 shrink-0 flex items-center justify-center">
+            {tenant.logo ? (
+              <img
+                src={tenant.logo}
+                alt={tenant.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+          <span className="truncate">{tenant.name}</span>
+        </div>
+      ),
     },
     {
       key: "contactEmail",
@@ -471,6 +508,18 @@ export default function Tenants() {
         messages={messages}
         isReadOnly={isReadOnly}
       >
+        <div className="space-y-2">
+          <FileUploader
+            label="Tenant Logo"
+            accept="image"
+            maxFiles={1}
+            value={tenantLogoFiles}
+            onChange={(files) => setTenantLogo(files[0]?.url || "")}
+            folder="tenant"
+            disabled={isReadOnly || isCreating || isUpdating}
+          />
+        </div>
+
         <div className="space-y-2">
           {isReadOnly ? (
             <>

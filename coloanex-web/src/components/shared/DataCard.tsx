@@ -26,16 +26,25 @@ export function DataCard({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-foreground truncate text-sm" title={title}>
+            <h4
+              className="font-semibold text-foreground truncate text-[14px]"
+              title={title}
+            >
               {title}
-            </h3>
+            </h4>
             {subtitle && (
-              <p className="text-foreground mt-1 truncate text-sm" title={subtitle}>
+              <p
+                className="text-foreground mt-1 truncate text-[14px]"
+                title={subtitle}
+              >
                 {subtitle}
               </p>
             )}
             {metadata && (
-              <p className="text-xs text-muted-foreground mt-1 truncate" title={metadata}>
+              <p
+                className="!text-[12px] text-muted-foreground mt-1 truncate"
+                title={metadata}
+              >
                 {metadata}
               </p>
             )}
@@ -63,7 +72,10 @@ export function DataCard({
             className="p-2 hover:bg-destructive/10 rounded transition-colors cursor-pointer"
             title={deleteTitle}
           >
-            <Trash2 className="w-4 h-4" style={{ color: 'var(--color-danger)' }} />
+            <Trash2
+              className="w-4 h-4"
+              style={{ color: "var(--color-danger)" }}
+            />
           </button>
         </div>
       </div>

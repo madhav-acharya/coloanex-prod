@@ -60,6 +60,11 @@ export interface SignupRequest {
   password: string;
   fullName: string;
   tenantId?: string;
+  role?: string;
+  tenantName?: string;
+  tenantContactEmail?: string;
+  tenantContactPhone?: string;
+  tenantLogo?: string;
 }
 
 export interface RefreshTokenRequest {

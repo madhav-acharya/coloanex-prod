@@ -1,14 +1,18 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
+import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { canAccessBorrowerRoutes, getHomeRoute } from "@/lib/roleUtils";
-import BorrowerDashboard from "@/pages/borrower/BorrowerDashboard";
+import BorrowerDashboard from "@/pages/borrower/Dashboard";
 import BrowseLenders from "@/pages/borrower/BrowseLenders";
 import LenderDetails from "@/pages/borrower/LenderDetails";
-import MyLoans from "@/pages/borrower/MyLoans";
 import LoanDetails from "@/pages/borrower/LoanDetails";
 import MakeRepayment from "@/pages/borrower/MakeRepayment";
-import BorrowerSettings from "@/pages/borrower/BorrowerSettings";
+import BorrowerKycStatus from "@/pages/borrower/BorrowerKycStatus";
+import Settings from "@/pages/borrower/Settings";
+import Features from "@/pages/public/Features";
+import HowItWorks from "@/pages/public/HowItWorks";
+import Security from "@/pages/public/Security";
 import Pricing from "@/pages/public/Pricing";
 
 interface BorrowerRouteProps {
@@ -98,7 +102,7 @@ export const BorrowerRoutes = () => {
         path="/borrower/my-loans"
         element={
           <BorrowerRouteWrapper>
-            <MyLoans />
+            <Navigate to="/borrower/profile?section=my-loans" replace />
           </BorrowerRouteWrapper>
         }
       />
@@ -119,10 +123,48 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/settings"
+        path="/borrower/profile"
         element={
           <BorrowerRouteWrapper>
-            <BorrowerSettings />
+            <Settings />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/analytics"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/borrower/profile?section=my-loans" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/how-it-works"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerLayout>
+              <HowItWorks isSubcomponent />
+            </BorrowerLayout>
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/features"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerLayout>
+              <Features isSubcomponent />
+            </BorrowerLayout>
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/security"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerLayout>
+              <Security isSubcomponent />
+            </BorrowerLayout>
           </BorrowerRouteWrapper>
         }
       />
@@ -130,7 +172,33 @@ export const BorrowerRoutes = () => {
         path="/borrower/pricing"
         element={
           <BorrowerRouteWrapper>
-            <Pricing />
+            <BorrowerLayout>
+              <Pricing isSubcomponent />
+            </BorrowerLayout>
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/wallet"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/borrower/profile?section=wallet" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/payment-configs"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/borrower/profile?section=payment-config" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/kyc/:id"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerKycStatus />
           </BorrowerRouteWrapper>
         }
       />
@@ -142,6 +210,7 @@ export const BorrowerRoutes = () => {
           </BorrowerRouteWrapper>
         }
       />
+      <Route path="*" element={null} />
     </Routes>
   );
 };

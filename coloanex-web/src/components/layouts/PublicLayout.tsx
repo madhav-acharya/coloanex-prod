@@ -7,6 +7,9 @@ import { RootState } from "@/store";
 import { logout } from "@/store/slices/authSlice";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { AuthModal } from "@/components/modals/AuthModal";
+import { MobileBottomNav } from "@/components/shared/MobileBottomNav";
+import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
+import { getHomeRoute } from "@/lib/roleUtils";
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -29,27 +32,34 @@ export default function PublicLayout({
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
+    const orderedSections = [
+      "home",
+      "services",
+      "how-it-works",
+      "features",
+      "security",
+      "pricing",
+    ];
+
     const handleScroll = () => {
       setScrolled(window.scrollY > 40);
 
-      const sections = [
-        "home",
-        "services",
-        "how-it-works",
-        "features",
-        "security",
-        "pricing",
-      ];
-      let current = "";
-      for (const section of sections) {
+      if (location.pathname !== "/") {
+        setActiveSection("");
+        return;
+      }
+
+      const scrollPosition = window.scrollY + 160;
+      let current = "home";
+
+      for (const section of orderedSections) {
         const el = document.getElementById(section);
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          if (rect.top <= window.innerHeight / 3 && rect.bottom >= 0) {
-            current = section;
-          }
+        if (!el) continue;
+        if (el.offsetTop <= scrollPosition) {
+          current = section;
         }
       }
+
       setActiveSection(current);
     };
 
@@ -64,21 +74,7 @@ export default function PublicLayout({
   };
 
   const isHome = location.pathname === "/";
-
-  const handleNavClick = (anchor: string) => {
-    if (
-      isHome ||
-      (location.pathname !== "/login" && location.pathname !== "/signup")
-    ) {
-      const el = document.getElementById(anchor);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth" });
-        setMobileMenuOpen(false);
-        return;
-      }
-    }
-    setMobileMenuOpen(false);
-  };
+  const userHomeRoute = user ? getHomeRoute(user as any) : "/dashboard";
 
   const navLinks = [
     { label: "Home", to: "/", anchor: "home" },
@@ -130,38 +126,29 @@ export default function PublicLayout({
               </Link>
 
               <div className="hidden lg:flex items-center gap-6">
-                {navLinks.map((link) =>
-                  link.anchor && isHome ? (
-                    <button
-                      key={link.label}
-                      onClick={() => handleNavClick(link.anchor)}
-                      className={navLinkClass(link.to, link.anchor || "")}
-                    >
-                      {link.label}
-                    </button>
-                  ) : (
-                    <Link
-                      key={link.label}
-                      to={link.to}
-                      className={navLinkClass(link.to, link.anchor || "")}
-                    >
-                      {link.label}
-                    </Link>
-                  ),
-                )}
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    className={navLinkClass(link.to, link.anchor || "")}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
 
               <div className="hidden lg:flex items-center gap-3">
                 <ThemeSwitcher />
                 {user ? (
                   <>
-                    <Link to="/dashboard">
-                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-5 cursor-pointer">
+                    <NotificationsDropdown />
+                    <Link to={userHomeRoute}>
+                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-4 cursor-pointer h-9">
                         Dashboard
                       </Button>
                     </Link>
                     <Button
-                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-full px-5 cursor-pointer"
+                      className="bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-full px-4 cursor-pointer h-9"
                       onClick={handleLogout}
                     >
                       Logout
@@ -186,16 +173,55 @@ export default function PublicLayout({
                 )}
               </div>
 
-              <button
-                className="lg:hidden p-2 text-foreground hover:text-primary cursor-pointer"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-6 h-6" />
+              <div className="lg:hidden flex items-center gap-1.5">
+                <ThemeSwitcher />
+                {user ? (
+                  <>
+                    <NotificationsDropdown />
+                    <Link to={userHomeRoute}>
+                      <Button size="sm" className="h-8 px-2.5 text-xs">
+                        Dashboard
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={handleLogout}
+                    >
+                      Logout
+                    </Button>
+                  </>
                 ) : (
-                  <Menu className="w-6 h-6" />
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() => setIsAuthModalOpen(true)}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-8 px-2.5 text-xs"
+                      onClick={() => setIsAuthModalOpen(true)}
+                    >
+                      Sign Up
+                    </Button>
+                  </>
                 )}
-              </button>
+                <button
+                  className="p-2 text-foreground hover:text-primary cursor-pointer"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                  {mobileMenuOpen ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           {/* Animated Blinking Separator Line */}
@@ -203,17 +229,20 @@ export default function PublicLayout({
         </nav>
       )}
 
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
       <div className="relative z-10 min-h-screen flex flex-col">
         {mobileMenuOpen && (
           <div className="lg:hidden fixed inset-0 z-[60] flex">
             <div
-              className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300"
+              className="fixed inset-0 bg-black/55 animate-in fade-in duration-300"
               onClick={() => setMobileMenuOpen(false)}
             />
-            <div className="relative w-[90%] sm:w-[85%] max-w-sm h-full bg-card border-r border-border shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-              <div className="flex items-center justify-between px-4 h-16 border-b border-border">
+            <div className="relative w-[78%] sm:w-[72%] max-w-[280px] h-full bg-[#08162b] border-r border-[#12355f] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+              <div className="flex items-center justify-between px-3.5 h-14 border-b border-border">
                 <Link
                   to="/"
                   className="flex items-center gap-2"
@@ -226,99 +255,38 @@ export default function PublicLayout({
                       className="w-full h-full"
                     />
                   </div>
-                  <span className="font-bold text-foreground text-lg">
+                  <span className="font-bold text-foreground text-base">
                     Coloanex
                   </span>
                 </Link>
                 <button
-                  className="p-2 text-foreground/80 hover:text-foreground"
+                  className="p-1.5 text-foreground/80 hover:text-foreground"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-6 space-y-2">
-                {navLinks.map((link) =>
-                  link.anchor && isHome ? (
-                    <button
-                      key={link.label}
-                      onClick={() => handleNavClick(link.anchor)}
-                      className="w-full text-left cursor-pointer block py-3 px-2 text-foreground/80 hover:text-foreground hover:bg-muted transition-colors rounded-lg"
-                    >
-                      {link.label}
-                    </button>
-                  ) : (
-                    <Link
-                      key={link.label}
-                      to={link.to}
-                      className={`block py-3 px-2 transition-colors rounded-lg ${isActiveLink(link.to, link.anchor || "") ? "text-primary font-bold bg-primary/5" : "text-foreground/80 hover:text-foreground hover:bg-muted"}`}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {link.label}
-                    </Link>
-                  ),
-                )}
-
-                <div className="flex items-center justify-between pt-4 pb-2 border-b border-border">
-                  <span className="text-sm font-medium text-foreground/70">
-                    Theme
-                  </span>
-                  <ThemeSwitcher />
-                </div>
-
-                <div className="flex flex-col gap-3 pt-6">
-                  {user ? (
-                    <>
-                      <Link
-                        to="/dashboard"
-                        className="w-full"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        <Button variant="outline" className="w-full">
-                          Dashboard
-                        </Button>
-                      </Link>
-                      <Button
-                        className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outline"
-                        className="w-full text-foreground border-border cursor-pointer"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setIsAuthModalOpen(true);
-                        }}
-                      >
-                        Login
-                      </Button>
-                      <Button
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          setIsAuthModalOpen(true);
-                        }}
-                      >
-                        Get Started
-                      </Button>
-                    </>
-                  )}
-                </div>
+              <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    className={`block py-2.5 px-2.5 text-sm transition-colors rounded-lg ${isActiveLink(link.to, link.anchor || "") ? "text-primary font-semibold bg-primary/10" : "text-foreground/80 hover:text-foreground hover:bg-muted"}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
         )}
 
-        <main className="flex-1 pt-16">{children}</main>
+        <main className="flex-1 pt-16 pb-20 md:pb-0">{children}</main>
 
         {showFooter && (
-          <footer className="relative z-20 bg-background border-t border-border text-foreground py-16 transition-colors mt-auto">
+          <footer className="relative z-20 bg-background border-t border-border text-foreground py-10 md:py-16 transition-colors mt-auto">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid md:grid-cols-4 gap-8 mb-12 text-left">
                 <div className="text-left">
@@ -387,36 +355,32 @@ export default function PublicLayout({
                     <ul className="space-y-2 text-sm text-muted-foreground list-none p-0">
                       <li>
                         <Link
-                          to="/#features"
+                          to="/how-it-works"
                           className="hover:text-primary transition-colors"
-                          onClick={() => handleNavClick("how-it-works")}
                         >
                           How It Works
                         </Link>
                       </li>
                       <li>
                         <Link
-                          to="/#features"
+                          to="/features"
                           className="hover:text-primary transition-colors"
-                          onClick={() => handleNavClick("features")}
                         >
                           Features
                         </Link>
                       </li>
                       <li>
                         <Link
-                          to="/#security"
+                          to="/security"
                           className="hover:text-primary transition-colors"
-                          onClick={() => handleNavClick("security")}
                         >
                           Security
                         </Link>
                       </li>
                       <li>
                         <Link
-                          to="/#pricing"
+                          to="/pricing"
                           className="hover:text-primary transition-colors"
-                          onClick={() => handleNavClick("pricing")}
                         >
                           Pricing
                         </Link>
@@ -524,6 +488,11 @@ export default function PublicLayout({
             </div>
           </footer>
         )}
+
+        <MobileBottomNav
+          variant="public"
+          accountPath={user ? "/dashboard" : "/login"}
+        />
       </div>
     </div>
   );

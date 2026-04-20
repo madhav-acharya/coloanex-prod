@@ -35,31 +35,62 @@ import { formatDistanceToNow } from "date-fns";
 const getActivityIcon = (action: string) => {
   switch (action) {
     case "CREATE":
-      return <Plus className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
+      return (
+        <Plus className="h-5 w-5" style={{ color: "var(--color-info)" }} />
+      );
     case "UPDATE":
-      return <Edit className="h-5 w-5" style={{ color: 'var(--color-warning)' }} />;
+      return (
+        <Edit className="h-5 w-5" style={{ color: "var(--color-warning)" }} />
+      );
     case "DELETE":
-      return <Trash2 className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
+      return (
+        <Trash2 className="h-5 w-5" style={{ color: "var(--color-danger)" }} />
+      );
     case "KYC_VERIFY":
-      return <ShieldCheck className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
+      return (
+        <ShieldCheck
+          className="h-5 w-5"
+          style={{ color: "var(--color-success)" }}
+        />
+      );
     case "KYC_REJECT":
-      return <ShieldX className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
+      return (
+        <ShieldX className="h-5 w-5" style={{ color: "var(--color-danger)" }} />
+      );
     case "LOGIN":
-      return <LogIn className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
+      return (
+        <LogIn className="h-5 w-5" style={{ color: "var(--color-info)" }} />
+      );
     case "LOGOUT":
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "VISIT":
-      return <Eye className="h-5 w-5" style={{ color: 'var(--color-warning)' }} />;
+      return (
+        <Eye className="h-5 w-5" style={{ color: "var(--color-warning)" }} />
+      );
     case "LEAVE":
       return <LogOut className="h-5 w-5 text-muted-foreground" />;
     case "LOAN_APPROVE":
-      return <BadgeCheck className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
+      return (
+        <BadgeCheck
+          className="h-5 w-5"
+          style={{ color: "var(--color-success)" }}
+        />
+      );
     case "LOAN_REJECT":
-      return <ShieldX className="h-5 w-5" style={{ color: 'var(--color-danger)' }} />;
+      return (
+        <ShieldX className="h-5 w-5" style={{ color: "var(--color-danger)" }} />
+      );
     case "CONTRACT_SIGN":
-      return <FileCheck className="h-5 w-5" style={{ color: 'var(--color-info)' }} />;
+      return (
+        <FileCheck className="h-5 w-5" style={{ color: "var(--color-info)" }} />
+      );
     case "PAYMENT_RECEIVED":
-      return <Banknote className="h-5 w-5" style={{ color: 'var(--color-success)' }} />;
+      return (
+        <Banknote
+          className="h-5 w-5"
+          style={{ color: "var(--color-success)" }}
+        />
+      );
     default:
       return <FileText className="h-5 w-5 text-muted-foreground" />;
   }
@@ -228,7 +259,10 @@ export const NotificationsDropdown = () => {
         {unreadCount > 0 && (
           <span
             className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center rounded-full text-xs font-semibold"
-            style={{ backgroundColor: 'var(--color-badge-danger)', color: 'var(--color-danger-fg)' }}
+            style={{
+              backgroundColor: "var(--color-badge-danger)",
+              color: "var(--color-danger-fg)",
+            }}
           >
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
@@ -237,7 +271,7 @@ export const NotificationsDropdown = () => {
 
       {isOpen && (
         <div
-          className="absolute right-0 mt-2 w-96 !bg-popover rounded-lg shadow-lg border z-50"
+          className="fixed left-2 right-2 top-16 mt-0 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 !bg-popover rounded-lg shadow-lg border z-[220]"
           style={{ backgroundColor: "hsl(var(--popover))" }}
         >
           <div className="p-4 border-b flex items-center justify-between">
@@ -273,7 +307,7 @@ export const NotificationsDropdown = () => {
             </div>
           </div>
 
-          <ScrollArea className="h-[500px]">
+          <ScrollArea className="h-[min(68vh,500px)] sm:h-[500px]">
             {isFetchingNotifications && offset === 0 ? (
               <div className="p-8 text-center">
                 <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin text-muted-foreground" />
@@ -313,7 +347,12 @@ export const NotificationsDropdown = () => {
                             {formatDescription(notification)}
                           </p>
                           {!notification.isRead && (
-                            <div className="flex-shrink-0 w-2 h-2 rounded-full mt-1" style={{ backgroundColor: 'var(--color-unread-dot)' }}></div>
+                            <div
+                              className="flex-shrink-0 w-2 h-2 rounded-full mt-1"
+                              style={{
+                                backgroundColor: "var(--color-unread-dot)",
+                              }}
+                            ></div>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
@@ -343,7 +382,10 @@ export const NotificationsDropdown = () => {
                         )}
                       </div>
                       {notification.isRead && (
-                        <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--color-success)' }} />
+                        <Check
+                          className="h-4 w-4 flex-shrink-0"
+                          style={{ color: "var(--color-success)" }}
+                        />
                       )}
                     </div>
                   </div>
