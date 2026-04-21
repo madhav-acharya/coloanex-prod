@@ -20,7 +20,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:unit:auth": "jest --runTestsByPath test/unit/auth.service.spec.ts",
+    "test:unit:loans": "jest --runTestsByPath test/unit/loans.service.spec.ts",
+    "test:unit:kyc": "jest --runTestsByPath test/unit/kyc.service.spec.ts",
+    "test:unit:payments": "jest --runTestsByPath test/unit/payments.service.spec.ts",
+    "test:unit:contracts": "jest --runTestsByPath test/unit/contracts.service.spec.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
@@ -93,10 +98,17 @@
       "json",
       "ts"
     ],
-    "rootDir": "src",
+    "rootDir": ".",
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/test"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^uuid$": "<rootDir>/src/__mocks__/uuid.ts"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
