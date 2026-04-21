@@ -8,6 +8,8 @@ import BrowseLenders from "@/pages/borrower/BrowseLenders";
 import LenderDetails from "@/pages/borrower/LenderDetails";
 import LoanDetails from "@/pages/borrower/LoanDetails";
 import MakeRepayment from "@/pages/borrower/MakeRepayment";
+import BorrowerPaymentSuccess from "@/pages/borrower/PaymentSuccess";
+import BorrowerPaymentFailure from "@/pages/borrower/PaymentFailure";
 import BorrowerKycStatus from "@/pages/borrower/BorrowerKycStatus";
 import Settings from "@/pages/borrower/Settings";
 import Features from "@/pages/public/Features";
@@ -206,7 +208,15 @@ export const BorrowerRoutes = () => {
         path="/borrower/payment/success"
         element={
           <BorrowerRouteWrapper>
-            <></>
+            <BorrowerPaymentSuccess />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/borrower/payment/failure"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerPaymentFailure />
           </BorrowerRouteWrapper>
         }
       />
