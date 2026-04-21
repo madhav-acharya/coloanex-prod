@@ -9,7 +9,14 @@ import { Link, useParams } from "react-router-dom";
 import { useGetLoanQuery } from "@/apis/loansApi";
 import { useGetPaymentSchedulesByContractQuery } from "@/apis/paymentSchedulesApi";
 import { useGetContractsQuery } from "@/apis/contractsApi";
+import { useGetMyWalletsQuery } from "@/apis/walletsApi";
+import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
 import { LoanStatus } from "@/types/loan";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useEsewaPayment } from "@/hooks/useEsewaPayment";
+import { useKhaltiPayment } from "@/hooks/useKhaltiPayment";
+import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 import {
   FileText,
   Calendar,
@@ -20,7 +27,10 @@ import {
   Clock3,
   ShieldCheck,
   Link as LinkIcon,
+  X,
 } from "lucide-react";
+
+type Gateway = "KHALTI" | "ESEWA";
 
 const money = (value?: number | null) =>
   new Intl.NumberFormat("en-IN", {
@@ -165,12 +175,29 @@ const statusInfo: Partial<
 };
 
 export default function LoanDetails() {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const { data: loan, isLoading } = useGetLoanQuery(id || "", {
     skip: !id,
   });
   const { data: contracts = [] } = useGetContractsQuery();
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
+  const {
+    pay: payKhalti,
+    isInitiating: isInitiatingKhalti,
+    isVerifying: isVerifyingKhalti,
+  } = useKhaltiPayment();
+  const {
+    pay: payEsewa,
+    isInitiating: isInitiatingEsewa,
+    isVerifying: isVerifyingEsewa,
+  } = useEsewaPayment();
+
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<string[]>([]);
+  const [gateway, setGateway] = useState<Gateway>("KHALTI");
+  const [showGatewayPicker, setShowGatewayPicker] = useState(false);
 
   const resolvedContract = useMemo(() => {
     if (loan?.contract?.id) return loan.contract;
@@ -201,7 +228,9 @@ export default function LoanDetails() {
 
   const payableSchedules = useMemo(
     () =>
-      allSchedules.filter((s) => !isSchedulePaid(s as Record<string, unknown>)),
+      allSchedules.filter(
+        (s) => !isSchedulePaid(s as unknown as Record<string, unknown>),
+      ),
     [allSchedules],
   );
 
@@ -210,7 +239,8 @@ export default function LoanDetails() {
       payableSchedules
         .filter((s) => selectedScheduleIds.includes(s.id))
         .reduce(
-          (sum, s) => sum + getScheduleDueAmount(s as Record<string, unknown>),
+          (sum, s) =>
+            sum + getScheduleDueAmount(s as unknown as Record<string, unknown>),
           0,
         ),
     [payableSchedules, selectedScheduleIds],
@@ -222,10 +252,21 @@ export default function LoanDetails() {
     setSelectedScheduleIds([payableSchedules[0].id]);
   }, [payableSchedules, selectedScheduleIds.length]);
 
-  const repaymentHref =
-    id && selectedScheduleIds.length > 0
-      ? `/borrower/repayment/${id}?selected=${encodeURIComponent(selectedScheduleIds.join(","))}`
-      : `/borrower/repayment/${id}`;
+  const blockchainAccess = useMemo(
+    () =>
+      getBlockchainAccessSnapshot({
+        gasPaymentMode: (user as any)?.gasPaymentMode,
+        wallets,
+        subscriptions: mySubscriptions,
+      }),
+    [user, wallets, mySubscriptions],
+  );
+
+  const gatewayBusy =
+    isInitiatingKhalti ||
+    isVerifyingKhalti ||
+    isInitiatingEsewa ||
+    isVerifyingEsewa;
 
   const canRepay =
     loan?.status === LoanStatus.LOAN_PROVIDED ||
@@ -256,6 +297,75 @@ export default function LoanDetails() {
     );
   };
 
+  const handlePaySelected = () => {
+    if (!contractId) {
+      toast({
+        title: "Error",
+        description:
+          "Loan contract not found. Ensure loan is approved and contract generated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedScheduleIds.length === 0 || selectedAmount <= 0) {
+      toast({
+        title: "Select installments",
+        description: "Choose at least one installment to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setShowGatewayPicker(true);
+  };
+
+  const handleGatewayPayment = async () => {
+    if (!contractId || !id || selectedAmount <= 0) return;
+
+    const gasPaymentMode =
+      blockchainAccess.mode === "USER_WALLET"
+        ? "USER_WALLET"
+        : "PLATFORM_WALLET";
+
+    const successPath = `/borrower/payment/success?context=repayment&loanId=${encodeURIComponent(id)}&amount=${encodeURIComponent(String(selectedAmount))}`;
+    const failurePath = `/borrower/payment/failure?context=repayment&loanId=${encodeURIComponent(id)}&amount=${encodeURIComponent(String(selectedAmount))}`;
+
+    setShowGatewayPicker(false);
+
+    try {
+      if (gateway === "KHALTI") {
+        await payKhalti({
+          contractId,
+          paymentScheduleId: selectedScheduleIds.join(","),
+          amount: selectedAmount,
+          type: "INSTALLMENT_PAYMENT",
+          gasPaymentMode,
+          platform: "WEB",
+          successPath,
+          failurePath,
+        });
+      } else {
+        await payEsewa({
+          contractId,
+          paymentScheduleId: selectedScheduleIds.join(","),
+          amount: selectedAmount,
+          type: "INSTALLMENT_PAYMENT",
+          gasPaymentMode,
+          platform: "WEB",
+          successPath,
+          failurePath,
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Gateway Error",
+        description: err?.data?.message || "Failed to initiate payment.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <BorrowerLayout
       title="Loan Details"
@@ -270,14 +380,16 @@ export default function LoanDetails() {
             Back to My Loans
           </Link>
           {canRepay && id && (
-            <Link to={repaymentHref} className="hidden sm:block">
-              <Button className="h-9 px-4">
-                <CreditCard className="w-4 h-4 mr-2" />
-                {selectedScheduleIds.length > 0
-                  ? `Pay Selected (${selectedScheduleIds.length})`
-                  : "Make Repayment"}
-              </Button>
-            </Link>
+            <Button
+              className="h-9 px-4 hidden sm:inline-flex"
+              onClick={handlePaySelected}
+              disabled={gatewayBusy}
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              {selectedScheduleIds.length > 0
+                ? `Pay Selected (${selectedScheduleIds.length})`
+                : "Make Repayment"}
+            </Button>
           )}
         </div>
 
@@ -483,10 +595,10 @@ export default function LoanDetails() {
                         {allSchedules.slice(0, 8).map((s) => {
                           const checked = selectedScheduleIds.includes(s.id);
                           const scheduleDue = getScheduleDueAmount(
-                            s as Record<string, unknown>,
+                            s as unknown as Record<string, unknown>,
                           );
                           const schedulePaid = isSchedulePaid(
-                            s as Record<string, unknown>,
+                            s as unknown as Record<string, unknown>,
                           );
                           return (
                             <button
@@ -756,10 +868,10 @@ export default function LoanDetails() {
                           {allSchedules.map((s) => {
                             const checked = selectedScheduleIds.includes(s.id);
                             const scheduleDue = getScheduleDueAmount(
-                              s as Record<string, unknown>,
+                              s as unknown as Record<string, unknown>,
                             );
                             const schedulePaid = isSchedulePaid(
-                              s as Record<string, unknown>,
+                              s as unknown as Record<string, unknown>,
                             );
                             return (
                               <button
@@ -850,14 +962,16 @@ export default function LoanDetails() {
                     </div>
 
                     {canRepay && id && (
-                      <Link to={repaymentHref}>
-                        <Button className="w-full h-10">
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          {selectedScheduleIds.length > 0
-                            ? `Pay Selected (${selectedScheduleIds.length})`
-                            : "Make Repayment"}
-                        </Button>
-                      </Link>
+                      <Button
+                        className="w-full h-10"
+                        onClick={handlePaySelected}
+                        disabled={gatewayBusy}
+                      >
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        {selectedScheduleIds.length > 0
+                          ? `Pay Selected (${selectedScheduleIds.length})`
+                          : "Make Repayment"}
+                      </Button>
                     )}
 
                     {canSignContract && contractId && (
@@ -900,17 +1014,85 @@ export default function LoanDetails() {
 
             {canRepay && id && (
               <div className="sm:hidden fixed bottom-20 left-3 right-3 z-[130]">
-                <Link to={repaymentHref}>
-                  <Button className="w-full h-11 shadow-xl">
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    {selectedScheduleIds.length > 0
-                      ? `Pay Selected (${selectedScheduleIds.length})`
-                      : "Make Repayment"}
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full h-11 shadow-xl"
+                  onClick={handlePaySelected}
+                  disabled={gatewayBusy}
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  {selectedScheduleIds.length > 0
+                    ? `Pay Selected (${selectedScheduleIds.length})`
+                    : "Make Repayment"}
+                </Button>
               </div>
             )}
           </>
+        )}
+
+        {showGatewayPicker && (
+          <div className="fixed inset-0 z-[140] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <Card className="w-full max-w-md border-2 border-primary/20 bg-card">
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">Payment Method</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Select your preferred gateway
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowGatewayPicker(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-24 flex flex-col gap-2 transition-all ${gateway === "KHALTI" ? "border-primary bg-primary/5" : ""}`}
+                    onClick={() => setGateway("KHALTI")}
+                  >
+                    <img
+                      src="/images/khalti.png"
+                      alt="Khalti"
+                      className="h-8"
+                    />
+                    <span className="text-xs">Khalti</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`h-24 flex flex-col gap-2 transition-all ${gateway === "ESEWA" ? "border-primary bg-primary/5" : ""}`}
+                    onClick={() => setGateway("ESEWA")}
+                  >
+                    <img src="/images/esewa.png" alt="eSewa" className="h-8" />
+                    <span className="text-xs">eSewa</span>
+                  </Button>
+                </div>
+
+                <div className="rounded-xl border border-border/20 bg-muted/10 p-3 text-sm flex items-center justify-between">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="font-semibold">{money(selectedAmount)}</span>
+                </div>
+
+                <div className="flex gap-3 justify-end mt-6">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setShowGatewayPicker(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleGatewayPayment} disabled={gatewayBusy}>
+                    {gatewayBusy ? "Processing..." : "Complete Payment"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
       </div>
     </BorrowerLayout>
