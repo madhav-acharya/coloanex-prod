@@ -30,6 +30,15 @@ export default function PublicLayout({
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const isHome = location.pathname === "/";
+
+  const routeSectionMap: Record<string, string> = {
+    "/": "home",
+    "/how-it-works": "how-it-works",
+    "/features": "features",
+    "/security": "security",
+    "/pricing": "pricing",
+  };
 
   useEffect(() => {
     const orderedSections = [
@@ -45,7 +54,7 @@ export default function PublicLayout({
       setScrolled(window.scrollY > 40);
 
       if (location.pathname !== "/") {
-        setActiveSection("");
+        setActiveSection(routeSectionMap[location.pathname] || "");
         return;
       }
 
@@ -68,32 +77,64 @@ export default function PublicLayout({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (location.pathname !== "/" || !location.hash) return;
+    const id = location.hash.replace("#", "");
+    const timer = setTimeout(() => {
+      const el = document.getElementById(id);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [location.pathname, location.hash]);
+
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
   };
 
-  const isHome = location.pathname === "/";
   const userHomeRoute = user ? getHomeRoute(user as any) : "/dashboard";
 
   const navLinks = [
-    { label: "Home", to: "/", anchor: "home" },
+    { label: "Home", to: "/#home", anchor: "home" },
     { label: "Services", to: "/#services", anchor: "services" },
-    { label: "How It Works", to: "/how-it-works", anchor: "how-it-works" },
-    { label: "Features", to: "/features", anchor: "features" },
-    { label: "Security", to: "/security", anchor: "security" },
-    { label: "Pricing", to: "/pricing", anchor: "pricing" },
+    { label: "How It Works", to: "/#how-it-works", anchor: "how-it-works" },
+    { label: "Features", to: "/#features", anchor: "features" },
+    { label: "Security", to: "/#security", anchor: "security" },
+    { label: "Pricing", to: "/#pricing", anchor: "pricing" },
   ];
 
-  const isActiveLink = (to: string, anchor: string) => {
+  const handleNavClick = (item: { to: string; anchor: string }) => {
+    setMobileMenuOpen(false);
+
+    if (location.pathname === "/" && item.anchor) {
+      const el = document.getElementById(item.anchor);
+      if (el) {
+        setActiveSection(item.anchor);
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (window.location.hash !== `#${item.anchor}`) {
+          window.history.replaceState(null, "", `/#${item.anchor}`);
+        }
+        return;
+      }
+    }
+
+    navigate(item.to);
+  };
+
+  const isActiveLink = (_to: string, anchor: string) => {
     if (isHome && anchor) {
       return activeSection === anchor;
     }
-    if (!isHome && to !== "/") {
-      return location.pathname === to.split("#")[0];
+
+    if (anchor && routeSectionMap[location.pathname]) {
+      return routeSectionMap[location.pathname] === anchor;
     }
-    if (to === "/")
-      return activeSection === "home" || (!activeSection && isHome);
+
+    if (anchor === "home") {
+      return location.pathname === "/";
+    }
+
     return false;
   };
 
@@ -127,13 +168,14 @@ export default function PublicLayout({
 
               <div className="hidden lg:flex items-center gap-6">
                 {navLinks.map((link) => (
-                  <Link
+                  <button
                     key={link.label}
-                    to={link.to}
+                    type="button"
+                    onClick={() => handleNavClick(link)}
                     className={navLinkClass(link.to, link.anchor || "")}
                   >
                     {link.label}
-                  </Link>
+                  </button>
                 ))}
               </div>
 
@@ -269,14 +311,14 @@ export default function PublicLayout({
 
               <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-1">
                 {navLinks.map((link) => (
-                  <Link
+                  <button
                     key={link.label}
-                    to={link.to}
+                    type="button"
                     className={`block py-2.5 px-2.5 text-sm transition-colors rounded-lg ${isActiveLink(link.to, link.anchor || "") ? "text-primary font-semibold bg-primary/10" : "text-foreground/80 hover:text-foreground hover:bg-muted"}`}
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={() => handleNavClick(link)}
                   >
                     {link.label}
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>
