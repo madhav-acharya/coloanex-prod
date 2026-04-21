@@ -219,13 +219,23 @@ export class TransactionsService {
     createTransactionDto: CreateTransactionDto,
     currentUser: { sub: string; tenantId?: string; roles?: string[] },
   ): Promise<Transaction> {
-    const { blockchain_tx_hash, ...transactionData } = createTransactionDto;
+    const {
+      blockchain_tx_hash,
+      contractId,
+      paymentScheduleId,
+      paymentDetails,
+      sentBy,
+      receivedBy,
+      type,
+      amount,
+      description,
+    } = createTransactionDto;
     const platform = this.resolvePlatform(currentUser);
 
     const decision = await this.transactionOrchestrator.orchestrate({
       userId: currentUser.sub,
       tenantId: currentUser.tenantId,
-      transactionType: createTransactionDto.type,
+      transactionType: type,
       platform,
       userRoles: currentUser.roles,
       preferredWalletId: createTransactionDto.walletId,
@@ -240,13 +250,15 @@ export class TransactionsService {
 
     const transaction = await this.prisma.transaction.create({
       data: {
-        ...transactionData,
-        sentBy: createTransactionDto.sentBy || currentUser.sub,
+        sentBy: sentBy || currentUser.sub,
+        receivedBy,
+        type,
+        amount,
+        description,
         status: TransactionStatus.PENDING as any,
-        gatewayDetails: createTransactionDto.paymentDetails as any,
+        gatewayDetails: paymentDetails as any,
         gasPaymentMode: decision.gasPaymentMode as any,
         gasPaidBy: decision.gasPayer,
-        walletId: decision.walletId,
         walletProvider: decision.walletProvider as any,
         platform: ((decision.evaluationData?.platform as
           | 'APP'
@@ -258,6 +270,13 @@ export class TransactionsService {
           subscriptionId: decision.subscriptionId,
           featureFlags: decision.featureFlags,
         } as any,
+        ...(contractId ? { contract: { connect: { id: contractId } } } : {}),
+        ...(paymentScheduleId
+          ? { paymentSchedule: { connect: { id: paymentScheduleId } } }
+          : {}),
+        ...(decision.walletId
+          ? { wallet: { connect: { id: decision.walletId } } }
+          : {}),
         ...(blockchain_tx_hash && { blockchainTxHash: blockchain_tx_hash }),
       },
       include: {
@@ -289,8 +308,8 @@ export class TransactionsService {
       );
       const bcTx = await this.blockchainService.recordPayment(
         transaction.id,
-        createTransactionDto.contractId ?? 'no-contract',
-        Math.round(Number(createTransactionDto.amount) * 100),
+        contractId ?? 'no-contract',
+        Math.round(Number(amount) * 100),
         'system',
         transaction.id,
       );
