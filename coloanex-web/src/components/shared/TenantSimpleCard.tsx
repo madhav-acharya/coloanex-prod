@@ -21,7 +21,7 @@ export function TenantSimpleCard({
     <Card
       className={[
         "border-border/30 bg-card cursor-pointer overflow-hidden w-full",
-        narrow ? "max-w-[340px] mx-auto" : "",
+        narrow ? "max-w-[340px] mx-auto sm:max-w-none sm:mx-0" : "",
         className || "",
       ].join(" ")}
       onClick={onClick}
