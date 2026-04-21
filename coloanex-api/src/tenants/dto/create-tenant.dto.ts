@@ -18,6 +18,10 @@ export class CreateTenantDto {
   })
   name!: string;
 
+  @IsString()
+  @IsOptional()
+  logo?: string;
+
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
