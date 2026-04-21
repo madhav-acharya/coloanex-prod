@@ -3,6 +3,19 @@ import type { RootState } from "@/store";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL!;
 
+const isAuthRoute = (pathname: string) =>
+  pathname === "/login" || pathname === "/signup";
+
+const isUploadEndpoint = (args: unknown) => {
+  const url =
+    typeof args === "string"
+      ? args
+      : typeof args === "object" && args && "url" in args
+        ? String((args as { url?: unknown }).url || "")
+        : "";
+  return url.includes("/cloudinary-uploads/");
+};
+
 // Base query with authentication
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
@@ -28,6 +41,8 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
+    const pathname = window.location.pathname;
+    const suppressRedirect = isAuthRoute(pathname) || isUploadEndpoint(args);
     const refreshToken = localStorage.getItem("refreshToken");
 
     if (refreshToken) {
@@ -61,8 +76,8 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
         // Clear auth state
         api.dispatch({ type: "auth/logout" });
 
-        // Prevent redirect loop
-        if (!window.location.pathname.includes("/login")) {
+        // Prevent losing typed auth form data due forced redirects.
+        if (!suppressRedirect && !window.location.pathname.includes("/login")) {
           window.location.href = "/login";
         }
       }
@@ -70,7 +85,7 @@ const baseQueryWithReauth = async (args: any, api: any, extraOptions: any) => {
       api.dispatch({ type: "auth/logout" });
       api.dispatch({ type: "auth/logout" });
 
-      if (!window.location.pathname.includes("/login")) {
+      if (!suppressRedirect && !window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
     }

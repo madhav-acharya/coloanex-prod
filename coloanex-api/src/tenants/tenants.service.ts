@@ -48,6 +48,7 @@ export class TenantsService {
     const tenant = await this.prisma.tenant.create({
       data: {
         name: createTenantDto.name,
+        logo: createTenantDto.logo,
         isActive: createTenantDto.isActive ?? true,
         isBanned: createTenantDto.isBanned ?? false,
         contactEmail: createTenantDto.contactEmail,
@@ -261,6 +262,7 @@ export class TenantsService {
       where: { id },
       data: {
         name: updateTenantDto.name,
+        logo: updateTenantDto.logo,
         isActive: updateTenantDto.isActive,
         isBanned: updateTenantDto.isBanned,
         contactEmail: updateTenantDto.contactEmail,

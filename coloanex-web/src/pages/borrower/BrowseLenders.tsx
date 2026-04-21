@@ -268,13 +268,13 @@ export default function BrowseLenders() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5">
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} className="h-72 w-full rounded-2xl" />
               ))
             ) : lenderTenants.length === 0 ? (
-              <Card className="xl:col-span-2 border-dashed border-border/30 bg-card">
+              <Card className="col-span-full border-dashed border-border/30 bg-card">
                 <CardContent className="py-20 text-center">
                   <Search className="w-10 h-10 mx-auto text-muted-foreground/40" />
                   <h3 className="mt-4 text-lg font-semibold text-foreground">
@@ -291,7 +291,6 @@ export default function BrowseLenders() {
                 <TenantSimpleCard
                   key={lender.id}
                   className="rounded-2xl"
-                  narrow
                   onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
                   tenant={lender}
                 />

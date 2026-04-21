@@ -13,6 +13,7 @@ import { CloudinaryUploadsService } from './cloudinary-uploads.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { UploadFileDto, UploadFilesDto } from './dto/upload.dto';
 import type { CloudinaryUploadResult } from './interfaces/upload.interface';
+import { Public } from '../common/decorators/public.decorator';
 
 @Controller('cloudinary-uploads')
 @UseGuards(JwtAuthGuard)
@@ -20,9 +21,10 @@ export class CloudinaryUploadsController {
   constructor(private readonly cloudinaryService: CloudinaryUploadsService) {}
 
   @Post('single')
+  @Public()
   @UseInterceptors(FileInterceptor('file'))
   async uploadSingle(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
     @Body() uploadDto: UploadFileDto,
   ) {
     if (!file) {
@@ -51,9 +53,10 @@ export class CloudinaryUploadsController {
   }
 
   @Post('multiple')
+  @Public()
   @UseInterceptors(FilesInterceptor('files', 10))
   async uploadMultiple(
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: any[],
     @Body() uploadDto: UploadFilesDto,
   ) {
     if (!files || files.length === 0) {
