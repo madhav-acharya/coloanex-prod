@@ -25,7 +25,12 @@
     "test:unit:loans": "jest --runTestsByPath test/unit/loans.service.spec.ts",
     "test:unit:kyc": "jest --runTestsByPath test/unit/kyc.service.spec.ts",
     "test:unit:payments": "jest --runTestsByPath test/unit/payments.service.spec.ts",
-    "test:unit:contracts": "jest --runTestsByPath test/unit/contracts.service.spec.ts"
+    "test:unit:contracts": "jest --runTestsByPath test/unit/contracts.service.spec.ts",
+    "test:unit:blockchain": "jest --runTestsByPath test/unit/blockchain.service.spec.ts",
+    "test:unit:orchestrator": "jest --runTestsByPath test/unit/transaction-orchestrator.service.spec.ts",
+    "test:unit:activity": "jest --runTestsByPath test/unit/activity-logs.service.spec.ts",
+    "test:unit:transactions": "jest --runTestsByPath test/unit/transactions.service.spec.ts",
+    "test:unit:wallets": "jest --runTestsByPath test/unit/wallets.service.spec.ts"
   },
   "dependencies": {
     "@nestjs/cache-manager": "^3.0.1",
