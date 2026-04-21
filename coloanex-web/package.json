@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit:permissions": "vitest run tests/unit/permissions.spec.ts",
+    "test:unit:roles": "vitest run tests/unit/roleUtils.spec.ts",
+    "test:unit:blockchain-access": "vitest run tests/unit/blockchainAccess.spec.ts",
+    "test:unit:platform": "vitest run tests/unit/platform.spec.ts",
+    "test:unit:classnames": "vitest run tests/unit/utils.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -65,6 +70,7 @@
     "tw-animate-css": "^1.4.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.3",
-    "vite": "^7.2.2"
+    "vite": "^7.2.2",
+    "vitest": "^3.2.4"
   }
 }
