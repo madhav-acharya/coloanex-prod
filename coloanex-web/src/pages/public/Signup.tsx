@@ -29,20 +29,42 @@ import { FileUploader } from "@/components/shared/FileUploader";
 import type { UploadedFile } from "@/types/upload";
 
 const Signup = () => {
+  const readSavedFormData = () => {
+    try {
+      const raw = sessionStorage.getItem("signup_form_data");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<{
+        fullName: string;
+        email: string;
+        phone: string;
+        password: string;
+        role: string;
+        tenantName: string;
+        tenantContactEmail: string;
+        tenantContactPhone: string;
+        tenantLogo: string;
+      }>;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const savedFormData = readSavedFormData();
   const [step, setStep] = useState(() => {
     const saved = Number(sessionStorage.getItem("signup_step"));
     return saved >= 1 && saved <= 3 ? saved : 1;
   });
   const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    password: "",
-    role: "lender", // default
-    tenantName: "",
-    tenantContactEmail: "",
-    tenantContactPhone: "",
-    tenantLogo: "",
+    fullName: savedFormData?.fullName || "",
+    email: savedFormData?.email || "",
+    phone: savedFormData?.phone || "",
+    password: savedFormData?.password || "",
+    role: savedFormData?.role || "lender", // default
+    tenantName: savedFormData?.tenantName || "",
+    tenantContactEmail: savedFormData?.tenantContactEmail || "",
+    tenantContactPhone: savedFormData?.tenantContactPhone || "",
+    tenantLogo: savedFormData?.tenantLogo || "",
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -68,12 +90,17 @@ const Signup = () => {
 
   const handleClose = () => {
     sessionStorage.removeItem("signup_step");
+    sessionStorage.removeItem("signup_form_data");
     navigate("/");
   };
 
   useEffect(() => {
     sessionStorage.setItem("signup_step", String(step));
   }, [step]);
+
+  useEffect(() => {
+    sessionStorage.setItem("signup_form_data", JSON.stringify(formData));
+  }, [formData]);
 
   useEffect(() => {
     if (formData.role !== "lender" && step === 3) {
@@ -113,6 +140,7 @@ const Signup = () => {
 
       dispatch(setAuth({ token: response.accessToken }));
       sessionStorage.removeItem("signup_step");
+      sessionStorage.removeItem("signup_form_data");
       if (response.user) {
         dispatch(setUser(response.user));
         navigate(getHomeRoute(response.user));
