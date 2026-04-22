@@ -178,9 +178,9 @@ export function LoanReviewModal({
         <SheetHeader className="px-6 pt-6 pb-4 space-y-2">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <SheetTitle className="text-2xl">Loan Review</SheetTitle>
+              <SheetTitle className="text-2xl">Loan Verification</SheetTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Review and approve or reject the loan request
+                Verify and approve or reject the loan request
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -408,7 +408,7 @@ export function LoanReviewModal({
               <Label htmlFor="rejectionReason">
                 {status === LoanStatus.REJECTED
                   ? "Rejection Reason (Required)"
-                  : "Review Notes (Optional)"}
+                  : "Verification Notes (Optional)"}
               </Label>
               <Textarea
                 id="rejectionReason"
@@ -417,7 +417,7 @@ export function LoanReviewModal({
                 placeholder={
                   status === LoanStatus.REJECTED
                     ? "Please provide a reason for rejection..."
-                    : "Add any additional notes about this review..."
+                    : "Add any additional notes about this verification..."
                 }
                 className="mt-2 min-h-[100px]"
               />
@@ -451,8 +451,8 @@ export function LoanReviewModal({
                 {isSubmitting
                   ? "Submitting..."
                   : hasNext
-                    ? "Submit & Next"
-                    : "Submit Review"}
+                    ? "Verify & Next"
+                    : "Submit Verification"}
               </Button>
             </div>
           </div>
@@ -690,7 +690,7 @@ export function LoanReviewModal({
                   <div className="bg-secondary/5 rounded-lg p-4 border border-secondary/20">
                     <h4 className="text-xs font-semibold text-secondary-foreground uppercase tracking-wide flex items-center gap-2 mb-3">
                       <span className="w-2 h-2 bg-secondary-foreground rounded-full"></span>
-                      Status Update
+                      Verification Status Update
                     </h4>
                     <div>
                       <Label className="text-sm font-medium text-foreground">

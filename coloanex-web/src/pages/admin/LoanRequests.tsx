@@ -52,7 +52,7 @@ export default function LoanRequests() {
   const [isDeletingLoan, setIsDeletingLoan] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   const [isReadOnly, setIsReadOnly] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [blockchainStep, setBlockchainStep] = useState<
     "blockchain" | "database" | "complete"
@@ -62,7 +62,7 @@ export default function LoanRequests() {
   const [createLoan, { isLoading: isCreating }] = useCreateLoanMutation();
   const [updateLoan, { isLoading: isUpdating }] = useUpdateLoanMutation();
   const [deleteLoan] = useDeleteLoanMutation();
-  const [reviewLoan, { isLoading: isReviewing }] = useReviewLoanMutation();
+  const [verifyLoan, { isLoading: isVerifying }] = useReviewLoanMutation();
   const { data: wallets = [] } = useGetMyWalletsQuery();
   const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
   const blockchainAccess = useMemo(
@@ -342,9 +342,9 @@ export default function LoanRequests() {
     }, 5000);
   };
 
-  const handleReviewClick = (loan: Loan) => {
+  const handleVerifyClick = (loan: Loan) => {
     setSelectedLoan(loan);
-    setReviewModalOpen(true);
+    setVerifyModalOpen(true);
   };
 
   const handleVerifySelected = () => {
@@ -352,11 +352,11 @@ export default function LoanRequests() {
     const firstSelectedLoan = loans.find((loan) => selectedRows.has(loan.id));
     if (firstSelectedLoan) {
       setSelectedLoan(firstSelectedLoan);
-      setReviewModalOpen(true);
+      setVerifyModalOpen(true);
     }
   };
 
-  const handleReviewSubmit = async (
+  const handleVerifySubmit = async (
     status: LoanStatus,
     rejectionReason?: string,
     approvedAmount?: number,
@@ -418,7 +418,7 @@ export default function LoanRequests() {
         setBlockchainStep("database");
       }
 
-      await reviewLoan({
+      await verifyLoan({
         id: selectedLoan.id,
         data: {
           status,
@@ -459,7 +459,7 @@ export default function LoanRequests() {
         }
       }
 
-      setReviewModalOpen(false);
+      setVerifyModalOpen(false);
       setSelectedLoan(null);
       setSelectedRows(new Set());
     } catch (error) {
@@ -1211,32 +1211,20 @@ export default function LoanRequests() {
               onClick: handleViewLoan,
             },
             {
-              label: "Review",
+              label: "Verify",
               icon: <CheckCircle2 className="w-4 h-4" />,
-              onClick: handleReviewClick,
-              show: (loan) =>
-                (isSuperAdmin || isLender) &&
-                (loan.status === LoanStatus.UNDER_REVIEW ||
-                  loan.status === LoanStatus.SUBMITTED),
+              onClick: handleVerifyClick,
             },
             {
               label: "Edit",
               icon: <Edit className="w-4 h-4" />,
               onClick: handleEditLoan,
-              show: (loan) =>
-                isSuperAdmin ||
-                isLender ||
-                (isBorrower && loan.status === LoanStatus.DRAFT),
             },
             {
               label: "Delete",
               icon: <Trash2 className="w-4 h-4" />,
               variant: "destructive",
               onClick: handleDeleteClick,
-              show: (loan) =>
-                isSuperAdmin ||
-                isLender ||
-                (isBorrower && loan.status === LoanStatus.DRAFT),
             },
           ]}
         />
@@ -1282,10 +1270,10 @@ export default function LoanRequests() {
       />
 
       <LoanReviewModal
-        open={reviewModalOpen}
-        onOpenChange={setReviewModalOpen}
+        open={verifyModalOpen}
+        onOpenChange={setVerifyModalOpen}
         loan={selectedLoan}
-        onSubmit={handleReviewSubmit}
+        onSubmit={handleVerifySubmit}
         hasNext={
           selectedRows.size > 1 && selectedLoan
             ? Array.from(selectedRows).indexOf(selectedLoan.id) <
@@ -1304,7 +1292,7 @@ export default function LoanRequests() {
       />
 
       <BlockchainProcessingModal
-        open={isCreating || isUpdating || isReviewing || isProcessingBlockchain}
+        open={isCreating || isUpdating || isVerifying || isProcessingBlockchain}
         currentStep={blockchainStep}
         message="Recording loan operation on the blockchain and updating the database. Please wait..."
       />
