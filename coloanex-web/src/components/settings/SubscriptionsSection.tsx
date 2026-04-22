@@ -138,7 +138,8 @@ export default function SubscriptionsSection({
                       : "No expiry date"}
                   </p>
                   {(subscription.isBought ||
-                    subscription.status === "ACTIVE") && (
+                    subscription.status === "ACTIVE" ||
+                    subscription.lifecycleStatus === "EXPIRED") && (
                     <div className="mt-3 flex justify-end">
                       <Button
                         size="sm"
