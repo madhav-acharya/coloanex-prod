@@ -46,11 +46,8 @@ import { toast } from "sonner";
 import {
   Loader2,
   User,
-  FileText,
-  Wallet,
   CreditCard,
   Lock,
-  Bell,
   Eye,
   EyeOff,
   Check,
@@ -66,8 +63,6 @@ import WalletSection from "@/components/settings/WalletSection";
 import SubscriptionsSection from "@/components/settings/SubscriptionsSection";
 import PaymentConfigSection from "@/components/settings/PaymentConfigSection";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
-import { useGetLoansQuery } from "@/apis/loansApi";
-import { LoanStatus } from "@/types/loan";
 
 const gatewayLogoByType: Record<"ESEWA" | "KHALTI", string> = {
   ESEWA: "/images/esewa.png",
@@ -104,7 +99,6 @@ const planAccentByCode: Record<
 };
 
 const accountSections = new Set([
-  "my-loans",
   "account",
   "password",
   "appearance",
@@ -147,16 +141,6 @@ export default function Settings() {
   const showPaymentConfig = Boolean(user);
   const { data: paymentConfigs = [], refetch: refetchConfigs } =
     useListMyPaymentConfigsQuery(undefined, { skip: !showPaymentConfig });
-  const {
-    data: accountLoansData,
-    isLoading: isLoadingAccountLoans,
-    isFetching: isFetchingAccountLoans,
-  } = useGetLoansQuery({
-    page: 1,
-    limit: 100,
-    sortBy: "createdAt",
-    sortOrder: "desc",
-  });
 
   const connectedGatewayTypes = Array.from(
     new Set(
@@ -248,7 +232,6 @@ export default function Settings() {
     !!selectedSubscription &&
     selectedSubscription.remainingTransactions !== null &&
     selectedSubscription.remainingTransactions <= 0;
-  const accountLoans = accountLoansData?.data || [];
 
   const paymentConfigPlaceholders =
     configGateway === "ESEWA"
@@ -675,30 +658,6 @@ export default function Settings() {
       description: `Theme: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}`,
     },
     {
-      id: "wallet",
-      icon: Wallet,
-      title: "Wallet",
-      description: `Gas mode: ${formatGasPaymentMode(gasPaymentMode)}`,
-      badge:
-        blockchainAccess.mode === "USER_WALLET" ? (
-          blockchainAccess.hasWallet ? (
-            <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <Check className="w-3 h-3" />
-              Connected
-            </span>
-          ) : (
-            <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider flex items-center gap-1.5">
-              <X className="w-3 h-3" />
-              Not Connected
-            </span>
-          )
-        ) : (
-          <span className="text-xs px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-500 border border-sky-500/20 font-bold uppercase tracking-wider">
-            Platform Mode
-          </span>
-        ),
-    },
-    {
       id: "subscriptions",
       icon: IconCurrencyRupeeNepalese,
       title: "Subscriptions",
@@ -730,12 +689,6 @@ export default function Settings() {
           },
         ]
       : []),
-    {
-      id: "notifications",
-      icon: Bell,
-      title: "Notifications",
-      description: "Manage notification preferences",
-    },
   ];
 
   const accountNavSections = [
@@ -744,12 +697,6 @@ export default function Settings() {
       icon: User,
       title: "Account Information",
       description: "Update your profile details",
-    },
-    {
-      id: "my-loans",
-      icon: FileText,
-      title: "My Loans",
-      description: "Open and track loan requests",
     },
     {
       id: "password",
@@ -762,12 +709,6 @@ export default function Settings() {
       icon: Palette,
       title: "Appearance",
       description: "Choose app theme",
-    },
-    {
-      id: "wallet",
-      icon: Wallet,
-      title: "Wallet",
-      description: "Manage blockchain wallet",
     },
     {
       id: "subscriptions",
@@ -785,19 +726,13 @@ export default function Settings() {
           },
         ]
       : []),
-    {
-      id: "notifications",
-      icon: Bell,
-      title: "Notifications",
-      description: "Alerts and preferences",
-    },
   ];
 
   if (accountSections.has(activeSection)) {
     return (
       <Layout
         title="Account"
-        description="Manage settings and review your loans from one workspace"
+        description="Manage settings, security, and preferences in one workspace"
       >
         <div className="settings-shell grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr] lg:gap-6">
           <Card className="hidden lg:block rounded-2xl border-border/70 bg-card/75 lg:sticky lg:top-28 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-hidden">
@@ -907,71 +842,6 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
-            {activeSection === "my-loans" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Loans</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Open a specific loan to review details and status
-                  </p>
-                </CardHeader>
-                <Separator />
-                <CardContent className="pt-6 space-y-3">
-                  {isLoadingAccountLoans || isFetchingAccountLoans ? (
-                    <div className="space-y-2.5">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} className="h-20 w-full rounded-lg" />
-                      ))}
-                    </div>
-                  ) : accountLoans.length === 0 ? (
-                    <div className="rounded-lg border border-border/30 bg-muted/10 p-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        No loans found in your account.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {accountLoans.map((loan) => (
-                        <button
-                          key={loan.id}
-                          type="button"
-                          onClick={() =>
-                            navigate(`/borrower/my-loans/${loan.id}`)
-                          }
-                          className="w-full rounded-lg border border-border/30 bg-muted/10 px-3.5 py-3 text-left hover:bg-muted/20 transition-colors"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-foreground truncate">
-                                {loan.purpose || "Loan facility"}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Applied{" "}
-                                {new Date(loan.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <Badge variant="outline" className="capitalize">
-                              {String(loan.status || "draft")
-                                .toLowerCase()
-                                .replace(/_/g, " ")}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>
-                              NPR{" "}
-                              {Number(loan.requestedAmount || 0).toLocaleString(
-                                "en-IN",
-                              )}
-                            </span>
-                            <span>{loan.requestedTermMonths || 0} months</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
 
             {activeSection === "account" && (
               <Card>
@@ -1064,6 +934,7 @@ export default function Settings() {
                           id="current-password"
                           type={showPasswords.current ? "text" : "password"}
                           value={passwordForm.currentPassword}
+                          placeholder="Enter current password"
                           onChange={(e) =>
                             setPasswordForm((prev) => ({
                               ...prev,
@@ -1100,6 +971,7 @@ export default function Settings() {
                           id="new-password"
                           type={showPasswords.new ? "text" : "password"}
                           value={passwordForm.newPassword}
+                          placeholder="Enter new password"
                           onChange={(e) =>
                             setPasswordForm((prev) => ({
                               ...prev,
@@ -1138,6 +1010,7 @@ export default function Settings() {
                           id="confirm-password"
                           type={showPasswords.confirm ? "text" : "password"}
                           value={passwordForm.confirmPassword}
+                          placeholder="Confirm new password"
                           onChange={(e) =>
                             setPasswordForm((prev) => ({
                               ...prev,
@@ -1614,6 +1487,7 @@ export default function Settings() {
                   id="borrower-current-password"
                   type={showPasswords.current ? "text" : "password"}
                   value={passwordForm.currentPassword}
+                  placeholder="Enter current password"
                   onChange={(e) =>
                     setPasswordForm((prev) => ({
                       ...prev,
@@ -1650,6 +1524,7 @@ export default function Settings() {
                   id="borrower-new-password"
                   type={showPasswords.new ? "text" : "password"}
                   value={passwordForm.newPassword}
+                  placeholder="Enter new password"
                   onChange={(e) =>
                     setPasswordForm((prev) => ({
                       ...prev,
@@ -1685,6 +1560,7 @@ export default function Settings() {
                   id="borrower-confirm-password"
                   type={showPasswords.confirm ? "text" : "password"}
                   value={passwordForm.confirmPassword}
+                  placeholder="Confirm new password"
                   onChange={(e) =>
                     setPasswordForm((prev) => ({
                       ...prev,
