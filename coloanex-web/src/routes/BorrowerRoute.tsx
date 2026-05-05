@@ -1,21 +1,18 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { canAccessBorrowerRoutes, getHomeRoute } from "@/lib/roleUtils";
 import BorrowerDashboard from "@/pages/borrower/Dashboard";
 import BrowseLenders from "@/pages/borrower/BrowseLenders";
 import LenderDetails from "@/pages/borrower/LenderDetails";
+import MyLoans from "@/pages/borrower/MyLoans";
 import LoanDetails from "@/pages/borrower/LoanDetails";
 import MakeRepayment from "@/pages/borrower/MakeRepayment";
 import BorrowerPaymentSuccess from "@/pages/borrower/PaymentSuccess";
 import BorrowerPaymentFailure from "@/pages/borrower/PaymentFailure";
 import BorrowerKycStatus from "@/pages/borrower/BorrowerKycStatus";
+import KycOverview from "@/pages/borrower/KycOverview";
 import Settings from "@/pages/borrower/Settings";
-import Features from "@/pages/public/Features";
-import HowItWorks from "@/pages/public/HowItWorks";
-import Security from "@/pages/public/Security";
-import Pricing from "@/pages/public/Pricing";
 
 interface BorrowerRouteProps {
   children: React.ReactNode;
@@ -104,7 +101,7 @@ export const BorrowerRoutes = () => {
         path="/borrower/my-loans"
         element={
           <BorrowerRouteWrapper>
-            <Navigate to="/borrower/profile?section=my-loans" replace />
+            <MyLoans />
           </BorrowerRouteWrapper>
         }
       />
@@ -136,47 +133,15 @@ export const BorrowerRoutes = () => {
         path="/borrower/analytics"
         element={
           <BorrowerRouteWrapper>
-            <Navigate to="/borrower/profile?section=my-loans" replace />
+            <Navigate to="/borrower/my-loans" replace />
           </BorrowerRouteWrapper>
         }
       />
       <Route
-        path="/borrower/how-it-works"
+        path="/borrower/kyc"
         element={
           <BorrowerRouteWrapper>
-            <BorrowerLayout>
-              <HowItWorks isSubcomponent />
-            </BorrowerLayout>
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/features"
-        element={
-          <BorrowerRouteWrapper>
-            <BorrowerLayout>
-              <Features isSubcomponent />
-            </BorrowerLayout>
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/security"
-        element={
-          <BorrowerRouteWrapper>
-            <BorrowerLayout>
-              <Security isSubcomponent />
-            </BorrowerLayout>
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/pricing"
-        element={
-          <BorrowerRouteWrapper>
-            <BorrowerLayout>
-              <Pricing isSubcomponent />
-            </BorrowerLayout>
+            <KycOverview />
           </BorrowerRouteWrapper>
         }
       />
