@@ -35,6 +35,7 @@ import {
   UserCircle2,
 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"];
 const MARITAL_STATUS_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
@@ -78,6 +79,17 @@ export function KycVerificationModal({
   const { user } = useAuth();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+  const stepMeta = [
+    { id: 1, label: "Identity", icon: UserCircle2 },
+    { id: 2, label: "Address", icon: Home },
+    { id: 3, label: "Income", icon: IconCurrencyRupeeNepalese },
+    { id: 4, label: "Document", icon: FileBadge },
+    { id: 5, label: "Upload", icon: FileScan },
+  ];
+  const stepProgress = Math.round((step / stepMeta.length) * 100);
+  const inputClass =
+    "h-11 bg-background/60 border-border/40 focus-visible:ring-primary/30";
+  const selectClass = "h-11 bg-background/60 border-border/40";
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
 
@@ -410,61 +422,66 @@ export function KycVerificationModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-2xl p-0 max-h-[92vh] overflow-y-auto"
+        className="sm:max-w-4xl p-0 max-h-[92vh] overflow-y-auto"
         onInteractOutside={(e) => e.preventDefault()}
       >
         <DialogHeader>
-          <div className="px-6 pt-6">
-            <DialogTitle>Verify KYC</DialogTitle>
+          <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-muted/5">
+            <DialogTitle className="text-xl">Verify KYC</DialogTitle>
             <DialogDescription>
               Complete verification for this lender before applying for a loan.
             </DialogDescription>
           </div>
         </DialogHeader>
-        <div className="px-6 pb-6">
-          <div className="mb-5 space-y-3">
-            <div className="text-xs font-semibold text-muted-foreground">
-              Step {step} of 5
+        <div className="px-6 pb-6 pt-5">
+          <div className="mb-6 rounded-2xl border border-border/40 bg-background/60 p-4 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Step {step} of {stepMeta.length}
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {stepMeta[step - 1]?.label}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Complete each section to submit your KYC verification.
+                </p>
+              </div>
+              <div className="text-xs font-semibold text-muted-foreground">
+                {stepProgress}%
+              </div>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              {[
-                { id: 1, label: "Identity", icon: UserCircle2 },
-                { id: 2, label: "Address", icon: Home },
-                { id: 3, label: "Income", icon: IconCurrencyRupeeNepalese },
-                { id: 4, label: "Document", icon: FileBadge },
-                { id: 5, label: "Upload", icon: FileScan },
-              ].map((item) => (
-                <div key={item.id} className="space-y-1">
-                  <div className="flex justify-center">
-                    <item.icon
-                      className={`w-3.5 h-3.5 ${
-                        step >= item.id
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                      }`}
-                    />
-                  </div>
-                  <div
-                    className={`h-8 rounded-md border text-[11px] font-semibold flex items-center justify-center transition-colors ${
+            <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+              <div
+                className="h-full bg-primary"
+                style={{ width: `${stepProgress}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest">
+              {stepMeta.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <span
+                    key={item.id}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border",
                       step >= item.id
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/40 text-muted-foreground border-border"
-                    }`}
+                        ? "border-primary/40 text-primary bg-primary/10"
+                        : "border-border/40 text-muted-foreground bg-muted/30",
+                    )}
                   >
-                    {item.id}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center truncate">
+                    <Icon className="w-3 h-3" />
                     {item.label}
-                  </p>
-                </div>
-              ))}
+                  </span>
+                );
+              })}
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-4">
               {step === 1 && (
-                <div className="space-y-4">
+                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <Building2 className="w-4 h-4 text-primary" />
                     Identity Information
@@ -480,7 +497,7 @@ export function KycVerificationModal({
                           setForm((prev) => ({ ...prev, tenantId: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={selectClass}>
                           <SelectValue placeholder="Select lender" />
                         </SelectTrigger>
                         <SelectContent>
@@ -507,6 +524,7 @@ export function KycVerificationModal({
                             firstName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -519,6 +537,7 @@ export function KycVerificationModal({
                             middleName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -533,6 +552,7 @@ export function KycVerificationModal({
                             lastName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -552,6 +572,7 @@ export function KycVerificationModal({
                             dateOfBirth: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -562,7 +583,7 @@ export function KycVerificationModal({
                           setForm((prev) => ({ ...prev, gender: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={selectClass}>
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
@@ -582,7 +603,7 @@ export function KycVerificationModal({
                           setForm((prev) => ({ ...prev, maritalStatus: value }))
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={selectClass}>
                           <SelectValue placeholder="Select marital status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -599,7 +620,7 @@ export function KycVerificationModal({
               )}
 
               {step === 2 && (
-                <div className="space-y-4">
+                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <Home className="w-4 h-4 text-primary" />
                     Family & Address Details
@@ -615,6 +636,7 @@ export function KycVerificationModal({
                             fatherName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -627,6 +649,7 @@ export function KycVerificationModal({
                             motherName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -639,6 +662,7 @@ export function KycVerificationModal({
                             grandfatherName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -656,6 +680,7 @@ export function KycVerificationModal({
                             province: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -670,6 +695,7 @@ export function KycVerificationModal({
                             district: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -684,6 +710,7 @@ export function KycVerificationModal({
                             municipality: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -695,6 +722,7 @@ export function KycVerificationModal({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, ward: e.target.value }))
                         }
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -706,13 +734,14 @@ export function KycVerificationModal({
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, tole: e.target.value }))
                       }
+                      className={inputClass}
                     />
                   </div>
                 </div>
               )}
 
               {step === 3 && (
-                <div className="space-y-4">
+                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
                     Occupation & Banking
@@ -730,6 +759,7 @@ export function KycVerificationModal({
                             occupation: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -746,6 +776,7 @@ export function KycVerificationModal({
                             monthlyIncome: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -758,6 +789,7 @@ export function KycVerificationModal({
                             bankName: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                     <div className="space-y-2">
@@ -770,6 +802,7 @@ export function KycVerificationModal({
                             bankAccountNumber: e.target.value,
                           }))
                         }
+                        className={inputClass}
                       />
                     </div>
                   </div>
@@ -784,13 +817,14 @@ export function KycVerificationModal({
                           bankBranch: e.target.value,
                         }))
                       }
+                      className={inputClass}
                     />
                   </div>
                 </div>
               )}
 
               {step === 4 && (
-                <div className="space-y-4">
+                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <FileBadge className="w-4 h-4 text-primary" />
                     Document Selection
@@ -810,11 +844,12 @@ export function KycVerificationModal({
                             key={option.value}
                             type="button"
                             onClick={() => handleToggleDocType(option.value)}
-                            className={`px-3 py-1.5 rounded-full text-xs border ${
+                            className={cn(
+                              "px-3 py-1.5 rounded-full text-xs border transition-colors",
                               selected
-                                ? "bg-primary/10 border-primary text-primary"
-                                : "bg-muted/20 border-border text-muted-foreground"
-                            }`}
+                                ? "bg-primary/10 border-primary/40 text-primary"
+                                : "bg-muted/20 border-border/40 text-muted-foreground hover:text-foreground",
+                            )}
                           >
                             {option.label}
                           </button>
@@ -833,7 +868,7 @@ export function KycVerificationModal({
                             setActiveDocumentType(value as DocumentType)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={selectClass}>
                             <SelectValue placeholder="Choose document to fill" />
                           </SelectTrigger>
                           <SelectContent>
@@ -870,6 +905,7 @@ export function KycVerificationModal({
                                     e.target.value,
                                   )
                                 }
+                                className={inputClass}
                               />
                             </div>
                             <div className="space-y-2">
@@ -884,6 +920,7 @@ export function KycVerificationModal({
                                     e.target.value,
                                   )
                                 }
+                                className={inputClass}
                               />
                             </div>
                             <div className="space-y-2">
@@ -898,6 +935,7 @@ export function KycVerificationModal({
                                     e.target.value,
                                   )
                                 }
+                                className={inputClass}
                               />
                             </div>
                             <div className="space-y-2 sm:col-span-2">
@@ -911,6 +949,7 @@ export function KycVerificationModal({
                                     e.target.value,
                                   )
                                 }
+                                className={inputClass}
                               />
                             </div>
                           </div>
@@ -921,7 +960,7 @@ export function KycVerificationModal({
               )}
 
               {step === 5 && (
-                <div className="space-y-4">
+                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                     <FileScan className="w-4 h-4 text-primary" />
                     Upload Verification Files
@@ -932,7 +971,7 @@ export function KycVerificationModal({
                         Passport Size Photo{" "}
                         <span className="text-destructive">*</span>
                       </Label>
-                      <label className="h-36 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                      <label className="h-36 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
                         <input
                           type="file"
                           accept="image/*"
@@ -962,7 +1001,7 @@ export function KycVerificationModal({
                       <Label>
                         Selfie <span className="text-destructive">*</span>
                       </Label>
-                      <label className="h-36 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                      <label className="h-36 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
                         <input
                           type="file"
                           accept="image/*"
@@ -993,7 +1032,7 @@ export function KycVerificationModal({
                           Document Front{" "}
                           <span className="text-destructive">*</span>
                         </Label>
-                        <label className="h-28 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                        <label className="h-28 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
                           <input
                             type="file"
                             accept="image/*,.pdf"
@@ -1025,7 +1064,7 @@ export function KycVerificationModal({
                             Document Back{" "}
                             <span className="text-destructive">*</span>
                           </Label>
-                          <label className="h-28 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                          <label className="h-28 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
                             <input
                               type="file"
                               accept="image/*,.pdf"
@@ -1084,11 +1123,12 @@ export function KycVerificationModal({
               )}
             </div>
 
-            <div className="flex justify-between gap-2 pt-2">
+            <div className="flex flex-wrap justify-between gap-2 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="h-11 rounded-xl"
               >
                 Cancel
               </Button>
@@ -1098,6 +1138,7 @@ export function KycVerificationModal({
                   variant="outline"
                   onClick={prevStep}
                   disabled={step === 1 || isSubmitting}
+                  className="h-11 rounded-xl"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" /> Back
                 </Button>
@@ -1106,11 +1147,16 @@ export function KycVerificationModal({
                     type="button"
                     onClick={nextStep}
                     disabled={isSubmitting}
+                    className="h-11 rounded-xl"
                   >
                     Next <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={!canSubmit || isSubmitting}>
+                  <Button
+                    type="submit"
+                    disabled={!canSubmit || isSubmitting}
+                    className="h-11 rounded-xl"
+                  >
                     {isSubmitting ? "Submitting..." : "Submit KYC"}
                   </Button>
                 )}

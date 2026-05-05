@@ -1,9 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal, ChevronRight } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronRight,
+  Mail,
+  MapPin,
+  Phone,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -15,7 +24,6 @@ import {
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { TenantSimpleCard } from "@/components/shared/TenantSimpleCard";
 
 export default function BrowseLenders() {
   const navigate = useNavigate();
@@ -45,6 +53,7 @@ export default function BrowseLenders() {
         : t.isActive === (statusFilter === "active"),
     ) || [];
   const totalPages = Math.ceil((tenantsData?.total || 0) / 10);
+  const totalCount = tenantsData?.total || 0;
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
     const q = search.toLowerCase();
@@ -58,6 +67,77 @@ export default function BrowseLenders() {
       })
       .slice(0, 5);
   }, [search, lenderTenants]);
+
+  const renderLenderCard = (lender: (typeof lenderTenants)[number]) => (
+    <button
+      key={lender.id}
+      type="button"
+      onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
+      className="w-full rounded-2xl border border-border/30 bg-card p-4 text-left transition-colors hover:bg-muted/10"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+            {lender.logo ? (
+              <img
+                src={lender.logo}
+                alt={lender.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-lg font-bold text-primary">
+                {lender.name.charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">
+              {lender.name}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1 truncate">
+              {lender.contactEmail || lender.address || "Lending partner"}
+            </p>
+          </div>
+        </div>
+        <Badge
+          className={cn(
+            "rounded-full px-3 py-1 text-[10px] uppercase tracking-widest",
+            lender.isActive
+              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+              : "bg-muted/40 text-muted-foreground border-border",
+          )}
+        >
+          {lender.isActive ? "Active" : "Inactive"}
+        </Badge>
+      </div>
+
+      <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+        {lender.contactEmail && (
+          <div className="flex items-center gap-2">
+            <Mail className="w-3.5 h-3.5" />
+            <span className="truncate">{lender.contactEmail}</span>
+          </div>
+        )}
+        {lender.contactPhone && (
+          <div className="flex items-center gap-2">
+            <Phone className="w-3.5 h-3.5" />
+            <span>{lender.contactPhone}</span>
+          </div>
+        )}
+        {lender.address && (
+          <div className="flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5" />
+            <span className="truncate">{lender.address}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-xs font-semibold text-primary">
+        <span>View Details</span>
+        <ArrowRight className="w-3.5 h-3.5" />
+      </div>
+    </button>
+  );
 
   return (
     <BorrowerLayout
@@ -144,15 +224,7 @@ export default function BrowseLenders() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {lenderTenants.map((lender) => (
-                <TenantSimpleCard
-                  key={lender.id}
-                  className="rounded-2xl"
-                  narrow
-                  onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-                  tenant={lender}
-                />
-              ))}
+              {lenderTenants.map(renderLenderCard)}
             </div>
           )}
 
@@ -265,6 +337,12 @@ export default function BrowseLenders() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{totalCount} lenders available</span>
+                <span>
+                  Showing {lenderTenants.length} of {totalCount}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -287,14 +365,7 @@ export default function BrowseLenders() {
                 </CardContent>
               </Card>
             ) : (
-              lenderTenants.map((lender) => (
-                <TenantSimpleCard
-                  key={lender.id}
-                  className="rounded-2xl"
-                  onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-                  tenant={lender}
-                />
-              ))
+              lenderTenants.map(renderLenderCard)
             )}
           </div>
 

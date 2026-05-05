@@ -42,6 +42,7 @@ import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 import { recordLoanOnBlockchain } from "@/utils/blockchain";
 import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
 import { useUploadSingleMutation } from "@/apis/uploadApi";
+import { cn } from "@/lib/utils";
 
 const COLLATERAL_TYPE_OPTIONS = [
   { label: "Property/Land", value: "Property" },
@@ -78,6 +79,33 @@ export function ApplyLoanModal({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+  const stepMeta = [
+    {
+      id: 1,
+      title: "Loan Basics",
+      description: "Amount, term, and lender selection",
+    },
+    {
+      id: 2,
+      title: "Loan Purpose",
+      description: "Tell us why you need the financing",
+    },
+    {
+      id: 3,
+      title: "Collateral",
+      description: "Assets to secure your loan request",
+    },
+    {
+      id: 4,
+      title: "Review & Submit",
+      description: "Confirm details before sending",
+    },
+  ];
+  const activeStep = stepMeta[step - 1];
+  const stepProgress = Math.round((step / stepMeta.length) * 100);
+  const inputClass =
+    "h-11 bg-background/60 border-border/40 focus-visible:ring-primary/30";
+  const selectClass = "h-11 bg-background/60 border-border/40";
 
   const [createLoan] = useCreateLoanMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
@@ -279,14 +307,14 @@ export function ApplyLoanModal({
         setBlockchainStep("complete");
         setTimeout(() => {
           setIsProcessingBlockchain(false);
-          navigate("/borrower/profile?section=my-loans");
+          navigate("/borrower/my-loans");
         }, 1000);
       } else {
         toast({
           title: "Success",
           description: "Loan request submitted successfully.",
         });
-        navigate("/borrower/profile?section=my-loans");
+        navigate("/borrower/my-loans");
       }
     } catch (err: any) {
       setIsProcessingBlockchain(false);
@@ -302,47 +330,63 @@ export function ApplyLoanModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-2xl p-0 max-h-[92vh] overflow-y-auto"
+          className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto"
           onInteractOutside={(e) => e.preventDefault()}
         >
           <DialogHeader>
-            <div className="px-6 pt-6">
-              <DialogTitle>Apply for a Loan</DialogTitle>
+            <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-muted/5">
+              <DialogTitle className="text-xl">Apply for a Loan</DialogTitle>
               <DialogDescription>
                 Submit your financing requirements in simple steps.
               </DialogDescription>
             </div>
           </DialogHeader>
 
-          <div className="px-6 pb-6">
-            <div className="mb-5">
-              <div className="flex justify-center space-x-2 mb-3">
-                {[1, 2, 3, 4].map((dotStep) => (
-                  <div
-                    key={dotStep}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      step === dotStep ? "w-8 bg-primary" : "w-2 bg-primary/20"
-                    }`}
-                  />
-                ))}
+          <div className="px-6 pb-6 pt-5">
+            <div className="mb-6 rounded-2xl border border-border/40 bg-background/60 p-4 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Step {step} of {stepMeta.length}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {activeStep?.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {activeStep?.description}
+                  </p>
+                </div>
+                <div className="text-xs font-semibold text-muted-foreground">
+                  {stepProgress}%
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">
-                  Step {step} of 4
-                </p>
-                <p className="text-sm font-semibold">
-                  {step === 1 && "Loan Basics"}
-                  {step === 2 && "Loan Purpose"}
-                  {step === 3 && "Collateral Details"}
-                  {step === 4 && "Review & Submit"}
-                </p>
+              <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
+                <div
+                  className="h-full bg-primary"
+                  style={{ width: `${stepProgress}%` }}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest">
+                {stepMeta.map((item) => (
+                  <span
+                    key={item.id}
+                    className={cn(
+                      "px-2.5 py-1 rounded-full border",
+                      step >= item.id
+                        ? "border-primary/40 text-primary bg-primary/10"
+                        : "border-border/40 text-muted-foreground bg-muted/30",
+                    )}
+                  >
+                    {item.title}
+                  </span>
+                ))}
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
                 {step === 1 && (
-                  <Card className="border-border/30 bg-card animate-in fade-in slide-in-from-right-4 duration-300">
+                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                     <CardContent className="p-5 space-y-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                         <Building2 className="w-4 h-4 text-primary" />
@@ -360,7 +404,7 @@ export function ApplyLoanModal({
                               handleSelectChange("tenantId", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={selectClass}>
                               <SelectValue placeholder="Choose lender" />
                             </SelectTrigger>
                             <SelectContent>
@@ -386,6 +430,7 @@ export function ApplyLoanModal({
                             value={formData.requestedAmount}
                             onChange={handleChange}
                             placeholder="50000"
+                            className={inputClass}
                           />
                         </div>
                         <div className="space-y-2">
@@ -399,6 +444,7 @@ export function ApplyLoanModal({
                             value={formData.requestedTermMonths}
                             onChange={handleChange}
                             placeholder="12"
+                            className={inputClass}
                           />
                         </div>
                       </div>
@@ -407,7 +453,7 @@ export function ApplyLoanModal({
                 )}
 
                 {step === 2 && (
-                  <Card className="border-border/30 bg-card animate-in fade-in slide-in-from-right-4 duration-300">
+                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                     <CardContent className="p-5 space-y-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                         <FileText className="w-4 h-4 text-primary" />
@@ -424,7 +470,7 @@ export function ApplyLoanModal({
                             handleSelectChange("purpose", value)
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className={selectClass}>
                             <SelectValue placeholder="Select purpose" />
                           </SelectTrigger>
                           <SelectContent>
@@ -444,7 +490,7 @@ export function ApplyLoanModal({
                 )}
 
                 {step === 3 && (
-                  <Card className="border-border/30 bg-card animate-in fade-in slide-in-from-right-4 duration-300">
+                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                     <CardContent className="p-5 space-y-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
                         <ShieldCheck className="w-4 h-4 text-primary" />
@@ -462,7 +508,7 @@ export function ApplyLoanModal({
                               handleSelectChange("collateralType", value)
                             }
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className={selectClass}>
                               <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
@@ -489,6 +535,7 @@ export function ApplyLoanModal({
                             value={formData.collateralValue}
                             onChange={handleChange}
                             placeholder="100000"
+                            className={inputClass}
                           />
                         </div>
                       </div>
@@ -503,6 +550,7 @@ export function ApplyLoanModal({
                           value={formData.collateralDescription}
                           onChange={handleChange}
                           placeholder="Describe your collateral"
+                          className={inputClass}
                         />
                       </div>
 
@@ -511,7 +559,7 @@ export function ApplyLoanModal({
                           Collateral Image{" "}
                           <span className="text-destructive">*</span>
                         </Label>
-                        <label className="h-40 rounded-lg border border-dashed border-border flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10">
+                        <label className="h-40 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
                           <input
                             type="file"
                             accept="image/*"
@@ -539,7 +587,7 @@ export function ApplyLoanModal({
                 )}
 
                 {step === 4 && (
-                  <Card className="border-border/30 bg-card animate-in fade-in slide-in-from-right-4 duration-300">
+                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
                     <CardContent className="p-5 space-y-3 text-sm">
                       <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90 pb-1 border-b border-border/40">
                         <ListChecks className="w-4 h-4 text-primary" />
@@ -592,11 +640,12 @@ export function ApplyLoanModal({
                 )}
               </div>
 
-              <div className="flex justify-between gap-2 pt-2">
+              <div className="flex flex-wrap justify-between gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => onOpenChange(false)}
+                  className="h-11 rounded-xl"
                 >
                   Cancel
                 </Button>
@@ -606,6 +655,7 @@ export function ApplyLoanModal({
                     variant="outline"
                     onClick={prevStep}
                     disabled={step === 1 || isProcessingBlockchain}
+                    className="h-11 rounded-xl"
                   >
                     <ArrowLeft className="w-4 h-4 mr-1" /> Back
                   </Button>
@@ -614,6 +664,7 @@ export function ApplyLoanModal({
                       type="button"
                       onClick={nextStep}
                       disabled={isProcessingBlockchain}
+                      className="h-11 rounded-xl"
                     >
                       Next <ArrowRight className="w-4 h-4 ml-1" />
                     </Button>
@@ -622,6 +673,7 @@ export function ApplyLoanModal({
                       type="button"
                       onClick={handleSubmit}
                       disabled={isProcessingBlockchain || !isStepValid(3)}
+                      className="h-11 rounded-xl"
                     >
                       {isProcessingBlockchain
                         ? "Processing..."

@@ -374,7 +374,7 @@ export default function LoanDetails() {
       <div className="space-y-6 lg:space-y-8">
         <div className="flex items-center justify-between">
           <Link
-            to="/borrower/profile?section=my-loans"
+            to="/borrower/my-loans"
             className="text-sm font-medium text-primary hover:underline"
           >
             Back to My Loans

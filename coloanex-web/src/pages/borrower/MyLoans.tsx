@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useGetLoansQuery } from "@/apis/loansApi";
 import {
   useGetBorrowerAnalyticsQuery,
@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 
 export default function MyLoans() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [searchInput, setSearchInput] = useState("");
@@ -59,6 +60,29 @@ export default function MyLoans() {
       search: debouncedSearch || undefined,
     }));
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("focus") !== "transactions") return;
+
+    const targets = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "[data-scroll-target='transactions']",
+      ),
+    );
+    const target = targets.find((el) => el.offsetParent !== null) || targets[0];
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    params.delete("focus");
+    const nextSearch = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextSearch ? `?${nextSearch}` : "",
+      },
+      { replace: true },
+    );
+  }, [location.pathname, location.search, navigate]);
 
   const { data: loansData, isLoading, isFetching } = useGetLoansQuery(filters);
   const { data: analytics } = useGetBorrowerAnalyticsQuery();
@@ -246,7 +270,10 @@ export default function MyLoans() {
         <div className="space-y-3 lg:hidden">
           {renderSearch()}
 
-          <Card className="border-border/30 bg-card">
+          <Card
+            className="border-border/30 bg-card"
+            data-scroll-target="transactions"
+          >
             <CardContent className="p-3">
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -490,7 +517,10 @@ export default function MyLoans() {
 
           <div className="grid grid-cols-12 gap-4 items-start">
             <div className="col-span-8 space-y-4">
-              <Card className="border-border/20 bg-card">
+              <Card
+                className="border-border/20 bg-card"
+                data-scroll-target="transactions"
+              >
                 <CardContent className="p-4 space-y-4">
                   <div className="flex items-center justify-between gap-4">
                     {renderSearch("w-full")}

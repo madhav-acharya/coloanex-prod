@@ -1,4 +1,4 @@
-import { LogOut, User, Settings, CreditCard, Wallet } from "lucide-react";
+import { LogOut, Settings, CreditCard, Wallet, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,8 +19,10 @@ import { getRoles } from "@/lib/roleUtils";
 
 export function ProfileDropdown({
   avatarOnly = false,
+  showDetails = false,
 }: {
   avatarOnly?: boolean;
+  showDetails?: boolean;
 }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -39,7 +41,19 @@ export function ProfileDropdown({
   const basePath = location.pathname.startsWith("/borrower") ? "/borrower" : "";
   const isBorrowerContext = basePath === "/borrower";
   const { isBorrower } = getRoles(user);
-  const avatarOnlyTrigger = avatarOnly || (isBorrowerContext && isBorrower);
+  const avatarOnlyTrigger =
+    avatarOnly || (!showDetails && isBorrowerContext && isBorrower);
+
+  const roleLabel = (() => {
+    const roleNames =
+      user?.roles?.map((role) => role.role?.name).filter(Boolean) || [];
+    if (roleNames.length === 0) return "User";
+    const priority = ["Super Admin", "Admin", "Lender", "Borrower"];
+    const preferred = priority.find((name) =>
+      roleNames.some((role) => role.toLowerCase() === name.toLowerCase()),
+    );
+    return preferred || roleNames[0];
+  })();
 
   const handleLogout = () => {
     logout();
@@ -80,9 +94,11 @@ export function ProfileDropdown({
                 <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
                   {user.fullName}
                 </p>
-                <p className="text-[10px] text-muted-foreground/90 truncate mt-0.5">
-                  {user.email}
-                </p>
+                {roleLabel && (
+                  <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+                    {roleLabel}
+                  </p>
+                )}
               </div>
             </div>
           </Button>
@@ -104,9 +120,11 @@ export function ProfileDropdown({
               <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
                 {user.fullName}
               </p>
-              <p className="text-[10px] text-muted-foreground/90 truncate mt-0.5">
-                {user.email}
-              </p>
+              {roleLabel && (
+                <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+                  {roleLabel}
+                </p>
+              )}
             </div>
           </div>
           <div className="mt-3 space-y-2 text-[11px]">
@@ -133,17 +151,15 @@ export function ProfileDropdown({
             </div>
           </div>
         </div>
-        <DropdownMenuItem
-          className="cursor-pointer rounded-md text-xs"
-          onClick={() =>
-            navigate(
-              isBorrowerContext ? `${basePath}/profile` : `${basePath}/profile`,
-            )
-          }
-        >
-          <User className="mr-2 h-4 w-4" />
-          <span>Profile</span>
-        </DropdownMenuItem>
+        {!isBorrowerContext && (
+          <DropdownMenuItem
+            className="cursor-pointer rounded-md text-xs"
+            onClick={() => navigate(`${basePath}/profile`)}
+          >
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile</span>
+          </DropdownMenuItem>
+        )}
         {!isBorrowerContext && (
           <DropdownMenuItem
             className="cursor-pointer rounded-md text-xs"
