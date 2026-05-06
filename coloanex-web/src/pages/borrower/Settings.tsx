@@ -800,9 +800,9 @@ export default function Settings() {
           </Card>
 
           <div className="space-y-6">
-            <Card className="lg:hidden rounded-2xl border-border/70 bg-card/80">
+            <Card className="lg:hidden rounded-2xl border-border/30 bg-white/75 shadow-sm">
               <CardContent className="p-0">
-                <div className="px-4 pt-4 pb-5 text-center border-b border-border/40 bg-muted/10">
+                <div className="px-4 pt-4 pb-5 text-center border-b border-border/30 bg-white/70">
                   <Avatar className="h-16 w-16 ring-2 ring-primary/25 mx-auto">
                     <AvatarImage
                       src={user?.profileImage}

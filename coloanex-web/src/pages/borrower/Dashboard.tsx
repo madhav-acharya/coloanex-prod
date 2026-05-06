@@ -140,10 +140,14 @@ export default function BorrowerDashboard() {
     <BorrowerLayout>
       <div className="space-y-8">
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded-3xl border-border/30 bg-card">
-            <CardContent className="p-6 space-y-5">
+          <Card className="relative overflow-hidden rounded-[32px] border-border/30 bg-gradient-to-br from-primary/5 via-card to-card shadow-[0_18px_70px_rgba(15,23,42,0.06)]">
+            <div className="pointer-events-none absolute -top-14 right-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
+            <CardContent className="relative p-6 space-y-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1.5">
+                  <Badge className="rounded-full border-border/30 bg-white/70 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                    Borrower overview
+                  </Badge>
                   <p className="text-sm text-muted-foreground font-medium">
                     {greeting},
                   </p>
@@ -159,7 +163,7 @@ export default function BorrowerDashboard() {
                   onClick={() =>
                     navigate("/borrower/profile?section=notifications")
                   }
-                  className="relative w-11 h-11 rounded-2xl border border-border/40 bg-muted/30 text-foreground flex items-center justify-center"
+                  className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border/40 bg-white/70 text-foreground shadow-sm backdrop-blur"
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
@@ -174,7 +178,7 @@ export default function BorrowerDashboard() {
                   <Link
                     key={action.label}
                     to={action.path}
-                    className="rounded-2xl border border-border/30 bg-background/60 p-3.5 flex flex-col items-start gap-3 hover:border-primary/30 transition-colors"
+                    className="rounded-2xl border border-border/30 bg-white/70 p-3.5 flex flex-col items-start gap-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                   >
                     <div
                       className={cn(
@@ -200,7 +204,10 @@ export default function BorrowerDashboard() {
 
           <div className="grid grid-cols-3 gap-3">
             {stats.map((stat) => (
-              <Card key={stat.label} className="rounded-2xl border-border/30">
+              <Card
+                key={stat.label}
+                className="rounded-2xl border-border/30 bg-white/80 shadow-sm"
+              >
                 <CardContent className="p-4 space-y-2">
                   <div
                     className={cn(
@@ -221,7 +228,7 @@ export default function BorrowerDashboard() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded-3xl border-border/30 bg-card">
+          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
@@ -254,7 +261,7 @@ export default function BorrowerDashboard() {
                       key={lender.id}
                       type="button"
                       onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-                      className="w-full rounded-2xl border border-border/20 bg-background/60 px-4 py-3 text-left hover:bg-muted/10 transition-colors"
+                      className="w-full rounded-2xl border border-border/20 bg-white/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
@@ -300,7 +307,7 @@ export default function BorrowerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-3xl border-border/30 bg-card">
+          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
@@ -332,7 +339,7 @@ export default function BorrowerDashboard() {
                       key={loan.id}
                       type="button"
                       onClick={() => navigate(`/borrower/my-loans/${loan.id}`)}
-                      className="w-full rounded-2xl border border-border/20 bg-background/60 px-4 py-3 text-left hover:bg-muted/10 transition-colors"
+                      className="w-full rounded-2xl border border-border/20 bg-white/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -364,7 +371,7 @@ export default function BorrowerDashboard() {
         </section>
 
         <section>
-          <Card className="rounded-3xl border-border/30 bg-card">
+          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
@@ -388,7 +395,7 @@ export default function BorrowerDashboard() {
                   {recentTransactions.slice(0, 4).map((tx) => (
                     <div
                       key={tx.id}
-                      className="rounded-2xl border border-border/20 bg-background/60 px-4 py-3"
+                      className="rounded-2xl border border-border/20 bg-white/70 px-4 py-3 shadow-sm"
                     >
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(tx.createdAt), "MMM dd, yyyy")}

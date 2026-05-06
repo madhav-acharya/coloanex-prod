@@ -151,23 +151,31 @@ export function ProfileDropdown({
             </div>
           </div>
         </div>
-        {!isBorrowerContext && (
+        {isBorrowerContext ? (
           <DropdownMenuItem
             className="cursor-pointer rounded-md text-xs"
             onClick={() => navigate(`${basePath}/profile`)}
           >
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-        )}
-        {!isBorrowerContext && (
-          <DropdownMenuItem
-            className="cursor-pointer rounded-md text-xs"
-            onClick={() => navigate(`${basePath}/settings`)}
-          >
             <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>Account</span>
           </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuItem
+              className="cursor-pointer rounded-md text-xs"
+              onClick={() => navigate(`${basePath}/profile`)}
+            >
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer rounded-md text-xs"
+              onClick={() => navigate(`${basePath}/settings`)}
+            >
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+          </>
         )}
         {isFreePlan && (
           <DropdownMenuItem

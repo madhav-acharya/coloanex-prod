@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { XCircle, RotateCcw, LayoutDashboard } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { useToast } from "@/hooks/use-toast";
 
 export default function BorrowerPaymentFailure() {
@@ -31,49 +32,55 @@ export default function BorrowerPaymentFailure() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
-        <div className="rounded-full bg-red-100 dark:bg-red-950 p-6">
-          <XCircle className="h-16 w-16 text-destructive" />
-        </div>
+    <BorrowerLayout>
+      <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4 py-12">
+        <div className="w-full rounded-[32px] border border-border/30 bg-gradient-to-br from-red-500/10 via-card to-card p-6 text-center shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:p-8">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10">
+            <XCircle className="h-10 w-10 text-red-600" />
+          </div>
 
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-foreground">Payment Failed</h1>
-          {amount && (
-            <p className="text-xl font-semibold text-muted-foreground flex items-center justify-center gap-1">
-              <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
-              {Number(amount).toLocaleString()}
+          <div className="mt-5 space-y-2">
+            <h1 className="text-3xl font-bold text-foreground">
+              Payment Failed
+            </h1>
+            {amount && (
+              <p className="text-xl font-semibold text-muted-foreground flex items-center justify-center gap-1">
+                <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
+                {Number(amount).toLocaleString()}
+              </p>
+            )}
+            <p className="text-sm leading-6 text-muted-foreground">
+              We could not verify your repayment payment. No installment update
+              was confirmed.
             </p>
-          )}
-          <p className="text-muted-foreground">
-            We could not verify your repayment payment. No installment update
-            was confirmed.
-          </p>
-        </div>
+          </div>
 
-        <div className="w-full flex flex-col gap-3">
-          <Button
-            className="w-full"
-            variant="destructive"
-            onClick={() =>
-              navigate(
-                loanId ? `/borrower/repayment/${loanId}` : "/borrower/my-loans",
-              )
-            }
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Try Again
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate("/borrower/dashboard")}
-          >
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            Go to Dashboard
-          </Button>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button
+              className="w-full"
+              variant="destructive"
+              onClick={() =>
+                navigate(
+                  loanId
+                    ? `/borrower/repayment/${loanId}`
+                    : "/borrower/my-loans",
+                )
+              }
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full border-border/40 bg-white/70"
+              onClick={() => navigate("/borrower/dashboard")}
+            >
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Go to Dashboard
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </BorrowerLayout>
   );
 }

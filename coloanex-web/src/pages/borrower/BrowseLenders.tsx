@@ -73,7 +73,7 @@ export default function BrowseLenders() {
       key={lender.id}
       type="button"
       onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-      className="w-full rounded-2xl border border-border/30 bg-card p-4 text-left transition-colors hover:bg-muted/10"
+      className="w-full rounded-2xl border border-border/30 bg-white/75 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -157,15 +157,15 @@ export default function BrowseLenders() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="pl-10 h-11 bg-card border-border/30"
+              className="h-11 rounded-2xl border-border/30 bg-white/80 pl-10 shadow-sm"
             />
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-[130] mt-1 w-full rounded-lg border border-border/30 bg-card shadow-lg overflow-hidden">
+              <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-2xl border border-border/30 bg-card shadow-lg">
                 {suggestions.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors"
+                    className="w-full px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       setSearch(item.name);
@@ -196,7 +196,7 @@ export default function BrowseLenders() {
                 type="button"
                 size="sm"
                 variant={statusFilter === item.key ? "default" : "outline"}
-                className="h-8 px-3 whitespace-nowrap"
+                className="h-8 whitespace-nowrap px-3"
                 onClick={() => {
                   setStatusFilter(item.key);
                   setPage(1);
@@ -214,7 +214,7 @@ export default function BrowseLenders() {
               ))}
             </div>
           ) : lenderTenants.length === 0 ? (
-            <Card className="border-border/30 bg-card">
+            <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
               <CardContent className="p-6 text-center">
                 <Search className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
                 <p className="text-sm text-muted-foreground">
@@ -230,7 +230,7 @@ export default function BrowseLenders() {
 
           {totalPages > 1 && (
             <div className="flex justify-center">
-              <div className="flex items-center gap-2 p-1.5 rounded-xl border border-border/20 bg-card">
+              <div className="flex items-center gap-2 rounded-xl border border-border/20 bg-card p-1.5 shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -274,7 +274,7 @@ export default function BrowseLenders() {
         </div>
 
         <div className="hidden lg:block space-y-10">
-          <Card className="border-border/15 bg-surface/20 backdrop-blur-xl shadow-soft overflow-visible">
+          <Card className="overflow-visible rounded-[28px] border-border/30 bg-white/70 shadow-sm backdrop-blur-xl">
             <CardContent className="p-6 lg:p-8 space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
                 <div className="relative z-[120]">
@@ -290,15 +290,15 @@ export default function BrowseLenders() {
                       setSearch(e.target.value);
                       setPage(1);
                     }}
-                    className="pl-11 h-12 bg-background/50 border-border/20"
+                    className="h-12 rounded-2xl border-border/30 bg-white/80 pl-11 shadow-sm"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-[130] mt-1 w-full rounded-lg border border-border/30 bg-card shadow-lg overflow-hidden">
+                    <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-2xl border border-border/30 bg-card shadow-lg">
                       {suggestions.map((item) => (
                         <button
                           key={item.id}
                           type="button"
-                          className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors"
+                          className="w-full px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
                             setSearch(item.name);
@@ -324,7 +324,7 @@ export default function BrowseLenders() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-12 bg-background/50 border-border/20">
+                  <SelectTrigger className="h-12 rounded-2xl border-border/30 bg-white/80 shadow-sm">
                     <div className="flex items-center gap-2 text-sm">
                       <SlidersHorizontal className="w-4 h-4 text-primary" />
                       <SelectValue placeholder="Status" />
@@ -352,7 +352,7 @@ export default function BrowseLenders() {
                 <Skeleton key={i} className="h-72 w-full rounded-2xl" />
               ))
             ) : lenderTenants.length === 0 ? (
-              <Card className="col-span-full border-dashed border-border/30 bg-card">
+              <Card className="col-span-full rounded-[28px] border-dashed border-border/30 bg-card shadow-sm">
                 <CardContent className="py-20 text-center">
                   <Search className="w-10 h-10 mx-auto text-muted-foreground/40" />
                   <h3 className="mt-4 text-lg font-semibold text-foreground">
@@ -371,7 +371,7 @@ export default function BrowseLenders() {
 
           {totalPages > 1 && (
             <div className="flex justify-center pb-2">
-              <div className="flex items-center gap-2 p-1.5 rounded-xl border border-border/20 bg-card">
+              <div className="flex items-center gap-2 rounded-xl border border-border/20 bg-card p-1.5 shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
