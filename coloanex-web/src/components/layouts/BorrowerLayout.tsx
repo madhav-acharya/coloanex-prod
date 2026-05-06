@@ -1,7 +1,6 @@
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Separator } from "@/components/ui/separator";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
@@ -12,8 +11,6 @@ import {
   FileText,
   LayoutDashboard,
   ShieldCheck,
-  User,
-  Wallet,
 } from "lucide-react";
 
 interface BorrowerLayoutProps {
@@ -82,25 +79,6 @@ export default function BorrowerLayout({
       href: "/borrower/kyc",
       icon: ShieldCheck,
       matchPaths: ["/borrower/kyc"],
-    },
-  ];
-
-  const accountNav: NavItem[] = [
-    {
-      id: "wallet",
-      label: "Wallet",
-      href: "/borrower/profile?section=wallet",
-      icon: Wallet,
-      section: "wallet",
-      matchPaths: ["/borrower/profile"],
-    },
-    {
-      id: "account",
-      label: "Account",
-      href: "/borrower/profile",
-      icon: User,
-      section: "account",
-      matchPaths: ["/borrower/profile"],
     },
   ];
 
@@ -209,29 +187,9 @@ export default function BorrowerLayout({
               <span className="text-lg font-bold">Coloanex</span>
             </Link>
 
-            <div className="hidden lg:flex items-center justify-center gap-3">
-              <nav className="flex flex-wrap items-center gap-2">
+            <div className="hidden lg:flex items-center justify-center">
+              <nav className="flex flex-wrap items-center justify-center gap-2">
                 {primaryNav.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isActiveItem(item);
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.href}
-                      className={headerLinkClass(isActive)}
-                      aria-current={isActive ? "page" : undefined}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              <nav className="flex flex-wrap items-center gap-2">
-                {accountNav.map((item) => {
                   const Icon = item.icon;
                   const isActive = isActiveItem(item);
                   return (
