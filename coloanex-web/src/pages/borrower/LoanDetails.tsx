@@ -394,7 +394,7 @@ export default function LoanDetails() {
         </div>
 
         {isLoading || !loan ? (
-          <Card className="border-border/30 bg-card">
+          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
             <CardContent className="p-6 space-y-4">
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-24 w-full" />
@@ -404,7 +404,7 @@ export default function LoanDetails() {
         ) : (
           <>
             <div className="space-y-4 max-w-4xl mx-auto lg:hidden">
-              <Card className="border-border/30 bg-card">
+              <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                 <CardContent className="p-4 space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -425,7 +425,7 @@ export default function LoanDetails() {
                     </Badge>
                   </div>
 
-                  <div className="rounded-xl border border-border/20 bg-muted/10 px-3 py-3 text-center">
+                  <div className="rounded-xl border border-border/20 bg-white/70 px-3 py-3 text-center shadow-sm">
                     <p className="text-[11px] text-muted-foreground">
                       Current Amount
                     </p>
@@ -435,7 +435,7 @@ export default function LoanDetails() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
-                    <div className="rounded-lg border border-border/20 bg-muted/10 p-2.5">
+                    <div className="rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm">
                       <p className="text-[11px] text-muted-foreground">
                         Requested
                       </p>
@@ -443,7 +443,7 @@ export default function LoanDetails() {
                         {money(loan.requestedAmount)}
                       </p>
                     </div>
-                    <div className="rounded-lg border border-border/20 bg-muted/10 p-2.5">
+                    <div className="rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm">
                       <p className="text-[11px] text-muted-foreground">Term</p>
                       <p className="text-sm font-semibold mt-1">
                         {loan.approvedTermMonths ?? loan.requestedTermMonths}{" "}
@@ -463,7 +463,7 @@ export default function LoanDetails() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border/30 bg-card">
+              <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                 <CardContent className="p-4 space-y-3">
                   <h3 className="text-sm font-semibold">Loan Information</h3>
                   <div className="space-y-2 text-sm">
@@ -491,7 +491,7 @@ export default function LoanDetails() {
               </Card>
 
               {currentStatusInfo && (
-                <Card className="border-border/30 bg-card">
+                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                   <CardContent className="p-4">
                     <div
                       className={`rounded-lg border px-3 py-3 ${currentStatusInfo.tone}`}
@@ -506,7 +506,7 @@ export default function LoanDetails() {
               )}
 
               {collateralEntries.length > 0 && (
-                <Card className="border-border/30 bg-card">
+                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                   <CardContent className="p-4 space-y-3">
                     <h3 className="text-sm font-semibold">
                       Collateral Details
@@ -516,7 +516,7 @@ export default function LoanDetails() {
                         typeof value === "string" && isImageUrl(value) ? (
                           <div
                             key={key}
-                            className="space-y-2 rounded-lg border border-border/20 bg-muted/10 p-2.5"
+                            className="space-y-2 rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm"
                           >
                             <p className="text-xs text-muted-foreground">
                               {titleCase(key)}
@@ -557,7 +557,7 @@ export default function LoanDetails() {
               )}
 
               {resolvedContract && (
-                <Card className="border-border/30 bg-card">
+                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                   <CardContent className="p-4 space-y-3">
                     <h3 className="text-sm font-semibold">Contract</h3>
                     <div className="space-y-2 text-sm">
@@ -583,7 +583,7 @@ export default function LoanDetails() {
               )}
 
               {canRepay && (
-                <Card className="border-border/30 bg-card">
+                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
                   <CardContent className="p-4 space-y-3">
                     <h3 className="text-sm font-semibold">Payment Schedule</h3>
                     {allSchedules.length === 0 ? (
@@ -608,12 +608,12 @@ export default function LoanDetails() {
                                 if (schedulePaid) return;
                                 toggleSchedule(s.id);
                               }}
-                              className={`w-full rounded-lg border p-2.5 text-left transition-colors ${
+                              className={`w-full rounded-2xl border p-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
                                 schedulePaid
-                                  ? "border-border/20 bg-muted/10"
+                                  ? "border-border/20 bg-white/70"
                                   : checked
                                     ? "border-primary bg-primary/5"
-                                    : "border-border/20 bg-muted/10"
+                                    : "border-border/20 bg-white/70"
                               }`}
                             >
                               <div className="flex items-center justify-between gap-3">
@@ -685,7 +685,7 @@ export default function LoanDetails() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-3">
-                      <div className="rounded-xl border border-border/20 bg-muted/10 p-3">
+                      <div className="rounded-xl border border-border/20 bg-white/70 p-3 shadow-sm">
                         <p className="text-[11px] text-muted-foreground">
                           Current Amount
                         </p>
@@ -693,7 +693,7 @@ export default function LoanDetails() {
                           {money(loan.approvedAmount ?? loan.requestedAmount)}
                         </p>
                       </div>
-                      <div className="rounded-xl border border-border/20 bg-muted/10 p-3">
+                      <div className="rounded-xl border border-border/20 bg-white/70 p-3 shadow-sm">
                         <p className="text-[11px] text-muted-foreground">
                           Requested
                         </p>
@@ -937,7 +937,7 @@ export default function LoanDetails() {
               </div>
 
               <div className="col-span-12 xl:col-span-4 space-y-6">
-                <Card className="border-border/20 bg-card sticky top-28">
+                <Card className="sticky top-28 rounded-[28px] border-border/20 bg-card shadow-sm">
                   <CardContent className="p-6 space-y-4">
                     <h3 className="text-base font-semibold">Loan Actions</h3>
                     <div className="space-y-2.5 text-sm">
@@ -984,7 +984,7 @@ export default function LoanDetails() {
                     )}
 
                     {resolvedContract && (
-                      <div className="rounded-lg border border-border/20 bg-muted/10 px-3 py-2.5">
+                      <div className="rounded-lg border border-border/20 bg-white/70 px-3 py-2.5 shadow-sm">
                         <p className="text-[11px] text-muted-foreground">
                           Contract
                         </p>
@@ -1074,7 +1074,7 @@ export default function LoanDetails() {
                   </Button>
                 </div>
 
-                <div className="rounded-xl border border-border/20 bg-muted/10 p-3 text-sm flex items-center justify-between">
+                <div className="rounded-xl border border-border/20 bg-white/70 p-3 text-sm flex items-center justify-between shadow-sm">
                   <span className="text-muted-foreground">Amount</span>
                   <span className="font-semibold">{money(selectedAmount)}</span>
                 </div>
