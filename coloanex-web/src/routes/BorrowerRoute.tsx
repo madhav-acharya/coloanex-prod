@@ -7,6 +7,7 @@ import BrowseLenders from "@/pages/borrower/BrowseLenders";
 import LenderDetails from "@/pages/borrower/LenderDetails";
 import MyLoans from "@/pages/borrower/MyLoans";
 import LoanDetails from "@/pages/borrower/LoanDetails";
+import ContractDetails from "@/pages/borrower/ContractDetails";
 import MakeRepayment from "@/pages/borrower/MakeRepayment";
 import BorrowerPaymentSuccess from "@/pages/borrower/PaymentSuccess";
 import BorrowerPaymentFailure from "@/pages/borrower/PaymentFailure";
@@ -19,35 +20,12 @@ interface BorrowerRouteProps {
 }
 
 const FullPageSkeleton = () => (
-  <div className="flex h-screen overflow-hidden bg-background">
-    <aside className="w-64 shrink-0 border-r bg-background p-4 space-y-4">
-      <Skeleton className="h-10 w-3/4 rounded-lg" />
-      <div className="space-y-2 pt-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-full rounded-md" />
-        ))}
-      </div>
-    </aside>
-    <main className="flex-1 flex flex-col overflow-hidden">
-      <div className="border-b p-4 flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-7 w-48 rounded" />
-          <Skeleton className="h-4 w-72 rounded" />
-        </div>
-        <div className="flex gap-2">
-          <Skeleton className="h-9 w-9 rounded-full" />
-          <Skeleton className="h-9 w-9 rounded-full" />
-        </div>
-      </div>
-      <div className="p-8 space-y-6 flex-1">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-          <Skeleton className="h-32 rounded-xl" />
-        </div>
-        <Skeleton className="h-[400px] w-full rounded-xl" />
-      </div>
-    </main>
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="space-y-4 w-full max-w-sm px-6">
+      <Skeleton className="h-10 w-3/4 rounded-lg mx-auto" />
+      <Skeleton className="h-4 w-full rounded" />
+      <Skeleton className="h-4 w-2/3 rounded" />
+    </div>
   </div>
 );
 
@@ -74,7 +52,7 @@ export const BorrowerRoutes = () => {
   return (
     <Routes>
       <Route
-        path="/borrower/dashboard"
+        path="/dashboard"
         element={
           <BorrowerRouteWrapper>
             <BorrowerDashboard />
@@ -82,7 +60,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/lenders"
+        path="/lenders"
         element={
           <BorrowerRouteWrapper>
             <BrowseLenders />
@@ -90,7 +68,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/lenders/:id"
+        path="/lenders/:id"
         element={
           <BorrowerRouteWrapper>
             <LenderDetails />
@@ -98,7 +76,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/my-loans"
+        path="/my-loans"
         element={
           <BorrowerRouteWrapper>
             <MyLoans />
@@ -106,7 +84,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/my-loans/:id"
+        path="/my-loans/:id"
         element={
           <BorrowerRouteWrapper>
             <LoanDetails />
@@ -114,7 +92,15 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/repayment/:id"
+        path="/contracts/:id"
+        element={
+          <BorrowerRouteWrapper>
+            <ContractDetails />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/repayment/:id"
         element={
           <BorrowerRouteWrapper>
             <MakeRepayment />
@@ -122,7 +108,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/profile"
+        path="/profile"
         element={
           <BorrowerRouteWrapper>
             <Settings />
@@ -130,15 +116,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/analytics"
-        element={
-          <BorrowerRouteWrapper>
-            <Navigate to="/borrower/my-loans" replace />
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/kyc"
+        path="/kyc"
         element={
           <BorrowerRouteWrapper>
             <KycOverview />
@@ -146,23 +124,7 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/wallet"
-        element={
-          <BorrowerRouteWrapper>
-            <Navigate to="/borrower/profile?section=wallet" replace />
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/payment-configs"
-        element={
-          <BorrowerRouteWrapper>
-            <Navigate to="/borrower/profile?section=payment-config" replace />
-          </BorrowerRouteWrapper>
-        }
-      />
-      <Route
-        path="/borrower/kyc/:id"
+        path="/kyc/:id"
         element={
           <BorrowerRouteWrapper>
             <BorrowerKycStatus />
@@ -170,7 +132,31 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/payment/success"
+        path="/wallet"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/profile?section=wallet" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/payment-configs"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/profile?section=payment-config" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <BorrowerRouteWrapper>
+            <Navigate to="/my-loans" replace />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/payment/success"
         element={
           <BorrowerRouteWrapper>
             <BorrowerPaymentSuccess />
@@ -178,13 +164,14 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
-        path="/borrower/payment/failure"
+        path="/payment/failure"
         element={
           <BorrowerRouteWrapper>
             <BorrowerPaymentFailure />
           </BorrowerRouteWrapper>
         }
       />
+      <Route path="/borrower/*" element={<Navigate to="/dashboard" replace />} />
       <Route path="*" element={null} />
     </Routes>
   );
