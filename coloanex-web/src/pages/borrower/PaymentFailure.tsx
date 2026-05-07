@@ -34,7 +34,7 @@ export default function BorrowerPaymentFailure() {
   return (
     <BorrowerLayout>
       <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4 py-12">
-        <div className="w-full rounded-[32px] border border-border/30 bg-gradient-to-br from-red-500/10 via-card to-card p-6 text-center shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:p-8">
+        <div className="w-full rounded-xl border border-border bg-card p-6 text-center shadow-lg sm:p-8">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10">
             <XCircle className="h-10 w-10 text-red-600" />
           </div>
@@ -72,7 +72,7 @@ export default function BorrowerPaymentFailure() {
             </Button>
             <Button
               variant="outline"
-              className="w-full border-border/40 bg-white/70"
+              className="w-full border-border bg-muted/20"
               onClick={() => navigate("/borrower/dashboard")}
             >
               <LayoutDashboard className="mr-2 h-4 w-4" />

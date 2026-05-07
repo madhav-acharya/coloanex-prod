@@ -18,7 +18,7 @@ export const getRoles = (user: AuthUser | null | undefined) => ({
 export const getHomeRoute = (user: AuthUser | null | undefined): string => {
   const { isSuperAdmin, isAdmin, isLender } = getRoles(user);
   if (isSuperAdmin || isAdmin || isLender) return "/dashboard";
-  return "/borrower/dashboard";
+  return "/dashboard";
 };
 
 export const canAccessAdminRoutes = (

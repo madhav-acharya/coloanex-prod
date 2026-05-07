@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,22 @@ import {
   Building2,
   CalendarClock,
   Check,
+  CheckCircle2,
+  Clock3,
+  FileBadge,
+  FileCheck,
   FileText,
+  Gem,
+  Home,
   ImagePlus,
   ListChecks,
   ShieldCheck,
+  Tractor,
+  Truck,
+  Upload,
+  Wrench,
 } from "lucide-react";
+import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
@@ -43,25 +54,35 @@ import { recordLoanOnBlockchain } from "@/utils/blockchain";
 import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
 import { useUploadSingleMutation } from "@/apis/uploadApi";
 import { cn } from "@/lib/utils";
+import type { ComponentType } from "react";
 
-const COLLATERAL_TYPE_OPTIONS = [
-  { label: "Property/Land", value: "Property" },
-  { label: "Vehicle", value: "Vehicle" },
-  { label: "Gold", value: "Gold" },
-  { label: "Machinery", value: "Machinery" },
-  { label: "Stock/Inventory", value: "Stock" },
-  { label: "Other", value: "Other" },
+const COLLATERAL_OPTIONS: Array<{
+  label: string;
+  value: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  { label: "Property/Land", value: "Property", icon: Home },
+  { label: "Vehicle", value: "Vehicle", icon: Truck },
+  { label: "Gold", value: "Gold", icon: Gem },
+  { label: "Machinery", value: "Machinery", icon: Wrench },
+  { label: "Stock/Inventory", value: "Stock", icon: Tractor },
+  { label: "Other", value: "Other", icon: BriefcaseBusiness },
 ];
 
-const LOAN_PURPOSE_OPTIONS = [
-  { label: "Business Expansion", value: "Business Expansion" },
-  { label: "Home Renovation", value: "Home Renovation" },
-  { label: "Education", value: "Education" },
-  { label: "Medical Emergency", value: "Medical Emergency" },
-  { label: "Vehicle Purchase", value: "Vehicle Purchase" },
-  { label: "Debt Consolidation", value: "Debt Consolidation" },
-  { label: "Working Capital", value: "Working Capital" },
-  { label: "Other", value: "Other" },
+const LOAN_PURPOSE_OPTIONS: Array<{
+  label: string;
+  value: string;
+  icon: ComponentType<{ className?: string }>;
+  desc: string;
+}> = [
+  { label: "Business Expansion", value: "Business Expansion", icon: BriefcaseBusiness, desc: "Grow your business" },
+  { label: "Home Renovation", value: "Home Renovation", icon: Home, desc: "Improve your home" },
+  { label: "Education", value: "Education", icon: FileText, desc: "Invest in knowledge" },
+  { label: "Medical Emergency", value: "Medical Emergency", icon: ShieldCheck, desc: "Health & care" },
+  { label: "Vehicle Purchase", value: "Vehicle Purchase", icon: Truck, desc: "Buy a vehicle" },
+  { label: "Debt Consolidation", value: "Debt Consolidation", icon: CheckCircle2, desc: "Simplify payments" },
+  { label: "Working Capital", value: "Working Capital", icon: Wrench, desc: "Day-to-day operations" },
+  { label: "Other", value: "Other", icon: ListChecks, desc: "Something else" },
 ];
 
 export function ApplyLoanModal({
@@ -79,33 +100,13 @@ export function ApplyLoanModal({
   const navigate = useNavigate();
   const { toast } = useToast();
   const [step, setStep] = useState(1);
+
   const stepMeta = [
-    {
-      id: 1,
-      title: "Loan Basics",
-      description: "Amount, term, and lender selection",
-    },
-    {
-      id: 2,
-      title: "Loan Purpose",
-      description: "Tell us why you need the financing",
-    },
-    {
-      id: 3,
-      title: "Collateral",
-      description: "Assets to secure your loan request",
-    },
-    {
-      id: 4,
-      title: "Review & Submit",
-      description: "Confirm details before sending",
-    },
+    { id: 1, label: "Basics & Purpose", icon: Building2 },
+    { id: 2, label: "Collateral Type", icon: ShieldCheck },
+    { id: 3, label: "Collateral Details", icon: ListChecks },
+    { id: 4, label: "Review", icon: CheckCircle2 },
   ];
-  const activeStep = stepMeta[step - 1];
-  const stepProgress = Math.round((step / stepMeta.length) * 100);
-  const inputClass =
-    "h-11 bg-background/60 border-border/40 focus-visible:ring-primary/30";
-  const selectClass = "h-11 bg-background/60 border-border/40";
 
   const [createLoan] = useCreateLoanMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
@@ -179,8 +180,7 @@ export function ApplyLoanModal({
     } catch (error: any) {
       toast({
         title: "Upload failed",
-        description:
-          error?.data?.message || "Unable to upload collateral image.",
+        description: error?.data?.message || "Unable to upload collateral image.",
         variant: "destructive",
       });
     }
@@ -191,15 +191,15 @@ export function ApplyLoanModal({
       return Boolean(
         formData.requestedAmount &&
         formData.requestedTermMonths &&
+        formData.purpose &&
         (isLockedTenant ? defaultTenantId : formData.tenantId),
       );
     }
     if (currentStep === 2) {
-      return Boolean(formData.purpose);
+      return Boolean(formData.collateralType);
     }
     if (currentStep === 3) {
       return Boolean(
-        formData.collateralType &&
         formData.collateralDescription &&
         formData.collateralValue &&
         formData.collateralImageUrl,
@@ -223,25 +223,15 @@ export function ApplyLoanModal({
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
 
   const handleSubmit = async () => {
-    if (
-      !formData.tenantId ||
-      !formData.requestedAmount ||
-      !formData.requestedTermMonths
-    ) {
-      toast({
-        title: "Validation Error",
-        description: "Missing required fields.",
-        variant: "destructive",
-      });
+    if (!formData.tenantId || !formData.requestedAmount || !formData.requestedTermMonths) {
+      toast({ title: "Validation Error", description: "Missing required fields.", variant: "destructive" });
       return;
     }
-
     const isKycVerified = kycsData && kycsData.total > 0;
     if (!isKycVerified) {
       toast({
         title: "KYC Required",
-        description:
-          "You must have a verified KYC for this lender before applying for a loan.",
+        description: "You must have a verified KYC for this lender before applying for a loan.",
         variant: "destructive",
       });
       return;
@@ -249,7 +239,6 @@ export function ApplyLoanModal({
 
     const requestedAmount = Number(formData.requestedAmount);
     const requestedTermMonths = Number(formData.requestedTermMonths);
-
     const payload = {
       requestedAmount,
       purpose: formData.purpose,
@@ -268,7 +257,6 @@ export function ApplyLoanModal({
         setIsProcessingBlockchain(true);
         setBlockchainStep("blockchain");
       }
-
       let blockchainTxHash: string | undefined;
       let loanId: string | undefined;
 
@@ -276,30 +264,19 @@ export function ApplyLoanModal({
         try {
           loanId = crypto.randomUUID();
           blockchainTxHash = await recordLoanOnBlockchain(
-            loanId,
-            requestedAmount * 100,
-            1200,
-            requestedTermMonths,
+            loanId, requestedAmount * 100, 1200, requestedTermMonths,
           );
         } catch (blockchainError: any) {
           setIsProcessingBlockchain(false);
-          toast({
-            title: "Blockchain Error",
-            description: blockchainError.message || blockchainError.code,
-            variant: "destructive",
-          });
+          toast({ title: "Blockchain Error", description: blockchainError.message || blockchainError.code, variant: "destructive" });
           return;
         }
       }
 
-      if (shouldShowBlockchainProcessing) {
-        setBlockchainStep("database");
-      }
-
-      const finalPayload =
-        blockchainTxHash && loanId
-          ? { ...payload, blockchainTxHash, id: loanId }
-          : payload;
+      if (shouldShowBlockchainProcessing) setBlockchainStep("database");
+      const finalPayload = blockchainTxHash && loanId
+        ? { ...payload, blockchainTxHash, id: loanId }
+        : payload;
 
       await createLoan(finalPayload).unwrap();
 
@@ -307,340 +284,387 @@ export function ApplyLoanModal({
         setBlockchainStep("complete");
         setTimeout(() => {
           setIsProcessingBlockchain(false);
-          navigate("/borrower/my-loans");
+          navigate("/my-loans");
         }, 1000);
       } else {
-        toast({
-          title: "Success",
-          description: "Loan request submitted successfully.",
-        });
-        navigate("/borrower/my-loans");
+        toast({ title: "Success", description: "Loan request submitted successfully." });
+        navigate("/my-loans");
       }
     } catch (err: any) {
       setIsProcessingBlockchain(false);
-      toast({
-        title: "Error",
-        description: err?.data?.message || "Failed to submit loan request.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: err?.data?.message || "Failed to submit loan request.", variant: "destructive" });
     }
   };
+
+  const inputClass = "h-10 bg-muted/20 border-border/40 focus-visible:ring-primary/30 rounded-xl text-sm";
+
+  const selectedLenderName = tenants.find((t) => t.id === formData.tenantId)?.name || "-";
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto"
+          className="sm:max-w-xl p-0 max-h-[92vh] overflow-y-auto rounded-xl"
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-muted/5">
-              <DialogTitle className="text-xl">Apply for a Loan</DialogTitle>
-              <DialogDescription>
-                Submit your financing requirements in simple steps.
-              </DialogDescription>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <DialogTitle className="text-xl font-bold tracking-tight">Apply for a Loan</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Complete your financing requirements in a few simple steps.
+                </DialogDescription>
+              </div>
             </div>
           </DialogHeader>
 
-          <div className="px-6 pb-6 pt-5">
-            <div className="mb-6 rounded-2xl border border-border/40 bg-background/60 p-4 space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Step {step} of {stepMeta.length}
-                  </p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {activeStep?.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {activeStep?.description}
-                  </p>
-                </div>
-                <div className="text-xs font-semibold text-muted-foreground">
-                  {stepProgress}%
-                </div>
-              </div>
-              <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
-                <div
-                  className="h-full bg-primary"
-                  style={{ width: `${stepProgress}%` }}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest">
-                {stepMeta.map((item) => (
-                  <span
-                    key={item.id}
-                    className={cn(
-                      "px-2.5 py-1 rounded-full border",
-                      step >= item.id
-                        ? "border-primary/40 text-primary bg-primary/10"
-                        : "border-border/40 text-muted-foreground bg-muted/30",
-                    )}
-                  >
-                    {item.title}
-                  </span>
-                ))}
+          <div className="px-6 py-6">
+            <div className="mb-8 overflow-hidden">
+              <div className="flex items-center justify-between relative px-2">
+                <div className="absolute top-5 left-8 right-8 h-[2px] bg-border/40 z-0" />
+                {stepMeta.map((s, i) => {
+                  const Icon = s.icon;
+                  const isDone = step > s.id;
+                  const isActive = step === s.id;
+                  return (
+                    <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
+                      <div
+                        className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
+                          isDone
+                            ? "bg-primary border-primary text-primary-foreground"
+                            : isActive
+                            ? "border-primary bg-background text-primary ring-4 ring-primary/10"
+                            : "border-border bg-background text-muted-foreground",
+                        )}
+                      >
+                        {isDone ? (
+                          <Check className="w-5 h-5 stroke-[3px]" />
+                        ) : (
+                          <Icon className="w-5 h-5" />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold uppercase tracking-wider text-center hidden sm:block",
+                          isActive ? "text-primary" : "text-muted-foreground",
+                        )}
+                      >
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                {step === 1 && (
-                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                        <Building2 className="w-4 h-4 text-primary" />
-                        Loan Basics
+            <div className="space-y-6">
+              {step === 1 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="rounded-xl bg-primary/5 border border-primary/10 p-3">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <ShieldCheck className="w-4 h-4 text-primary" />
                       </div>
-                      {!isLockedTenant && (
-                        <div className="space-y-2">
-                          <Label>
-                            Select Lender{" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Select
-                            value={formData.tenantId}
-                            onValueChange={(value) =>
-                              handleSelectChange("tenantId", value)
-                            }
-                          >
-                            <SelectTrigger className={selectClass}>
-                              <SelectValue placeholder="Choose lender" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {tenants.map((tenant) => (
-                                <SelectItem key={tenant.id} value={tenant.id}>
-                                  {tenant.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
+                      <div className="space-y-0">
+                        <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Lender Recommendation</p>
+                        <p className="text-xs text-foreground/80 leading-tight">
+                          Aim for a Loan-to-Value (LTV) ratio under <span className="text-primary font-bold">70%</span> for prioritized approval.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>
-                            Requested Amount (NPR){" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            name="requestedAmount"
-                            value={formData.requestedAmount}
-                            onChange={handleChange}
-                            placeholder="50000"
-                            className={inputClass}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>
-                            Loan Term (Months){" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            type="number"
-                            name="requestedTermMonths"
-                            value={formData.requestedTermMonths}
-                            onChange={handleChange}
-                            placeholder="12"
-                            className={inputClass}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                  <div className="grid grid-cols-1 gap-y-4">
+                    <div className="space-y-4">
+                       <div className="flex items-center gap-2 pb-1 border-b border-border/40">
+                          <Building2 className="w-3.5 h-3.5 text-primary" />
+                          <h3 className="text-xs font-bold text-foreground">Basic Requirements</h3>
+                       </div>
+                    </div>
 
-                {step === 2 && (
-                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                        <FileText className="w-4 h-4 text-primary" />
-                        Loan Purpose
-                      </div>
-                      <div className="space-y-2">
-                        <Label>
-                          Loan Purpose{" "}
-                          <span className="text-destructive">*</span>
+                    {!isLockedTenant && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Target Institution <span className="text-destructive">*</span>
                         </Label>
                         <Select
-                          value={formData.purpose}
-                          onValueChange={(value) =>
-                            handleSelectChange("purpose", value)
-                          }
+                          value={formData.tenantId}
+                          onValueChange={(value) => handleSelectChange("tenantId", value)}
                         >
-                          <SelectTrigger className={selectClass}>
-                            <SelectValue placeholder="Select purpose" />
+                          <SelectTrigger className={inputClass}>
+                            <SelectValue placeholder="Choose a partner lender" />
                           </SelectTrigger>
                           <SelectContent>
-                            {LOAN_PURPOSE_OPTIONS.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
+                            {tenants.map((tenant) => (
+                              <SelectItem key={tenant.id} value={tenant.id}>
+                                {tenant.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                    )}
 
-                {step === 3 && (
-                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                    <CardContent className="p-5 space-y-4">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                        <ShieldCheck className="w-4 h-4 text-primary" />
-                        Collateral Details
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Requested Amount (NPR) <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        name="requestedAmount"
+                        value={formData.requestedAmount}
+                        onChange={handleChange}
+                        placeholder="Amount in Rupees"
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Duration (Months) <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        type="number"
+                        name="requestedTermMonths"
+                        value={formData.requestedTermMonths}
+                        onChange={handleChange}
+                        placeholder="e.g. 12, 24, 36"
+                        className={inputClass}
+                      />
+                    </div>
+
+                    <div className="space-y-4 mt-2">
+                      <div className="flex items-center gap-2 pb-1 border-b border-border/40">
+                         <FileText className="w-3.5 h-3.5 text-primary" />
+                         <h3 className="text-xs font-bold text-foreground">Facility Purpose</h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label>
-                            Collateral Type{" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Select
-                            value={formData.collateralType}
-                            onValueChange={(value) =>
-                              handleSelectChange("collateralType", value)
-                            }
-                          >
-                            <SelectTrigger className={selectClass}>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COLLATERAL_TYPE_OPTIONS.map((option) => (
-                                <SelectItem
-                                  key={option.value}
-                                  value={option.value}
-                                >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {LOAN_PURPOSE_OPTIONS.map((option) => {
+                          const Icon = option.icon;
+                          const isSelected = formData.purpose === option.value;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => handleSelectChange("purpose", option.value)}
+                              className={cn(
+                                "group rounded-xl border p-2 text-left transition-all duration-200 cursor-pointer relative",
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                                  : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10",
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={cn(
+                                  "w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                                  isSelected ? "bg-primary text-primary-foreground" : "bg-background border border-border group-hover:border-primary/30 text-muted-foreground",
+                                )}>
+                                  <Icon className="w-3 h-3" />
+                                </div>
+                                <p className={cn(
+                                  "text-[10px] font-bold leading-tight",
+                                  isSelected ? "text-primary" : "text-foreground/80 group-hover:text-foreground",
+                                )}>
                                   {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                        <div className="space-y-2">
-                          <Label>
-                            Collateral Value (NPR){" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
+              {step === 2 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500 py-2">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Select Collateral Type</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {COLLATERAL_OPTIONS.map((option) => {
+                      const Icon = option.icon;
+                      const isSelected = formData.collateralType === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleSelectChange("collateralType", option.value)}
+                          className={cn(
+                            "group rounded-xl border p-4 flex flex-col items-center gap-2 transition-all duration-200 cursor-pointer relative",
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                              : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10",
+                          )}
+                        >
+                          <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
+                            isSelected ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-background border border-border group-hover:border-primary/30 text-muted-foreground",
+                          )}>
+                            <Icon className="w-5 h-5" />
+                          </div>
+                          <span className={cn(
+                            "text-[10px] font-bold uppercase tracking-wider",
+                            isSelected ? "text-primary" : "text-foreground/80 group-hover:text-foreground",
+                          )}>
+                            {option.label}
+                          </span>
+                          {isSelected && (
+                            <div className="absolute top-2 right-2">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {step === 3 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                    <FileBadge className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Collateral Verification</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-8 items-start">
+                    <div className="space-y-5">
+                      <div className="space-y-2.5">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Estimated Value (NPR) <span className="text-destructive">*</span>
+                        </Label>
+                        <div className="relative">
+                          <IconCurrencyRupeeNepalese className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
                           <Input
                             type="number"
                             name="collateralValue"
                             value={formData.collateralValue}
                             onChange={handleChange}
-                            placeholder="100000"
-                            className={inputClass}
+                            placeholder="Current market valuation"
+                            className={cn(inputClass, "pl-9")}
                           />
                         </div>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label>
-                          Collateral Description{" "}
-                          <span className="text-destructive">*</span>
+                      <div className="space-y-2.5">
+                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          Description & Features <span className="text-destructive">*</span>
                         </Label>
-                        <Input
+                        <textarea
                           name="collateralDescription"
                           value={formData.collateralDescription}
-                          onChange={handleChange}
-                          placeholder="Describe your collateral"
-                          className={inputClass}
+                          onChange={(e: any) => setFormData(prev => ({ ...prev, collateralDescription: e.target.value }))}
+                          placeholder="Provide details about the collateral (e.g., location, model, condition)"
+                          className="min-h-[160px] w-full rounded-xl border border-border/40 bg-muted/10 px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
                         />
                       </div>
+                    </div>
 
-                      <div className="space-y-2">
-                        <Label>
-                          Collateral Image{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <label className="h-40 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              uploadCollateral(e.target.files?.[0] || null)
-                            }
-                          />
-                          {formData.collateralImageUrl ? (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Supporting Evidence <span className="text-destructive">*</span>
+                      </Label>
+                      <label className="group h-[230px] rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => uploadCollateral(e.target.files?.[0] || null)}
+                        />
+                        {formData.collateralImageUrl ? (
+                          <div className="relative w-full h-full">
                             <img
                               src={formData.collateralImageUrl}
                               alt="Collateral"
-                              className="w-full h-full object-cover"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                             />
-                          ) : (
-                            <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                              <ImagePlus className="w-4 h-4" />
-                              {isUploading ? "Uploading..." : "Upload image"}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white">
+                              <div className="flex flex-col items-center gap-2">
+                                <Upload className="w-8 h-8" />
+                                <p className="text-[10px] font-bold uppercase tracking-widest">Update Document</p>
+                              </div>
                             </div>
-                          )}
-                        </label>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 text-muted-foreground p-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-background border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:text-primary transition-all duration-300">
+                              <ImagePlus className="w-6 h-6" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[11px] font-bold text-foreground">
+                                {isUploading ? "Uploading..." : "Upload Asset Photo"}
+                              </p>
+                              <p className="text-[10px] leading-tight text-muted-foreground max-w-[150px]">
+                                JPG or PNG. High resolution images speed up appraisal.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-                {step === 4 && (
-                  <Card className="rounded-2xl border-border/40 bg-card/70 shadow-sm animate-in fade-in slide-in-from-right-4 duration-300">
-                    <CardContent className="p-5 space-y-3 text-sm">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90 pb-1 border-b border-border/40">
-                        <ListChecks className="w-4 h-4 text-primary" />
-                        Review & Submit
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Lender</span>
-                        <span className="font-medium">
-                          {tenants.find((t) => t.id === formData.tenantId)
-                            ?.name || "-"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Amount</span>
-                        <span className="font-medium">
-                          NPR{" "}
-                          {Number(formData.requestedAmount || 0).toLocaleString(
-                            "en-IN",
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Term</span>
-                        <span className="font-medium">
-                          <CalendarClock className="w-3.5 h-3.5 inline mr-1 text-primary" />
-                          {formData.requestedTermMonths} months
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Purpose</span>
-                        <span className="font-medium">{formData.purpose}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Collateral
-                        </span>
-                        <span className="font-medium">
-                          {formData.collateralType}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Image</span>
-                        <span className="font-medium inline-flex items-center gap-1">
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />{" "}
-                          Uploaded
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+              {step === 4 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                    <ListChecks className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Application Summary</h3>
+                  </div>
 
-              <div className="flex flex-wrap justify-between gap-2 pt-2">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      { label: "Institution", value: selectedLenderName, icon: Building2 },
+                      { label: "Principal", value: `NPR ${Number(formData.requestedAmount || 0).toLocaleString("en-IN")}`, icon: IconCurrencyRupeeNepalese },
+                      { label: "Loan Term", value: `${formData.requestedTermMonths} months`, icon: CalendarClock },
+                      { label: "Purpose", value: formData.purpose, icon: FileText },
+                      { label: "Asset Type", value: formData.collateralType, icon: ShieldCheck },
+                      { label: "Asset Value", value: `NPR ${Number(formData.collateralValue || 0).toLocaleString("en-IN")}`, icon: IconCurrencyRupeeNepalese },
+                    ].map((row) => (
+                      <div key={row.label} className="p-3 rounded-xl border border-border/40 bg-muted/5 flex flex-col gap-1.5 transition-all hover:bg-muted/10">
+                        <div className="flex items-center gap-1.5">
+                          <row.icon className="w-3 h-3 text-primary/70" />
+                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{row.label}</span>
+                        </div>
+                        <p className="text-xs font-bold text-foreground truncate">{row.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-3 p-4 rounded-xl border border-border/40 bg-muted/5">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        formData.collateralImageUrl ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground"
+                      )}>
+                        <FileCheck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">Supporting Docs</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {formData.collateralImageUrl ? "Verified & Attached" : "Missing collateral photo"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 rounded-xl border border-border/40 bg-muted/5">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                        <Clock3 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">Timeline</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">3–5 Business Days</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap justify-between gap-2 pt-4 border-t border-border/30">
                 <Button
                   type="button"
                   variant="outline"
@@ -675,9 +699,7 @@ export function ApplyLoanModal({
                       disabled={isProcessingBlockchain || !isStepValid(3)}
                       className="h-11 rounded-xl"
                     >
-                      {isProcessingBlockchain
-                        ? "Processing..."
-                        : "Submit Application"}
+                      {isProcessingBlockchain ? "Processing..." : "Submit Application"}
                     </Button>
                   )}
                 </div>

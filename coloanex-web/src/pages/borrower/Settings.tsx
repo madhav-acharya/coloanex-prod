@@ -58,11 +58,18 @@ import {
   Sun,
   Moon,
   Monitor,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  FileScan,
+  FileCheck,
+  FileBadge,
 } from "lucide-react";
 import WalletSection from "@/components/settings/WalletSection";
 import SubscriptionsSection from "@/components/settings/SubscriptionsSection";
 import PaymentConfigSection from "@/components/settings/PaymentConfigSection";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 const gatewayLogoByType: Record<"ESEWA" | "KHALTI", string> = {
   ESEWA: "/images/esewa.png",
@@ -74,27 +81,27 @@ const planAccentByCode: Record<
   { card: string; button: string; chip: string }
 > = {
   free: {
-    card: "border-border/70 bg-card/80",
+    card: "border-border bg-card",
     button:
-      "bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/80",
-    chip: "bg-primary/15 text-emerald-300",
+      "bg-primary hover:bg-primary/90 text-primary-foreground border border-primary",
+    chip: "bg-primary/15 text-primary",
   },
   premium: {
-    card: "border-sky-400/40 bg-gradient-to-br from-sky-500/10 to-transparent",
-    button: "bg-sky-600 hover:bg-sky-700 text-white border border-sky-500/80",
-    chip: "bg-sky-500/15 text-sky-300",
+    card: "border-border bg-card",
+    button: "bg-primary hover:bg-primary/90 text-white border border-primary",
+    chip: "bg-primary/15 text-primary",
   },
   pro: {
-    card: "border-amber-400/40 bg-gradient-to-br from-amber-500/10 to-transparent",
+    card: "border-border bg-card",
     button:
-      "bg-amber-600 hover:bg-amber-700 text-white border border-amber-500/80",
-    chip: "bg-amber-500/15 text-amber-300",
+      "bg-primary hover:bg-primary/90 text-white border border-primary",
+    chip: "bg-primary/15 text-primary",
   },
   enterprise: {
-    card: "border-fuchsia-400/40 bg-gradient-to-br from-fuchsia-500/10 to-transparent",
+    card: "border-border bg-card",
     button:
-      "bg-fuchsia-600 hover:bg-fuchsia-700 text-white border border-fuchsia-500/80",
-    chip: "bg-fuchsia-500/15 text-fuchsia-300",
+      "bg-primary hover:bg-primary/90 text-white border border-primary",
+    chip: "bg-primary/15 text-primary",
   },
 };
 
@@ -630,11 +637,11 @@ export default function Settings() {
 
   if (!user) {
     return (
-      <Layout title="Settings" description="Manage your settings">
+      <BorrowerLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      </Layout>
+      </BorrowerLayout>
     );
   }
 
@@ -642,37 +649,37 @@ export default function Settings() {
     {
       id: "account",
       icon: User,
-      title: "Account Information",
-      description: "Update your account details",
+      title: "Account Profile",
+      description: "Manage personal details",
     },
     {
       id: "password",
       icon: Lock,
-      title: "Change Password",
-      description: "Update your password",
+      title: "Security & Login",
+      description: "Password and protection",
     },
     {
       id: "appearance",
       icon: Palette,
-      title: "Appearance",
-      description: `Theme: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}`,
+      title: "Display Theme",
+      description: `Active: ${mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}`,
     },
     {
       id: "subscriptions",
       icon: IconCurrencyRupeeNepalese,
-      title: "Subscriptions",
-      description: "View active plan and upgrade options",
+      title: "Billing & Plans",
+      description: "Usage and limits",
       badge: hasLimitReached ? (
-        <span className="text-xs px-2 py-0.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-wider">
-          Limit Reached
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-tighter">
+          Exceeded
         </span>
       ) : hasActiveSubscription ? (
-        <span className="text-xs px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 border border-green-500/20 font-bold uppercase tracking-wider">
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold uppercase tracking-tighter">
           Active
         </span>
       ) : (
-        <span className="text-xs px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold uppercase tracking-wider">
-          Inactive
+        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold uppercase tracking-tighter">
+          Upgrade
         </span>
       ),
     },
@@ -681,80 +688,37 @@ export default function Settings() {
           {
             id: "payment-config",
             icon: CreditCard,
-            title: "Payment Config",
-            description:
-              connectedGatewayTypes.length > 0
-                ? `Connected: ${connectedGatewayTypes.map((gateway) => (gateway === "ESEWA" ? "eSewa" : "Khalti")).join(" + ")}`
-                : "Configure receive credentials for user and tenant payment flows",
-          },
-        ]
-      : []),
-  ];
-
-  const accountNavSections = [
-    {
-      id: "account",
-      icon: User,
-      title: "Account Information",
-      description: "Update your profile details",
-    },
-    {
-      id: "password",
-      icon: Lock,
-      title: "Change Password",
-      description: "Secure your account access",
-    },
-    {
-      id: "appearance",
-      icon: Palette,
-      title: "Appearance",
-      description: "Choose app theme",
-    },
-    {
-      id: "subscriptions",
-      icon: IconCurrencyRupeeNepalese,
-      title: "Subscriptions",
-      description: "Plans and usage limits",
-    },
-    ...(showPaymentConfig
-      ? [
-          {
-            id: "payment-config",
-            icon: CreditCard,
-            title: "Payment Config",
+            title: "Merchant API",
             description: "Gateway credentials",
           },
         ]
       : []),
   ];
 
+  const accountNavSections = settingsOptions;
+
+  const inputClass = "h-10 rounded-xl bg-background border-border/60 font-medium text-xs transition-all focus:ring-1 focus:ring-primary/20 focus:border-primary";
+
   if (accountSections.has(activeSection)) {
     return (
-      <Layout
-        title="Account"
-        description="Manage settings, security, and preferences in one workspace"
-      >
-        <div className="settings-shell grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr] lg:gap-6">
-          <Card className="hidden lg:block rounded-2xl border-border/70 bg-card/75 lg:sticky lg:top-28 lg:max-h-[calc(100vh-7.5rem)] lg:overflow-hidden">
-            <CardContent className="p-4 space-y-4 h-full overflow-y-auto">
-              <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/40 p-3">
-                <Avatar className="h-10 w-10 ring-1 ring-primary/25">
+      <BorrowerLayout>
+        <div className="settings-shell grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+          <Card className="hidden lg:block rounded-2xl border-border bg-card/50 backdrop-blur-sm lg:sticky lg:top-28 lg:max-h-[calc(100vh-8rem)]">
+            <CardContent className="p-4 space-y-5">
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-background/50">
+                <Avatar className="h-10 w-10 ring-2 ring-primary/10">
                   <AvatarImage src={user?.profileImage} alt={user?.fullName} />
-                  <AvatarFallback className="bg-primary/15 text-primary font-semibold">
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
                     {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold leading-none truncate">
-                    {user?.fullName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-1 truncate">
-                    {user?.email}
-                  </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold truncate tracking-tight">{user?.fullName}</p>
+                  <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-widest">{user?.isActive ? "Verified" : "Pending"}</p>
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {accountNavSections.map((option) => {
                   const Icon = option.icon;
                   const isActive = activeSection === option.id;
@@ -763,152 +727,98 @@ export default function Settings() {
                       key={option.id}
                       type="button"
                       onClick={() => setActiveSection(option.id)}
-                      className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors cursor-pointer ${
-                        isActive
-                          ? "border-primary/40 bg-primary/10"
-                          : "border-border/40 bg-background/30 hover:bg-muted/40"
-                      }`}
+                      className={cn(
+                        "group w-full flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border",
+                        isActive 
+                          ? "bg-primary/10 border-primary/20 shadow-sm" 
+                          : "bg-transparent border-transparent hover:bg-muted/50 hover:border-border/50"
+                      )}
                     >
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center shrink-0">
-                          <Icon className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm border",
+                          isActive ? "bg-primary text-primary-foreground border-primary/20" : "bg-background border-border group-hover:bg-muted"
+                        )}>
+                          <Icon className="w-4 h-4" />
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">
-                            {option.title}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                            {option.description}
-                          </p>
+                        <div className="text-left min-w-0">
+                           <p className={cn("text-xs font-bold truncate", isActive ? "text-primary" : "text-foreground/80")}>{option.title}</p>
+                           <p className="text-[9px] text-muted-foreground truncate leading-none mt-0.5">{option.description}</p>
                         </div>
                       </div>
+                      {option.badge}
                     </button>
                   );
                 })}
               </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-                className="w-full rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="w-4 h-4 mr-1.5" />
-                Logout
-              </Button>
+              <div className="pt-4 border-t border-border/40">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="w-full justify-start rounded-xl h-10 px-3 font-bold text-destructive hover:bg-destructive/10 hover:text-destructive transition-all"
+                >
+                  <LogOut className="w-4 h-4 mr-2.5" />
+                  Sign Out
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          <div className="space-y-6">
-            <Card className="lg:hidden rounded-2xl border-border/30 bg-white/75 shadow-sm">
-              <CardContent className="p-0">
-                <div className="px-4 pt-4 pb-5 text-center border-b border-border/30 bg-white/70">
-                  <Avatar className="h-16 w-16 ring-2 ring-primary/25 mx-auto">
-                    <AvatarImage
-                      src={user?.profileImage}
-                      alt={user?.fullName}
-                    />
-                    <AvatarFallback className="bg-primary/15 text-primary font-semibold text-lg">
-                      {user?.fullName?.charAt(0)?.toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <p className="text-lg font-semibold mt-3">{user?.fullName}</p>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {user?.email}
-                  </p>
-                </div>
-                <div className="px-3 py-3 overflow-x-auto">
-                  <div className="flex items-center gap-2 min-w-max">
-                    {accountNavSections.map((option) => {
-                      const Icon = option.icon;
-                      const isActive = activeSection === option.id;
-                      return (
-                        <button
-                          key={`mobile-${option.id}`}
-                          type="button"
-                          onClick={() => setActiveSection(option.id)}
-                          className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm border transition-colors ${
-                            isActive
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-muted/40 text-muted-foreground border-border/50"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span>{option.title}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeSection === "account" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Information</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Update your account details and contact information
-                  </p>
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+                <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-bold">Profile Information</CardTitle>
+                  </div>
                 </CardHeader>
-                <Separator />
                 <CardContent className="pt-6">
-                  <form onSubmit={handleAccountUpdate} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="account-fullName">Full Name</Label>
-                      <Input
-                        id="account-fullName"
-                        value={accountForm.fullName}
-                        onChange={(e) =>
-                          setAccountForm((prev) => ({
-                            ...prev,
-                            fullName: e.target.value,
-                          }))
-                        }
-                        required
-                      />
+                  <form onSubmit={handleAccountUpdate} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="account-fullName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Full Identity Name</Label>
+                        <Input
+                          id="account-fullName"
+                          value={accountForm.fullName}
+                          className={inputClass}
+                          onChange={(e) => setAccountForm(prev => ({ ...prev, fullName: e.target.value }))}
+                          placeholder="e.g. John Doe"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="account-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Business Contact Email</Label>
+                        <Input
+                          id="account-email"
+                          type="email"
+                          value={accountForm.email}
+                          className={inputClass}
+                          onChange={(e) => setAccountForm(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="johndoe@example.com"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="account-phone" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Verified Phone Line</Label>
+                        <Input
+                          id="account-phone"
+                          value={accountForm.phone}
+                          className={inputClass}
+                          onChange={(e) => setAccountForm(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="+977-XXXXXXXXXX"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="account-email">Email</Label>
-                      <Input
-                        id="account-email"
-                        type="email"
-                        value={accountForm.email}
-                        onChange={(e) =>
-                          setAccountForm((prev) => ({
-                            ...prev,
-                            email: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="account-phone">Phone</Label>
-                      <Input
-                        id="account-phone"
-                        value={accountForm.phone}
-                        onChange={(e) =>
-                          setAccountForm((prev) => ({
-                            ...prev,
-                            phone: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="flex justify-end pt-4">
+                    <div className="flex items-center justify-between pt-4 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground font-medium italic">All changes are subject to system verification.</p>
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                       >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
                       </Button>
                     </div>
                   </form>
@@ -917,143 +827,90 @@ export default function Settings() {
             )}
 
             {activeSection === "password" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Change Password</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Update your password to keep your account secure
-                  </p>
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+                <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-bold">Security Credentials</CardTitle>
+                  </div>
                 </CardHeader>
-                <Separator />
                 <CardContent className="pt-6">
-                  <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="current-password"
-                          type={showPasswords.current ? "text" : "password"}
-                          value={passwordForm.currentPassword}
-                          placeholder="Enter current password"
-                          onChange={(e) =>
-                            setPasswordForm((prev) => ({
-                              ...prev,
-                              currentPassword: e.target.value,
-                            }))
-                          }
-                          required
-                          className="pr-10"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                          onClick={() =>
-                            setShowPasswords((prev) => ({
-                              ...prev,
-                              current: !prev.current,
-                            }))
-                          }
-                        >
-                          {showPasswords.current ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
+                  <form onSubmit={handlePasswordUpdate} className="space-y-6">
+                    <div className="space-y-4 max-w-md">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="current-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Established Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="current-password"
+                            type={showPasswords.current ? "text" : "password"}
+                            value={passwordForm.currentPassword}
+                            className={cn(inputClass, "pr-10")}
+                            placeholder="Current secret key"
+                            onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                            required
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                            onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                          >
+                            {showPasswords.current ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="new-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">New Secure Password</Label>
+                          <div className="relative">
+                            <Input
+                              id="new-password"
+                              type={showPasswords.new ? "text" : "password"}
+                              value={passwordForm.newPassword}
+                              className={cn(inputClass, "pr-10")}
+                              placeholder="Min 8 characters"
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                              onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                            >
+                              {showPasswords.new ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="confirm-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Confirm Identity Key</Label>
+                          <div className="relative">
+                            <Input
+                              id="confirm-password"
+                              type={showPasswords.confirm ? "text" : "password"}
+                              value={passwordForm.confirmPassword}
+                              className={cn(inputClass, "pr-10")}
+                              placeholder="Retype new password"
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                              onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                            >
+                              {showPasswords.confirm ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">New Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="new-password"
-                          type={showPasswords.new ? "text" : "password"}
-                          value={passwordForm.newPassword}
-                          placeholder="Enter new password"
-                          onChange={(e) =>
-                            setPasswordForm((prev) => ({
-                              ...prev,
-                              newPassword: e.target.value,
-                            }))
-                          }
-                          required
-                          className="pr-10"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                          onClick={() =>
-                            setShowPasswords((prev) => ({
-                              ...prev,
-                              new: !prev.new,
-                            }))
-                          }
-                        >
-                          {showPasswords.new ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">
-                        Confirm New Password
-                      </Label>
-                      <div className="relative">
-                        <Input
-                          id="confirm-password"
-                          type={showPasswords.confirm ? "text" : "password"}
-                          value={passwordForm.confirmPassword}
-                          placeholder="Confirm new password"
-                          onChange={(e) =>
-                            setPasswordForm((prev) => ({
-                              ...prev,
-                              confirmPassword: e.target.value,
-                            }))
-                          }
-                          required
-                          className="pr-10"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                          onClick={() =>
-                            setShowPasswords((prev) => ({
-                              ...prev,
-                              confirm: !prev.confirm,
-                            }))
-                          }
-                        >
-                          {showPasswords.confirm ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex justify-end pt-4">
+                    <div className="flex items-center justify-between pt-4 border-t border-border/40">
+                      <p className="text-[10px] text-muted-foreground font-medium italic">Regular password rotations are recommended.</p>
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                       >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Updating...
-                          </>
-                        ) : (
-                          "Update Password"
-                        )}
+                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh Security"}
                       </Button>
                     </div>
                   </form>
@@ -1062,81 +919,45 @@ export default function Settings() {
             )}
 
             {activeSection === "appearance" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Appearance</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Customize how Coloanex looks on your device
-                  </p>
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+                <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-bold">Display Interface</CardTitle>
+                  </div>
                 </CardHeader>
-                <Separator />
                 <CardContent className="pt-6">
-                  <div className="grid gap-3">
-                    <button
-                      onClick={() => setTheme("light")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all cursor-pointer ${mode === "light" ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "light" ? "bg-primary" : "bg-muted"}`}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                      { id: "light", icon: Sun, label: "Light Mode", desc: "Classic clarity" },
+                      { id: "dark", icon: Moon, label: "Deep Space", desc: "Power efficient" },
+                      { id: "system", icon: Monitor, label: "System Sync", desc: "Auto adjustment" },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTheme(t.id as any)}
+                        className={cn(
+                          "group flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden relative",
+                          mode === t.id
+                            ? "border-primary bg-primary/5 shadow-lg shadow-primary/5"
+                            : "border-border/60 bg-background/50 hover:border-primary/40 hover:bg-muted/30"
+                        )}
                       >
-                        <Sun
-                          className={`w-5 h-5 ${mode === "light" ? "text-white" : "text-muted-foreground"}`}
-                        />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-medium">Light</p>
-                        <p className="text-sm text-muted-foreground">
-                          Bright and clean appearance
-                        </p>
-                      </div>
-                      {mode === "light" && (
-                        <Check className="w-5 h-5 text-primary" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => setTheme("dark")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all cursor-pointer ${mode === "dark" ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "dark" ? "bg-primary" : "bg-muted"}`}
-                      >
-                        <Moon
-                          className={`w-5 h-5 ${mode === "dark" ? "text-white" : "text-muted-foreground"}`}
-                        />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-medium">Dark</p>
-                        <p className="text-sm text-muted-foreground">
-                          Easy on the eyes in low light
-                        </p>
-                      </div>
-                      {mode === "dark" && (
-                        <Check className="w-5 h-5 text-primary" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => setTheme("system")}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all cursor-pointer ${mode === "system" ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <div
-                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${mode === "system" ? "bg-primary" : "bg-muted"}`}
-                      >
-                        <Monitor
-                          className={`w-5 h-5 ${mode === "system" ? "text-white" : "text-muted-foreground"}`}
-                        />
-                      </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-medium">System</p>
-                        <p className="text-sm text-muted-foreground">
-                          Follows your device settings
-                        </p>
-                      </div>
-                      {mode === "system" && (
-                        <Check className="w-5 h-5 text-primary" />
-                      )}
-                    </button>
+                        <div className={cn(
+                          "w-12 h-12 rounded-2xl mb-4 flex items-center justify-center transition-all duration-300 shadow-sm border",
+                          mode === t.id ? "bg-primary text-primary-foreground border-primary/20 scale-110" : "bg-muted/80 text-muted-foreground border-border"
+                        )}>
+                          <t.icon className="w-5 h-5" />
+                        </div>
+                        <p className={cn("text-xs font-bold uppercase tracking-tight", mode === t.id ? "text-primary" : "text-foreground/70")}>{t.label}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 font-medium">{t.desc}</p>
+                        {mode === t.id && (
+                          <div className="absolute top-3 right-3">
+                             <CheckCircle2 className="w-4 h-4 text-primary" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -1209,114 +1030,48 @@ export default function Settings() {
             )}
 
             {activeSection === "notifications" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Manage your notification preferences
-                  </p>
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+                <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-sm font-bold">Transmission Settings</CardTitle>
+                  </div>
                 </CardHeader>
-                <Separator />
                 <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label
-                          htmlFor="email-notifications"
-                          className="cursor-pointer"
-                        >
-                          Email Notifications
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via email
-                        </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { id: "emailNotifications", label: "Email Alerts", desc: "Critical system transmissions" },
+                      { id: "loanUpdates", label: "Loan Pulse", desc: "Status & lifecycle changes" },
+                      { id: "kycUpdates", label: "Identity Sync", desc: "Verification milestones" },
+                      { id: "securityAlerts", label: "Threat Matrix", desc: "Account security pings" },
+                    ].map((s) => (
+                      <div key={s.id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/40">
+                        <div className="min-w-0">
+                          <Label htmlFor={s.id} className="text-xs font-bold text-foreground/80 block">{s.label}</Label>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                        </div>
+                        <Switch
+                          id={s.id}
+                          checked={(notificationSettings as any)[s.id]}
+                          onCheckedChange={() => handleNotificationToggle(s.id as any)}
+                          className="data-[state=checked]:bg-primary scale-90"
+                        />
                       </div>
-                      <Switch
-                        id="email-notifications"
-                        checked={notificationSettings.emailNotifications}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("emailNotifications")
-                        }
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label
-                          htmlFor="loan-updates"
-                          className="cursor-pointer"
-                        >
-                          Loan Updates
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Get notified about loan application updates
-                        </p>
-                      </div>
-                      <Switch
-                        id="loan-updates"
-                        checked={notificationSettings.loanUpdates}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("loanUpdates")
-                        }
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="kyc-updates" className="cursor-pointer">
-                          KYC Updates
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Notifications for KYC verification status
-                        </p>
-                      </div>
-                      <Switch
-                        id="kyc-updates"
-                        checked={notificationSettings.kycUpdates}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("kycUpdates")
-                        }
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label
-                          htmlFor="security-alerts"
-                          className="cursor-pointer"
-                        >
-                          Security Alerts
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          Important security notifications
-                        </p>
-                      </div>
-                      <Switch
-                        id="security-alerts"
-                        checked={notificationSettings.securityAlerts}
-                        onCheckedChange={() =>
-                          handleNotificationToggle("securityAlerts")
-                        }
-                        className="data-[state=checked]:bg-primary"
-                      />
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
-      </Layout>
+      </BorrowerLayout>
     );
   }
 
   return (
-    <Layout>
+    <BorrowerLayout>
       <div className="mx-auto max-w-5xl space-y-6">
-        <Card className="settings-shell rounded-3xl border-border/70 bg-card/75">
+        <Card className="settings-shell rounded-xl border-border bg-card/75">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14 ring-2 ring-primary/25">
@@ -1360,7 +1115,7 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card className="settings-shell rounded-3xl border-border/70 bg-card/75">
+        <Card className="settings-shell rounded-xl border-border bg-card/75">
           <CardContent className="p-6">
             <div className="mb-4">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
@@ -1385,7 +1140,7 @@ export default function Settings() {
                       }
                       setActiveDialog(option.id);
                     }}
-                    className="group rounded-2xl border border-border/60 bg-background/30 p-4 hover:bg-primary/5 cursor-pointer transition-colors"
+                    className="group rounded-xl border border-border bg-background/30 p-4 hover:bg-primary/5 cursor-pointer transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 min-w-0">
@@ -1722,6 +1477,6 @@ export default function Settings() {
           </div>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </BorrowerLayout>
   );
 }

@@ -85,13 +85,7 @@ export default function LenderDetails() {
   }
 
   return (
-    <BorrowerLayout
-      title={lender?.name || "Lender Profile"}
-      description={
-        (lender as any)?.description ||
-        "Institutional lending partner providing decentralized credit facilities."
-      }
-    >
+    <BorrowerLayout>
       <div className="space-y-12 animate-fade-up">
         {/* Navigation & Breadcrumbs */}
         <div className="flex items-center justify-between">
@@ -109,7 +103,7 @@ export default function LenderDetails() {
             </Badge>
             <Badge
               variant="outline"
-              className="rounded-full px-4 py-1.5 border-border/40 text-muted-foreground font-black text-[10px] tracking-widest uppercase"
+              className="rounded-full px-4 py-1.5 border-border text-muted-foreground font-black text-[10px] tracking-widest uppercase"
             >
               Institutional Profile
             </Badge>
@@ -119,19 +113,19 @@ export default function LenderDetails() {
         {isLoading || !lender ? (
           <div className="space-y-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Skeleton className="h-64 col-span-2 rounded-[2.5rem]" />
-              <Skeleton className="h-64 rounded-[2.5rem]" />
+              <Skeleton className="h-64 col-span-2 rounded-xl" />
+              <Skeleton className="h-64 rounded-xl" />
             </div>
           </div>
         ) : (
           <div className="space-y-12">
             <div className="space-y-4 max-w-4xl mx-auto lg:hidden">
-              <Card className="rounded-3xl border-border/30 bg-card">
+              <Card className="rounded-xl border-border bg-card">
                 <CardContent className="p-6 text-center">
                   <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden">
-                    {(lender as any).logo ? (
+                    {lender.logo ? (
                       <img
-                        src={(lender as any).logo}
+                        src={lender.logo}
                         alt={lender.name}
                         className="w-full h-full object-cover"
                       />
@@ -163,7 +157,7 @@ export default function LenderDetails() {
               {(lender.contactEmail ||
                 lender.contactPhone ||
                 lender.address) && (
-                <Card className="rounded-3xl border-border/30 bg-card">
+                <Card className="rounded-xl border-border bg-card">
                   <CardContent className="p-0">
                     <h3 className="px-5 pt-5 pb-3 text-xs uppercase tracking-widest font-bold text-muted-foreground">
                       Contact Information
@@ -225,7 +219,7 @@ export default function LenderDetails() {
                 </Card>
               )}
 
-              <Card className="rounded-2xl border-primary/30 bg-primary/5">
+              <Card className="rounded-xl border-primary/20 bg-primary/5">
                 <CardContent className="p-4 flex items-start gap-2.5">
                   <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <p className="text-sm text-primary/90">
@@ -242,14 +236,14 @@ export default function LenderDetails() {
 
               {isKycVerified ? (
                 <Button
-                  className="w-full h-12 rounded-2xl font-semibold"
+                  className="w-full h-12 rounded-xl font-semibold"
                   onClick={() => setShowApply(true)}
                 >
                   <FileText className="w-4 h-4 mr-2" /> {kycPrimaryActionLabel}
                 </Button>
               ) : (
                 <Button
-                  className="w-full h-12 rounded-2xl font-semibold bg-amber-500 hover:bg-amber-600"
+                  className="w-full h-12 rounded-xl font-semibold bg-amber-500 hover:bg-amber-600"
                   onClick={() => {
                     if (isKycPending && kycStatusData?.kycId) {
                       navigate(`/borrower/kyc/${kycStatusData.kycId}`);
@@ -271,7 +265,7 @@ export default function LenderDetails() {
                   {visibleRules.map((rule) => (
                     <Card
                       key={rule.id}
-                      className="rounded-3xl border-border/30 bg-card"
+                      className="rounded-xl border-border bg-card"
                     >
                       <CardContent className="p-4 space-y-4">
                         <div className="flex items-start justify-between gap-3">
@@ -334,13 +328,13 @@ export default function LenderDetails() {
 
             <div className="hidden lg:block space-y-8">
               <div className="grid grid-cols-12 gap-6">
-                <Card className="col-span-12 xl:col-span-8 rounded-[2rem] border-border/30 bg-surface/30 backdrop-blur-xl overflow-hidden">
+                <Card className="col-span-12 xl:col-span-8 rounded-xl border-border bg-card overflow-hidden">
                   <CardContent className="p-8">
                     <div className="flex items-center gap-6">
                       <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden shrink-0">
-                        {(lender as any).logo ? (
+                        {lender.logo ? (
                           <img
-                            src={(lender as any).logo}
+                            src={lender.logo}
                             alt={lender.name}
                             className="w-full h-full object-cover"
                           />
@@ -355,7 +349,7 @@ export default function LenderDetails() {
                           {lender.name}
                         </h2>
                         <p className="mt-3 text-sm text-muted-foreground max-w-2xl leading-relaxed">
-                          {(lender as any)?.description ||
+                          {lender?.description ||
                             "Institutional lending partner providing compliant and transparent credit products."}
                         </p>
                         <div className="mt-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 bg-primary/10 text-primary text-xs font-semibold">
@@ -376,7 +370,7 @@ export default function LenderDetails() {
                   </CardContent>
                 </Card>
 
-                <Card className="col-span-12 xl:col-span-4 rounded-[2rem] border-border/30 bg-card">
+                <Card className="col-span-12 xl:col-span-4 rounded-xl border-border bg-card">
                   <CardContent className="p-6 space-y-4">
                     <div className="flex items-start gap-3">
                       <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
@@ -420,7 +414,7 @@ export default function LenderDetails() {
               {(lender.contactEmail ||
                 lender.contactPhone ||
                 lender.address) && (
-                <Card className="rounded-[2rem] border-border/30 bg-card overflow-hidden">
+                <Card className="rounded-xl border-border bg-card overflow-hidden">
                   <CardContent className="p-0">
                     <div className="px-6 py-4 border-b border-border/20">
                       <h3 className="text-sm uppercase tracking-widest font-black text-muted-foreground">
@@ -493,7 +487,7 @@ export default function LenderDetails() {
                     {visibleRules.map((rule) => (
                       <Card
                         key={rule.id}
-                        className="rounded-[1.75rem] border-border/30 bg-card overflow-hidden"
+                        className="rounded-xl border-border bg-card overflow-hidden"
                       >
                         <CardContent className="p-6 space-y-5">
                           <div className="flex items-start justify-between gap-3">
