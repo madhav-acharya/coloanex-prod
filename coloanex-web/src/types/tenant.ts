@@ -7,6 +7,7 @@ export interface Tenant {
   contactEmail: string;
   contactPhone: string;
   address?: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
   ownerUserId: string;
