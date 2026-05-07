@@ -67,10 +67,10 @@ export function ProfileDropdown({
         {avatarOnlyTrigger ? (
           <Button
             variant="ghost"
-            className="h-auto rounded-xl p-1.5 bg-muted/40 hover:bg-muted/70 cursor-pointer border border-transparent hover:border-border/60"
+            className="h-auto rounded-xl p-1 hover:bg-muted/30 cursor-pointer border-none bg-transparent active:scale-95 transition-all"
             aria-label="Open profile menu"
           >
-            <Avatar className="w-8 h-8 sm:w-9 sm:h-9 ring-2 ring-primary/20">
+            <Avatar className="w-8 h-8 sm:w-9 sm:h-9">
               <AvatarImage src={user.profileImage} alt={user.fullName} />
               <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                 {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
@@ -80,22 +80,22 @@ export function ProfileDropdown({
         ) : (
           <Button
             variant="ghost"
-            className="h-auto rounded-xl px-2 py-1.5 bg-muted/50 hover:bg-muted/80 cursor-pointer border border-border/60"
+            className="h-auto rounded-xl px-2 py-1.5 hover:bg-muted/30 cursor-pointer border-none bg-transparent active:scale-95 transition-all"
             aria-label="Open profile menu"
           >
             <div className="flex items-center gap-2.5 min-w-0 max-w-[230px]">
-              <Avatar className="w-8 h-8 ring-2 ring-primary/20 shrink-0">
+              <Avatar className="w-8 h-8 shrink-0">
                 <AvatarImage src={user.profileImage} alt={user.fullName} />
                 <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                   {user.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
-              <div className="min-w-0 text-left leading-tight">
-                <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
+              <div className="min-w-0 text-left leading-tight hidden sm:block">
+                <p className="text-[11px] font-bold tracking-tight truncate text-foreground/90">
                   {user.fullName}
                 </p>
                 {roleLabel && (
-                  <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+                  <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5 font-medium uppercase tracking-tighter">
                     {roleLabel}
                   </p>
                 )}
@@ -106,9 +106,9 @@ export function ProfileDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-64 sm:w-72 p-2 z-[220] rounded-xl border border-border/70 shadow-xl"
+        className="w-64 sm:w-72 p-2 z-[220] rounded-xl border border-border shadow-2xl bg-popover/95 backdrop-blur-xl"
       >
-        <div className="rounded-lg border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 mb-2">
+        <div className="rounded-xl bg-primary/10 p-3 mb-2">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10 ring-2 ring-primary/20">
               <AvatarImage src={user.profileImage} alt={user.fullName} />
