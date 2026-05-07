@@ -24,7 +24,7 @@ const getHomeRoute = (user: any): string => {
   );
   if (isAdminOrLender) return "/dashboard";
   const isBorrower = user.roles.some((ur: any) => ur.role?.name === "Borrower");
-  if (isBorrower) return "/borrower/dashboard";
+  if (isBorrower) return "/dashboard";
   return "/dashboard";
 };
 
