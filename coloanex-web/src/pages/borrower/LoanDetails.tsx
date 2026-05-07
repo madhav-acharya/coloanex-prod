@@ -1,17 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BlockchainStatusBadge } from "@/components/shared/BlockchainStatusBadge";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useGetLoanQuery } from "@/apis/loansApi";
 import { useGetPaymentSchedulesByContractQuery } from "@/apis/paymentSchedulesApi";
 import { useGetContractsQuery } from "@/apis/contractsApi";
 import { useGetMyWalletsQuery } from "@/apis/walletsApi";
 import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
-import { LoanStatus } from "@/types/loan";
+import { LoanStatus, type Loan } from "@/types/loan";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useEsewaPayment } from "@/hooks/useEsewaPayment";
@@ -177,6 +178,7 @@ const statusInfo: Partial<
 export default function LoanDetails() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { data: loan, isLoading } = useGetLoanQuery(id || "", {
     skip: !id,
@@ -367,734 +369,314 @@ export default function LoanDetails() {
   };
 
   return (
-    <BorrowerLayout
-      title="Loan Details"
-      description="Track status, contract, and repayment progress"
-    >
-      <div className="space-y-6 lg:space-y-8">
-        <div className="flex items-center justify-between">
-          <Link
-            to="/borrower/my-loans"
-            className="text-sm font-medium text-primary hover:underline"
-          >
-            Back to My Loans
-          </Link>
-          {canRepay && id && (
-            <Button
-              className="h-9 px-4 hidden sm:inline-flex"
-              onClick={handlePaySelected}
-              disabled={gatewayBusy}
-            >
-              <CreditCard className="w-4 h-4 mr-2" />
-              {selectedScheduleIds.length > 0
-                ? `Pay Selected (${selectedScheduleIds.length})`
-                : "Make Repayment"}
-            </Button>
-          )}
+    <BorrowerLayout>
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight">Loan Management</h1>
+            <p className="text-sm text-muted-foreground font-medium">Track your funding progress and repayment schedule</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <Button variant="outline" onClick={() => navigate(-1)} className="rounded-xl border-border/40 font-bold px-6 cursor-pointer">
+                Back
+             </Button>
+             {canRepay && (
+               <Button onClick={handlePaySelected} disabled={gatewayBusy} className="rounded-xl font-bold px-6 bg-primary shadow-lg shadow-primary/20 cursor-pointer">
+                  <CreditCard className="w-4 h-4 mr-2" /> Pay Selected
+               </Button>
+             )}
+          </div>
         </div>
 
         {isLoading || !loan ? (
-          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Skeleton className="lg:col-span-2 h-[400px] rounded-3xl" />
+            <Skeleton className="h-[400px] rounded-3xl" />
+          </div>
         ) : (
-          <>
-            <div className="space-y-4 max-w-4xl mx-auto lg:hidden">
-              <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                <CardContent className="p-4 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground line-clamp-1">
-                          {loan.purpose || "Loan Request"}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                          #{loan.id.slice(0, 12).toUpperCase()}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge className={statusTheme?.chip}>
-                      {titleCase(loan.status)}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div className="lg:col-span-8 space-y-6">
+              <Card className="rounded-xl border border-border bg-card shadow-sm overflow-hidden animate-in slide-in-from-bottom-2 duration-300">
+                <div className="h-1.5 w-full bg-primary/20" />
+                <CardHeader className="flex flex-row items-center gap-3 border-b border-border/30 pb-4">
+                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                     <FileText className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base font-bold text-foreground">{loan.purpose || "Loan Facility"}</CardTitle>
+                    <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-tighter">#{loan.id.slice(0,12)}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge className={cn("px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border", statusTheme?.chip)}>
+                      {loan.status}
                     </Badge>
+                    <BlockchainStatusBadge blockchainTxHash={(resolvedContract as any)?.blockchainTxHash} />
                   </div>
-
-                  <div className="rounded-xl border border-border/20 bg-white/70 px-3 py-3 text-center shadow-sm">
-                    <p className="text-[11px] text-muted-foreground">
-                      Current Amount
-                    </p>
-                    <p className="text-xl font-bold text-foreground mt-1">
-                      {money(loan.approvedAmount ?? loan.requestedAmount)}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm">
-                      <p className="text-[11px] text-muted-foreground">
-                        Requested
-                      </p>
-                      <p className="text-sm font-semibold mt-1">
-                        {money(loan.requestedAmount)}
-                      </p>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Approved Funding</p>
+                      <h2 className="text-4xl font-bold text-primary tracking-tight">
+                        {money(loan.approvedAmount ?? loan.requestedAmount)}
+                      </h2>
                     </div>
-                    <div className="rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm">
-                      <p className="text-[11px] text-muted-foreground">Term</p>
-                      <p className="text-sm font-semibold mt-1">
-                        {loan.approvedTermMonths ?? loan.requestedTermMonths}{" "}
-                        months
-                      </p>
+                    <div className="bg-primary/5 rounded-2xl p-4 border border-primary/10 flex items-center gap-4">
+                       <MetricBox label="Interest" value={`${(loan as any).interestRate || "12.5"}%`} sub="APR" />
+                       <div className="w-px h-8 bg-primary/10" />
+                       <MetricBox label="Term" value={`${loan.approvedTermMonths || loan.requestedTermMonths}`} sub="Months" />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5">
-                      <StatusIcon className="w-3.5 h-3.5" /> {statusTheme?.note}
-                    </span>
-                    <BlockchainStatusBadge
-                      blockchainTxHash={loan.blockchainTxHash}
-                    />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-border/30">
+                    <DetailItem label="Paid Installments" value={`${paidCount} of ${allSchedules.length}`} />
+                    <DetailItem label="Next Due Date" value={nextDue ? new Date(nextDue.dueDate).toLocaleDateString() : "Fully Repaid"} />
+                    <DetailItem label="Due Amount" value={nextDue ? money(getScheduleDueAmount(nextDue as any)) : "0.00"} />
+                    <DetailItem label="Overdue" value={overdueCount > 0 ? `${overdueCount} Items` : "None"} />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                <CardContent className="p-4 space-y-3">
-                  <h3 className="text-sm font-semibold">Loan Information</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Applied On</span>
-                      <span>
-                        {new Date(loan.createdAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Last Updated
-                      </span>
-                      <span>
-                        {new Date(loan.updatedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {loan.rejectionReason && (
-                      <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-2.5 text-red-600 text-xs">
-                        {loan.rejectionReason}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {currentStatusInfo && (
-                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                  <CardContent className="p-4">
-                    <div
-                      className={`rounded-lg border px-3 py-3 ${currentStatusInfo.tone}`}
-                    >
-                      <p className="text-sm font-semibold">
-                        {currentStatusInfo.title}
-                      </p>
-                      <p className="text-xs mt-1.5">{currentStatusInfo.body}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {collateralEntries.length > 0 && (
-                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                  <CardContent className="p-4 space-y-3">
-                    <h3 className="text-sm font-semibold">
-                      Collateral Details
+              <Card className="rounded-xl border-border bg-card shadow-sm overflow-hidden">
+                <div className="border-b border-border/30 p-6 bg-muted/5">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-base font-bold flex items-center gap-2">
+                       <Calendar className="w-4 h-4 text-primary" /> Repayment Timeline
                     </h3>
-                    <div className="space-y-2 text-sm">
-                      {collateralEntries.map(({ key, value }) =>
-                        typeof value === "string" && isImageUrl(value) ? (
-                          <div
-                            key={key}
-                            className="space-y-2 rounded-lg border border-border/20 bg-white/70 p-2.5 shadow-sm"
-                          >
-                            <p className="text-xs text-muted-foreground">
-                              {titleCase(key)}
-                            </p>
-                            <img
-                              src={value}
-                              alt={titleCase(key)}
-                              className="w-full h-44 rounded-md object-cover border border-border/20"
-                              loading="lazy"
-                            />
-                          </div>
-                        ) : (
-                          <div key={key} className="flex justify-between gap-3">
-                            <span className="text-muted-foreground">
-                              {titleCase(key)}
-                            </span>
-                            {typeof value === "string" &&
-                            /^https?:\/\//i.test(value) ? (
-                              <a
-                                href={value}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-right break-all text-primary inline-flex items-center gap-1 hover:underline"
-                              >
-                                Open Link <LinkIcon className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              <span className="text-right break-all">
-                                {String(value)}
-                              </span>
-                            )}
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {resolvedContract && (
-                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                  <CardContent className="p-4 space-y-3">
-                    <h3 className="text-sm font-semibold">Contract</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Number</span>
-                        <span>{resolvedContract.contractNumber}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Status</span>
-                        <span>{titleCase(resolvedContract.status)}</span>
-                      </div>
-                    </div>
-                    {canSignContract && contractId && (
-                      <Link to={`/contracts/${contractId}`}>
-                        <Button variant="outline" className="w-full h-9">
-                          <ShieldCheck className="w-4 h-4 mr-2" /> View & Sign
-                          Contract
-                        </Button>
-                      </Link>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {canRepay && (
-                <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-                  <CardContent className="p-4 space-y-3">
-                    <h3 className="text-sm font-semibold">Payment Schedule</h3>
-                    {allSchedules.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No pending repayments found.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {allSchedules.slice(0, 8).map((s) => {
-                          const checked = selectedScheduleIds.includes(s.id);
-                          const scheduleDue = getScheduleDueAmount(
-                            s as unknown as Record<string, unknown>,
-                          );
-                          const schedulePaid = isSchedulePaid(
-                            s as unknown as Record<string, unknown>,
-                          );
-                          return (
-                            <button
-                              key={s.id}
-                              type="button"
-                              onClick={() => {
-                                if (schedulePaid) return;
-                                toggleSchedule(s.id);
-                              }}
-                              className={`w-full rounded-2xl border p-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
-                                schedulePaid
-                                  ? "border-border/20 bg-white/70"
-                                  : checked
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border/20 bg-white/70"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div
-                                    className={`w-4 h-4 rounded border ${schedulePaid ? "bg-emerald-500/15 border-emerald-500/40" : checked ? "bg-primary border-primary" : "border-border/60"}`}
-                                  />
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">
-                                      Installment {s.installmentNumber}
-                                    </p>
-                                    <p className="text-sm font-medium mt-0.5">
-                                      {new Date(s.dueDate).toLocaleDateString()}
-                                    </p>
-                                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                                      P:{" "}
-                                      {Number(
-                                        (s as any).principalAmount || 0,
-                                      ).toFixed(2)}{" "}
-                                      • I:{" "}
-                                      {Number(
-                                        (s as any).interestAmount || 0,
-                                      ).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-semibold">
-                                    {money(scheduleDue)}
-                                  </p>
-                                  <p
-                                    className={`text-xs mt-0.5 ${schedulePaid ? "text-emerald-500" : "text-muted-foreground"}`}
-                                  >
-                                    {schedulePaid ? "Paid" : "Pending"}
-                                  </p>
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            <div className="hidden lg:grid grid-cols-12 gap-6">
-              <div className="col-span-12 xl:col-span-8 space-y-6">
-                <Card className="border-border/20 bg-surface/20">
-                  <CardContent className="p-7 space-y-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <h2 className="text-2xl font-bold text-foreground line-clamp-1">
-                            {loan.purpose || "Loan Request"}
-                          </h2>
-                          <p className="text-xs text-muted-foreground font-mono mt-1">
-                            #{loan.id}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge className={statusTheme?.chip}>
-                        {titleCase(loan.status)}
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-3">
-                      <div className="rounded-xl border border-border/20 bg-white/70 p-3 shadow-sm">
-                        <p className="text-[11px] text-muted-foreground">
-                          Current Amount
-                        </p>
-                        <p className="text-base font-bold mt-1">
-                          {money(loan.approvedAmount ?? loan.requestedAmount)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/20 bg-white/70 p-3 shadow-sm">
-                        <p className="text-[11px] text-muted-foreground">
-                          Requested
-                        </p>
-                        <p className="text-base font-bold mt-1">
-                          {money(loan.requestedAmount)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/20 bg-muted/10 p-3">
-                        <p className="text-[11px] text-muted-foreground">
-                          Term
-                        </p>
-                        <p className="text-base font-bold mt-1">
-                          {loan.approvedTermMonths ?? loan.requestedTermMonths}{" "}
-                          mo
-                        </p>
-                      </div>
-                      <div className="rounded-xl border border-border/20 bg-muted/10 p-3">
-                        <p className="text-[11px] text-muted-foreground">
-                          Blockchain
-                        </p>
-                        <div className="mt-2">
-                          <BlockchainStatusBadge
-                            blockchainTxHash={loan.blockchainTxHash}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-semibold">
-                          Loan Information
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Applied On
-                            </span>
-                            <span>
-                              {new Date(loan.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Last Updated
-                            </span>
-                            <span>
-                              {new Date(loan.updatedAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Borrower
-                            </span>
-                            <span>{loan.borrower?.user?.fullName || "-"}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-semibold">
-                          Lender Information
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Building2 className="w-4 h-4" />
-                            <span>Institutional lender</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar className="w-4 h-4" />
-                            <span>Loan active timeline</span>
-                          </div>
-                          <Link to={`/borrower/lenders/${loan.tenantId}`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="mt-1"
-                            >
-                              View Lender Profile
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-
-                    {loan.rejectionReason && (
-                      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600">
-                        {loan.rejectionReason}
-                      </div>
-                    )}
-
-                    {currentStatusInfo && (
-                      <div
-                        className={`rounded-xl border px-4 py-3 ${currentStatusInfo.tone}`}
-                      >
-                        <p className="text-sm font-semibold">
-                          {currentStatusInfo.title}
-                        </p>
-                        <p className="text-xs mt-1.5 leading-relaxed">
-                          {currentStatusInfo.body}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {collateralEntries.length > 0 && (
-                  <Card className="border-border/20 bg-card">
-                    <CardContent className="p-6">
-                      <h3 className="text-base font-semibold mb-4">
-                        Collateral Details
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        {collateralEntries.map(({ key, value }) =>
-                          typeof value === "string" && isImageUrl(value) ? (
-                            <div
-                              key={key}
-                              className="rounded-lg border border-border/20 bg-muted/10 p-2.5"
-                            >
-                              <p className="text-[11px] text-muted-foreground mb-2">
-                                {titleCase(key)}
-                              </p>
-                              <img
-                                src={value}
-                                alt={titleCase(key)}
-                                className="w-full h-48 rounded-md object-cover border border-border/20"
-                                loading="lazy"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              key={key}
-                              className="rounded-lg border border-border/20 bg-muted/10 px-3 py-2.5"
-                            >
-                              <p className="text-[11px] text-muted-foreground">
-                                {titleCase(key)}
-                              </p>
-                              {typeof value === "string" &&
-                              /^https?:\/\//i.test(value) ? (
-                                <a
-                                  href={value}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="mt-1 font-medium text-primary inline-flex items-center gap-1 hover:underline break-all"
-                                >
-                                  Open Link <LinkIcon className="w-3 h-3" />
-                                </a>
-                              ) : (
-                                <p className="mt-1 font-medium break-all">
-                                  {String(value)}
-                                </p>
-                              )}
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {canRepay && (
-                  <Card className="border-border/20 bg-card">
-                    <CardContent className="p-6">
-                      <h3 className="text-base font-semibold mb-4">
-                        Payment Schedule
-                      </h3>
-                      {allSchedules.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No pending repayments found.
-                        </p>
-                      ) : (
-                        <div className="space-y-2.5">
-                          {allSchedules.map((s) => {
-                            const checked = selectedScheduleIds.includes(s.id);
-                            const scheduleDue = getScheduleDueAmount(
-                              s as unknown as Record<string, unknown>,
-                            );
-                            const schedulePaid = isSchedulePaid(
-                              s as unknown as Record<string, unknown>,
-                            );
-                            return (
-                              <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => {
-                                  if (schedulePaid) return;
-                                  toggleSchedule(s.id);
-                                }}
-                                className={`w-full rounded-lg border px-3.5 py-3 text-left transition-colors ${
-                                  schedulePaid
-                                    ? "border-border/20 bg-muted/10"
-                                    : checked
-                                      ? "border-primary bg-primary/5"
-                                      : "border-border/20 bg-muted/10"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <div
-                                      className={`w-4 h-4 rounded border ${schedulePaid ? "bg-emerald-500/15 border-emerald-500/40" : checked ? "bg-primary border-primary" : "border-border/60"}`}
-                                    />
-                                    <div>
-                                      <p className="text-xs text-muted-foreground">
-                                        Installment {s.installmentNumber}
-                                      </p>
-                                      <p className="text-sm font-semibold mt-0.5">
-                                        {new Date(
-                                          s.dueDate,
-                                        ).toLocaleDateString()}
-                                      </p>
-                                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                                        P:{" "}
-                                        {Number(
-                                          (s as any).principalAmount || 0,
-                                        ).toFixed(2)}{" "}
-                                        • I:{" "}
-                                        {Number(
-                                          (s as any).interestAmount || 0,
-                                        ).toFixed(2)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-semibold">
-                                      {money(scheduleDue)}
-                                    </p>
-                                    <p
-                                      className={`text-xs mt-0.5 ${schedulePaid ? "text-emerald-500" : "text-muted-foreground"}`}
-                                    >
-                                      {schedulePaid ? "Paid" : "Pending"}
-                                    </p>
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              <div className="col-span-12 xl:col-span-4 space-y-6">
-                <Card className="sticky top-28 rounded-[28px] border-border/20 bg-card shadow-sm">
-                  <CardContent className="p-6 space-y-4">
-                    <h3 className="text-base font-semibold">Loan Actions</h3>
-                    <div className="space-y-2.5 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">
-                          Paid installments
-                        </span>
-                        <span className="font-semibold">{paidCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Overdue</span>
-                        <span className="font-semibold">{overdueCount}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Next due</span>
-                        <span className="font-semibold">
-                          {nextDue
-                            ? new Date(nextDue.dueDate).toLocaleDateString()
-                            : "None"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {canRepay && id && (
-                      <Button
-                        className="w-full h-10"
-                        onClick={handlePaySelected}
-                        disabled={gatewayBusy}
-                      >
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        {selectedScheduleIds.length > 0
-                          ? `Pay Selected (${selectedScheduleIds.length})`
-                          : "Make Repayment"}
-                      </Button>
-                    )}
-
-                    {canSignContract && contractId && (
-                      <Link to={`/contracts/${contractId}`}>
-                        <Button variant="outline" className="w-full h-10">
-                          <ShieldCheck className="w-4 h-4 mr-2" /> View & Sign
-                          Contract
-                        </Button>
-                      </Link>
-                    )}
-
-                    {resolvedContract && (
-                      <div className="rounded-lg border border-border/20 bg-white/70 px-3 py-2.5 shadow-sm">
-                        <p className="text-[11px] text-muted-foreground">
-                          Contract
-                        </p>
-                        <p className="text-sm font-medium mt-1">
-                          {resolvedContract.contractNumber}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {titleCase(resolvedContract.status)}
-                        </p>
-                      </div>
-                    )}
-
-                    {selectedScheduleIds.length > 0 && (
-                      <div className="rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5">
-                        <p className="text-[11px] text-muted-foreground">
-                          Selected payable
-                        </p>
-                        <p className="text-sm font-semibold mt-1">
-                          {money(selectedAmount)}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {canRepay && id && (
-              <div className="sm:hidden fixed bottom-20 left-3 right-3 z-[130]">
-                <Button
-                  className="w-full h-11 shadow-xl"
-                  onClick={handlePaySelected}
-                  disabled={gatewayBusy}
-                >
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  {selectedScheduleIds.length > 0
-                    ? `Pay Selected (${selectedScheduleIds.length})`
-                    : "Make Repayment"}
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {showGatewayPicker && (
-          <div className="fixed inset-0 z-[140] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <Card className="w-full max-w-md border-2 border-primary/20 bg-card">
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold">Payment Method</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Select your preferred gateway
-                    </p>
+                    <Badge variant="outline" className="text-[10px] font-bold uppercase border-primary/20 text-primary">{payableSchedules.length} Pending</Badge>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowGatewayPicker(false)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
                 </div>
+                <CardContent className="p-0">
+                  <div className="divide-y divide-border/30 max-h-[500px] overflow-y-auto no-scrollbar">
+                    {allSchedules.length === 0 ? (
+                      <div className="p-12 text-center text-muted-foreground">
+                         <Clock3 className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                         <p className="font-bold text-sm tracking-tight">No repayment schedule generated yet.</p>
+                      </div>
+                    ) : (
+                      allSchedules.map((s) => {
+                        const paid = isSchedulePaid(s as any);
+                        const selected = selectedScheduleIds.includes(s.id);
+                        return (
+                          <div 
+                            key={s.id} 
+                            onClick={() => !paid && toggleSchedule(s.id)}
+                            className={cn(
+                              "p-5 flex items-center justify-between gap-4 transition-all hover:bg-muted/10 group cursor-pointer",
+                              paid && "opacity-60 cursor-default",
+                              selected && "bg-primary/[0.03] border-l-4 border-l-primary -ml-[4px]"
+                            )}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className={cn(
+                                "w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all",
+                                paid ? "bg-emerald-500 border-emerald-500 text-white" : 
+                                selected ? "bg-primary border-primary text-white" : 
+                                "border-border/60"
+                              )}>
+                                {paid && <CheckCircle2 className="w-4 h-4" />}
+                              </div>
+                              <div className="space-y-0.5">
+                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Installment {s.installmentNumber}</p>
+                                <p className="text-sm font-bold text-foreground">{new Date(s.dueDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold tracking-tight text-foreground">{money(getScheduleDueAmount(s as any))}</p>
+                              <p className={cn("text-[10px] font-bold uppercase tracking-widest", paid ? "text-emerald-500" : overdueCount > 0 && Array.from(payableSchedules).indexOf(s) === 0 ? "text-red-500" : "text-muted-foreground")}>
+                                {paid ? "Transaction Success" : overdueCount > 0 && Array.from(payableSchedules).indexOf(s) === 0 ? "Overdue" : "Pending Action"}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`h-24 flex flex-col gap-2 transition-all ${gateway === "KHALTI" ? "border-primary bg-primary/5" : ""}`}
-                    onClick={() => setGateway("KHALTI")}
-                  >
-                    <img
-                      src="/images/khalti.png"
-                      alt="Khalti"
-                      className="h-8"
-                    />
-                    <span className="text-xs">Khalti</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`h-24 flex flex-col gap-2 transition-all ${gateway === "ESEWA" ? "border-primary bg-primary/5" : ""}`}
-                    onClick={() => setGateway("ESEWA")}
-                  >
-                    <img src="/images/esewa.png" alt="eSewa" className="h-8" />
-                    <span className="text-xs">eSewa</span>
-                  </Button>
+              <Card className="rounded-xl border-border bg-card shadow-sm overflow-hidden">
+                <div className="border-b border-border/30 p-6 bg-muted/5">
+                  <h3 className="text-base font-bold flex items-center gap-2">
+                     <ShieldCheck className="w-4 h-4 text-emerald-500" /> Collateral & Asset Security
+                  </h3>
                 </div>
+                <CardContent className="p-6">
+                  {collateralEntries.length === 0 ? (
+                    <p className="text-sm text-center py-8 text-muted-foreground italic">No collateral assets registered for this loan.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                      {collateralEntries.map(({ key, value }, idx) => (
+                        <div key={idx} className="space-y-3 group">
+                           <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{titleCase(key)}</p>
+                           {isImageUrl(String(value)) ? (
+                             <div className="aspect-[4/3] rounded-2xl border border-border/40 overflow-hidden bg-muted/5 group-hover:shadow-md transition-all">
+                                <img src={String(value)} alt={key} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" />
+                             </div>
+                           ) : (
+                             <div className="p-4 rounded-2xl border border-border/20 bg-muted/10 font-bold text-sm text-foreground break-all shadow-inner">
+                                {String(value)}
+                             </div>
+                           )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-                <div className="rounded-xl border border-border/20 bg-white/70 p-3 text-sm flex items-center justify-between shadow-sm">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-semibold">{money(selectedAmount)}</span>
+            <div className="lg:col-span-4 space-y-6">
+              {currentStatusInfo && (
+                <div className={cn("p-6 rounded-xl border border-border shadow-sm space-y-3 bg-card", currentStatusInfo.tone)}>
+                  <div className="flex items-center gap-2">
+                     <StatusIcon className="w-5 h-5" />
+                     <h4 className="font-bold text-sm uppercase tracking-wider">{currentStatusInfo.title}</h4>
+                  </div>
+                  <p className="text-xs font-medium leading-relaxed opacity-80">{currentStatusInfo.body}</p>
                 </div>
+              )}
 
-                <div className="flex gap-3 justify-end mt-6">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowGatewayPicker(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleGatewayPayment} disabled={gatewayBusy}>
-                    {gatewayBusy ? "Processing..." : "Complete Payment"}
-                  </Button>
+              <Card className="rounded-xl border-border bg-card shadow-sm overflow-hidden">
+                <div className="border-b border-border/30 p-6">
+                  <h3 className="text-base font-bold">Lender Insight</h3>
                 </div>
-              </CardContent>
-            </Card>
+                <CardContent className="p-6 space-y-6 flex-1">
+                  <div className="flex items-center gap-4 p-4 rounded-2xl border border-border/20 bg-white dark:bg-muted/5 shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                       <Building2 className="w-6 h-6" />
+                    </div>
+                    <div className="min-w-0">
+                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Lender Partner</p>
+                       <p className="text-sm font-bold text-foreground truncate">{loan.tenantId.slice(0,10)} FINANCIAL CORP</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest pl-1">Compliance Progress</p>
+                    <div className="space-y-4">
+                       <ProgressItem label="Credit Approval" done />
+                       <ProgressItem label="Document Verification" done />
+                       <ProgressItem label="Blockchain Anchoring" done={!!loan.blockchainTxHash} />
+                       <ProgressItem label="Fund Disbursement" done={loan.status === LoanStatus.LOAN_PROVIDED || loan.status === LoanStatus.PARTIALLY_PAID || loan.status === LoanStatus.PAID} />
+                    </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-border/30 space-y-4">
+                     <Link to={`/lenders/${loan.tenantId}`} className="block">
+                        <Button variant="outline" className="w-full rounded-2xl h-12 font-bold bg-muted/10 border-border/40 hover:bg-muted/20 cursor-pointer">
+                           Lender Profile
+                        </Button>
+                     </Link>
+                     {resolvedContract && (
+                       <Link to={`/contracts/${contractId}`} className="block">
+                         <Button className="w-full rounded-2xl h-12 font-bold bg-foreground text-background hover:bg-foreground/90 cursor-pointer">
+                           View Signed Contract
+                         </Button>
+                       </Link>
+                     )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-xl bg-primary/5 border border-primary/20">
+                 <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                       <p className="text-xs font-bold text-primary uppercase tracking-widest">Total Repayable</p>
+                       <p className="text-xl font-bold text-primary tracking-tight">{money(loan.requestedAmount * 1.15)}</p>
+                    </div>
+                    <div className="space-y-2">
+                       <div className="h-2 w-full bg-primary/10 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-700" 
+                            style={{ width: `${(paidCount / schedules.length) * 100}%` }} 
+                          />
+                       </div>
+                       <p className="text-[10px] font-bold text-primary/60 text-right uppercase tracking-tighter">
+                          {Math.round((paidCount / schedules.length) * 100)}% Recovered
+                       </p>
+                    </div>
+                 </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>
+
+      {showGatewayPicker && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
+           <Card className="w-full max-w-sm rounded-xl border border-border bg-card shadow-xl overflow-hidden animate-in zoom-in-95 duration-300">
+              <div className="p-6 border-b border-border/30 flex items-center justify-between">
+                 <h3 className="font-bold text-lg">Select Gateway</h3>
+                 <button onClick={() => setShowGatewayPicker(false)} className="rounded-full cursor-pointer hover:bg-muted p-1 transition-colors"><X className="w-4 h-4" /></button>
+              </div>
+              <CardContent className="p-6 space-y-4">
+                 <button 
+                  onClick={() => setGateway("KHALTI")}
+                  className={cn("w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer hover:shadow-lg", gateway === "KHALTI" ? "border-purple-500 bg-purple-500/5 shadow-purple-500/10" : "border-border/30")}
+                 >
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-xl bg-purple-500 p-2"><img src="/images/khalti-logo.png" alt="K" className="w-full h-full object-contain" /></div>
+                       <span className="font-bold text-purple-600">Khalti Wallet</span>
+                    </div>
+                    {gateway === "KHALTI" && <div className="w-3 h-3 rounded-full bg-purple-500 ring-4 ring-purple-500/20" />}
+                 </button>
+                 <button 
+                  onClick={() => setGateway("ESEWA")}
+                  className={cn("w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all cursor-pointer hover:shadow-lg", gateway === "ESEWA" ? "border-emerald-500 bg-emerald-500/5 shadow-emerald-500/10" : "border-border/30")}
+                 >
+                    <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-xl bg-emerald-500 p-2"><img src="/images/esewa-logo.png" alt="E" className="w-full h-full object-contain" /></div>
+                       <span className="font-bold text-emerald-600">eSewa Nepal</span>
+                    </div>
+                    {gateway === "ESEWA" && <div className="w-3 h-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />}
+                 </button>
+
+                 <div className="pt-4 space-y-3">
+                    <div className="flex items-center justify-between text-sm px-1">
+                       <span className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">Total Amount</span>
+                       <span className="font-bold text-xl tracking-tight">{money(selectedAmount)}</span>
+                    </div>
+                    <Button onClick={handleGatewayPayment} className="w-full h-12 rounded-xl font-bold uppercase tracking-wide bg-primary shadow-lg shadow-primary/20 text-md cursor-pointer transition-all active:scale-95">
+                       Verify and Pay
+                    </Button>
+                 </div>
+              </CardContent>
+           </Card>
+        </div>
+      )}
     </BorrowerLayout>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="text-sm font-bold text-foreground">{value || "N/A"}</p>
+    </div>
+  );
+}
+
+function MetricBox({ label, value, sub }: { label: string; value: any; sub: string }) {
+  return (
+    <div className="text-center">
+      <p className="text-[9px] font-bold uppercase tracking-tighter text-muted-foreground/60">{label}</p>
+      <div className="flex items-baseline justify-center gap-1">
+        <span className="text-base font-bold text-primary">{value}</span>
+        <span className="text-[8px] font-bold text-muted-foreground uppercase">{sub}</span>
+      </div>
+    </div>
+  );
+}
+
+function ProgressItem({ label, done }: { label: string; done?: boolean }) {
+  return (
+    <div className="flex items-center gap-3 transition-all duration-500" style={{ opacity: done ? 1 : 0.4 }}>
+       <div className={cn("w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all shadow-sm", done ? "bg-emerald-500 border-emerald-500 text-white" : "border-border/60 bg-transparent text-transparent")}>
+          <CheckCircle2 className="w-3 h-3" />
+       </div>
+       <span className={cn("text-xs font-bold tracking-tight", done ? "text-foreground" : "text-muted-foreground")}>{label}</span>
+    </div>
   );
 }
