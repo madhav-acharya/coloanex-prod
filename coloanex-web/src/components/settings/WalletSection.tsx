@@ -1,8 +1,9 @@
-import { Check, X } from "lucide-react";
+import { Check, X, ShieldCheck, Wallet, Plus, Trash2, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 type WalletSectionProps = {
   wallets: any[];
@@ -39,189 +40,180 @@ export default function WalletSection({
   loadingWalletCoinBalances,
   walletCoinBalances,
 }: WalletSectionProps) {
+  const isMetaConnected = wallets.some((w) => w.provider === "METAMASK");
+  const primaryWallet = wallets.find((w) => w.isPrimary) || wallets.find((w) => w.provider === "METAMASK");
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>MetaMask Wallet Settings</CardTitle>
-        <p className="text-sm text-muted-foreground mt-1">
-          Connect your MetaMask wallet and choose how blockchain gas is paid.
-        </p>
-      </CardHeader>
-      <CardContent className="pt-4 space-y-4">
-        {wallets.some((w) => w.provider === "METAMASK") ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
-            <div className="flex items-start gap-3 sm:items-center">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center border border-white/20 shadow-sm">
-                <Check className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
-                  MetaMask Connected
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground/80 font-medium break-all">
-                  {wallets.find((wallet) => wallet.isPrimary)?.address ||
-                    wallets.find((w) => w.provider === "METAMASK")?.address}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => void disconnectMetamask()}
-              disabled={isCreatingWallet}
-              size="sm"
-              variant="outline"
-              className="w-full sm:w-auto border-red-200 text-destructive hover:bg-red-50 hover:text-red-700 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold h-10 px-4 transition-all"
-            >
-              Disconnect
-            </Button>
+    <div className="space-y-6">
+      <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+        <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-bold">Web3 Infrastructure</CardTitle>
           </div>
-        ) : (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
-            <div className="flex items-start gap-3 sm:items-center">
-              <div className="w-10 h-10 rounded-xl bg-destructive flex items-center justify-center border border-white/20 shadow-sm">
-                <X className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-destructive text-base">
-                  MetaMask Not Connected
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground/80 font-medium">
-                  You are currently disconnected. Link your wallet to perform
-                  on-chain operations.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => void connectMetamask()}
-              disabled={isCreatingWallet}
-              className="w-full sm:w-auto bg-destructive hover:bg-destructive/90 text-white font-bold h-10 px-4 border border-white/10"
-            >
-              {isCreatingWallet ? "Connecting..." : "Connect Wallet"}
-            </Button>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label>Gas Payment Mode</Label>
-          <div className="rounded-lg border border-border/70 bg-muted/30 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Current Mode
-            </p>
-            <p className="mt-1 text-sm font-medium">
-              {blockchainAccess.modeLabel}
-            </p>
-            {!blockchainAccess.canRunBlockchain && blockchainAccess.reason ? (
-              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                {blockchainAccess.reason}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              className={`cursor-pointer ${
-                gasPaymentMode === "USER_WALLET"
-                  ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                  : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-              }`}
-              onClick={() => void saveGasMode("USER_WALLET")}
-            >
-              User Wallet
-            </Button>
-            <Button
-              className={`cursor-pointer ${
-                gasPaymentMode === "PLATFORM_WALLET"
-                  ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                  : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
-              }`}
-              onClick={() => void saveGasMode("PLATFORM_WALLET")}
-            >
-              Platform Sponsored
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            User Wallet mode requires MetaMask connection. Platform Sponsored
-            mode requires an active subscription.
-          </p>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              value={manualWalletAddress}
-              onChange={(e) => setManualWalletAddress(e.target.value)}
-              placeholder="Add wallet manually (0x...)"
-            />
-            <Button
-              variant="outline"
-              onClick={() => void addManualWebWallet()}
-              className="cursor-pointer bg-muted text-foreground hover:bg-muted/80 w-full sm:w-auto"
-            >
-              Add
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Connected Wallets</Label>
-          <div className="space-y-2">
-            {wallets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No wallets connected yet
-              </p>
-            ) : (
-              wallets.map((wallet) => (
-                <div
-                  key={wallet.id}
-                  className="border rounded-md p-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      {wallet.label || "Wallet"} • {wallet.purpose}
-                    </p>
-                    <p className="text-xs text-muted-foreground break-all">
-                      {wallet.address}
-                    </p>
-                    {wallet.provider === "METAMASK" ? (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {loadingWalletCoinBalances
-                          ? "Loading balance..."
-                          : walletCoinBalances[wallet.id]
-                            ? `${walletCoinBalances[wallet.id].value} ${walletCoinBalances[wallet.id].symbol}`
-                            : "Balance unavailable"}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {!wallet.isPrimary && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="cursor-pointer bg-muted text-foreground hover:bg-muted/80 flex-1 sm:flex-none"
-                        onClick={async () => {
-                          await setPrimaryWallet({ id: wallet.id });
-                          await refetchWallets();
-                        }}
-                      >
-                        Set Primary
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="cursor-pointer flex-1 sm:flex-none"
-                      onClick={async () => {
-                        await deleteWallet({ id: wallet.id });
-                        await refetchWallets();
-                      }}
-                    >
-                      Remove
-                    </Button>
-                  </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className={cn(
+            "p-5 rounded-2xl border transition-all duration-300",
+            isMetaConnected 
+              ? "bg-emerald-500/5 border-emerald-500/20" 
+              : "bg-destructive/5 border-destructive/20"
+          )}>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm border",
+                  isMetaConnected ? "bg-emerald-500 text-white border-emerald-400" : "bg-destructive text-white border-destructive/40"
+                )}>
+                  {isMetaConnected ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
                 </div>
-              ))
-            )}
+                <div>
+                  <p className={cn("text-sm font-bold uppercase tracking-tight", isMetaConnected ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
+                    {isMetaConnected ? "MetaMask Active" : "MetaMask Disconnected"}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                    {isMetaConnected ? primaryWallet?.address : "On-chain capabilities are currently restricted."}
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => (isMetaConnected ? void disconnectMetamask() : void connectMetamask())}
+                disabled={isCreatingWallet}
+                variant={isMetaConnected ? "outline" : "default"}
+                className={cn(
+                  "h-10 rounded-xl font-bold px-6 transition-all active:scale-95",
+                  isMetaConnected 
+                    ? "border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" 
+                    : "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                )}
+              >
+                {isCreatingWallet ? "Processing..." : isMetaConnected ? "Terminate Session" : "Link MetaMask"}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+
+          <div className="space-y-3">
+             <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Gas Execution Strategy</Label>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  { id: "PLATFORM_WALLET", label: "Sponsored execution", desc: "Platform covers gas fees", active: gasPaymentMode === "PLATFORM_WALLET" },
+                  { id: "USER_WALLET", label: "Self-Execution", desc: "User pays network gas", active: gasPaymentMode === "USER_WALLET" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => void saveGasMode(m.id as any)}
+                    className={cn(
+                      "group flex flex-col text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer",
+                      m.active ? "bg-primary/10 border-primary/20 shadow-sm" : "bg-background border-border/60 hover:bg-muted/30"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                       <span className={cn("text-xs font-bold", m.active ? "text-primary" : "text-foreground/80")}>{m.label}</span>
+                       {m.active && <Check className="w-3.5 h-3.5 text-primary" />}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground font-medium leading-none">{m.desc}</p>
+                  </button>
+                ))}
+             </div>
+             {!blockchainAccess.canRunBlockchain && (
+               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                  <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tighter uppercase">{blockchainAccess.reason}</p>
+               </div>
+             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+        <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
+          <div className="flex items-center gap-2">
+            <Plus className="w-4 h-4 text-primary" />
+            <CardTitle className="text-sm font-bold">Wallet Directory</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className="flex gap-2">
+             <Input
+                value={manualWalletAddress}
+                className="h-10 rounded-xl bg-background border-border/60 font-medium text-xs transition-all focus:ring-1 focus:ring-primary/20"
+                onChange={(e) => setManualWalletAddress(e.target.value)}
+                placeholder="Secure Wallet (0x...)"
+              />
+              <Button
+                variant="outline"
+                onClick={() => void addManualWebWallet()}
+                className="h-10 rounded-xl border-primary/30 text-primary hover:bg-primary/5 font-bold px-5"
+              >
+                Register
+              </Button>
+          </div>
+
+          <div className="space-y-2">
+             <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Connected Identities</Label>
+             <div className="grid grid-cols-1 gap-2">
+                {wallets.length === 0 ? (
+                  <div className="p-8 rounded-2xl border border-dashed border-border/40 bg-muted/5 text-center text-muted-foreground">
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">No wallets indexed yet</p>
+                  </div>
+                ) : (
+                  wallets.map((wallet) => (
+                    <div key={wallet.id} className="group p-3 rounded-xl border border-border/60 bg-background/50 flex items-center justify-between gap-4 transition-all hover:border-primary/20">
+                      <div className="flex items-center gap-3 min-w-0">
+                         <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center border border-border shrink-0">
+                            <Wallet className="w-4 h-4 text-muted-foreground" />
+                         </div>
+                         <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                               <p className="text-xs font-bold truncate">{wallet.label || "Secure Asset"}</p>
+                               {wallet.isPrimary ? (
+                                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black uppercase tracking-tighter">Primary</span>
+                               ) : (
+                                 <span className="text-[8px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-black uppercase tracking-tighter">{wallet.purpose}</span>
+                               )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground transition-colors group-hover:text-primary max-w-[200px] truncate">{wallet.address}</p>
+                            {wallet.provider === "METAMASK" && (
+                              <p className="text-[9px] font-bold text-emerald-600/70 dark:text-emerald-400/70 uppercase tracking-widest mt-0.5">
+                                {loadingWalletCoinBalances ? "Querying Chain..." : walletCoinBalances[wallet.id] ? `${walletCoinBalances[wallet.id].value} ${walletCoinBalances[wallet.id].symbol}` : "Balance Offline"}
+                              </p>
+                            )}
+                         </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                         {!wallet.isPrimary && (
+                           <Button
+                              size="icon"
+                              variant="ghost"
+                              className="w-8 h-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10"
+                              onClick={async () => {
+                                await setPrimaryWallet({ id: wallet.id });
+                                await refetchWallets();
+                              }}
+                           >
+                              <ShieldCheck className="w-4 h-4" />
+                           </Button>
+                         )}
+                         <Button
+                            size="icon"
+                            variant="ghost"
+                            className="w-8 h-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              await deleteWallet({ id: wallet.id });
+                              await refetchWallets();
+                            }}
+                         >
+                            <Trash2 className="w-4 h-4" />
+                         </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+             </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
