@@ -72,12 +72,12 @@ export default function BrowseLenders() {
     <button
       key={lender.id}
       type="button"
-      onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-      className="w-full rounded-2xl border border-border/30 bg-white/75 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+      onClick={() => navigate(`/lenders/${lender.id}`)}
+      className="w-full rounded-xl border border-border bg-card p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-11 h-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
             {lender.logo ? (
               <img
                 src={lender.logo}
@@ -85,7 +85,7 @@ export default function BrowseLenders() {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-lg font-bold text-primary">
+              <span className="text-base font-bold text-primary">
                 {lender.name.charAt(0).toUpperCase()}
               </span>
             )}
@@ -94,14 +94,14 @@ export default function BrowseLenders() {
             <p className="text-sm font-semibold text-foreground truncate">
               {lender.name}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1 truncate">
+            <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
               {lender.contactEmail || lender.address || "Lending partner"}
             </p>
           </div>
         </div>
         <Badge
           className={cn(
-            "rounded-full px-3 py-1 text-[10px] uppercase tracking-widest",
+            "rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest shrink-0",
             lender.isActive
               ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
               : "bg-muted/40 text-muted-foreground border-border",
@@ -111,43 +111,101 @@ export default function BrowseLenders() {
         </Badge>
       </div>
 
-      <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+      <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
         {lender.contactEmail && (
           <div className="flex items-center gap-2">
-            <Mail className="w-3.5 h-3.5" />
+            <Mail className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{lender.contactEmail}</span>
           </div>
         )}
         {lender.contactPhone && (
           <div className="flex items-center gap-2">
-            <Phone className="w-3.5 h-3.5" />
+            <Phone className="w-3.5 h-3.5 shrink-0" />
             <span>{lender.contactPhone}</span>
           </div>
         )}
         {lender.address && (
           <div className="flex items-center gap-2">
-            <MapPin className="w-3.5 h-3.5" />
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{lender.address}</span>
           </div>
         )}
       </div>
 
-      <div className="mt-4 flex items-center justify-between text-xs font-semibold text-primary">
+      <div className="mt-3 flex items-center justify-between text-xs font-semibold text-primary">
         <span>View Details</span>
         <ArrowRight className="w-3.5 h-3.5" />
       </div>
     </button>
   );
 
+  const renderPagination = () =>
+    totalPages > 1 ? (
+      <div className="flex justify-center">
+        <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1 shadow-sm">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={page === 1}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            <ChevronRight className="w-4 h-4 rotate-180" />
+          </Button>
+          {Array.from({ length: Math.min(totalPages, 7) }).map((_, i) => (
+            <Button
+              key={i}
+              variant={page === i + 1 ? "default" : "ghost"}
+              className={cn(
+                "h-8 w-8 text-xs",
+                page === i + 1 && "bg-primary text-primary-foreground",
+              )}
+              onClick={() => setPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={page === totalPages}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    ) : null;
+
   return (
-    <BorrowerLayout
-      title="Lenders"
-      description="Search and choose lending partners"
-    >
-      <div className="space-y-8 lg:space-y-12">
+    <BorrowerLayout>
+      <div className="space-y-6">
+        <section className="bg-primary/5 border border-border rounded-xl p-5 md:p-6 mb-2">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+            <div className="space-y-2 flex-1">
+              <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 transition-colors mb-2">Smart Lending Guide</Badge>
+              <h2 className="text-xl font-bold text-foreground">Discover the Perfect Loan Partner</h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Connect with verified financial institutions tailored to your specific needs. Each lender on our platform undergoes a rigorous vetting process to ensure transparency and security for your financial journey.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 shrink-0">
+              <div className="bg-card border border-border/40 rounded-xl px-4 py-3 flex flex-col items-center justify-center min-w-[100px] shadow-sm">
+                <span className="text-lg font-bold text-primary">0%</span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Hidden Fees</span>
+              </div>
+              <div className="bg-card border border-border/40 rounded-xl px-4 py-3 flex flex-col items-center justify-center min-w-[100px] shadow-sm">
+                <span className="text-lg font-bold text-emerald-500">24h</span>
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Avg Response</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="lg:hidden space-y-4">
           <div className="relative z-[120]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search lenders"
               value={search}
@@ -157,10 +215,10 @@ export default function BrowseLenders() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="h-11 rounded-2xl border-border/30 bg-white/80 pl-10 shadow-sm"
+              className="h-11 rounded-xl border border-border bg-card pl-10"
             />
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-2xl border border-border/30 bg-card shadow-lg">
+              <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                 {suggestions.map((item) => (
                   <button
                     key={item.id}
@@ -196,7 +254,7 @@ export default function BrowseLenders() {
                 type="button"
                 size="sm"
                 variant={statusFilter === item.key ? "default" : "outline"}
-                className="h-8 whitespace-nowrap px-3"
+                className="h-8 whitespace-nowrap px-4 rounded-full"
                 onClick={() => {
                   setStatusFilter(item.key);
                   setPage(1);
@@ -210,11 +268,11 @@ export default function BrowseLenders() {
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 w-full rounded-2xl" />
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
               ))}
             </div>
           ) : lenderTenants.length === 0 ? (
-            <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
+            <Card className="rounded-xl border border-border bg-card shadow-sm">
               <CardContent className="p-6 text-center">
                 <Search className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
                 <p className="text-sm text-muted-foreground">
@@ -228,57 +286,15 @@ export default function BrowseLenders() {
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="flex justify-center">
-              <div className="flex items-center gap-2 rounded-xl border border-border/20 bg-card p-1.5 shadow-sm">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronRight className="w-4 h-4 rotate-180" />
-                </Button>
-                {Array.from({ length: totalPages })
-                  .slice(0, 5)
-                  .map((_, i) => {
-                    const pageNo = i + 1;
-                    return (
-                      <Button
-                        key={pageNo}
-                        variant={page === pageNo ? "default" : "ghost"}
-                        className={cn(
-                          "h-8 w-8 text-xs",
-                          page === pageNo &&
-                            "bg-primary text-primary-foreground",
-                        )}
-                        onClick={() => setPage(pageNo)}
-                      >
-                        {pageNo}
-                      </Button>
-                    );
-                  })}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          {renderPagination()}
         </div>
 
-        <div className="hidden lg:block space-y-10">
-          <Card className="overflow-visible rounded-[28px] border-border/30 bg-white/70 shadow-sm backdrop-blur-xl">
-            <CardContent className="p-6 lg:p-8 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-4">
+        <div className="hidden lg:block space-y-6">
+          <Card className="overflow-visible rounded-xl border border-border bg-card shadow-sm">
+            <CardContent className="p-5 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-3">
                 <div className="relative z-[120]">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search by lender name, city, or email"
                     value={search}
@@ -290,10 +306,10 @@ export default function BrowseLenders() {
                       setSearch(e.target.value);
                       setPage(1);
                     }}
-                    className="h-12 rounded-2xl border-border/30 bg-white/80 pl-11 shadow-sm"
+                    className="h-11 rounded-xl border border-border bg-muted/20 pl-10"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-2xl border border-border/30 bg-card shadow-lg">
+                    <div className="absolute z-[130] mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg">
                       {suggestions.map((item) => (
                         <button
                           key={item.id}
@@ -324,7 +340,7 @@ export default function BrowseLenders() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-12 rounded-2xl border-border/30 bg-white/80 shadow-sm">
+                  <SelectTrigger className="h-11 rounded-xl border border-border bg-muted/20">
                     <div className="flex items-center gap-2 text-sm">
                       <SlidersHorizontal className="w-4 h-4 text-primary" />
                       <SelectValue placeholder="Status" />
@@ -337,7 +353,7 @@ export default function BrowseLenders() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{totalCount} lenders available</span>
                 <span>
                   Showing {lenderTenants.length} of {totalCount}
@@ -346,16 +362,16 @@ export default function BrowseLenders() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-72 w-full rounded-2xl" />
+                <Skeleton key={i} className="h-52 w-full rounded-xl" />
               ))
             ) : lenderTenants.length === 0 ? (
-              <Card className="col-span-full rounded-[28px] border-dashed border-border/30 bg-card shadow-sm">
-                <CardContent className="py-20 text-center">
+              <Card className="col-span-full rounded-xl border-dashed border-border bg-card shadow-sm">
+                <CardContent className="py-16 text-center">
                   <Search className="w-10 h-10 mx-auto text-muted-foreground/40" />
-                  <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  <h3 className="mt-4 text-base font-semibold text-foreground">
                     No lenders matched your filters
                   </h3>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -369,52 +385,7 @@ export default function BrowseLenders() {
             )}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center pb-2">
-              <div className="flex items-center gap-2 rounded-xl border border-border/20 bg-card p-1.5 shadow-sm">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page === 1}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPage((p) => p - 1);
-                  }}
-                >
-                  <ChevronRight className="w-4 h-4 rotate-180" />
-                </Button>
-                {Array.from({ length: totalPages }).map((_, i) => (
-                  <Button
-                    key={i}
-                    variant={page === i + 1 ? "default" : "ghost"}
-                    className={cn(
-                      "h-8 w-8 text-xs",
-                      page === i + 1 && "bg-primary text-primary-foreground",
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPage(i + 1);
-                    }}
-                  >
-                    {i + 1}
-                  </Button>
-                ))}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  disabled={page === totalPages}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPage((p) => p + 1);
-                  }}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+          {renderPagination()}
         </div>
       </div>
     </BorrowerLayout>
