@@ -28,10 +28,15 @@ import {
   ArrowRight,
   Building2,
   Check,
+  CheckCircle2,
   FileBadge,
+  FileCheck,
   FileScan,
+  Heart,
   Home,
   Upload,
+  User,
+  UserCheck,
   UserCircle2,
 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
@@ -80,16 +85,17 @@ export function KycVerificationModal({
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const stepMeta = [
-    { id: 1, label: "Identity", icon: UserCircle2 },
-    { id: 2, label: "Address", icon: Home },
-    { id: 3, label: "Income", icon: IconCurrencyRupeeNepalese },
-    { id: 4, label: "Document", icon: FileBadge },
-    { id: 5, label: "Upload", icon: FileScan },
+    { id: 1, label: "Basic Info", icon: UserCircle2 },
+    { id: 2, label: "Personal", icon: Heart },
+    { id: 3, label: "Address", icon: Home },
+    { id: 4, label: "Professional", icon: Building2 },
+    { id: 5, label: "Documents", icon: FileBadge },
+    { id: 6, label: "Finalize", icon: FileScan },
   ];
   const stepProgress = Math.round((step / stepMeta.length) * 100);
   const inputClass =
-    "h-11 bg-background/60 border-border/40 focus-visible:ring-primary/30";
-  const selectClass = "h-11 bg-background/60 border-border/40";
+    "h-10 bg-muted/20 border-border/40 focus-visible:ring-primary/30 rounded-xl text-sm";
+  const selectClass = "h-10 bg-muted/20 border-border/40 rounded-xl text-sm";
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
 
@@ -241,16 +247,25 @@ export function KycVerificationModal({
     }
     if (currentStep === 2) {
       return (
+        Boolean(form.gender) &&
+        Boolean(form.maritalStatus) &&
+        Boolean(form.fatherName) &&
+        Boolean(form.motherName) &&
+        Boolean(form.grandfatherName)
+      );
+    }
+    if (currentStep === 3) {
+      return (
         Boolean(form.province.trim()) &&
         Boolean(form.district.trim()) &&
         Boolean(form.municipality.trim()) &&
         Boolean(form.ward.trim())
       );
     }
-    if (currentStep === 3) {
+    if (currentStep === 4) {
       return Boolean(form.occupation.trim()) && Boolean(form.monthlyIncome);
     }
-    if (currentStep === 4) {
+    if (currentStep === 5) {
       return (
         Boolean(selectedDocumentTypes.length) && Boolean(activeDocumentType)
       );
@@ -290,7 +305,7 @@ export function KycVerificationModal({
       });
       return;
     }
-    setStep((prev) => Math.min(prev + 1, 5));
+    setStep((prev) => Math.min(prev + 1, 6));
   };
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1));
@@ -419,746 +434,525 @@ export function KycVerificationModal({
     }
   };
 
+  const genderIcons = {
+    Male: UserCircle2,
+    Female: UserCircle2,
+    Other: UserCircle2,
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-4xl p-0 max-h-[92vh] overflow-y-auto"
+      <DialogContent 
+        className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto rounded-xl"
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <DialogHeader>
-          <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-muted/5">
-            <DialogTitle className="text-xl">Verify KYC</DialogTitle>
-            <DialogDescription>
-              Complete verification for this lender before applying for a loan.
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40">
+          <div className="space-y-1">
+            <DialogTitle className="text-xl font-bold tracking-tight">KYC Verification</DialogTitle>
+            <DialogDescription className="text-sm">
+              Complete your identity verification to unlock full platform features.
             </DialogDescription>
           </div>
         </DialogHeader>
-        <div className="px-6 pb-6 pt-5">
-          <div className="mb-6 rounded-2xl border border-border/40 bg-background/60 p-4 space-y-3">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Step {step} of {stepMeta.length}
-                </p>
-                <p className="text-sm font-semibold text-foreground">
-                  {stepMeta[step - 1]?.label}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Complete each section to submit your KYC verification.
-                </p>
-              </div>
-              <div className="text-xs font-semibold text-muted-foreground">
-                {stepProgress}%
-              </div>
-            </div>
-            <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden">
-              <div
-                className="h-full bg-primary"
-                style={{ width: `${stepProgress}%` }}
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest">
-              {stepMeta.map((item) => {
-                const Icon = item.icon;
+
+        <div className="px-6 py-6">
+          <div className="mb-8 overflow-hidden">
+            <div className="flex items-center justify-between relative px-2">
+              <div className="absolute top-5 left-8 right-8 h-[2px] bg-border/40 z-0" />
+              {stepMeta.map((s, i) => {
+                const Icon = s.icon;
+                const isDone = step > s.id;
+                const isActive = step === s.id;
                 return (
-                  <span
-                    key={item.id}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border",
-                      step >= item.id
-                        ? "border-primary/40 text-primary bg-primary/10"
-                        : "border-border/40 text-muted-foreground bg-muted/30",
-                    )}
-                  >
-                    <Icon className="w-3 h-3" />
-                    {item.label}
-                  </span>
+                  <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
+                        isDone
+                          ? "bg-primary border-primary text-primary-foreground"
+                          : isActive
+                          ? "border-primary bg-background text-primary ring-4 ring-primary/10"
+                          : "border-border bg-background text-muted-foreground",
+                      )}
+                    >
+                      {step > s.id ? (
+                        <Check className="w-5 h-5 stroke-[3px]" />
+                      ) : (
+                        <Icon className="w-5 h-5" />
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold uppercase tracking-wider text-center hidden sm:block",
+                        isActive ? "text-primary" : "text-muted-foreground",
+                      )}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
                 );
               })}
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-6">
               {step === 1 && (
-                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                    <Building2 className="w-4 h-4 text-primary" />
-                    Identity Information
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                     <UserCircle2 className="w-4 h-4 text-primary" />
+                     <h3 className="text-sm font-bold text-foreground">Basic Information</h3>
                   </div>
-                  {!isLockedTenant && (
-                    <div className="space-y-2">
-                      <Label>
-                        Lender <span className="text-destructive">*</span>
-                      </Label>
-                      <Select
-                        value={form.tenantId}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, tenantId: value }))
-                        }
-                      >
-                        <SelectTrigger className={selectClass}>
-                          <SelectValue placeholder="Select lender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tenants.map((tenant) => (
-                            <SelectItem key={tenant.id} value={tenant.id}>
-                              {tenant.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label>
-                        First Name <span className="text-destructive">*</span>
-                      </Label>
+                  <div className="grid grid-cols-1 gap-y-4">
+                    {!isLockedTenant && (
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Target Institution <span className="text-destructive">*</span>
+                        </Label>
+                        <Select
+                          value={form.tenantId}
+                          onValueChange={(value) => setForm((prev) => ({ ...prev, tenantId: value }))}
+                        >
+                          <SelectTrigger className={inputClass}>
+                            <SelectValue placeholder="Select target lender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tenants.map((tenant) => (
+                              <SelectItem key={tenant.id} value={tenant.id}>
+                                {tenant.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">First Name *</Label>
                       <Input
                         value={form.firstName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            firstName: e.target.value,
-                          }))
-                        }
+                        onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                        placeholder="John"
                         className={inputClass}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Middle Name</Label>
-                      <Input
-                        value={form.middleName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            middleName: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Last Name <span className="text-destructive">*</span>
-                      </Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Name *</Label>
                       <Input
                         value={form.lastName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            lastName: e.target.value,
-                          }))
-                        }
+                        onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                        placeholder="Doe"
                         className={inputClass}
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label>
-                        Date of Birth{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Middle Name</Label>
+                      <Input
+                        value={form.middleName}
+                        onChange={(e) => setForm((prev) => ({ ...prev, middleName: e.target.value }))}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date of Birth *</Label>
                       <Input
                         type="date"
                         value={form.dateOfBirth}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            dateOfBirth: e.target.value,
-                          }))
-                        }
+                        onChange={(e) => setForm((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
                         className={inputClass}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Gender</Label>
-                      <Select
-                        value={form.gender}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, gender: value }))
-                        }
-                      >
-                        <SelectTrigger className={selectClass}>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {GENDER_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Marital Status</Label>
-                      <Select
-                        value={form.maritalStatus}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, maritalStatus: value }))
-                        }
-                      >
-                        <SelectTrigger className={selectClass}>
-                          <SelectValue placeholder="Select marital status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {MARITAL_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
                   </div>
                 </div>
               )}
 
               {step === 2 && (
-                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                    <Home className="w-4 h-4 text-primary" />
-                    Family & Address Details
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label>Father&apos;s Name</Label>
-                      <Input
-                        value={form.fatherName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            fatherName: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Mother&apos;s Name</Label>
-                      <Input
-                        value={form.motherName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            motherName: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Grandfather&apos;s Name</Label>
-                      <Input
-                        value={form.grandfatherName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            grandfatherName: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                     <Heart className="w-4 h-4 text-primary" />
+                     <h3 className="text-sm font-bold text-foreground">Personal Details</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-y-4">
                     <div className="space-y-2">
-                      <Label>
-                        Province <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        value={form.province}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            province: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Biological Gender *</Label>
+                       <div className="grid grid-cols-3 gap-2">
+                         {GENDER_OPTIONS.map((opt) => (
+                           <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setForm(p => ({ ...p, gender: opt }))}
+                            className={cn(
+                              "px-2 py-2 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer",
+                              form.gender === opt
+                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-sm"
+                                : "border-border bg-muted/5 text-muted-foreground hover:border-primary/20"
+                            )}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>
-                        District <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        value={form.district}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            district: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Municipality <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        value={form.municipality}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            municipality: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Ward <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        value={form.ward}
-                        onChange={(e) =>
-                          setForm((prev) => ({ ...prev, ward: e.target.value }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label>Tole/Street</Label>
-                    <Input
-                      value={form.tole}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, tole: e.target.value }))
-                      }
-                      className={inputClass}
-                    />
+                    <div className="space-y-2">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Marital Status *</Label>
+                       <div className="grid grid-cols-2 gap-2">
+                         {MARITAL_STATUS_OPTIONS.map((opt) => (
+                           <button
+                            key={opt}
+                            type="button"
+                            onClick={() => setForm(p => ({ ...p, maritalStatus: opt }))}
+                            className={cn(
+                              "px-2 py-2 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer",
+                              form.maritalStatus === opt
+                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-sm"
+                                : "border-border bg-muted/5 text-muted-foreground hover:border-primary/20"
+                            )}
+                          >
+                            {opt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Father's Full Name *</Label>
+                       <Input value={form.fatherName} onChange={e => setForm(p => ({...p, fatherName: e.target.value}))} className={inputClass} />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mother's Full Name *</Label>
+                       <Input value={form.motherName} onChange={e => setForm(p => ({...p, motherName: e.target.value}))} className={inputClass} />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Grandfather's Full Name *</Label>
+                       <Input value={form.grandfatherName} onChange={e => setForm(p => ({...p, grandfatherName: e.target.value}))} className={inputClass} />
+                    </div>
                   </div>
                 </div>
               )}
 
               {step === 3 && (
-                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                    <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
-                    Occupation & Banking
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>
-                        Occupation <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        value={form.occupation}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            occupation: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>
-                        Monthly Income (NPR){" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <Input
-                        type="number"
-                        value={form.monthlyIncome}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            monthlyIncome: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bank Name</Label>
-                      <Input
-                        value={form.bankName}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            bankName: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Bank Account Number</Label>
-                      <Input
-                        value={form.bankAccountNumber}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            bankAccountNumber: e.target.value,
-                          }))
-                        }
-                        className={inputClass}
-                      />
-                    </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                     <Home className="w-4 h-4 text-primary" />
+                     <h3 className="text-sm font-bold text-foreground">Permanent Residence</h3>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Bank Branch</Label>
-                    <Input
-                      value={form.bankBranch}
-                      onChange={(e) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          bankBranch: e.target.value,
-                        }))
-                      }
-                      className={inputClass}
-                    />
+                  <div className="grid grid-cols-1 gap-y-4">
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Province *</Label>
+                       <Input value={form.province} onChange={e => setForm(p => ({...p, province: e.target.value}))} className={inputClass} placeholder="e.g. Bagmati" />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">District *</Label>
+                       <Input value={form.district} onChange={e => setForm(p => ({...p, district: e.target.value}))} className={inputClass} placeholder="e.g. Kathmandu" />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Municipality / Rural Municipality *</Label>
+                       <Input value={form.municipality} onChange={e => setForm(p => ({...p, municipality: e.target.value}))} className={inputClass} placeholder="e.g. Kathmandu Metro" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-1.5">
+                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ward No. *</Label>
+                         <Input type="number" value={form.ward} onChange={e => setForm(p => ({...p, ward: e.target.value}))} className={inputClass} placeholder="10" />
+                      </div>
+                      <div className="space-y-1.5">
+                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tole / Village</Label>
+                         <Input value={form.tole} onChange={e => setForm(p => ({...p, tole: e.target.value}))} className={inputClass} placeholder="New Baneshwor" />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
 
               {step === 4 && (
-                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                    <FileBadge className="w-4 h-4 text-primary" />
-                    Document Selection
-                  </div>
-                  <div className="space-y-2">
-                    <Label>
-                      Select Document Type(s){" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <div className="flex flex-wrap gap-2">
-                      {DOCUMENT_TYPE_OPTIONS.map((option) => {
-                        const selected = selectedDocumentTypes.includes(
-                          option.value,
-                        );
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleToggleDocType(option.value)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs border transition-colors",
-                              selected
-                                ? "bg-primary/10 border-primary/40 text-primary"
-                                : "bg-muted/20 border-border/40 text-muted-foreground hover:text-foreground",
-                            )}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                     <Building2 className="w-4 h-4 text-primary" />
+                     <h3 className="text-sm font-bold text-foreground">Professional & Financials</h3>
                   </div>
 
-                  {selectedDocumentTypes.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>Active Document</Label>
-                        <Select
-                          value={activeDocumentType}
-                          onValueChange={(value) =>
-                            setActiveDocumentType(value as DocumentType)
-                          }
-                        >
-                          <SelectTrigger className={selectClass}>
-                            <SelectValue placeholder="Choose document to fill" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedDocumentTypes.map((docType) => {
-                              const label =
-                                DOCUMENT_TYPE_OPTIONS.find(
-                                  (d) => d.value === docType,
-                                )?.label || docType;
-                              return (
-                                <SelectItem key={docType} value={docType}>
-                                  {label}
-                                </SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {activeDocumentType &&
-                        activeDocDetail &&
-                        activeDocMeta && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-2 sm:col-span-2">
-                              <Label>
-                                {activeDocMeta.numberLabel}{" "}
-                                <span className="text-destructive">*</span>
-                              </Label>
-                              <Input
-                                value={activeDocDetail.documentNumber}
-                                onChange={(e) =>
-                                  updateDocumentDetail(
-                                    activeDocumentType,
-                                    "documentNumber",
-                                    e.target.value,
-                                  )
-                                }
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Issue Date</Label>
-                              <Input
-                                type="date"
-                                value={activeDocDetail.issueDate}
-                                onChange={(e) =>
-                                  updateDocumentDetail(
-                                    activeDocumentType,
-                                    "issueDate",
-                                    e.target.value,
-                                  )
-                                }
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Expiry Date</Label>
-                              <Input
-                                type="date"
-                                value={activeDocDetail.expiryDate}
-                                onChange={(e) =>
-                                  updateDocumentDetail(
-                                    activeDocumentType,
-                                    "expiryDate",
-                                    e.target.value,
-                                  )
-                                }
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2 sm:col-span-2">
-                              <Label>Issue District</Label>
-                              <Input
-                                value={activeDocDetail.issueDistrict}
-                                onChange={(e) =>
-                                  updateDocumentDetail(
-                                    activeDocumentType,
-                                    "issueDistrict",
-                                    e.target.value,
-                                  )
-                                }
-                                className={inputClass}
-                              />
-                            </div>
-                          </div>
-                        )}
+                  <div className="grid grid-cols-1 gap-y-4">
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Primary Occupation *</Label>
+                       <Input value={form.occupation} onChange={e => setForm(p => ({...p, occupation: e.target.value}))} className={inputClass} placeholder="e.g. Senior Software Engineer" />
                     </div>
-                  )}
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly Take-Home Income (NPR) *</Label>
+                       <div className="relative">
+                         <IconCurrencyRupeeNepalese className="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
+                         <Input type="number" value={form.monthlyIncome} onChange={e => setForm(p => ({...p, monthlyIncome: e.target.value}))} className={cn(inputClass, "pl-8")} placeholder="75000" />
+                       </div>
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Primary Bank Name</Label>
+                       <Input value={form.bankName} onChange={e => setForm(p => ({...p, bankName: e.target.value}))} className={inputClass} placeholder="e.g. Nabil Bank Ltd." />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account Number</Label>
+                       <Input value={form.bankAccountNumber} onChange={e => setForm(p => ({...p, bankAccountNumber: e.target.value}))} className={inputClass} placeholder="00100XXXXXXXXX" />
+                    </div>
+                    <div className="space-y-1.5">
+                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bank Branch Location</Label>
+                       <Input value={form.bankBranch} onChange={e => setForm(p => ({...p, bankBranch: e.target.value}))} className={inputClass} placeholder="Main Branch, Kathmandu" />
+                    </div>
+                  </div>
                 </div>
               )}
 
               {step === 5 && (
-                <div className="rounded-2xl border border-border/40 bg-card/70 shadow-sm p-5 space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-                    <FileScan className="w-4 h-4 text-primary" />
-                    Upload Verification Files
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>
-                        Passport Size Photo{" "}
-                        <span className="text-destructive">*</span>
-                      </Label>
-                      <label className="h-36 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) =>
-                            uploadImage(
-                              e.target.files?.[0] || null,
-                              "passportPhoto",
-                            )
-                          }
-                        />
-                        {passportPhoto ? (
-                          <img
-                            src={passportPhoto}
-                            alt="Passport"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                            <Upload className="w-4 h-4" /> Upload Image
-                          </div>
-                        )}
-                      </label>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>
-                        Selfie <span className="text-destructive">*</span>
-                      </Label>
-                      <label className="h-36 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) =>
-                            uploadImage(e.target.files?.[0] || null, "selfie")
-                          }
-                        />
-                        {selfie ? (
-                          <img
-                            src={selfie}
-                            alt="Selfie"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                            <Upload className="w-4 h-4" /> Upload Image
-                          </div>
-                        )}
-                      </label>
-                    </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                    <FileBadge className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Document Management</h3>
                   </div>
 
-                  {activeDocumentType && activeDocDetail && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label>
-                          Document Front{" "}
-                          <span className="text-destructive">*</span>
-                        </Label>
-                        <label className="h-28 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
-                          <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            className="hidden"
-                            onChange={(e) =>
-                              uploadImage(
-                                e.target.files?.[0] || null,
-                                "frontImage",
-                                activeDocumentType,
-                              )
-                            }
-                          />
-                          {activeDocDetail.frontImage ? (
-                            <img
-                              src={activeDocDetail.frontImage}
-                              alt="Document front"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                              <Upload className="w-4 h-4" /> Upload Front
-                            </div>
-                          )}
-                        </label>
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select Identity Documents *</Label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {DOCUMENT_TYPE_OPTIONS.map((opt) => {
+                          const selected = selectedDocumentTypes.includes(opt.value);
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => handleToggleDocType(opt.value)}
+                              className={cn(
+                                "group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden relative",
+                                selected
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                                  : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10"
+                              )}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={cn(
+                                  "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                  selected ? "bg-primary text-primary-foreground" : "bg-background border border-border group-hover:border-primary/30 text-muted-foreground"
+                                )}>
+                                  <FileCheck className="w-4 h-4" />
+                                </div>
+                                <div className="text-left">
+                                   <p className={cn("text-xs font-bold", selected ? "text-primary" : "text-foreground/80")}>{opt.label}</p>
+                                   <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-bold">Lender Requirement</p>
+                                </div>
+                              </div>
+                              {selected && (
+                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                      {activeDocumentType !== "PAN" && (
-                        <div className="space-y-2">
-                          <Label>
-                            Document Back{" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <label className="h-28 rounded-xl border border-dashed border-border/40 flex items-center justify-center cursor-pointer overflow-hidden bg-muted/10 hover:bg-muted/20 transition-colors">
-                            <input
-                              type="file"
-                              accept="image/*,.pdf"
-                              className="hidden"
-                              onChange={(e) =>
-                                uploadImage(
-                                  e.target.files?.[0] || null,
-                                  "backImage",
-                                  activeDocumentType,
-                                )
-                              }
-                            />
-                            {activeDocDetail.backImage ? (
-                              <img
-                                src={activeDocDetail.backImage}
-                                alt="Document back"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
-                                <Upload className="w-4 h-4" /> Upload Back
+                    </div>
+
+                    <div className="space-y-4">
+                      {selectedDocumentTypes.length > 0 ? (
+                        <div className="animate-in fade-in slide-in-from-top-2 duration-400">
+                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Document Detail *</Label>
+                          <div className="mt-2 p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-4">
+                            <div className="space-y-1.5">
+                               <Select
+                                value={activeDocumentType}
+                                onValueChange={(value) => setActiveDocumentType(value as DocumentType)}
+                              >
+                                <SelectTrigger className="h-10 rounded-lg bg-background border-primary/20 font-bold text-xs">
+                                  <SelectValue placeholder="Choose document" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {selectedDocumentTypes.map((docType) => {
+                                    const label = DOCUMENT_TYPE_OPTIONS.find((d) => d.value === docType)?.label || docType;
+                                    return <SelectItem key={docType} value={docType} className="font-bold text-xs">{label}</SelectItem>;
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            {activeDocumentType && activeDocDetail && activeDocMeta && (
+                              <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="space-y-1.5">
+                                   <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{activeDocMeta.numberLabel}</Label>
+                                   <Input value={activeDocDetail.documentNumber} onChange={e => updateDocumentDetail(activeDocumentType, "documentNumber", e.target.value)} className={cn(inputClass, "bg-background")} placeholder="ID Number" />
+                                </div>
+                                <div className="grid grid-cols-1 gap-3">
+                                  <div className="space-y-1.5">
+                                     <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Issue Date</Label>
+                                     <Input type="date" value={activeDocDetail.issueDate} onChange={e => updateDocumentDetail(activeDocumentType, "issueDate", e.target.value)} className={cn(inputClass, "bg-background")} />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                     <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Expiry Date</Label>
+                                     <Input type="date" value={activeDocDetail.expiryDate} onChange={e => updateDocumentDetail(activeDocumentType, "expiryDate", e.target.value)} className={cn(inputClass, "bg-background")} />
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                   <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Issue District / Authority</Label>
+                                   <Input value={activeDocDetail.issueDistrict} onChange={e => updateDocumentDetail(activeDocumentType, "issueDistrict", e.target.value)} className={cn(inputClass, "bg-background")} placeholder="e.g. Kathmandu" />
+                                </div>
                               </div>
                             )}
-                          </label>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-full min-h-[200px] flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-border/40 bg-muted/5 text-muted-foreground text-center">
+                           <FileScan className="w-10 h-10 mb-3 opacity-20" />
+                           <p className="text-[10px] font-bold uppercase tracking-wider opacity-40">Select documents on the left to proceed</p>
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                </div>
+              )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDocumentTypes.map((docType) => {
-                      const detail = getDocumentDetail(docType);
-                      const done = Boolean(
-                        detail.documentNumber &&
-                        detail.frontImage &&
-                        (docType === "PAN" || detail.backImage),
-                      );
-                      const label =
-                        DOCUMENT_TYPE_OPTIONS.find((d) => d.value === docType)
-                          ?.label || docType;
-                      return (
-                        <Badge
-                          key={docType}
-                          variant="outline"
-                          className={
-                            done ? "border-emerald-500 text-emerald-600" : ""
-                          }
-                        >
-                          {done ? <Check className="w-3 h-3 mr-1" /> : null}
-                          {label}
-                        </Badge>
-                      );
-                    })}
+              {step === 6 && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  <div className="flex items-center gap-2.5 pb-2 border-b border-border/40">
+                    <FileScan className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-bold text-foreground">Upload Verification Assets</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Passport Photo *</Label>
+                         <label className="group relative flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-border/40 bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300 cursor-pointer overflow-hidden">
+                            <input type="file" accept="image/*" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "passportPhoto")} />
+                            {passportPhoto ? (
+                              <>
+                                <img src={passportPhoto} alt="Passport" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <Upload className="w-6 h-6 text-white" />
+                                    <span className="text-[9px] text-white font-bold uppercase tracking-widest">Update</span>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors text-center p-4">
+                                <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
+                                  <Upload className="w-5 h-5" />
+                                </div>
+                                <span className="text-[9px] font-bold uppercase tracking-widest leading-tight">Passport Size Photo</span>
+                              </div>
+                            )}
+                         </label>
+                      </div>
+                      <div className="space-y-2">
+                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Verification Selfie *</Label>
+                         <label className="group relative flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-border/40 bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300 cursor-pointer overflow-hidden">
+                            <input type="file" accept="image/*" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "selfie")} />
+                            {selfie ? (
+                              <>
+                                <img src={selfie} alt="Selfie" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <div className="flex flex-col items-center gap-2">
+                                    <Upload className="w-6 h-6 text-white" />
+                                    <span className="text-[9px] text-white font-bold uppercase tracking-widest">Update</span>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center gap-2 text-muted-foreground group-hover:text-primary transition-colors text-center p-4">
+                                <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
+                                  <Upload className="w-5 h-5" />
+                                </div>
+                                <span className="text-[9px] font-bold uppercase tracking-widest leading-tight">Live Selfie with ID</span>
+                              </div>
+                            )}
+                         </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Document Scans *</Label>
+                      <div className="grid grid-cols-1 gap-4">
+                        {selectedDocumentTypes.map((docType) => {
+                          const detail = getDocumentDetail(docType);
+                          const label = DOCUMENT_TYPE_OPTIONS.find((d) => d.value === docType)?.label || docType;
+                          return (
+                            <div key={docType} className="p-4 rounded-xl border border-border/40 bg-muted/5 space-y-3">
+                              <div className="flex items-center gap-2">
+                                <FileCheck className="w-3.5 h-3.5 text-primary" />
+                                <span className="text-[10px] font-bold text-foreground uppercase tracking-widest">{label} Scans</span>
+                              </div>
+
+                               <div className="grid grid-cols-2 gap-3">
+                                 <div className="space-y-1.5">
+                                    <label className="group h-24 rounded-lg border border-dashed border-border/60 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-background hover:border-primary/40 transition-all duration-300">
+                                       <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "frontImage", docType)} />
+                                       {detail.frontImage ? (
+                                         <img src={detail.frontImage} alt="Front" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                      ) : (
+                                        <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
+                                          <Upload className="w-4 h-4" />
+                                          <span className="text-[8px] font-bold uppercase tracking-widest">Front Page</span>
+                                        </div>
+                                      )}
+                                   </label>
+                                </div>
+                                {docType !== "PAN" && (
+                                  <div className="space-y-1.5">
+                                     <label className="group h-24 rounded-lg border border-dashed border-border/60 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-background hover:border-primary/40 transition-all duration-300">
+                                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "backImage", docType)} />
+                                        {detail.backImage ? (
+                                          <img src={detail.backImage} alt="Back" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                        ) : (
+                                          <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
+                                            <Upload className="w-4 h-4" />
+                                            <span className="text-[8px] font-bold uppercase tracking-widest">Back Page</span>
+                                          </div>
+                                        )}
+                                     </label>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex flex-wrap justify-between gap-2 pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-12 border-t border-border/40">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="h-11 rounded-xl"
+                className="h-11 rounded-xl px-6 font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
               >
-                Cancel
+                Discard Application
               </Button>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={prevStep}
                   disabled={step === 1 || isSubmitting}
-                  className="h-11 rounded-xl"
+                  className="h-11 rounded-xl px-6 font-bold border-border/60 bg-muted/10 hover:bg-muted/20 transition-all"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Previous
                 </Button>
-                {step < 5 ? (
+                {step < 6 ? (
                   <Button
                     type="button"
                     onClick={nextStep}
                     disabled={isSubmitting}
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
                   >
-                    Next <ArrowRight className="w-4 h-4 ml-1" />
+                    Continue <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 ) : (
                   <Button
-                    type="submit"
-                    disabled={!canSubmit || isSubmitting}
-                    className="h-11 rounded-xl"
-                  >
-                    {isSubmitting ? "Submitting..." : "Submit KYC"}
-                  </Button>
+                      type="submit"
+                      disabled={!canSubmit || isSubmitting}
+                      className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                    >
+                      {isSubmitting ? "Processing..." : "Submit Verification"}
+                    </Button>
                 )}
               </div>
             </div>
