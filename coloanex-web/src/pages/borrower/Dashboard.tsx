@@ -1,19 +1,16 @@
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import type { ComponentType } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useGetUnreadCountQuery } from "@/apis/notificationsApi";
 import { useGetLoansQuery } from "@/apis/loansApi";
-import { useGetTransactionsByEntityQuery } from "@/apis/transactionsApi";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { Link, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import {
-  ArrowLeftRight,
   Bell,
   Building2,
   FileText,
@@ -34,14 +31,11 @@ export default function BorrowerDashboard() {
     sortBy: "createdAt",
     sortOrder: "desc",
   });
-  const { data: transactionsData, isLoading: isLoadingTransactions } =
-    useGetTransactionsByEntityQuery(user?.id || "", { skip: !user?.id });
 
   const unreadCount = unreadData?.count ?? 0;
   const lenders = lendersData?.data || [];
   const activeLenders = lenders.filter((l) => l.isActive).length;
   const recentLoans = loansData?.data || [];
-  const recentTransactions = transactionsData || [];
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -86,7 +80,7 @@ export default function BorrowerDashboard() {
       label: "Lenders",
       note: "Discover trusted partners",
       icon: Building2,
-      path: "/borrower/lenders",
+      path: "/lenders",
       color: "text-indigo-500",
       bg: "bg-indigo-500/10",
     },
@@ -94,23 +88,15 @@ export default function BorrowerDashboard() {
       label: "My Loans",
       note: "Track your loan lifecycle",
       icon: FileText,
-      path: "/borrower/my-loans",
+      path: "/my-loans",
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
-    },
-    {
-      label: "Transactions",
-      note: "Review repayment history",
-      icon: ArrowLeftRight,
-      path: "/borrower/my-loans?focus=transactions",
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
     },
     {
       label: "KYC",
       note: "Manage verification status",
       icon: ShieldCheck,
-      path: "/borrower/kyc",
+      path: "/kyc",
       color: "text-blue-500",
       bg: "bg-blue-500/10",
     },
@@ -138,17 +124,17 @@ export default function BorrowerDashboard() {
 
   return (
     <BorrowerLayout>
-      <div className="space-y-8">
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="relative overflow-hidden rounded-[32px] border-border/30 bg-gradient-to-br from-primary/5 via-card to-card shadow-[0_18px_70px_rgba(15,23,42,0.06)]">
+      <div className="space-y-6">
+        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <Card className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <div className="pointer-events-none absolute -top-14 right-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
-            <CardContent className="relative p-6 space-y-5">
+            <CardContent className="relative p-5 space-y-5">
               <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1.5">
-                  <Badge className="rounded-full border-border/30 bg-white/70 px-3 py-1 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+                <div className="space-y-1">
+                  <Badge className="rounded-full border-border/30 bg-muted/50 px-3 py-0.5 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
                     Borrower overview
                   </Badge>
-                  <p className="text-sm text-muted-foreground font-medium">
+                  <p className="text-sm text-muted-foreground font-medium mt-2">
                     {greeting},
                   </p>
                   <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground">
@@ -158,31 +144,17 @@ export default function BorrowerDashboard() {
                     Find the best loan for you
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigate("/borrower/profile?section=notifications")
-                  }
-                  className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-border/40 bg-white/70 text-foreground shadow-sm backdrop-blur"
-                >
-                  <Bell className="w-5 h-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-destructive text-[10px] font-bold text-white flex items-center justify-center">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </span>
-                  )}
-                </button>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="grid grid-cols-3 gap-3">
                 {quickActions.map((action) => (
                   <Link
                     key={action.label}
                     to={action.path}
-                    className="rounded-2xl border border-border/30 bg-white/70 p-3.5 flex flex-col items-start gap-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+                    className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col items-start gap-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md hover:bg-muted/40 cursor-pointer"
                   >
                     <div
                       className={cn(
-                        "w-9 h-9 rounded-xl flex items-center justify-center",
+                        "w-8 h-8 rounded-lg flex items-center justify-center",
                         action.bg,
                       )}
                     >
@@ -192,7 +164,7 @@ export default function BorrowerDashboard() {
                       <p className="text-sm font-semibold text-foreground">
                         {action.label}
                       </p>
-                      <p className="text-[11px] text-muted-foreground mt-1">
+                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
                         {action.note}
                       </p>
                     </div>
@@ -202,40 +174,81 @@ export default function BorrowerDashboard() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
             {stats.map((stat) => (
               <Card
                 key={stat.label}
-                className="rounded-2xl border-border/30 bg-white/80 shadow-sm"
+                className="rounded-xl border border-border bg-card shadow-sm"
               >
-                <CardContent className="p-4 space-y-2">
+                <CardContent className="p-4 flex lg:flex-row items-start lg:items-center gap-3">
                   <div
                     className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center",
+                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
                       stat.bg,
                     )}
                   >
                     <stat.icon className={cn("w-4 h-4", stat.color)} />
                   </div>
-                  <p className="text-lg font-bold text-foreground">
-                    {stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  <div>
+                    <p className="text-lg font-bold text-foreground">
+                      {stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
+        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="rounded-xl border border-border bg-card shadow-sm col-span-full">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2 max-w-md">
+                  <h2 className="text-lg font-bold text-foreground">Portfolio Distribution</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Your financial health at a glance. Manage your loan utilization and tracking metrics efficiently across different lenders.
+                  </p>
+                </div>
+                <div className="flex-1 space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">Monthly Goal Progress</span>
+                    <span className="text-primary font-bold">75%</span>
+                  </div>
+                  <div className="h-3 w-full rounded-full bg-muted/30 overflow-hidden flex">
+                    <div className="h-full bg-primary w-[45%] transition-all" />
+                    <div className="h-full bg-emerald-500 w-[30%] transition-all" />
+                  </div>
+                  <div className="flex flex-wrap gap-4 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Applied</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Active</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Pending</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+          <Card className="rounded-xl border border-border bg-card shadow-sm">
+            <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
                   Featured Lenders
                 </h2>
                 <Link
-                  to="/borrower/lenders"
+                  to="/lenders"
                   className="text-xs font-semibold text-primary"
                 >
                   See all
@@ -244,28 +257,28 @@ export default function BorrowerDashboard() {
               {isLoadingLenders ? (
                 <div className="space-y-3">
                   {Array.from({ length: 3 }).map((_, idx) => (
-                    <Skeleton key={idx} className="h-20 w-full rounded-xl" />
+                    <Skeleton key={idx} className="h-16 w-full rounded-xl" />
                   ))}
                 </div>
               ) : lenders.length === 0 ? (
-                <div className="rounded-xl border border-border/30 bg-muted/10 p-6 text-center">
+                <div className="rounded-xl border border-border bg-muted/10 p-6 text-center">
                   <Building2 className="w-8 h-8 mx-auto text-muted-foreground/40" />
                   <p className="mt-2 text-sm text-muted-foreground">
                     No lenders available
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {lenders.slice(0, 4).map((lender) => (
                     <button
                       key={lender.id}
                       type="button"
-                      onClick={() => navigate(`/borrower/lenders/${lender.id}`)}
-                      className="w-full rounded-2xl border border-border/20 bg-white/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                      onClick={() => navigate(`/lenders/${lender.id}`)}
+                      className="w-full rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/20 hover:shadow-md cursor-pointer"
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
+                          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
                             {lender.logo ? (
                               <img
                                 src={lender.logo}
@@ -273,7 +286,7 @@ export default function BorrowerDashboard() {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <span className="text-base font-bold text-primary">
+                              <span className="text-sm font-bold text-primary">
                                 {lender.name.charAt(0).toUpperCase()}
                               </span>
                             )}
@@ -291,7 +304,7 @@ export default function BorrowerDashboard() {
                         </div>
                         <Badge
                           className={cn(
-                            "rounded-full px-3 py-1 text-[10px] uppercase tracking-widest",
+                            "rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest shrink-0",
                             lender.isActive
                               ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                               : "bg-muted/40 text-muted-foreground border-border",
@@ -307,14 +320,14 @@ export default function BorrowerDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
+          <Card className="rounded-xl border border-border bg-card shadow-sm">
+            <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground">
                   Recent Loans
                 </h2>
                 <Link
-                  to="/borrower/my-loans"
+                  to="/my-loans"
                   className="text-xs font-semibold text-primary"
                 >
                   View all
@@ -327,26 +340,26 @@ export default function BorrowerDashboard() {
                   ))}
                 </div>
               ) : recentLoans.length === 0 ? (
-                <div className="rounded-xl border border-border/30 bg-muted/10 p-6 text-center">
+                <div className="rounded-xl border border-border bg-muted/10 p-6 text-center">
                   <p className="text-sm text-muted-foreground">
                     No loans found
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {recentLoans.map((loan) => (
                     <button
                       key={loan.id}
                       type="button"
-                      onClick={() => navigate(`/borrower/my-loans/${loan.id}`)}
-                      className="w-full rounded-2xl border border-border/20 bg-white/70 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md"
+                      onClick={() => navigate(`/my-loans/${loan.id}`)}
+                      className="w-full rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/20 hover:shadow-md cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-foreground truncate">
                             {loan.purpose || "Loan request"}
                           </p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
                             {loan.createdAt
                               ? format(new Date(loan.createdAt), "MMM dd, yyyy")
                               : "-"}
@@ -356,58 +369,13 @@ export default function BorrowerDashboard() {
                           {formatStatus(loan.status)}
                         </Badge>
                       </div>
-                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
                         <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
                         {Number(loan.requestedAmount || 0).toLocaleString(
                           "en-IN",
                         )}
                       </div>
                     </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </section>
-
-        <section>
-          <Card className="rounded-[28px] border-border/30 bg-card shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Recent Transactions
-                </h2>
-                <Link
-                  to="/borrower/my-loans?focus=transactions"
-                  className="text-xs font-semibold text-primary"
-                >
-                  View all
-                </Link>
-              </div>
-              {isLoadingTransactions ? (
-                <Skeleton className="h-20 w-full rounded-xl" />
-              ) : recentTransactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No recent transactions
-                </p>
-              ) : (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {recentTransactions.slice(0, 4).map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="rounded-2xl border border-border/20 bg-white/70 px-4 py-3 shadow-sm"
-                    >
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(tx.createdAt), "MMM dd, yyyy")}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground mt-1">
-                        {String(tx.type || "TRANSACTION").replace(/_/g, " ")}
-                      </p>
-                      <p className="text-xs font-semibold text-foreground mt-2 flex items-center gap-1">
-                        <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
-                        {Number(tx.amount || 0).toLocaleString("en-IN")}
-                      </p>
-                    </div>
                   ))}
                 </div>
               )}
