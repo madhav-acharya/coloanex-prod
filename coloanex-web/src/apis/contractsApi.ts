@@ -69,6 +69,7 @@ export interface Contract {
     id: string;
     purpose: string;
   };
+  blockchainTxHash?: string;
   rule?: {
     id: string;
     name: string;
