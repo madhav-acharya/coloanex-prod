@@ -19,7 +19,12 @@ function ScrollToTop() {
   return null;
 }
 
+import { getRoles } from "@/lib/roleUtils";
+import { useAuth } from "@/hooks/useAuth";
+
 function App() {
+  const { user } = useAuth();
+  const roles = getRoles(user);
   useActivityLog();
   useTheme();
 
@@ -27,10 +32,12 @@ function App() {
     <div className="min-h-screen bg-background font-sans antialiased">
       <ScrollToTop />
       <Suspense fallback={<Loader />}>
-        <SuperAdminRoutes />
-        <BorrowerRoutes />
+        {roles.isSuperAdmin && <SuperAdminRoutes />}
+        {roles.isBorrower && <BorrowerRoutes />}
+        {roles.isSuperAdmin || roles.isAdmin || roles.isLender ? (
+          <ProtectedRoutes />
+        ) : null}
         <PublicRoutes />
-        <ProtectedRoutes />
       </Suspense>
     </div>
   );
