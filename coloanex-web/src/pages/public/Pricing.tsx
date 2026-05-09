@@ -311,7 +311,7 @@ export default function Pricing({ showFooter = true, isSubcomponent = false }: P
           })}
       </div>
 
-      <div className="rounded-[3rem] overflow-hidden bg-muted/10">
+      <div className="overflow-hidden bg-muted/10 border border-border/30">
         <CardHeader className="bg-muted/30">
           <CardTitle>Compare Features</CardTitle>
         </CardHeader>
