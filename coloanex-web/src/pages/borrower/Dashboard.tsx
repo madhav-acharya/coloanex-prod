@@ -1,8 +1,4 @@
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
-import type { ComponentType } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useGetUnreadCountQuery } from "@/apis/notificationsApi";
@@ -15,21 +11,20 @@ import {
   Building2,
   FileText,
   ShieldCheck,
+  ChevronRight,
+  Plus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export default function BorrowerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { data: lendersData, isLoading: isLoadingLenders } = useGetTenantsQuery(
-    { limit: 6, page: 1 },
-  );
+  const { data: lendersData, isLoading: isLoadingLenders } = useGetTenantsQuery({ limit: 6, page: 1 });
   const { data: unreadData } = useGetUnreadCountQuery();
   const { data: loansData, isLoading: isLoadingLoans } = useGetLoansQuery({
-    page: 1,
-    limit: 4,
-    sortBy: "createdAt",
-    sortOrder: "desc",
+    page: 1, limit: 4, sortBy: "createdAt", sortOrder: "desc",
   });
 
   const unreadCount = unreadData?.count ?? 0;
@@ -44,345 +39,167 @@ export default function BorrowerDashboard() {
     return "Good evening";
   })();
 
-  const stats = [
-    {
-      label: "Lenders",
-      value: lenders.length,
-      icon: Building2,
-      color: "text-indigo-500",
-      bg: "bg-indigo-500/10",
-    },
-    {
-      label: "Active",
-      value: activeLenders,
-      icon: ShieldCheck,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      label: "Alerts",
-      value: unreadCount,
-      icon: Bell,
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
-    },
-  ];
-
-  const quickActions: Array<{
-    label: string;
-    note: string;
-    icon: ComponentType<{ className?: string }>;
-    path: string;
-    color: string;
-    bg: string;
-  }> = [
-    {
-      label: "Lenders",
-      note: "Discover trusted partners",
-      icon: Building2,
-      path: "/lenders",
-      color: "text-indigo-500",
-      bg: "bg-indigo-500/10",
-    },
-    {
-      label: "My Loans",
-      note: "Track your loan lifecycle",
-      icon: FileText,
-      path: "/my-loans",
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-    },
-    {
-      label: "KYC",
-      note: "Manage verification status",
-      icon: ShieldCheck,
-      path: "/kyc",
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-    },
-  ];
-
-  const statusClass = (status?: string) => {
-    if (!status) return "bg-muted/40 text-muted-foreground border-border";
-    if (status === "APPROVED" || status === "PAID") {
-      return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
-    }
-    if (status === "REJECTED") {
-      return "bg-red-500/10 text-red-600 border-red-500/20";
-    }
-    if (status === "UNDER_REVIEW" || status === "PARTIALLY_PAID") {
-      return "bg-amber-500/10 text-amber-600 border-amber-500/20";
-    }
-    return "bg-indigo-500/10 text-indigo-600 border-indigo-500/20";
-  };
-
-  const formatStatus = (value?: string) =>
-    String(value || "DRAFT")
-      .toLowerCase()
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (m) => m.toUpperCase());
+  const formatStatus = (value?: string) => String(value || "DRAFT").toLowerCase().replace(/_/g, " ").replace(/\b\w/g, m => m.toUpperCase());
 
   return (
     <BorrowerLayout>
-      <div className="space-y-6">
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="relative overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <div className="pointer-events-none absolute -top-14 right-0 h-32 w-32 rounded-full bg-primary/10 blur-3xl" />
-            <CardContent className="relative p-5 space-y-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1">
-                  <Badge className="rounded-full border-border/30 bg-muted/50 px-3 py-0.5 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                    Borrower overview
-                  </Badge>
-                  <p className="text-sm text-muted-foreground font-medium mt-2">
-                    {greeting},
-                  </p>
-                  <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-foreground">
-                    {user?.fullName?.split(" ")[0] || "Welcome"}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    Find the best loan for you
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                {quickActions.map((action) => (
-                  <Link
-                    key={action.label}
-                    to={action.path}
-                    className="rounded-xl border border-border bg-muted/20 p-3 flex flex-col items-start gap-2.5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md hover:bg-muted/40 cursor-pointer"
-                  >
-                    <div
-                      className={cn(
-                        "w-8 h-8 rounded-lg flex items-center justify-center",
-                        action.bg,
-                      )}
-                    >
-                      <action.icon className={cn("w-4 h-4", action.color)} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {action.label}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
-                        {action.note}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-3 lg:grid-cols-1 gap-3">
-            {stats.map((stat) => (
-              <Card
-                key={stat.label}
-                className="rounded-xl border border-border bg-card shadow-sm"
-              >
-                <CardContent className="p-4 flex lg:flex-row items-start lg:items-center gap-3">
-                  <div
-                    className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center shrink-0",
-                      stat.bg,
-                    )}
-                  >
-                    <stat.icon className={cn("w-4 h-4", stat.color)} />
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-foreground">
-                      {stat.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+      <div className="max-w-6xl mx-auto space-y-10 pb-12">
+        <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
+          <div className="space-y-1.5">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">{greeting}, {user?.fullName?.split(" ")[0]}</h2>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Overview</h1>
           </div>
+          <Button 
+            onClick={() => navigate("/lenders")}
+            className="rounded-xl h-11 px-6 font-semibold shadow-sm hover:translate-y-[-1px] transition-all"
+          >
+            <Plus className="w-4 h-4 mr-2" /> New Application
+          </Button>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Card className="rounded-xl border border-border bg-card shadow-sm col-span-full">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2 max-w-md">
-                  <h2 className="text-lg font-bold text-foreground">Portfolio Distribution</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Your financial health at a glance. Manage your loan utilization and tracking metrics efficiently across different lenders.
-                  </p>
-                </div>
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground font-medium">Monthly Goal Progress</span>
-                    <span className="text-primary font-bold">75%</span>
-                  </div>
-                  <div className="h-3 w-full rounded-full bg-muted/30 overflow-hidden flex">
-                    <div className="h-full bg-primary w-[45%] transition-all" />
-                    <div className="h-full bg-emerald-500 w-[30%] transition-all" />
-                  </div>
-                  <div className="flex flex-wrap gap-4 pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Applied</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Active</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
-                      <span className="text-[11px] text-muted-foreground font-medium uppercase">Pending</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard 
+            title="Lenders Available" 
+            value={lenders.length} 
+            icon={<Building2 className="w-5 h-5" />} 
+            color="text-blue-600 bg-blue-50"
+          />
+          <MetricCard 
+            title="Active Partnerships" 
+            value={activeLenders} 
+            icon={<ShieldCheck className="w-5 h-5" />} 
+            color="text-emerald-600 bg-emerald-50"
+          />
+          <MetricCard 
+            title="Pending Alerts" 
+            value={unreadCount} 
+            icon={<Bell className="w-5 h-5" />} 
+            color="text-amber-600 bg-amber-50"
+          />
+          <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 flex flex-col justify-between group cursor-pointer hover:bg-primary/10 transition-colors" onClick={() => navigate("/my-loans")}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Total Loans</span>
+              <ChevronRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" />
+            </div>
+            <p className="text-3xl font-bold text-foreground mt-2">{loansData?.total || 0}</p>
+          </div>
+        </div>
 
-        <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <Card className="rounded-xl border border-border bg-card shadow-sm">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Featured Lenders
-                </h2>
-                <Link
-                  to="/lenders"
-                  className="text-xs font-semibold text-primary"
-                >
-                  See all
-                </Link>
-              </div>
-              {isLoadingLenders ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <Skeleton key={idx} className="h-16 w-full rounded-xl" />
-                  ))}
-                </div>
-              ) : lenders.length === 0 ? (
-                <div className="rounded-xl border border-border bg-muted/10 p-6 text-center">
-                  <Building2 className="w-8 h-8 mx-auto text-muted-foreground/40" />
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    No lenders available
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {lenders.slice(0, 4).map((lender) => (
-                    <button
-                      key={lender.id}
-                      type="button"
-                      onClick={() => navigate(`/lenders/${lender.id}`)}
-                      className="w-full rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/20 hover:shadow-md cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 overflow-hidden">
-                            {lender.logo ? (
-                              <img
-                                src={lender.logo}
-                                alt={lender.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-sm font-bold text-primary">
-                                {lender.name.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              {lender.name}
-                            </p>
-                            {lender.address && (
-                              <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                                {lender.address}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Badge
-                          className={cn(
-                            "rounded-full px-2.5 py-0.5 text-[10px] uppercase tracking-widest shrink-0",
-                            lender.isActive
-                              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                              : "bg-muted/40 text-muted-foreground border-border",
-                          )}
-                        >
-                          {lender.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <div className="grid lg:grid-cols-3 gap-8">
+          <section className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-lg font-bold text-foreground">Recent Activity</h3>
+              <Link to="/my-loans" className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center">
+                History <ChevronRight className="w-4 h-4 ml-0.5" />
+              </Link>
+            </div>
 
-          <Card className="rounded-xl border border-border bg-card shadow-sm">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Recent Loans
-                </h2>
-                <Link
-                  to="/my-loans"
-                  className="text-xs font-semibold text-primary"
-                >
-                  View all
-                </Link>
-              </div>
+            <div className="space-y-3">
               {isLoadingLoans ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <Skeleton key={idx} className="h-16 w-full rounded-xl" />
-                  ))}
-                </div>
+                Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl bg-muted/40" />)
               ) : recentLoans.length === 0 ? (
-                <div className="rounded-xl border border-border bg-muted/10 p-6 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    No loans found
-                  </p>
-                </div>
+                <EmptyState icon={<FileText className="w-8 h-8" />} message="No recent loan activity found." />
               ) : (
-                <div className="space-y-2">
-                  {recentLoans.map((loan) => (
-                    <button
-                      key={loan.id}
-                      type="button"
-                      onClick={() => navigate(`/my-loans/${loan.id}`)}
-                      className="w-full rounded-xl border border-border/20 bg-muted/10 px-4 py-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:bg-muted/20 hover:shadow-md cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {loan.purpose || "Loan request"}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {loan.createdAt
-                              ? format(new Date(loan.createdAt), "MMM dd, yyyy")
-                              : "-"}
-                          </p>
-                        </div>
-                        <Badge className={statusClass(loan.status)}>
-                          {formatStatus(loan.status)}
-                        </Badge>
+                recentLoans.map((loan) => (
+                  <div 
+                    key={loan.id} 
+                    onClick={() => navigate(`/my-loans/${loan.id}`)}
+                    className="group bg-background border border-border/60 hover:border-primary/30 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:bg-muted/5 shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center shrink-0">
+                        <FileText className="w-6 h-6 text-muted-foreground/70" />
                       </div>
-                      <div className="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-                        <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
-                        {Number(loan.requestedAmount || 0).toLocaleString(
-                          "en-IN",
-                        )}
+                      <div>
+                        <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {loan.purpose || "Loan Request"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full bg-muted/60 text-[10px] font-bold uppercase tracking-wider">{formatStatus(loan.status)}</span>
+                          <span>•</span>
+                          <span>{loan.createdAt ? format(new Date(loan.createdAt), "MMM dd, yyyy") : ""}</span>
+                        </p>
                       </div>
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                    <div className="text-right flex items-center gap-6">
+                      <div className="hidden sm:block">
+                        <p className="text-lg font-bold text-foreground flex items-center gap-0.5">
+                          <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
+                          {Number(loan.requestedAmount || 0).toLocaleString("en-IN")}
+                        </p>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Amount</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                ))
               )}
-            </CardContent>
-          </Card>
-        </section>
+            </div>
+          </section>
+
+          <section className="space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-lg font-bold text-foreground">Top Lenders</h3>
+              <Link to="/lenders" className="text-sm font-semibold text-muted-foreground hover:text-primary transition-colors flex items-center">
+                Directory <ChevronRight className="w-4 h-4 ml-0.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-3">
+              {isLoadingLenders ? (
+                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-2xl bg-muted/40" />)
+              ) : lenders.length === 0 ? (
+                <EmptyState icon={<Building2 className="w-8 h-8" />} message="No lenders available." />
+              ) : (
+                lenders.slice(0, 5).map((lender) => (
+                  <div 
+                    key={lender.id} 
+                    onClick={() => navigate(`/lenders/${lender.id}`)}
+                    className="p-3 rounded-2xl bg-muted/20 border border-transparent hover:border-border/60 hover:bg-background transition-all flex items-center gap-4 cursor-pointer group shadow-sm hover:shadow-md"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-background border border-border/40 flex items-center justify-center overflow-hidden shrink-0 text-lg font-bold text-primary">
+                      {lender.logo ? <img src={lender.logo} alt={lender.name} className="w-full h-full object-cover" /> : lender.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{lender.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={cn("w-1.5 h-1.5 rounded-full", lender.isActive ? "bg-emerald-500" : "bg-muted-foreground/30")} />
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{lender.isActive ? "Active" : "Inactive"}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </BorrowerLayout>
+  );
+}
+
+function MetricCard({ title, value, icon, color }: { title: string; value: number | string; icon: React.ReactNode; color: string }) {
+  return (
+    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+      <div className={cn("inline-flex items-center justify-center w-10 h-10 rounded-xl mb-4", color)}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
+        <p className="text-xs font-semibold text-muted-foreground mt-2 uppercase tracking-wider">{title}</p>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ icon, message }: { icon: React.ReactNode; message: string }) {
+  return (
+    <div className="py-12 px-6 rounded-2xl border-2 border-dashed border-border/40 flex flex-col items-center text-center">
+      <div className="text-muted-foreground/30 mb-3">{icon}</div>
+      <p className="text-sm font-medium text-muted-foreground">{message}</p>
+    </div>
   );
 }
