@@ -95,9 +95,9 @@ export function ProfileDropdown({
                   {user.fullName}
                 </p>
                 {roleLabel && (
-                  <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5 font-medium uppercase tracking-tighter">
+                  <span className="inline-block bg-primary/15 text-primary text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm mt-0.5">
                     {roleLabel}
-                  </p>
+                  </span>
                 )}
               </div>
             </div>
@@ -117,13 +117,13 @@ export function ProfileDropdown({
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold tracking-tight truncate text-foreground/95">
+              <p className="text-sm font-semibold tracking-tight truncate text-foreground">
                 {user.fullName}
               </p>
               {roleLabel && (
-                <p className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
+                <span className="inline-flex items-center gap-1 bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded mt-1.5">
                   {roleLabel}
-                </p>
+                </span>
               )}
             </div>
           </div>
