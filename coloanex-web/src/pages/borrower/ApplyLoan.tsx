@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   BriefcaseBusiness,
@@ -44,7 +45,8 @@ import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
-import { useCreateLoanMutation } from "@/apis/loansApi";
+import { useGetLoansQuery, useCreateLoanMutation } from "@/apis/loansApi";
+import { LoanStatus } from "@/types/loan";
 import { useGetMyWalletsQuery } from "@/apis/walletsApi";
 import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
 import { useGetKycsQuery } from "@/apis/kycApi";
@@ -61,13 +63,13 @@ const COLLATERAL_OPTIONS: Array<{
   value: string;
   icon: ComponentType<{ className?: string }>;
 }> = [
-  { label: "Property/Land", value: "Property", icon: Home },
-  { label: "Vehicle", value: "Vehicle", icon: Truck },
-  { label: "Gold", value: "Gold", icon: Gem },
-  { label: "Machinery", value: "Machinery", icon: Wrench },
-  { label: "Stock/Inventory", value: "Stock", icon: Tractor },
-  { label: "Other", value: "Other", icon: BriefcaseBusiness },
-];
+    { label: "Property/Land", value: "Property", icon: Home },
+    { label: "Vehicle", value: "Vehicle", icon: Truck },
+    { label: "Gold", value: "Gold", icon: Gem },
+    { label: "Machinery", value: "Machinery", icon: Wrench },
+    { label: "Stock/Inventory", value: "Stock", icon: Tractor },
+    { label: "Other", value: "Other", icon: BriefcaseBusiness },
+  ];
 
 const LOAN_PURPOSE_OPTIONS: Array<{
   label: string;
@@ -75,15 +77,15 @@ const LOAN_PURPOSE_OPTIONS: Array<{
   icon: ComponentType<{ className?: string }>;
   desc: string;
 }> = [
-  { label: "Business Expansion", value: "Business Expansion", icon: BriefcaseBusiness, desc: "Grow your business" },
-  { label: "Home Renovation", value: "Home Renovation", icon: Home, desc: "Improve your home" },
-  { label: "Education", value: "Education", icon: FileText, desc: "Invest in knowledge" },
-  { label: "Medical Emergency", value: "Medical Emergency", icon: ShieldCheck, desc: "Health & care" },
-  { label: "Vehicle Purchase", value: "Vehicle Purchase", icon: Truck, desc: "Buy a vehicle" },
-  { label: "Debt Consolidation", value: "Debt Consolidation", icon: CheckCircle2, desc: "Simplify payments" },
-  { label: "Working Capital", value: "Working Capital", icon: Wrench, desc: "Day-to-day operations" },
-  { label: "Other", value: "Other", icon: ListChecks, desc: "Something else" },
-];
+    { label: "Business Expansion", value: "Business Expansion", icon: BriefcaseBusiness, desc: "Grow your business" },
+    { label: "Home Renovation", value: "Home Renovation", icon: Home, desc: "Improve your home" },
+    { label: "Education", value: "Education", icon: FileText, desc: "Invest in knowledge" },
+    { label: "Medical Emergency", value: "Medical Emergency", icon: ShieldCheck, desc: "Health & care" },
+    { label: "Vehicle Purchase", value: "Vehicle Purchase", icon: Truck, desc: "Buy a vehicle" },
+    { label: "Debt Consolidation", value: "Debt Consolidation", icon: CheckCircle2, desc: "Simplify payments" },
+    { label: "Working Capital", value: "Working Capital", icon: Wrench, desc: "Day-to-day operations" },
+    { label: "Other", value: "Other", icon: ListChecks, desc: "Something else" },
+  ];
 
 export function ApplyLoanModal({
   open,
@@ -110,14 +112,14 @@ export function ApplyLoanModal({
 
   const [createLoan] = useCreateLoanMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
+  const { data: previousLoans } = useGetLoansQuery(
+    { limit: 1 },
+    { skip: !user?.id }
+  );
   const { data: tenantsData } = useGetTenantsQuery({
     limit: 100,
     isActive: "true",
   });
-  const tenants = tenantsData?.data || [];
-
-  const { data: wallets = [] } = useGetMyWalletsQuery();
-  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
 
   const [formData, setFormData] = useState({
     requestedAmount: "",
@@ -129,6 +131,45 @@ export function ApplyLoanModal({
     requestedTermMonths: "",
     tenantId: defaultTenantId,
   });
+
+  const currentTenantId = isLockedTenant ? defaultTenantId : formData.tenantId;
+  const { data: tenantLoansData } = useGetLoansQuery(
+    { tenantId: currentTenantId, userId: user?.id, limit: 1, sortOrder: "desc" } as any,
+    { skip: !user?.id || !currentTenantId }
+  );
+
+  const existingLoan = tenantLoansData?.data?.[0];
+  const isLoanBlocked =
+    existingLoan &&
+    [
+      LoanStatus.DRAFT,
+      LoanStatus.SUBMITTED,
+      LoanStatus.UNDER_REVIEW,
+      LoanStatus.APPROVED,
+      LoanStatus.CONTRACT_GENERATED,
+      LoanStatus.CONTRACT_SIGNED,
+    ].includes(existingLoan.status as LoanStatus);
+  const tenants = tenantsData?.data || [];
+
+  useEffect(() => {
+    if (open && previousLoans?.data?.length) {
+      const loan = previousLoans.data[0];
+      setFormData((prev) => ({
+        ...prev,
+        requestedAmount: (loan.requestedAmount?.toString() as string) || prev.requestedAmount,
+        requestedTermMonths: (loan.requestedTermMonths?.toString() as string) || prev.requestedTermMonths,
+        tenantId: (loan.tenantId as string) || prev.tenantId,
+        purpose: (loan.purpose as string) || "",
+        collateralType: (loan.collateralDetails?.type as string) || prev.collateralType,
+        collateralDescription: (loan.collateralDetails?.description as string) || "",
+        collateralValue: (loan.collateralDetails?.value?.toString() as string) || "",
+        collateralImageUrl: (loan.collateralDetails?.imageUrl as string) || "",
+      }));
+    }
+  }, [open, previousLoans]);
+
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
 
   const { data: kycsData } = useGetKycsQuery(
     {
@@ -334,8 +375,8 @@ export function ApplyLoanModal({
                           isDone
                             ? "bg-primary border-primary text-primary-foreground"
                             : isActive
-                            ? "border-primary bg-background text-primary ring-4 ring-primary/10"
-                            : "border-border bg-background text-muted-foreground",
+                              ? "border-primary bg-background text-primary ring-4 ring-primary/10"
+                              : "border-border bg-background text-muted-foreground",
                         )}
                       >
                         {isDone ? (
@@ -361,6 +402,13 @@ export function ApplyLoanModal({
             <div className="space-y-6">
               {step === 1 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                  {isLoanBlocked && (
+                    <div className="bg-destructive/10 text-destructive text-xs font-bold p-3 rounded-xl border border-destructive/20 flex gap-2 items-center">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      You already have a {existingLoan?.status} loan request for this institution.
+                    </div>
+                  )}
+
                   <div className="rounded-xl bg-primary/5 border border-primary/10 p-3">
                     <div className="flex gap-3 items-center">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -377,10 +425,10 @@ export function ApplyLoanModal({
 
                   <div className="grid grid-cols-1 gap-y-4">
                     <div className="space-y-4">
-                       <div className="flex items-center gap-2 pb-1 border-b border-border/40">
-                          <Building2 className="w-3.5 h-3.5 text-primary" />
-                          <h3 className="text-xs font-bold text-foreground">Basic Requirements</h3>
-                       </div>
+                      <div className="flex items-center gap-2 pb-1 border-b border-border/40">
+                        <Building2 className="w-3.5 h-3.5 text-primary" />
+                        <h3 className="text-xs font-bold text-foreground">Basic Requirements</h3>
+                      </div>
                     </div>
 
                     {!isLockedTenant && (
@@ -435,10 +483,10 @@ export function ApplyLoanModal({
 
                     <div className="space-y-4 mt-2">
                       <div className="flex items-center gap-2 pb-1 border-b border-border/40">
-                         <FileText className="w-3.5 h-3.5 text-primary" />
-                         <h3 className="text-xs font-bold text-foreground">Facility Purpose</h3>
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <h3 className="text-xs font-bold text-foreground">Facility Purpose</h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="flex flex-wrap gap-2">
                         {LOAN_PURPOSE_OPTIONS.map((option) => {
                           const Icon = option.icon;
                           const isSelected = formData.purpose === option.value;
@@ -484,7 +532,7 @@ export function ApplyLoanModal({
                     <h3 className="text-sm font-bold text-foreground">Select Collateral Type</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-wrap gap-3">
                     {COLLATERAL_OPTIONS.map((option) => {
                       const Icon = option.icon;
                       const isSelected = formData.collateralType === option.value;
@@ -687,7 +735,7 @@ export function ApplyLoanModal({
                     <Button
                       type="button"
                       onClick={nextStep}
-                      disabled={isProcessingBlockchain}
+                      disabled={isProcessingBlockchain || (step === 1 && isLoanBlocked)}
                       className="h-11 rounded-xl"
                     >
                       Next <ArrowRight className="w-4 h-4 ml-1" />
