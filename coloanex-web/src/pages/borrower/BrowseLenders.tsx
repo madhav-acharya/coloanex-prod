@@ -13,18 +13,29 @@ import {
   Building2,
   ExternalLink
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 export default function BrowseLenders() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialSearch = queryParams.get("search") || "";
+
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [statusFilter, setStatusFilter] = useState("active");
+
+  useEffect(() => {
+    if (initialSearch && initialSearch !== search) {
+      setSearch(initialSearch);
+      setDebouncedSearch(initialSearch);
+    }
+  }, [initialSearch]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -68,8 +79,8 @@ export default function BrowseLenders() {
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
           <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest px-1">Marketplace</h2>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Lender Directory</h1>
+            <h2 className="text-sm font-semibold text-muted-foreground  tracking-wider px-1">Marketplace</h2>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Lender Directory</h1>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
             <div className="relative w-full sm:w-64 lg:w-80">
@@ -86,7 +97,7 @@ export default function BrowseLenders() {
                 className="h-11 rounded-xl border-border/60 bg-background/50 pl-10 font-medium placeholder:text-muted-foreground/60 focus-visible:ring-primary/20"
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-[130] mt-2 w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-xl">
+                <div className="absolute z-[130] mt-2 w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-none">
                   {suggestions.map((item) => (
                     <button
                       key={item.id}
@@ -111,9 +122,9 @@ export default function BrowseLenders() {
                   key={key}
                   onClick={() => setStatusFilter(key)}
                   className={cn(
-                    "px-4 py-1.5 rounded-lg text-xs font-bold transition-all capitalize",
+                    "px-4 py-1.5 rounded-lg text-[11px] font-bold transition-all capitalize tracking-wider",
                     statusFilter === key 
-                      ? "bg-background text-foreground shadow-sm ring-1 ring-border/20" 
+                      ? "bg-background text-foreground shadow-none ring-1 ring-border/20" 
                       : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -152,7 +163,7 @@ export default function BrowseLenders() {
                   size="sm"
                   className={cn(
                     "w-9 h-9 rounded-lg font-bold transition-all",
-                    page === i + 1 ? "shadow-md bg-background text-foreground ring-1 ring-border" : "text-muted-foreground hover:bg-background/50",
+                    page === i + 1 ? "shadow-none bg-background text-foreground ring-1 ring-border" : "text-muted-foreground hover:bg-background/50",
                   )}
                   onClick={() => setPage(i + 1)}
                 >
@@ -171,14 +182,14 @@ function LenderCard({ lender, onClick }: { lender: any; onClick: () => void }) {
   return (
     <div 
       onClick={onClick}
-      className="group bg-background border border-border/60 hover:border-primary/40 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 flex flex-col"
+      className="group bg-background border border-border/60 hover:border-primary/40 rounded-2xl p-5 cursor-pointer transition-all hover:shadow-none hover:-translate-y-1 flex flex-col"
     >
       <div className="flex items-start justify-between mb-6">
-        <div className="w-14 h-14 rounded-xl bg-muted/40 border border-border/40 flex items-center justify-center overflow-hidden shrink-0 text-xl font-bold text-primary shadow-sm bg-background">
+        <div className="w-14 h-14 rounded-xl bg-muted/40 border border-border/40 flex items-center justify-center overflow-hidden shrink-0 text-xl font-bold text-primary shadow-none bg-background">
           {lender.logo ? <img src={lender.logo} alt={lender.name} className="w-full h-full object-cover" /> : lender.name.charAt(0).toUpperCase()}
         </div>
         <div className={cn(
-          "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest",
+          "px-2.5 py-1 rounded-full text-[11px] font-bold  tracking-wider",
           lender.isActive ? "bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20" : "bg-muted text-muted-foreground ring-1 ring-border/40"
         )}>
           {lender.isActive ? "Active" : "Inactive"}
@@ -198,8 +209,8 @@ function LenderCard({ lender, onClick }: { lender: any; onClick: () => void }) {
       </div>
 
       <div className="mt-5 flex items-center justify-between">
-        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">Profile ID: {lender.id.slice(0, 8)}</span>
-        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+        <span className="text-[11px] font-bold  tracking-wider text-muted-foreground/60">Profile ID: {lender.id.slice(0, 8)}</span>
+        <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-none">
           <ArrowRight className="w-4 h-4" />
         </div>
       </div>
@@ -209,7 +220,7 @@ function LenderCard({ lender, onClick }: { lender: any; onClick: () => void }) {
 
 function InfoEntry({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-center gap-3 text-[11px] font-semibold text-muted-foreground/80">
+    <div className="flex items-center gap-3 text-[11px] font-bold text-muted-foreground/80  tracking-wider">
       <div className="shrink-0">{icon}</div>
       <span className="truncate">{text}</span>
     </div>
