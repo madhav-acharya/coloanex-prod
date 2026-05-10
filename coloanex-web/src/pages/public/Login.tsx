@@ -32,7 +32,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await login({
+      await login({
         email: formData.email,
         password: formData.password,
       });
@@ -69,78 +69,80 @@ const Login = () => {
               Sign In to Coloanex
             </DialogTitle>
             <DialogDescription className="text-center">
-              Enter your credentials to access your account
+              Access your account with your credentials
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 py-4">
-            {error && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {(error as { data?: { message?: string } })?.data?.message ||
-                  "Login failed"}
-              </div>
-            )}
+          <div className="py-4 space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                  {(error as { data?: { message?: string } })?.data?.message ||
+                    "Login failed"}
+                </div>
+              )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Email <span className="text-destructive">*</span>
-              </label>
-              <Input
-                type="email"
-                name="email"
-                placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Password <span className="text-destructive">*</span>
-              </label>
-              <div className="relative">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Email <span className="text-destructive">*</span>
+                </label>
                 <Input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
                   onChange={handleInputChange}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Password <span className="text-destructive">*</span>
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full bg-primary hover:bg-primary/90 cursor-pointer h-11 rounded-xl font-bold"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+
+              <p className="text-center text-sm">
+                Don't have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                  onClick={() => navigate("/signup")}
+                  className="text-primary hover:underline font-semibold cursor-pointer"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
+                  Create Account
                 </button>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full bg-primary hover:bg-primary/90 cursor-pointer"
-              disabled={isLoading}
-            >
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-
-            <p className="text-center text-sm">
-              Don't have an account?{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/signup")}
-                className="text-primary hover:underline font-semibold cursor-pointer"
-              >
-                Create Account
-              </button>
-            </p>
-          </form>
+              </p>
+            </form>
+          </div>
         </DialogContent>
       </Dialog>
     </>
