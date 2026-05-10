@@ -75,7 +75,8 @@ export const getBlockchainAccessSnapshot = (params: {
       hasWallet,
       hasActiveSubscription,
       hasSubscriptionCapacity,
-      canRunBlockchain: true,
+      canRunBlockchain: hasWallet, // User mode MUST have a wallet
+      reason: !hasWallet ? "Connect your MetaMask wallet to execute transactions in User Wallet mode." : undefined
     };
   }
 
