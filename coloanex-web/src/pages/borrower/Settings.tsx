@@ -47,6 +47,7 @@ import {
   Loader2,
   User,
   CreditCard,
+  Wallet,
   Lock,
   Eye,
   EyeOff,
@@ -407,6 +408,13 @@ export default function Settings() {
         return undefined;
       }
 
+      const alreadyLinked = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+      if (alreadyLinked) {
+        await refetchWallets();
+        toast.success("Wallet synchronized");
+        return address;
+      }
+
       await createWallet({
         provider: "METAMASK",
         purpose: "PRIMARY",
@@ -670,18 +678,24 @@ export default function Settings() {
       title: "Billing & Plans",
       description: "Usage and limits",
       badge: hasLimitReached ? (
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 font-bold uppercase tracking-tighter">
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive border border-destructive/20 font-bold tracking-tighter">
           Exceeded
         </span>
       ) : hasActiveSubscription ? (
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold uppercase tracking-tighter">
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold tracking-tighter">
           Active
         </span>
       ) : (
-        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold uppercase tracking-tighter">
+        <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold tracking-tighter">
           Upgrade
         </span>
       ),
+    },
+    {
+      id: "wallet",
+      icon: Wallet,
+      title: "Capital & Wallets",
+      description: "Manage digital assets",
     },
     ...(showPaymentConfig
       ? [
@@ -702,10 +716,10 @@ export default function Settings() {
   if (accountSections.has(activeSection)) {
     return (
       <BorrowerLayout>
-        <div className="settings-shell grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-          <Card className="hidden lg:block rounded-2xl border-border bg-card/50 backdrop-blur-sm lg:sticky lg:top-28 lg:max-h-[calc(100vh-8rem)]">
-            <CardContent className="p-4 space-y-5">
-              <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-background/50">
+        <div className="settings-shell shadow-none grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+          <Card className="hidden lg:block rounded-2xl border-border bg-card/50 backdrop-blur-sm lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex flex-col ">
+            <CardContent className="p-4 flex-1 h-full flex flex-col space-y-5 custom-scrollbar">
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-background/50 shrink-0">
                 <Avatar className="h-10 w-10 ring-2 ring-primary/10">
                   <AvatarImage src={user?.profileImage} alt={user?.fullName} />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
@@ -714,11 +728,11 @@ export default function Settings() {
                 </Avatar>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate tracking-tight">{user?.fullName}</p>
-                  <p className="text-[10px] text-muted-foreground truncate font-medium uppercase tracking-widest">{user?.isActive ? "Verified" : "Pending"}</p>
+                  <p className="text-[11px] text-muted-foreground truncate font-medium  tracking-wider">{user?.isActive ? "Verified" : "Pending"}</p>
                 </div>
               </div>
 
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1">
                 {accountNavSections.map((option) => {
                   const Icon = option.icon;
                   const isActive = activeSection === option.id;
@@ -730,20 +744,20 @@ export default function Settings() {
                       className={cn(
                         "group w-full flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border",
                         isActive 
-                          ? "bg-primary/10 border-primary/20 shadow-sm" 
+                          ? "bg-primary/10 border-primary/20 " 
                           : "bg-transparent border-transparent hover:bg-muted/50 hover:border-border/50"
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm border",
+                          "w-8 h-8 rounded-lg flex items-center justify-center transition-colors border ",
                           isActive ? "bg-primary text-primary-foreground border-primary/20" : "bg-background border-border group-hover:bg-muted"
                         )}>
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="text-left min-w-0">
-                           <p className={cn("text-xs font-bold truncate", isActive ? "text-primary" : "text-foreground/80")}>{option.title}</p>
-                           <p className="text-[9px] text-muted-foreground truncate leading-none mt-0.5">{option.description}</p>
+                           <p className={cn("text-[11px] font-bold truncate tracking-wider", isActive ? "text-primary" : "text-foreground/80")}>{option.title}</p>
+                           <p className="text-[11px] font-bold text-muted-foreground/60 truncate leading-none mt-1 tracking-tighter">{option.description}</p>
                         </div>
                       </div>
                       {option.badge}
@@ -752,7 +766,7 @@ export default function Settings() {
                 })}
               </div>
 
-              <div className="pt-4 border-t border-border/40">
+              <div className="pt-4 border-t border-border/40 mt-auto shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -768,7 +782,7 @@ export default function Settings() {
 
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeSection === "account" && (
-              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden  border-t border-t-border/60">
                 <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-primary" />
@@ -779,7 +793,7 @@ export default function Settings() {
                   <form onSubmit={handleAccountUpdate} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="account-fullName" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Full Identity Name</Label>
+                        <Label htmlFor="account-fullName" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">Full Identity Name</Label>
                         <Input
                           id="account-fullName"
                           value={accountForm.fullName}
@@ -790,7 +804,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="account-email" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Business Contact Email</Label>
+                        <Label htmlFor="account-email" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">Business Contact Email</Label>
                         <Input
                           id="account-email"
                           type="email"
@@ -801,7 +815,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="account-phone" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Verified Phone Line</Label>
+                        <Label htmlFor="account-phone" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">Verified Phone Line</Label>
                         <Input
                           id="account-phone"
                           value={accountForm.phone}
@@ -812,11 +826,11 @@ export default function Settings() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                      <p className="text-[10px] text-muted-foreground font-medium italic">All changes are subject to system verification.</p>
+                      <p className="text-[11px] text-muted-foreground font-medium italic">All changes are subject to system verification.</p>
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90   transition-all active:scale-95"
                       >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Changes"}
                       </Button>
@@ -827,7 +841,7 @@ export default function Settings() {
             )}
 
             {activeSection === "password" && (
-              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden  border-t border-t-border/60">
                 <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
                   <div className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-primary" />
@@ -838,7 +852,7 @@ export default function Settings() {
                   <form onSubmit={handlePasswordUpdate} className="space-y-6">
                     <div className="space-y-4 max-w-md">
                       <div className="space-y-1.5">
-                        <Label htmlFor="current-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Established Password</Label>
+                        <Label htmlFor="current-password" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">Established Password</Label>
                         <div className="relative">
                           <Input
                             id="current-password"
@@ -860,7 +874,7 @@ export default function Settings() {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="new-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">New Secure Password</Label>
+                          <Label htmlFor="new-password" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">New Secure Password</Label>
                           <div className="relative">
                             <Input
                               id="new-password"
@@ -881,7 +895,7 @@ export default function Settings() {
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="confirm-password" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Confirm Identity Key</Label>
+                          <Label htmlFor="confirm-password" className="text-[11px] font-bold tracking-wider text-muted-foreground ml-1">Confirm Identity Key</Label>
                           <div className="relative">
                             <Input
                               id="confirm-password"
@@ -904,11 +918,11 @@ export default function Settings() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                      <p className="text-[10px] text-muted-foreground font-medium italic">Regular password rotations are recommended.</p>
+                      <p className="text-[11px] text-muted-foreground font-medium italic">Regular password rotations are recommended.</p>
                       <Button
                         type="submit"
                         disabled={isLoading}
-                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                        className="h-10 rounded-xl px-6 font-bold bg-primary hover:bg-primary/90   transition-all active:scale-95"
                       >
                         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Refresh Security"}
                       </Button>
@@ -919,7 +933,7 @@ export default function Settings() {
             )}
 
             {activeSection === "appearance" && (
-              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden  border-t border-t-border/60">
                 <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
                   <div className="flex items-center gap-2">
                     <Palette className="w-4 h-4 text-primary" />
@@ -937,20 +951,20 @@ export default function Settings() {
                         key={t.id}
                         onClick={() => setTheme(t.id as any)}
                         className={cn(
-                          "group flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden relative",
+                          "group flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all duration-300 cursor-pointer overflow-hidden relative ",
                           mode === t.id
-                            ? "border-primary bg-primary/5 shadow-lg shadow-primary/5"
+                            ? "border-primary bg-primary/5 "
                             : "border-border/60 bg-background/50 hover:border-primary/40 hover:bg-muted/30"
                         )}
                       >
                         <div className={cn(
-                          "w-12 h-12 rounded-2xl mb-4 flex items-center justify-center transition-all duration-300 shadow-sm border",
+                          "w-12 h-12 rounded-2xl mb-4 flex items-center justify-center transition-all duration-300 border ",
                           mode === t.id ? "bg-primary text-primary-foreground border-primary/20 scale-110" : "bg-muted/80 text-muted-foreground border-border"
                         )}>
                           <t.icon className="w-5 h-5" />
                         </div>
-                        <p className={cn("text-xs font-bold uppercase tracking-tight", mode === t.id ? "text-primary" : "text-foreground/70")}>{t.label}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1 font-medium">{t.desc}</p>
+                        <p className={cn("text-xs font-bold tracking-tight", mode === t.id ? "text-primary" : "text-foreground/70")}>{t.label}</p>
+                        <p className="text-[11px] text-muted-foreground mt-1 font-medium">{t.desc}</p>
                         {mode === t.id && (
                           <div className="absolute top-3 right-3">
                              <CheckCircle2 className="w-4 h-4 text-primary" />
@@ -1030,7 +1044,7 @@ export default function Settings() {
             )}
 
             {activeSection === "notifications" && (
-              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden border-t-4 border-t-primary/20">
+              <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden  border-t border-border/60">
                 <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
                   <div className="flex items-center gap-2">
                     <Palette className="w-4 h-4 text-primary" />
@@ -1048,7 +1062,7 @@ export default function Settings() {
                       <div key={s.id} className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/40">
                         <div className="min-w-0">
                           <Label htmlFor={s.id} className="text-xs font-bold text-foreground/80 block">{s.label}</Label>
-                          <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">{s.desc}</p>
                         </div>
                         <Switch
                           id={s.id}
@@ -1071,7 +1085,7 @@ export default function Settings() {
   return (
     <BorrowerLayout>
       <div className="mx-auto max-w-5xl space-y-6">
-        <Card className="settings-shell rounded-xl border-border bg-card/75">
+        <Card className="settings-shell shadow-none rounded-xl border-border bg-card/75">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14 ring-2 ring-primary/25">
@@ -1089,7 +1103,7 @@ export default function Settings() {
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <Badge
-                    className={`rounded-full border text-[10px] ${
+                    className={`rounded-full border text-[11px] ${
                       user?.isActive
                         ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/20"
                         : "bg-destructive/15 text-destructive border-destructive/20"
@@ -1115,10 +1129,10 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        <Card className="settings-shell rounded-xl border-border bg-card/75">
+        <Card className="settings-shell shadow-none rounded-xl border-border bg-card/75">
           <CardContent className="p-6">
             <div className="mb-4">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+              <h1 className="text-2xl sm:text-2xl font-bold tracking-tight">
                 Profile Settings
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
