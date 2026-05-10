@@ -34,6 +34,10 @@ function AppContent() {
         <Stack.Screen name="profile/change-password" />
         <Stack.Screen name="profile/notifications" />
         <Stack.Screen name="profile/theme-settings" />
+        <Stack.Screen name="profile/subscriptions" />
+        <Stack.Screen name="profile/payment-configs" />
+        <Stack.Screen name="profile/support" />
+        <Stack.Screen name="profile/about" />
       </Stack>
       <StatusBar style={isDark ? "light" : "dark"} />
     </>
