@@ -17,7 +17,6 @@ type Tab = {
   label: string;
   path: string;
   icon: React.ComponentType<{ className?: string }>;
-  center?: boolean;
 };
 
 type MobileBottomNavProps = {
@@ -34,7 +33,7 @@ export function BottomNavbar({
   const borrowerTabs: Tab[] = [
     { label: "Home", path: "/dashboard", icon: Home },
     { label: "Lenders", path: "/lenders", icon: Users },
-    { label: "Loans", path: "/my-loans", icon: HandCoins, center: true },
+    { label: "Loans", path: "/my-loans", icon: HandCoins },
     { label: "KYC", path: "/kyc", icon: ShieldCheck },
     { label: "Account", path: "/profile", icon: User },
   ];
@@ -63,64 +62,38 @@ export function BottomNavbar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[120] md:hidden">
-      <nav className="flex items-end justify-around border-t border-border/40 bg-background/95 backdrop-blur-xl px-2 pb-safe">
+      <nav className="flex items-center justify-around border-t border-border/40 bg-background/95 backdrop-blur-xl px-2 h-16 pb-safe safe-area-bottom">
         {tabs.map((tab) => {
           const active = isActive(tab);
           const Icon = tab.icon;
-
-          if (tab.center) {
-            return (
-              <Link
-                key={tab.path}
-                to={tab.path}
-                className="flex flex-col items-center justify-center -mt-5 mb-1"
-              >
-                <div
-                  className={cn(
-                    "w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all border-4",
-                    active
-                      ? "bg-primary text-primary-foreground border-primary/30 scale-110"
-                      : "bg-primary text-primary-foreground border-background"
-                  )}
-                >
-                  <Icon className="w-6 h-6" />
-                </div>
-                <span
-                  className={cn(
-                    "text-[9px] font-bold uppercase tracking-wider mt-1.5",
-                    active ? "text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {tab.label}
-                </span>
-              </Link>
-            );
-          }
 
           return (
             <Link
               key={tab.path}
               to={tab.path}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 px-3"
+              className="relative flex flex-col items-center justify-center gap-1.5 h-full px-4 transition-all overflow-hidden"
             >
+              {active && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-b-full transition-all duration-300" />
+              )}
               <div
                 className={cn(
-                  "flex h-9 w-9 items-center justify-center transition-all",
+                  "flex h-8 w-8 items-center justify-center transition-all",
                   active
                     ? "text-primary"
-                    : "text-muted-foreground/70 hover:text-foreground"
+                    : "text-muted-foreground/70"
                 )}
               >
                 <Icon
                   className={cn(
                     "transition-all",
-                    active ? "w-5 h-5" : "w-4.5 h-4.5"
+                    active ? "w-6 h-6" : "w-5.5 h-5.5"
                   )}
                 />
               </div>
               <span
                 className={cn(
-                  "text-[10px] font-semibold leading-none tracking-tight",
+                  "text-[10px] font-bold leading-none tracking-tight transition-colors",
                   active ? "text-primary" : "text-muted-foreground/60"
                 )}
               >
