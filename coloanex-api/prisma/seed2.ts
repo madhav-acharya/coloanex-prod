@@ -124,7 +124,7 @@ async function main() {
     const borrowerUser = await prisma.user.create({
       data: {
         email: `borrower${i}@coloanex.com`,
-        fullName: `Dummy Borrower ${i}`,
+        fullName: `Borrower ${i}`,
         password: hashedPassword,
         phone: `982000000${i}`,
         isActive: true,
