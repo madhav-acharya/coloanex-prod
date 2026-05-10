@@ -23,6 +23,7 @@ import { useGetTenantsQuery } from "@/apis/tenantsApi";
 import { useCreateKycMutation } from "@/apis/kycApi";
 import { useUploadSingleMutation } from "@/apis/uploadApi";
 import { KycFileType } from "@/types/kyc";
+import { getBlockchainAccessSnapshot } from "@/utils/blockchainAccess";
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,9 +39,13 @@ import {
   User,
   UserCheck,
   UserCircle2,
+  Zap,
 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { useGetMyWalletsQuery } from "@/apis/walletsApi";
+import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
+import { useNavigate } from "react-router-dom";
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"];
 const MARITAL_STATUS_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
@@ -83,6 +88,7 @@ export function KycVerificationModal({
 }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const stepMeta = [
     { id: 1, label: "Basic Info", icon: UserCircle2 },
@@ -98,6 +104,18 @@ export function KycVerificationModal({
   const selectClass = "h-10 bg-muted/20 border-border/40 rounded-xl text-sm";
   const [createKyc, { isLoading: isCreating }] = useCreateKycMutation();
   const [uploadSingle, { isLoading: isUploading }] = useUploadSingleMutation();
+  const { data: wallets = [] } = useGetMyWalletsQuery();
+  const { data: mySubscriptions = [] } = useListMySubscriptionsQuery();
+
+  const blockchainAccess = useMemo(
+    () =>
+      getBlockchainAccessSnapshot({
+        gasPaymentMode: (user as any)?.gasPaymentMode,
+        wallets,
+        subscriptions: mySubscriptions,
+      }),
+    [user, wallets, mySubscriptions],
+  );
 
   const { data: tenantsData } = useGetTenantsQuery({
     page: 1,
@@ -446,6 +464,36 @@ export function KycVerificationModal({
         className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto rounded-xl"
         onInteractOutside={(e) => e.preventDefault()}
       >
+        {!blockchainAccess.canRunBlockchain && (
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-8 text-center rounded-xl animate-in fade-in duration-300">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+              <Zap className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">Subscription Required</h3>
+            <p className="text-sm text-muted-foreground mb-8 max-w-[350px]">
+              {blockchainAccess.reason || "KYC verification requires on-chain anchoring. Please upgrade your subscription to continue in platform-sponsored mode."}
+            </p>
+            <div className="flex flex-col w-full sm:w-[300px] gap-3">
+              <Button 
+                onClick={() => {
+                  onOpenChange(false);
+                  window.location.href = "/borrower/settings";
+                }}
+                className="w-full h-11 rounded-xl bg-primary hover:bg-primary/90 font-bold text-sm shadow-none"
+              >
+                Upgrade Plan
+              </Button>
+              <Button 
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="w-full h-11 rounded-xl font-bold text-sm text-muted-foreground"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40">
           <div className="space-y-1">
             <DialogTitle className="text-xl font-bold tracking-tight">KYC Verification</DialogTitle>
@@ -467,7 +515,7 @@ export function KycVerificationModal({
                   <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
                     <div
                       className={cn(
-                        "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
+                        "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-none",
                         isDone
                           ? "bg-primary border-primary text-primary-foreground"
                           : isActive
@@ -483,7 +531,7 @@ export function KycVerificationModal({
                     </div>
                     <span
                       className={cn(
-                        "text-[10px] font-bold uppercase tracking-wider text-center hidden sm:block",
+                        "text-[11px] font-bold  tracking-wider text-center hidden sm:block",
                         isActive ? "text-primary" : "text-muted-foreground",
                       )}
                     >
@@ -494,6 +542,37 @@ export function KycVerificationModal({
               })}
             </div>
           </div>
+
+          {!blockchainAccess.canRunBlockchain && (
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-8 text-center rounded-3xl animate-in fade-in duration-300">
+              <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+                <Zap className="w-8 h-8 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">Subscription Required</h3>
+              <p className="text-sm text-muted-foreground mb-8 max-w-[300px]">
+                {blockchainAccess.reason ||
+                  "You need an active subscription to execute blockchain transactions in platform mode."}
+              </p>
+              <div className="flex flex-col w-full gap-3 px-4">
+                <Button
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate("/profile?section=subscriptions");
+                  }}
+                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold text-sm shadow-none border-none"
+                >
+                  Upgrade Subscription
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  className="w-full h-12 rounded-xl font-bold text-sm text-muted-foreground"
+                >
+                  Maybe Later
+                </Button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-6">
@@ -507,7 +586,7 @@ export function KycVerificationModal({
                   <div className="grid grid-cols-1 gap-y-4">
                     {!isLockedTenant && (
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">
                           Target Institution <span className="text-destructive">*</span>
                         </Label>
                         <Select
@@ -529,7 +608,7 @@ export function KycVerificationModal({
                     )}
 
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">First Name *</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">First Name *</Label>
                       <Input
                         value={form.firstName}
                         onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))}
@@ -538,7 +617,7 @@ export function KycVerificationModal({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Name *</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Last Name *</Label>
                       <Input
                         value={form.lastName}
                         onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))}
@@ -547,7 +626,7 @@ export function KycVerificationModal({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Middle Name</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Middle Name</Label>
                       <Input
                         value={form.middleName}
                         onChange={(e) => setForm((prev) => ({ ...prev, middleName: e.target.value }))}
@@ -555,7 +634,7 @@ export function KycVerificationModal({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Date of Birth *</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Date of Birth *</Label>
                       <Input
                         type="date"
                         value={form.dateOfBirth}
@@ -576,7 +655,7 @@ export function KycVerificationModal({
 
                   <div className="grid grid-cols-1 gap-y-4">
                     <div className="space-y-2">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Biological Gender *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Biological Gender *</Label>
                        <div className="grid grid-cols-3 gap-2">
                          {GENDER_OPTIONS.map((opt) => (
                            <button
@@ -584,9 +663,9 @@ export function KycVerificationModal({
                             type="button"
                             onClick={() => setForm(p => ({ ...p, gender: opt }))}
                             className={cn(
-                              "px-2 py-2 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer",
+                              "px-2 py-2 rounded-lg border transition-all text-[11px] font-bold  tracking-wider cursor-pointer",
                               form.gender === opt
-                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-sm"
+                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-none"
                                 : "border-border bg-muted/5 text-muted-foreground hover:border-primary/20"
                             )}
                           >
@@ -597,7 +676,7 @@ export function KycVerificationModal({
                     </div>
 
                     <div className="space-y-2">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Marital Status *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Marital Status *</Label>
                        <div className="grid grid-cols-2 gap-2">
                          {MARITAL_STATUS_OPTIONS.map((opt) => (
                            <button
@@ -605,9 +684,9 @@ export function KycVerificationModal({
                             type="button"
                             onClick={() => setForm(p => ({ ...p, maritalStatus: opt }))}
                             className={cn(
-                              "px-2 py-2 rounded-lg border transition-all text-[10px] font-bold uppercase tracking-wider cursor-pointer",
+                              "px-2 py-2 rounded-lg border transition-all text-[11px] font-bold  tracking-wider cursor-pointer",
                               form.maritalStatus === opt
-                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-sm"
+                                ? "border-primary bg-primary/5 text-primary ring-1 ring-primary/20 shadow-none"
                                 : "border-border bg-muted/5 text-muted-foreground hover:border-primary/20"
                             )}
                           >
@@ -618,15 +697,15 @@ export function KycVerificationModal({
                     </div>
 
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Father's Full Name *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Father's Full Name *</Label>
                        <Input value={form.fatherName} onChange={e => setForm(p => ({...p, fatherName: e.target.value}))} className={inputClass} />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mother's Full Name *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Mother's Full Name *</Label>
                        <Input value={form.motherName} onChange={e => setForm(p => ({...p, motherName: e.target.value}))} className={inputClass} />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Grandfather's Full Name *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Grandfather's Full Name *</Label>
                        <Input value={form.grandfatherName} onChange={e => setForm(p => ({...p, grandfatherName: e.target.value}))} className={inputClass} />
                     </div>
                   </div>
@@ -642,24 +721,24 @@ export function KycVerificationModal({
 
                   <div className="grid grid-cols-1 gap-y-4">
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Province *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Province *</Label>
                        <Input value={form.province} onChange={e => setForm(p => ({...p, province: e.target.value}))} className={inputClass} placeholder="e.g. Bagmati" />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">District *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">District *</Label>
                        <Input value={form.district} onChange={e => setForm(p => ({...p, district: e.target.value}))} className={inputClass} placeholder="e.g. Kathmandu" />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Municipality / Rural Municipality *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Municipality / Rural Municipality *</Label>
                        <Input value={form.municipality} onChange={e => setForm(p => ({...p, municipality: e.target.value}))} className={inputClass} placeholder="e.g. Kathmandu Metro" />
                     </div>
                     <div className="grid grid-cols-1 gap-4">
                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ward No. *</Label>
+                         <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Ward No. *</Label>
                          <Input type="number" value={form.ward} onChange={e => setForm(p => ({...p, ward: e.target.value}))} className={inputClass} placeholder="10" />
                       </div>
                       <div className="space-y-1.5">
-                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tole / Village</Label>
+                         <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Tole / Village</Label>
                          <Input value={form.tole} onChange={e => setForm(p => ({...p, tole: e.target.value}))} className={inputClass} placeholder="New Baneshwor" />
                       </div>
                     </div>
@@ -676,26 +755,26 @@ export function KycVerificationModal({
 
                   <div className="grid grid-cols-1 gap-y-4">
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Primary Occupation *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Primary Occupation *</Label>
                        <Input value={form.occupation} onChange={e => setForm(p => ({...p, occupation: e.target.value}))} className={inputClass} placeholder="e.g. Senior Software Engineer" />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly Take-Home Income (NPR) *</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Monthly Take-Home Income (NPR) *</Label>
                        <div className="relative">
                          <IconCurrencyRupeeNepalese className="absolute left-3 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                          <Input type="number" value={form.monthlyIncome} onChange={e => setForm(p => ({...p, monthlyIncome: e.target.value}))} className={cn(inputClass, "pl-8")} placeholder="75000" />
                        </div>
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Primary Bank Name</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Primary Bank Name</Label>
                        <Input value={form.bankName} onChange={e => setForm(p => ({...p, bankName: e.target.value}))} className={inputClass} placeholder="e.g. Nabil Bank Ltd." />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Account Number</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Account Number</Label>
                        <Input value={form.bankAccountNumber} onChange={e => setForm(p => ({...p, bankAccountNumber: e.target.value}))} className={inputClass} placeholder="00100XXXXXXXXX" />
                     </div>
                     <div className="space-y-1.5">
-                       <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bank Branch Location</Label>
+                       <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Bank Branch Location</Label>
                        <Input value={form.bankBranch} onChange={e => setForm(p => ({...p, bankBranch: e.target.value}))} className={inputClass} placeholder="Main Branch, Kathmandu" />
                     </div>
                   </div>
@@ -711,7 +790,7 @@ export function KycVerificationModal({
 
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-4">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Select Identity Documents *</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Select Identity Documents *</Label>
                       <div className="grid grid-cols-1 gap-2">
                         {DOCUMENT_TYPE_OPTIONS.map((opt) => {
                           const selected = selectedDocumentTypes.includes(opt.value);
@@ -723,7 +802,7 @@ export function KycVerificationModal({
                               className={cn(
                                 "group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 cursor-pointer overflow-hidden relative",
                                 selected
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-none"
                                   : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10"
                               )}
                             >
@@ -736,7 +815,7 @@ export function KycVerificationModal({
                                 </div>
                                 <div className="text-left">
                                    <p className={cn("text-xs font-bold", selected ? "text-primary" : "text-foreground/80")}>{opt.label}</p>
-                                   <p className="text-[8px] text-muted-foreground uppercase tracking-widest font-bold">Lender Requirement</p>
+                                   <p className="text-[11px] text-muted-foreground  tracking-wider font-bold">Lender Requirement</p>
                                 </div>
                               </div>
                               {selected && (
@@ -751,7 +830,7 @@ export function KycVerificationModal({
                     <div className="space-y-4">
                       {selectedDocumentTypes.length > 0 ? (
                         <div className="animate-in fade-in slide-in-from-top-2 duration-400">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Document Detail *</Label>
+                          <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Active Document Detail *</Label>
                           <div className="mt-2 p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-4">
                             <div className="space-y-1.5">
                                <Select
@@ -773,21 +852,21 @@ export function KycVerificationModal({
                             {activeDocumentType && activeDocDetail && activeDocMeta && (
                               <div className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                                 <div className="space-y-1.5">
-                                   <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{activeDocMeta.numberLabel}</Label>
+                                   <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">{activeDocMeta.numberLabel}</Label>
                                    <Input value={activeDocDetail.documentNumber} onChange={e => updateDocumentDetail(activeDocumentType, "documentNumber", e.target.value)} className={cn(inputClass, "bg-background")} placeholder="ID Number" />
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                   <div className="space-y-1.5">
-                                     <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Issue Date</Label>
+                                     <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Issue Date</Label>
                                      <Input type="date" value={activeDocDetail.issueDate} onChange={e => updateDocumentDetail(activeDocumentType, "issueDate", e.target.value)} className={cn(inputClass, "bg-background")} />
                                   </div>
                                   <div className="space-y-1.5">
-                                     <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Expiry Date</Label>
+                                     <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Expiry Date</Label>
                                      <Input type="date" value={activeDocDetail.expiryDate} onChange={e => updateDocumentDetail(activeDocumentType, "expiryDate", e.target.value)} className={cn(inputClass, "bg-background")} />
                                   </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                   <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Issue District / Authority</Label>
+                                   <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Issue District / Authority</Label>
                                    <Input value={activeDocDetail.issueDistrict} onChange={e => updateDocumentDetail(activeDocumentType, "issueDistrict", e.target.value)} className={cn(inputClass, "bg-background")} placeholder="e.g. Kathmandu" />
                                 </div>
                               </div>
@@ -797,7 +876,7 @@ export function KycVerificationModal({
                       ) : (
                         <div className="h-full min-h-[200px] flex flex-col items-center justify-center p-6 rounded-xl border border-dashed border-border/40 bg-muted/5 text-muted-foreground text-center">
                            <FileScan className="w-10 h-10 mb-3 opacity-20" />
-                           <p className="text-[10px] font-bold uppercase tracking-wider opacity-40">Select documents on the left to proceed</p>
+                           <p className="text-[11px] font-bold  tracking-wider opacity-40">Select documents on the left to proceed</p>
                         </div>
                       )}
                     </div>
@@ -815,7 +894,7 @@ export function KycVerificationModal({
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-4">
                       <div className="space-y-2">
-                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Passport Photo *</Label>
+                         <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Passport Photo *</Label>
                          <label className="group relative flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-border/40 bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300 cursor-pointer overflow-hidden">
                             <input type="file" accept="image/*" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "passportPhoto")} />
                             {passportPhoto ? (
@@ -824,7 +903,7 @@ export function KycVerificationModal({
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <div className="flex flex-col items-center gap-2">
                                     <Upload className="w-6 h-6 text-white" />
-                                    <span className="text-[9px] text-white font-bold uppercase tracking-widest">Update</span>
+                                    <span className="text-[11px] text-white font-bold  tracking-wider">Update</span>
                                   </div>
                                 </div>
                               </>
@@ -833,13 +912,13 @@ export function KycVerificationModal({
                                 <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
                                   <Upload className="w-5 h-5" />
                                 </div>
-                                <span className="text-[9px] font-bold uppercase tracking-widest leading-tight">Passport Size Photo</span>
+                                <span className="text-[11px] font-bold  tracking-wider leading-tight">Passport Size Photo</span>
                               </div>
                             )}
                          </label>
                       </div>
                       <div className="space-y-2">
-                         <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Verification Selfie *</Label>
+                         <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Verification Selfie *</Label>
                          <label className="group relative flex flex-col items-center justify-center h-36 rounded-xl border-2 border-dashed border-border/40 bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300 cursor-pointer overflow-hidden">
                             <input type="file" accept="image/*" className="hidden" onChange={e => uploadImage(e.target.files?.[0] || null, "selfie")} />
                             {selfie ? (
@@ -848,7 +927,7 @@ export function KycVerificationModal({
                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                   <div className="flex flex-col items-center gap-2">
                                     <Upload className="w-6 h-6 text-white" />
-                                    <span className="text-[9px] text-white font-bold uppercase tracking-widest">Update</span>
+                                    <span className="text-[11px] text-white font-bold  tracking-wider">Update</span>
                                   </div>
                                 </div>
                               </>
@@ -857,7 +936,7 @@ export function KycVerificationModal({
                                 <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
                                   <Upload className="w-5 h-5" />
                                 </div>
-                                <span className="text-[9px] font-bold uppercase tracking-widest leading-tight">Live Selfie with ID</span>
+                                <span className="text-[11px] font-bold  tracking-wider leading-tight">Live Selfie with ID</span>
                               </div>
                             )}
                          </label>
@@ -865,7 +944,7 @@ export function KycVerificationModal({
                     </div>
 
                     <div className="space-y-4">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Document Scans *</Label>
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">Document Scans *</Label>
                       <div className="grid grid-cols-1 gap-4">
                         {selectedDocumentTypes.map((docType) => {
                           const detail = getDocumentDetail(docType);
@@ -874,7 +953,7 @@ export function KycVerificationModal({
                             <div key={docType} className="p-4 rounded-xl border border-border/40 bg-muted/5 space-y-3">
                               <div className="flex items-center gap-2">
                                 <FileCheck className="w-3.5 h-3.5 text-primary" />
-                                <span className="text-[10px] font-bold text-foreground uppercase tracking-widest">{label} Scans</span>
+                                <span className="text-[11px] font-bold text-foreground  tracking-wider">{label} Scans</span>
                               </div>
 
                                <div className="grid grid-cols-2 gap-3">
@@ -886,7 +965,7 @@ export function KycVerificationModal({
                                       ) : (
                                         <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
                                           <Upload className="w-4 h-4" />
-                                          <span className="text-[8px] font-bold uppercase tracking-widest">Front Page</span>
+                                          <span className="text-[11px] font-bold  tracking-wider">Front Page</span>
                                         </div>
                                       )}
                                    </label>
@@ -900,7 +979,7 @@ export function KycVerificationModal({
                                         ) : (
                                           <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-primary transition-colors">
                                             <Upload className="w-4 h-4" />
-                                            <span className="text-[8px] font-bold uppercase tracking-widest">Back Page</span>
+                                            <span className="text-[11px] font-bold  tracking-wider">Back Page</span>
                                           </div>
                                         )}
                                      </label>
@@ -941,7 +1020,7 @@ export function KycVerificationModal({
                     type="button"
                     onClick={nextStep}
                     disabled={isSubmitting}
-                    className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                    className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-none shadow-primary/20 transition-all active:scale-95"
                   >
                     Continue <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
@@ -949,7 +1028,7 @@ export function KycVerificationModal({
                   <Button
                       type="submit"
                       disabled={!canSubmit || isSubmitting}
-                      className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all active:scale-95"
+                      className="h-11 rounded-xl px-8 font-bold bg-primary hover:bg-primary/90 shadow-none shadow-primary/20 transition-all active:scale-95"
                     >
                       {isSubmitting ? "Processing..." : "Submit Verification"}
                     </Button>

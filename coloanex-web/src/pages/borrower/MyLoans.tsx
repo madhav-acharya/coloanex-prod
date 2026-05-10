@@ -104,9 +104,9 @@ export default function MyLoans() {
     <BorrowerLayout>
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest px-1">Portfolio</h2>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">My Loan Facilities</h1>
+          <div className="space-y-1">
+            <h2 className="text-xs font-bold text-muted-foreground  tracking-wider px-1">Portfolio</h2>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">My Loan Facilities</h1>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
             <div className="relative w-full sm:w-64 lg:w-80">
@@ -120,7 +120,7 @@ export default function MyLoans() {
                 className="h-11 w-full rounded-xl border border-border/60 bg-background/50 pl-10 pr-4 text-sm font-medium placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/20"
               />
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute z-[130] mt-2 w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-xl">
+                <div className="absolute z-[130] mt-2 w-full overflow-hidden rounded-xl border border-border/60 bg-background shadow-none">
                   {suggestions.map((item) => (
                     <button
                       key={item}
@@ -153,9 +153,9 @@ export default function MyLoans() {
           <SummaryCard label="Outstanding Principal" value={outstanding} icon={<Clock3 className="w-5 h-5" />} color="text-amber-600 bg-amber-50" />
         </div>
 
-        <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
            <div className="p-5 border-b border-border/40 bg-muted/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground  tracking-wider flex items-center gap-2">
                  <FileText className="w-4 h-4 text-primary" />
                  Active Applications ({total})
               </h3>
@@ -169,12 +169,12 @@ export default function MyLoans() {
            <div className="overflow-x-auto">
               <table className="w-full text-left">
                  <thead>
-                    <tr className="border-b border-border/40 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
-                       <th className="px-6 py-4 font-black">Purpose & Institution</th>
-                       <th className="px-6 py-4 font-black">Amount</th>
-                       <th className="px-6 py-4 font-black">Term</th>
-                       <th className="px-6 py-4 font-black">Status</th>
-                       <th className="px-6 py-4 font-black">Submitted</th>
+                    <tr className="border-b border-border/40 text-[11px] font-bold  tracking-wider text-muted-foreground/60">
+                       <th className="px-6 py-4 font-bold">Purpose & Institution</th>
+                       <th className="px-6 py-4 font-bold">Amount</th>
+                       <th className="px-6 py-4 font-bold">Term</th>
+                       <th className="px-6 py-4 font-bold">Status</th>
+                       <th className="px-6 py-4 font-bold">Submitted</th>
                        <th className="px-6 py-4"></th>
                     </tr>
                  </thead>
@@ -208,7 +208,7 @@ export default function MyLoans() {
                                       </div>
                                       <div className="min-w-0">
                                          <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{loan.purpose || "Business Capital"}</p>
-                                         <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Asset ID: {loan.id.slice(0,8)}</p>
+                                         <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mt-0.5">Asset ID: {loan.id.slice(0,8)}</p>
                                       </div>
                                    </div>
                                 </td>
@@ -220,10 +220,10 @@ export default function MyLoans() {
                                 </td>
                                 <td className="px-6 py-5">
                                    <div className="text-xs font-bold text-foreground">{loan.requestedTermMonths} Months</div>
-                                   <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Fixed Term</div>
+                                   <div className="text-[11px] font-bold text-muted-foreground  tracking-wider mt-0.5">Fixed Term</div>
                                 </td>
                                 <td className="px-6 py-5">
-                                   <span className={cn("inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", status.className)}>
+                                   <span className={cn("inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold  tracking-wider", status.className)}>
                                       {status.label}
                                    </span>
                                 </td>
@@ -231,7 +231,7 @@ export default function MyLoans() {
                                    {loan.createdAt ? format(new Date(loan.createdAt), "MMM dd, yyyy") : "N/A"}
                                 </td>
                                 <td className="px-6 py-5 text-right">
-                                   <div className="w-8 h-8 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                                   <div className="w-8 h-8 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all shadow-none">
                                       <ChevronRight className="w-4 h-4" />
                                    </div>
                                 </td>
@@ -254,7 +254,7 @@ export default function MyLoans() {
                  >
                     <ChevronLeft className="w-4 h-4" />
                  </Button>
-                 <div className="text-xs font-black text-muted-foreground px-4 uppercase tracking-widest">
+                 <div className="text-xs font-bold text-muted-foreground px-4  tracking-wider">
                     Page {filters.page} of {totalPages}
                  </div>
                  <Button
@@ -276,16 +276,16 @@ export default function MyLoans() {
 
 function SummaryCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-none flex flex-col justify-between">
       <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center mb-5", color)}>
         {icon}
       </div>
       <div>
         <div className="flex items-baseline gap-1">
-           <span className="text-[10px] font-bold text-muted-foreground/60">NPR</span>
-           <p className="text-2xl font-bold text-foreground tracking-tight">{value.toLocaleString("en-IN")}</p>
+           <span className="text-[11px] font-bold text-muted-foreground/60">NPR</span>
+           <p className="text-xl font-bold text-foreground tracking-tight">{value.toLocaleString("en-IN")}</p>
         </div>
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-2">{label}</p>
+        <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mt-2">{label}</p>
       </div>
     </div>
   );

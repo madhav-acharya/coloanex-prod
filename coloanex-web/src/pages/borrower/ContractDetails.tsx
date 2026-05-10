@@ -70,15 +70,15 @@ export default function ContractDetails() {
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
           <div className="space-y-2">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-widest">
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer  tracking-wider">
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Legal Instrument</h1>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-0.5">Agreement {contract.contractNumber}</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Legal Instrument</h1>
+            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider px-0.5">Agreement {contract.contractNumber}</p>
           </div>
           <div className="flex items-center gap-4">
              {contract.contractPdfUrl && (
-               <Button onClick={() => window.open(contract.contractPdfUrl, "_blank")} className="rounded-xl h-11 px-6 font-semibold border border-border/60 shadow-sm" variant="outline">
+               <Button onClick={() => window.open(contract.contractPdfUrl, "_blank")} className="rounded-xl h-11 px-6 font-semibold border border-border/60 shadow-none" variant="outline">
                   <Download className="w-4 h-4 mr-2" /> Download PDF
                </Button>
              )}
@@ -87,7 +87,7 @@ export default function ContractDetails() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           <div className="lg:col-span-8 space-y-8">
-            <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-sm">
+            <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-none">
                <div className="flex items-center justify-between gap-6 pb-6 border-b border-border/40">
                   <div className="flex items-center gap-4">
                      <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
@@ -95,10 +95,10 @@ export default function ContractDetails() {
                      </div>
                      <div>
                         <h2 className="text-lg font-bold text-foreground">Terms & Conditions</h2>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Digitally Governed Agreement</p>
+                        <p className="text-[11px] font-bold text-muted-foreground  tracking-wider">Digitally Governed Agreement</p>
                      </div>
                   </div>
-                  <Badge variant={contract.status === "ACTIVE" ? "default" : "secondary"} className="rounded-lg h-7 px-3 text-[10px] font-black uppercase tracking-widest">
+                  <Badge variant={contract.status === "ACTIVE" ? "default" : "secondary"} className="rounded-lg h-7 px-3 text-[11px] font-bold  tracking-wider">
                     {contract.status}
                   </Badge>
                </div>
@@ -111,9 +111,9 @@ export default function ContractDetails() {
                </div>
             </div>
 
-            <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-8 shadow-sm">
+            <div className="bg-emerald-50 border border-emerald-200/60 rounded-2xl p-8 shadow-none">
                <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-sm font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-2">
+                 <h3 className="text-sm font-bold  tracking-wider text-emerald-700 flex items-center gap-2">
                     <ShieldCheck className="w-5 h-5" />
                     Distributed Ledger Anchoring
                  </h3>
@@ -121,7 +121,7 @@ export default function ContractDetails() {
                </div>
                <div className="grid sm:grid-cols-2 gap-8">
                   <div className="space-y-3">
-                     <p className="text-xs font-bold text-emerald-700/80 uppercase tracking-widest flex items-center gap-2">
+                     <p className="text-xs font-bold text-emerald-700/80  tracking-wider flex items-center gap-2">
                         <Lock className="w-3.5 h-3.5" /> Immutable Fingerprint
                      </p>
                      <p className="text-sm text-emerald-800/70 leading-relaxed font-medium">
@@ -131,33 +131,33 @@ export default function ContractDetails() {
                   <div className="p-5 rounded-xl bg-white/60 border border-emerald-200/50 flex flex-col justify-center">
                      <div className="flex items-center gap-2 text-emerald-600 mb-2">
                         <CheckCircle2 className="w-4 h-4" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Proven Integrity</span>
+                        <span className="text-[11px] font-bold  tracking-wider">Proven Integrity</span>
                      </div>
-                     <p className="text-[10px] font-bold text-emerald-700/60 uppercase tracking-widest">Digital SHA-256 Verified</p>
+                     <p className="text-[11px] font-bold text-emerald-700/60  tracking-wider">Digital SHA-256 Verified</p>
                   </div>
                </div>
             </div>
           </div>
 
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
                <div className="p-6 border-b border-border/40 bg-muted/5">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Financial Summary</h3>
+                  <h3 className="text-xs font-bold  tracking-wider text-muted-foreground">Financial Summary</h3>
                </div>
                <div className="p-8 space-y-5">
                   <SummaryItem label="Principal" value={money(contract.loanAmount)} />
                   <SummaryItem label="Interest Rate" value={`${contract.interestRate}% APR`} />
                   <SummaryItem label="Repayment Term" value={`${contract.termMonths} Months`} />
                   <div className="pt-6 mt-4 border-t border-border/40">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary mb-1.5 px-0.5">Total Dues</p>
-                    <p className="text-3xl font-bold text-primary tracking-tight">{money(contract.totalAmountDue)}</p>
+                    <p className="text-[11px] font-bold  tracking-wider text-primary mb-1.5 px-0.5">Total Dues</p>
+                    <p className="text-2xl font-bold text-primary tracking-tight">{money(contract.totalAmountDue)}</p>
                   </div>
                </div>
             </div>
 
-            <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
                <div className="p-6 border-b border-border/40 bg-muted/5">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Validation Log</h3>
+                  <h3 className="text-xs font-bold  tracking-wider text-muted-foreground">Validation Log</h3>
                </div>
                <div className="p-6 space-y-4">
                   {contract.signatures?.map((sig, idx) => (
@@ -166,9 +166,9 @@ export default function ContractDetails() {
                         {sig.signedBy === "BORROWER" ? <User className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors uppercase tracking-tight">{sig.signedBy}</p>
-                        <p className="text-[10px] font-semibold text-muted-foreground mt-0.5">Authenticated {new Date(sig.signedAt).toLocaleDateString()}</p>
-                        <div className="mt-1 flex items-center gap-1 text-[9px] text-emerald-600 font-bold uppercase tracking-widest">
+                        <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors  tracking-tight">{sig.signedBy}</p>
+                        <p className="text-[11px] font-semibold text-muted-foreground mt-0.5">Authenticated {new Date(sig.signedAt).toLocaleDateString()}</p>
+                        <div className="mt-1 flex items-center gap-1 text-[11px] text-emerald-600 font-bold  tracking-wider">
                           <CheckCircle2 className="w-3 h-3" /> Validated
                         </div>
                       </div>
@@ -186,7 +186,7 @@ export default function ContractDetails() {
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between py-1 px-0.5">
-      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
+      <span className="text-xs font-bold text-muted-foreground  tracking-wider">{label}</span>
       <span className="text-sm font-bold text-foreground">{value}</span>
     </div>
   );

@@ -412,6 +412,13 @@ export default function Settings() {
         return undefined;
       }
 
+      const alreadyLinked = wallets.find(w => w.address.toLowerCase() === address.toLowerCase());
+      if (alreadyLinked) {
+        await refetchWallets();
+        toast.success("Wallet synchronized");
+        return address;
+      }
+
       await createWallet({
         provider: "METAMASK",
         purpose: "PRIMARY",
@@ -1299,7 +1306,7 @@ export default function Settings() {
       title="Settings"
       description="Manage your account preferences, security, and wallet connections"
     >
-      <Card className="settings-shell">
+      <Card className="settings-shell shadow-none">
         <CardContent className="p-0">
           <div className="divide-y">
             {settingsOptions.map((option) => {

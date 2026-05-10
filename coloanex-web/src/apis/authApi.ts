@@ -24,6 +24,7 @@ export const authApi = baseApi.injectEndpoints({
       invalidatesTags: ["Auth"],
     }),
 
+
     register: builder.mutation<AuthResponse, SignupRequest>({
       query: (userData) => ({
         url: "/auth/signup/web",
@@ -74,11 +75,13 @@ export const authApi = baseApi.injectEndpoints({
         method: "POST",
       }),
     }),
+
   }),
 });
 
 export const {
   useLoginMutation,
+  // useGoogleLoginMutation,
   useRegisterMutation,
   useLogoutMutation,
   useRefreshTokenMutation,
@@ -86,4 +89,5 @@ export const {
   useLogVisitMutation,
   useLogLeaveMutation,
   useUpdateActivityMutation,
+  // useCompleteProfileMutation,
 } = authApi;

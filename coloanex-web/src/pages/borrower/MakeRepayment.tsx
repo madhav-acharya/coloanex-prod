@@ -255,7 +255,7 @@ export default function MakeRepayment() {
           if (!open) navigate(`/borrower/my-loans/${id}`);
         }}
       >
-        <DialogContent className="sm:max-w-2xl p-0 max-h-[calc(100dvh-8.5rem)] sm:max-h-[90vh] overflow-y-auto mb-20 sm:mb-0 rounded-xl border border-border bg-card shadow-2xl">
+        <DialogContent className="sm:max-w-2xl p-0 max-h-[calc(100dvh-8.5rem)] sm:max-h-[90vh] overflow-y-auto mb-20 sm:mb-0 rounded-xl border border-border bg-card shadow-none">
           <DialogHeader>
             <div className="px-4 sm:px-6 pt-5">
               <DialogTitle>Make a Repayment</DialogTitle>
@@ -268,13 +268,13 @@ export default function MakeRepayment() {
           <div className="px-4 sm:px-6 pb-24 sm:pb-5 space-y-4">
             <Link
               to={`/borrower/my-loans/${id}`}
-              className="text-xs font-semibold text-primary hover:underline block"
+              className="text-[11px] font-bold text-primary hover:underline block  tracking-wider"
             >
               &larr; Back to Loan Detail
             </Link>
 
             {isLoading || !loan ? (
-              <Card className="rounded-xl border-border/30 bg-white/70 shadow-sm">
+              <Card className="rounded-xl border-border/30 bg-white/70 shadow-none">
                 <CardContent className="p-8 text-center">
                   <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
@@ -283,7 +283,7 @@ export default function MakeRepayment() {
                 </CardContent>
               </Card>
             ) : !resolvedContract ? (
-              <Card className="rounded-xl border-red-500/20 bg-white/70 shadow-sm">
+              <Card className="rounded-xl border-red-500/20 bg-white/70 shadow-none">
                 <CardContent className="p-6 text-center">
                   <Info className="w-10 h-10 text-amber-500 mx-auto mb-2" />
                   <h2 className="text-base font-bold mb-1">Contract Pending</h2>
@@ -294,32 +294,32 @@ export default function MakeRepayment() {
               </Card>
             ) : (
               <div className="space-y-4">
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-sm">
+                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-[11px] text-muted-foreground">
                           Loan Purpose
                         </p>
-                        <p className="font-semibold text-sm mt-1">
+                        <p className="font-bold text-sm mt-1">
                           {loan.purpose || "Loan Repayment"}
                         </p>
                         <p className="text-[11px] text-muted-foreground mt-1">
                           Contract: {resolvedContract.contractNumber}
                         </p>
                       </div>
-                      <Badge variant="outline" className="text-[10px]">
+                      <Badge variant="outline" className="text-[11px]">
                         {loan.status.replace(/_/g, " ")}
                       </Badge>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-sm">
+                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <div className="rounded-xl border border-border bg-muted/10 p-3 flex items-start gap-2">
                       <Info className="w-4 h-4 text-primary mt-0.5" />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[11px] font-bold text-muted-foreground  tracking-wider">
                         Select one or more installments and click Pay Selected.
                       </p>
                     </div>
@@ -329,7 +329,7 @@ export default function MakeRepayment() {
                         <h3 className="text-sm font-semibold">
                           Repayment Installments
                         </h3>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[11px] font-bold text-muted-foreground  tracking-wider">
                           {payableSchedules.length} due
                         </span>
                       </div>
@@ -356,7 +356,7 @@ export default function MakeRepayment() {
                                 key={schedule.id}
                                 type="button"
                                 onClick={() => toggleSchedule(schedule.id)}
-                                className={`w-full rounded-xl border px-3 py-2.5 text-left shadow-sm transition-all hover:-translate-y-0.5 ${
+                                className={`w-full rounded-xl border px-3 py-2.5 text-left shadow-none transition-all hover:-translate-y-0.5 ${
                                   checked
                                     ? "border-primary bg-primary/5"
                                     : "border-border bg-white/70 hover:bg-white"
@@ -368,11 +368,11 @@ export default function MakeRepayment() {
                                       className={`w-4 h-4 rounded border ${checked ? "bg-primary border-primary" : "border-border/60"}`}
                                     />
                                     <div className="min-w-0">
-                                      <p className="text-sm font-medium text-foreground">
+                                      <p className="text-sm font-bold text-foreground">
                                         Installment {schedule.installmentNumber}
                                       </p>
-                                      <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
+                                      <p className="text-[11px] font-bold text-muted-foreground mt-0.5 inline-flex items-center gap-1  tracking-wider">
+                                        <Calendar className="w-3" />
                                         Due{" "}
                                         {new Date(
                                           schedule.dueDate,
@@ -402,19 +402,19 @@ export default function MakeRepayment() {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-sm">
+                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
                   <CardContent className="p-4 space-y-3">
                     <h3 className="text-sm font-semibold">Payment Summary</h3>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-sm">
+                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-none">
                         <p className="text-xs text-muted-foreground">
                           Selected installments
                         </p>
-                        <p className="text-lg font-bold mt-1">
+                        <p className="text-lg font-bold mt-1 tracking-tight">
                           {selectedScheduleIds.length}
                         </p>
                       </div>
-                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-sm">
+                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-none">
                         <p className="text-xs text-muted-foreground">
                           Total payable
                         </p>
@@ -423,9 +423,9 @@ export default function MakeRepayment() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between text-sm rounded-xl border border-border bg-white/70 p-3 shadow-sm">
+                    <div className="flex items-center justify-between text-sm rounded-xl border border-border bg-white/70 p-3 shadow-none">
                       <span className="text-muted-foreground">Method</span>
-                      <span className="font-semibold inline-flex items-center gap-1">
+                      <span className="font-bold inline-flex items-center gap-1  tracking-wider text-[11px]">
                         <CreditCard className="w-3.5 h-3.5" /> Payment Gateway
                       </span>
                     </div>
@@ -490,7 +490,7 @@ export default function MakeRepayment() {
               </Button>
             </div>
 
-            <div className="rounded-xl border border-border bg-white/70 p-3 text-sm flex items-center justify-between shadow-sm">
+            <div className="rounded-xl border border-border bg-white/70 p-3 text-sm flex items-center justify-between shadow-none">
               <span className="text-muted-foreground">Amount</span>
               <span className="font-semibold">
                 {formatMoney(selectedAmount)}

@@ -28,6 +28,7 @@ import {
   ActivityAction,
   ActivityEntityType,
 } from '../activity-logs/entities/activity-log.entity';
+import { OAuth2Client } from 'google-auth-library';
 
 export type { AuthTokens };
 
@@ -630,6 +631,78 @@ export class AuthService {
         userAgent,
         tenantId,
       );
+    }
+  }
+
+  async googleLogin(
+    idToken: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<AuthTokens & { needsOnboarding: boolean }> {
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Invalid Google token payload');
+      }
+
+      let user = await this.prisma.user.findUnique({
+        where: { email: payload.email },
+        include: {
+          roles: { include: { role: true } },
+          permissions: { include: { permission: true } },
+        },
+      });
+
+      if (!user) {
+        const randomPassword = await argon2.hash(
+          Math.random().toString(36).substring(7),
+        );
+        user = await this.prisma.user.create({
+          data: {
+            email: payload.email,
+            fullName: payload.name || 'Google User',
+            profileImage: payload.picture,
+            password: randomPassword,
+            isActive: true,
+          },
+          include: {
+            roles: { include: { role: true } },
+            permissions: { include: { permission: true } },
+          },
+        });
+
+        await this.activityLogsService.logUserActivity(
+          user.id,
+          ActivityAction.CREATE,
+          ActivityEntityType.USER,
+          user.id,
+          'User signed up via Google',
+          null,
+          null,
+          ipAddress,
+          userAgent,
+        );
+      }
+
+      const { roles } = extractRolesAndPermissions(user);
+      const needsOnboarding = roles.length === 0 || !user.phone;
+
+      const authResponse = await this.performLogin(user, ipAddress, userAgent);
+
+      return {
+        ...authResponse,
+        needsOnboarding,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) throw error;
+      throw new UnauthorizedException('Google authentication failed');
     }
   }
 }

@@ -95,7 +95,7 @@ export function ProfileDropdown({
                   {user.fullName}
                 </p>
                 {roleLabel && (
-                  <span className="inline-block bg-primary/15 text-primary text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-sm mt-0.5">
+                  <span className="inline-block bg-primary/15 text-primary text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded-sm mt-0.5">
                     {roleLabel}
                   </span>
                 )}
@@ -106,7 +106,7 @@ export function ProfileDropdown({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-64 sm:w-72 p-2 z-[220] rounded-xl border border-border shadow-2xl bg-popover/95 backdrop-blur-xl"
+        className="w-64 sm:w-72 p-2 z-[220] rounded-xl border border-border shadow-none bg-popover/95 backdrop-blur-xl"
       >
         <div className="rounded-xl bg-primary/10 p-3 mb-2">
           <div className="flex items-center gap-3">
@@ -121,7 +121,7 @@ export function ProfileDropdown({
                 {user.fullName}
               </p>
               {roleLabel && (
-                <span className="inline-flex items-center gap-1 bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded mt-1.5">
+                <span className="inline-flex items-center gap-1 bg-primary/20 text-primary text-[10px] font-black tracking-widest px-2 py-1 rounded mt-1.5">
                   {roleLabel}
                 </span>
               )}
@@ -144,9 +144,9 @@ export function ProfileDropdown({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Current Plan</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 font-semibold uppercase tracking-wide text-primary">
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 font-semibold tracking-wide text-primary">
                 <CreditCard className="h-3 w-3" />
-                {(currentPlan || "FREE").toUpperCase()}
+                {(currentPlan || "Free")}
               </span>
             </div>
           </div>
@@ -190,7 +190,7 @@ export function ProfileDropdown({
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[11px] font-semibold tracking-wide text-muted-foreground">
                 Quick Plans
               </p>
             </div>

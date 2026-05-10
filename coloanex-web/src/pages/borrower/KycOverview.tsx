@@ -49,14 +49,14 @@ export default function KycOverview() {
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
           <div className="space-y-2">
-            <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-widest">
+            <button onClick={() => navigate("/dashboard")} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer  tracking-wider">
               <ChevronLeft className="w-4 h-4" /> Dashboard
             </button>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Compliance Center</h1>
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-0.5">KYC & Identity Management</p>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Compliance Center</h1>
+            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider px-0.5">KYC & Identity Management</p>
           </div>
           <div className="flex items-center gap-4">
-            <Button onClick={() => navigate("/lenders")} className="rounded-xl h-11 px-6 font-semibold shadow-sm">
+            <Button onClick={() => navigate("/lenders")} className="rounded-xl h-11 px-6 font-semibold shadow-none">
                New Verification
             </Button>
           </div>
@@ -68,9 +68,9 @@ export default function KycOverview() {
            <StatCard label="Action Required" value={rejectedCount} icon={<XCircle className="w-5 h-5" />} color="text-rose-600 bg-rose-50" />
         </div>
 
-        <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
            <div className="p-6 border-b border-border/40 bg-muted/5 flex items-center justify-between">
-              <h3 className="text-sm font-bold uppercase tracking-wider">{headerText}</h3>
+              <h3 className="text-sm font-bold  tracking-wider">{headerText}</h3>
               <Badge variant="outline" className="rounded-lg">Institutional Logs</Badge>
            </div>
            
@@ -82,7 +82,7 @@ export default function KycOverview() {
               ) : kycs.length === 0 ? (
                  <div className="py-20 flex flex-col items-center justify-center text-center opacity-40">
                     <ShieldCheck className="w-12 h-12 mb-4" />
-                    <p className="text-sm font-bold uppercase tracking-widest">No identity profiles anchored</p>
+                    <p className="text-sm font-bold  tracking-wider">No identity profiles anchored</p>
                  </div>
               ) : (
                  <div className="space-y-3">
@@ -101,11 +101,11 @@ export default function KycOverview() {
                                 <div>
                                    <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{item.fullName}</p>
                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">ID: {item.id.slice(0,8)}</span>
+                                      <span className="text-[11px] font-bold text-muted-foreground  tracking-wider leading-none">ID: {item.id.slice(0,8)}</span>
                                       {item.occupation && (
                                          <>
                                             <span className="w-1 h-1 rounded-full bg-border" />
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">{item.occupation}</span>
+                                            <span className="text-[11px] font-bold text-muted-foreground  tracking-wider leading-none">{item.occupation}</span>
                                          </>
                                       )}
                                    </div>
@@ -113,10 +113,10 @@ export default function KycOverview() {
                              </div>
 
                              <div className="flex items-center justify-between sm:justify-end gap-6">
-                                <span className={cn("px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest", status.className)}>
+                                <span className={cn("px-3 py-1 rounded-full text-[11px] font-bold  tracking-wider", status.className)}>
                                    {status.label}
                                 </span>
-                                <div className="w-8 h-8 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                                <div className="w-8 h-8 rounded-lg border border-border/40 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all shadow-none">
                                    <ArrowRight className="w-4 h-4" />
                                 </div>
                              </div>
@@ -130,13 +130,13 @@ export default function KycOverview() {
 
         <div className="bg-primary/5 rounded-2xl border border-primary/10 p-8 grid sm:grid-cols-2 gap-10">
            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-sm font-bold text-primary  tracking-wider flex items-center gap-2">
                  <Info className="w-4 h-4" /> Compliance Standards
               </h4>
               <p className="text-xs font-medium text-primary/80 leading-relaxed">Identity verification is mandatory for all institutional credit facilities. We use encrypted document vaults to protect your sensitive PII (Personally Identifiable Information).</p>
            </div>
            <div className="space-y-3">
-              <h4 className="text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+              <h4 className="text-sm font-bold text-primary  tracking-wider flex items-center gap-2">
                  <CheckCircle2 className="w-4 h-4" /> Real-time Settlement
               </h4>
               <p className="text-xs font-medium text-primary/80 leading-relaxed">Verified status unlocks immediate access to loan marketplaces and smart contract execution for instant fund disbursement.</p>
@@ -149,13 +149,13 @@ export default function KycOverview() {
 
 function StatCard({ label, value, icon, color }: { label: string; value: number; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm flex items-center gap-5">
-      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border border-current/10 shadow-sm", color)}>
+    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-none flex items-center gap-5">
+      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border border-current/10 shadow-none", color)}>
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
-        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1.5">{label}</p>
+        <p className="text-xl font-bold text-foreground tracking-tight leading-none">{value}</p>
+        <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mt-1.5">{label}</p>
       </div>
     </div>
   );

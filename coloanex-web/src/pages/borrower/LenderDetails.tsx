@@ -65,13 +65,13 @@ export default function LenderDetails() {
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
           <div className="space-y-2">
-            <button onClick={() => navigate("/lenders")} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-widest">
+            <button onClick={() => navigate("/lenders")} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer  tracking-wider">
               <ChevronLeft className="w-4 h-4" /> Marketplace
             </button>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Institutional Profile</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Institutional Profile</h1>
           </div>
           <div className="flex items-center gap-3">
-             <Badge variant="outline" className="rounded-lg h-7 px-3 text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 border-emerald-200">
+             <Badge variant="outline" className="rounded-lg h-7 px-3 text-[11px] font-bold  tracking-wider text-emerald-600 bg-emerald-50 border-emerald-200">
                 Verified Lender
              </Badge>
           </div>
@@ -85,7 +85,7 @@ export default function LenderDetails() {
         ) : (
           <div className="grid lg:grid-cols-12 gap-10 items-start">
             <div className="lg:col-span-8 space-y-10">
-              <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-sm flex flex-col sm:flex-row gap-8 items-start">
+              <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-none flex flex-col sm:flex-row gap-8 items-start">
                 <div className="w-24 h-24 rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
                   {lender.logo ? (
                     <img src={lender.logo} alt={lender.name} className="w-full h-full object-cover" />
@@ -96,7 +96,7 @@ export default function LenderDetails() {
                 <div className="flex-1 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                      <h2 className="text-2xl font-bold text-foreground">{lender.name}</h2>
-                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-bold  tracking-wider border border-emerald-100">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                         Online
                      </div>
@@ -107,12 +107,12 @@ export default function LenderDetails() {
                   <div className="flex items-center gap-6 pt-2">
                      <div className="flex items-center gap-1.5 text-muted-foreground">
                         <MapPin className="w-4 h-4" />
-                        <span className="text-xs font-bold">{lender.address || "Kathmandu, Nepal"}</span>
+                        <span className="text-[11px] font-bold  tracking-wider">{lender.address || "Kathmandu, Nepal"}</span>
                      </div>
                      {(lender as any).website && (
                         <a href={(lender as any).website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-primary hover:underline">
                            <ExternalLink className="w-4 h-4" />
-                           <span className="text-xs font-bold">Official Site</span>
+                           <span className="text-[11px] font-bold  tracking-wider">Official Site</span>
                         </a>
                      )}
                   </div>
@@ -121,35 +121,35 @@ export default function LenderDetails() {
 
               <div className="space-y-6">
                 <div className="flex items-center justify-between px-1">
-                   <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Catalog of Services</h3>
-                   <span className="text-[10px] font-black uppercase text-primary tracking-widest bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">{visibleRules.length} Facilities</span>
+                   <h3 className="text-sm font-bold  tracking-wider text-muted-foreground">Catalog of Services</h3>
+                   <span className="text-[11px] font-bold  text-primary tracking-wider bg-primary/5 px-2 py-0.5 rounded-lg border border-primary/10">{visibleRules.length} Facilities</span>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-6">
                   {visibleRules.map(rule => (
-                    <div key={rule.id} className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:border-primary/40 transition-colors">
+                    <div key={rule.id} className="bg-background border border-border/60 rounded-2xl p-6 shadow-none flex flex-col justify-between hover:border-primary/40 transition-colors">
                       <div className="space-y-4">
                         <div className="flex items-start justify-between gap-4">
                            <div className="space-y-1">
-                              <Badge className="rounded-lg h-5 px-2 text-[9px] font-black uppercase tracking-widest" variant="secondary">{rule.ruleType.replace(/_/g, " ")}</Badge>
+                              <Badge className="rounded-lg h-5 px-2 text-[11px] font-bold  tracking-wider" variant="secondary">{rule.ruleType.replace(/_/g, " ")}</Badge>
                               <p className="text-base font-bold text-foreground">{rule.name}</p>
                            </div>
                            <div className="text-right">
                               <p className="text-lg font-bold text-primary">{rule.interestRate}%</p>
-                              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">APR</p>
+                              <p className="text-[11px] font-bold  tracking-wider text-muted-foreground">APR</p>
                            </div>
                         </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{rule.description || "Compliant loan facility with flexible terms."}</p>
+                        <p className="text-[11px] font-bold text-muted-foreground  tracking-wider line-clamp-2 opacity-70">{rule.description || "Compliant loan facility with flexible terms."}</p>
                       </div>
                       <div className="pt-6 mt-6 border-t border-border/40 grid grid-cols-2 gap-4">
                          <div>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Principal Limit</p>
+                            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider opacity-60">Principal Limit</p>
                             <p className="text-xs font-bold text-foreground flex items-center mt-0.5">
                                <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 mr-0.5 text-muted-foreground" />
                                {(rule.loanLimits.minAmount / 1000).toFixed(0)}K - {(rule.loanLimits.maxAmount / 1000).toFixed(0)}K
                             </p>
                          </div>
                          <div>
-                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Max Term</p>
+                            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider opacity-60">Max Term</p>
                             <p className="text-xs font-bold text-foreground mt-0.5">{rule.loanLimits.maxTermMonths} Months</p>
                          </div>
                       </div>
@@ -160,10 +160,10 @@ export default function LenderDetails() {
             </div>
 
             <div className="lg:col-span-4 space-y-8">
-               <div className={cn("p-6 rounded-2xl border border-border/60 shadow-sm space-y-5", isKycVerified ? "bg-emerald-50 border-emerald-100" : "bg-muted/5")}>
+               <div className={cn("p-6 rounded-2xl border border-border/60 shadow-none space-y-5", isKycVerified ? "bg-emerald-50 border-emerald-100" : "bg-muted/5")}>
                  <div className="flex items-center gap-3">
                    {isKycVerified ? <ShieldCheck className="w-5 h-5 text-emerald-600" /> : <ShieldAlert className="w-5 h-5 text-amber-600" />}
-                   <span className="text-xs font-black uppercase tracking-widest">Access Verification</span>
+                   <span className="text-xs font-bold  tracking-wider">Access Verification</span>
                  </div>
                  <p className="text-xs font-medium leading-relaxed opacity-80">
                    {isKycVerified 
@@ -174,7 +174,7 @@ export default function LenderDetails() {
                    }
                  </p>
                  <Button 
-                   className={cn("w-full h-11 rounded-xl text-xs font-bold uppercase tracking-widest shadow-sm", !isKycVerified && "bg-amber-500 hover:bg-amber-600")}
+                   className={cn("w-full h-11 rounded-xl text-xs font-bold  tracking-wider shadow-none", !isKycVerified && "bg-amber-500 hover:bg-amber-600")}
                    onClick={() => {
                      if (isKycVerified) { setShowApply(true); }
                      else if (isKycPending && kycStatusData?.kycId) { navigate(`/borrower/kyc/${kycStatusData.kycId}`); }
@@ -186,9 +186,9 @@ export default function LenderDetails() {
                  </Button>
                </div>
 
-               <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+               <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
                   <div className="p-6 border-b border-border/40 bg-muted/5">
-                     <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Support Pipeline</h3>
+                     <h3 className="text-[11px] font-bold  tracking-wider text-muted-foreground">Support Pipeline</h3>
                   </div>
                   <div className="divide-y divide-border/40">
                      <ContactItem icon={<Mail className="w-4 h-4" />} label="Liaison Email" value={lender.contactEmail || "finance@co-loan.com"} href={`mailto:${lender.contactEmail}`} />
@@ -199,9 +199,9 @@ export default function LenderDetails() {
                <div className="bg-primary/5 rounded-2xl border border-primary/10 p-6 space-y-4">
                   <div className="flex items-center gap-3 text-primary">
                     <Info className="w-4 h-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Platform Trust</span>
+                    <span className="text-[11px] font-bold  tracking-wider">Platform Trust</span>
                   </div>
-                  <p className="text-[10px] font-bold text-primary/70 leading-relaxed uppercase tracking-wider">All transactions on the CoLoanEx platform are settled via distributed ledger technology for absolute transparency.</p>
+                  <p className="text-[11px] font-bold text-primary/70 leading-relaxed  tracking-wider">All transactions on the CoLoanEx platform are settled via distributed ledger technology for absolute transparency.</p>
                </div>
             </div>
           </div>
@@ -221,7 +221,7 @@ function ContactItem({ icon, label, value, href }: { icon: React.ReactNode; labe
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest">{label}</p>
+        <p className="text-[11px] font-bold text-muted-foreground/60  tracking-wider">{label}</p>
         <p className="text-sm font-bold text-foreground truncate">{value}</p>
       </div>
     </div>
