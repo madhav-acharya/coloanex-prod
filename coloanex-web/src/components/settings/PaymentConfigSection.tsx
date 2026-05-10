@@ -75,9 +75,9 @@ export default function PaymentConfigSection({
           {!showAddPaymentConfig && (
             <Button
               onClick={() => setShowAddPaymentConfig(true)}
-              className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-[10px] font-black uppercase tracking-widest px-4 transition-all active:scale-95 shadow-lg shadow-primary/10"
+              className="h-8 rounded-lg bg-primary hover:bg-primary/90 text-[10px] font-black tracking-widest px-4 transition-all active:scale-95"
             >
-              New Endpoint <Plus className="w-3 h-3 ml-1" />
+              New endpoint <Plus className="w-3 h-3 ml-1" />
             </Button>
           )}
         </CardHeader>
@@ -86,15 +86,15 @@ export default function PaymentConfigSection({
             <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
-                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Scope</Label>
+                     <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Scope</Label>
                      <div className="flex gap-1 bg-background p-1 rounded-xl border border-border/60">
                         {["USER", "TENANT"].map((s) => (
                            <button
                               key={s}
                               onClick={() => setConfigScope(s as any)}
                               className={cn(
-                                "flex-1 h-8 rounded-lg text-[10px] font-bold uppercase transition-all",
-                                configScope === s ? "bg-primary text-white shadow-sm" : "hover:bg-muted text-muted-foreground"
+                                "flex-1 h-8 rounded-lg text-[10px] font-bold  transition-all",
+                                configScope === s ? "bg-primary text-white " : "hover:bg-muted text-muted-foreground"
                               )}
                            >
                               {s}
@@ -103,15 +103,15 @@ export default function PaymentConfigSection({
                      </div>
                   </div>
                   <div className="space-y-2">
-                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Environment</Label>
+                     <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Environment</Label>
                      <div className="flex gap-1 bg-background p-1 rounded-xl border border-border/60">
                         {["sandbox", "production"].map((e) => (
                            <button
                               key={e}
                               onClick={() => setConfigEnvironment(e as any)}
                               className={cn(
-                                "flex-1 h-8 rounded-lg text-[10px] font-bold uppercase transition-all",
-                                configEnvironment === e ? "bg-primary text-white shadow-sm" : "hover:bg-muted text-muted-foreground"
+                                "flex-1 h-8 rounded-lg text-[10px] font-bold  transition-all",
+                                configEnvironment === e ? "bg-primary text-white " : "hover:bg-muted text-muted-foreground"
                               )}
                            >
                               {e}
@@ -120,15 +120,15 @@ export default function PaymentConfigSection({
                      </div>
                   </div>
                   <div className="space-y-2">
-                     <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Gateway</Label>
+                     <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Gateway</Label>
                      <div className="flex gap-1 bg-background p-1 rounded-xl border border-border/60">
                         {["ESEWA", "KHALTI"].map((g) => (
                            <button
                               key={g}
                               onClick={() => setConfigGateway(g as any)}
                               className={cn(
-                                "flex-1 h-8 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center justify-center gap-1.5",
-                                configGateway === g ? "bg-primary text-white shadow-sm" : "hover:bg-muted text-muted-foreground"
+                                "flex-1 h-8 rounded-lg text-[10px] font-bold  transition-all flex items-center justify-center gap-1.5",
+                                configGateway === g ? "bg-primary text-white " : "hover:bg-muted text-muted-foreground"
                               )}
                            >
                               <img src={gatewayLogoByType[g as any]} alt={g} className="w-3.5 h-3.5 rounded-sm object-cover" />
@@ -143,7 +143,7 @@ export default function PaymentConfigSection({
                   {configGateway === "ESEWA" ? (
                     <>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Merchant ID</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Merchant id</Label>
                           <Input
                              value={configMerchantId}
                              onChange={(e) => setConfigMerchantId(e.target.value)}
@@ -152,7 +152,7 @@ export default function PaymentConfigSection({
                           />
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Webhook URL</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Webhook url</Label>
                           <Input
                              value={configWebhookUrl}
                              onChange={(e) => setConfigWebhookUrl(e.target.value)}
@@ -161,7 +161,7 @@ export default function PaymentConfigSection({
                           />
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Public Key</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Public key</Label>
                           <Input
                              value={configPublicKey}
                              onChange={(e) => setConfigPublicKey(e.target.value)}
@@ -170,7 +170,7 @@ export default function PaymentConfigSection({
                           />
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Secret Key</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Secret key</Label>
                           <Input
                              type="password"
                              value={configSecretKey}
@@ -183,7 +183,7 @@ export default function PaymentConfigSection({
                   ) : (
                     <>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Public Key</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Public key</Label>
                           <Input
                              value={configPublicKey}
                              onChange={(e) => setConfigPublicKey(e.target.value)}
@@ -192,7 +192,7 @@ export default function PaymentConfigSection({
                           />
                        </div>
                        <div className="space-y-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Secret Key</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Secret key</Label>
                           <Input
                              type="password"
                              value={configSecretKey}
@@ -202,7 +202,7 @@ export default function PaymentConfigSection({
                           />
                        </div>
                        <div className="space-y-2 md:col-span-2">
-                          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Webhook URL</Label>
+                          <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Webhook url</Label>
                           <Input
                              value={configWebhookUrl}
                              onChange={(e) => setConfigWebhookUrl(e.target.value)}
@@ -218,16 +218,16 @@ export default function PaymentConfigSection({
                   <Button
                     variant="outline"
                     onClick={() => setShowAddPaymentConfig(false)}
-                    className="h-9 rounded-lg border-border bg-background text-[10px] font-bold uppercase tracking-widest px-6"
+                    className="h-9 rounded-lg border-border bg-background text-[10px] font-bold  tracking-widest px-6"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={() => void savePaymentConfig()}
                     disabled={isSavingConfig}
-                    className="h-9 rounded-lg bg-primary text-[10px] font-bold uppercase tracking-widest px-6 shadow-lg shadow-primary/20"
+                    className="h-9 rounded-lg bg-primary text-[10px] font-bold  tracking-widest px-6  "
                   >
-                    {isSavingConfig ? "Syncing..." : "Initialize Config"}
+                    {isSavingConfig ? "Syncing..." : "Initialize config"}
                   </Button>
                </div>
             </div>
@@ -236,7 +236,7 @@ export default function PaymentConfigSection({
               <div className="grid grid-cols-1 gap-2">
                 {paymentConfigs.length === 0 ? (
                   <div className="p-12 rounded-2xl border border-dashed border-border/40 bg-muted/5 text-center text-muted-foreground">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">No localized configurations Indexed</p>
+                    <p className="text-[10px] font-bold  tracking-widest opacity-40">No localized configurations indexed</p>
                   </div>
                 ) : (
                   paymentConfigs.map((cfg) => (
@@ -247,12 +247,12 @@ export default function PaymentConfigSection({
                          </div>
                          <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                               <p className="text-xs font-bold truncate">{cfg.gateway} Index</p>
+                               <p className="text-xs font-bold truncate">{cfg.gateway} index</p>
                                <span className={cn(
-                                 "text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter",
+                                 "text-[8px] px-1.5 py-0.5 rounded font-black  tracking-tighter",
                                  cfg.environment === "production" ? "bg-emerald-500/10 text-emerald-600" : "bg-amber-500/10 text-amber-600"
                                )}>{cfg.environment}</span>
-                               <span className="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black uppercase tracking-tighter">{cfg.ownerScope}</span>
+                               <span className="text-[8px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-black  tracking-tighter">{cfg.ownerScope}</span>
                             </div>
                             <p className="text-[10px] text-muted-foreground transition-colors group-hover:text-primary max-w-[250px] truncate mt-0.5">
                                Merchant: {cfg.merchantId || "Indexed Key"} • API v2.1
@@ -281,13 +281,13 @@ export default function PaymentConfigSection({
 
           {connectedGatewayTypes.length > 0 && (
             <div className="space-y-3 pt-4 border-t border-border/40">
-               <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Live Gateway Nodes</Label>
+               <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Live Gateway Nodes</Label>
                <div className="flex flex-wrap gap-2">
                   {connectedGatewayTypes.map((gateway) => (
                     <div key={gateway} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/5 transition-all hover:bg-emerald-500/10">
                        <img src={gatewayLogoByType[gateway]} alt={gateway} className="w-3.5 h-3.5 rounded-sm object-cover" />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                          {gateway} Active
+                       <span className="text-[10px] font-black  tracking-widest text-emerald-600 dark:text-emerald-400">
+                          {gateway} active
                        </span>
                     </div>
                   ))}
@@ -302,7 +302,7 @@ export default function PaymentConfigSection({
           <Settings2 className="w-5 h-5 text-amber-600 dark:text-amber-400" />
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-tight">Configuration Governance</p>
+          <p className="text-xs font-bold text-amber-700 dark:text-amber-400  tracking-tight">Configuration governance</p>
           <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">
             User-level configurations are utilized for automated loan disbursements, while Tenant-level configurations manage borrower repayments. Ensure all production credentials are encrypted before synchronization.
           </p>
