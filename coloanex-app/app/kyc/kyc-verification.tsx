@@ -21,6 +21,7 @@ import {
   AppHeader,
   CurrencyIcon,
   BlockchainProcessingModal,
+  SubscriptionBlockingOverlay,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
@@ -595,6 +596,7 @@ export default function KYCVerificationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
+      <SubscriptionBlockingOverlay />
       <AppHeader
         title="KYC Verification"
         onBackPress={handleBack}
@@ -1088,7 +1090,9 @@ export default function KYCVerificationScreen() {
                     onPress={() => pickImage(docType, "front")}
                     disabled={uploadingImage}
                   >
-                    {detail.frontImage ? (
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : detail.frontImage ? (
                       <Image
                         source={{ uri: detail.frontImage }}
                         style={styles.uploadedSmallImage}
@@ -1130,7 +1134,9 @@ export default function KYCVerificationScreen() {
                         onPress={() => pickImage(docType, "back")}
                         disabled={uploadingImage}
                       >
-                        {detail.backImage ? (
+                        {uploadingImage ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : detail.backImage ? (
                           <Image
                             source={{ uri: detail.backImage }}
                             style={styles.uploadedSmallImage}
@@ -1177,18 +1183,22 @@ export default function KYCVerificationScreen() {
                     onPress={takeSelfie}
                     disabled={uploadingImage}
                   >
-                    <Ionicons
-                      name="camera-outline"
-                      size={24}
-                      color={colors.primary}
-                    />
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Ionicons
+                        name="camera-outline"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.uploadText,
                         { color: colors.textSecondary },
                       ]}
                     >
-                      Take Selfie
+                      {uploadingImage ? "Uploading..." : "Take Selfie"}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1200,18 +1210,22 @@ export default function KYCVerificationScreen() {
                     onPress={() => pickImage("", "selfie")}
                     disabled={uploadingImage}
                   >
-                    <Ionicons
-                      name="images-outline"
-                      size={24}
-                      color={colors.primary}
-                    />
+                    {uploadingImage ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Ionicons
+                        name="images-outline"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    )}
                     <Text
                       style={[
                         styles.uploadText,
                         { color: colors.textSecondary },
                       ]}
                     >
-                      From Gallery
+                      {uploadingImage ? "Uploading..." : "From Gallery"}
                     </Text>
                   </TouchableOpacity>
                 </View>
