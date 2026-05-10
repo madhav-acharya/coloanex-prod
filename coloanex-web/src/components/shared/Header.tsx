@@ -1,30 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  LogOut,
+  Search,
+  Home,
+  Users,
+  HandCoins,
+  ShieldCheck,
+  Layers,
+  Zap,
+} from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/store";
 import { logout } from "@/store/slices/authSlice";
 import { ThemeSwitcher } from "@/components/shared/ThemeSwitcher";
 import { AuthModal } from "@/components/modals/AuthModal";
 import { NotificationsDropdown } from "@/components/shared/NotificationsDropdown";
+import { ProfileDropdown } from "@/components/shared/ProfileDropdown";
 import { getHomeRoute } from "@/lib/roleUtils";
+import { cn } from "@/lib/utils";
 
 interface SharedHeaderProps {
   variant: "public" | "borrower";
 }
 
 const publicNavLinks = [
-  { label: "Home", to: "/#home", anchor: "home" },
-  { label: "Services", to: "/#services", anchor: "services" },
-  { label: "How It Works", to: "/#how-it-works", anchor: "how-it-works" },
-  { label: "Features", to: "/#features", anchor: "features" },
-  { label: "Security", to: "/#security", anchor: "security" },
-  { label: "Pricing", to: "/#pricing", anchor: "pricing" },
+  { label: "Home", to: "/", icon: Home, anchor: "home" },
+  { label: "Services", to: "/#services", icon: Layers, anchor: "services" },
+  { label: "How It Works", to: "/#how-it-works", icon: HandCoins, anchor: "how-it-works" },
+  { label: "Features", to: "/#features", icon: Layers, anchor: "features" },
+  { label: "Security", to: "/#security", icon: ShieldCheck, anchor: "security" },
+  { label: "Pricing", to: "/#pricing", icon: Zap, anchor: "pricing" },
+];
+
+const borrowerNavLinks = [
+  { label: "Dashboard", to: "/dashboard", icon: Home, anchor: "" },
+  { label: "Lenders", to: "/lenders", icon: Users, anchor: "" },
+  { label: "Loans", to: "/my-loans", icon: HandCoins, anchor: "" },
+  { label: "KYC", to: "/kyc", icon: ShieldCheck, anchor: "" },
 ];
 
 const routeSectionMap: Record<string, string> = {
   "/": "home",
+  "/services": "services",
   "/how-it-works": "how-it-works",
   "/features": "features",
   "/security": "security",
@@ -37,12 +59,21 @@ export default function Header({ variant }: SharedHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
 
   const userHomeRoute = user ? getHomeRoute(user as any) : "/dashboard";
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchText.trim()) {
+      navigate(`/lenders?search=${encodeURIComponent(searchText.trim())}`);
+      setSearchText("");
+    }
+  };
 
   useEffect(() => {
     const orderedSections = ["home", "services", "how-it-works", "features", "security", "pricing"];
@@ -96,104 +127,150 @@ export default function Header({ variant }: SharedHeaderProps) {
     navigate(item.to);
   };
 
-  const isActiveLink = (_to: string, anchor: string) => {
-    if (isHome && anchor) return activeSection === anchor;
-    if (anchor && routeSectionMap[location.pathname]) return routeSectionMap[location.pathname] === anchor;
-    if (anchor === "home") return location.pathname === "/";
-    return false;
+  const isActiveLink = (to: string, anchor: string) => {
+    if (anchor) {
+      if (isHome) return activeSection === anchor;
+      if (routeSectionMap[location.pathname]) return routeSectionMap[location.pathname] === anchor;
+      if (anchor === "home") return location.pathname === "/";
+    }
+    return location.pathname === to || (to !== "/" && location.pathname.startsWith(`${to}`));
   };
 
-  const navLinkClass = (to: string, anchor: string) =>
-    `cursor-pointer transition-colors text-sm font-medium ${
-      isActiveLink(to, anchor)
-        ? "text-primary font-bold border-b-2 border-primary pb-1"
-        : "text-foreground/80 hover:text-foreground pb-1"
-    }`;
+  const navLinkClass = (active: boolean) =>
+    cn(
+      "relative flex items-center justify-center h-full sm:px-10 md:px-14 lg:px-16 transition-all group cursor-pointer",
+      active ? "text-primary" : "text-muted-foreground hover:bg-muted/40"
+    );
+
+  const activeIndicator = (active: boolean) => 
+    active && (
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-primary rounded-t-full" />
+    );
+
+  const TooltipButton = ({ children, title }: { children: React.ReactNode; title: string }) => (
+    <div className="relative group/tooltip flex items-center justify-center h-full w-full">
+      {children}
+      <div className="absolute top-14 scale-0 group-hover/tooltip:scale-100 transition-all bg-foreground text-background px-2 py-1 rounded text-[11px] font-bold whitespace-nowrap z-[200]">
+        {title}
+      </div>
+    </div>
+  );
 
   return (
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-[100] bg-background/95 backdrop-blur-md border-b transition-colors duration-300 ${scrolled ? "border-border" : "border-transparent"}`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to={variant === "borrower" ? "/dashboard" : "/"} className="flex items-center gap-2 cursor-pointer group">
-              <div className="w-8 h-8 flex items-center justify-center">
-                <img src="/images/logo.png" alt="Coloanex" className="w-full h-full object-contain" />
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-12">
+          <div className="grid grid-cols-2 lg:grid-cols-3 h-14">
+            {/* Left: Logo and Search */}
+            <div className="flex items-center gap-3">
+              <Link to={variant === "borrower" ? "/dashboard" : "/"} className="shrink-0 cursor-pointer">
+                <div className="w-10 h-10 flex items-center justify-center transition-transform hover:scale-105">
+                  <img src="/images/logo.png" alt="Coloanex" className="w-full h-full object-contain" />
+                </div>
+              </Link>
+              <form onSubmit={handleSearch} className="relative hidden sm:flex items-center w-full max-w-[200px] xl:max-w-[280px]">
+                <button type="submit" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground hover:text-primary transition-colors cursor-pointer z-10">
+                  <Search className="w-full h-full" />
+                </button>
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder={variant === "borrower" ? "Search" : "Search"}
+                  className="w-full h-9 bg-muted/50 border-none rounded-full pl-9 pr-4 text-sm focus:bg-muted focus:ring-0 transition-all placeholder:text-muted-foreground/60 hidden md:block"
+                />
+                <div className="md:hidden w-9 h-9 flex items-center justify-center bg-muted/50 rounded-full cursor-pointer hover:bg-muted">
+                   <Search className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </form>
+            </div>
+ 
+            {/* Center: Icons */}
+            <div className="flex items-center justify-center h-full hidden lg:flex">
+              <div className="flex items-center justify-center h-full">
+                {(variant === "borrower" ? borrowerNavLinks : publicNavLinks).map((link) => {
+                  const active = isActiveLink(link.to, link.anchor || "");
+                  return (
+                    <div key={link.label} className="h-full relative flex items-center">
+                      <TooltipButton title={link.label}>
+                          <button
+                            type="button"
+                            onClick={() => handleNavClick(link)}
+                            className={navLinkClass(active)}
+                          >
+                            <link.icon className={cn("w-6 h-6", active ? "text-primary" : "text-muted-foreground")} />
+                            {activeIndicator(active)}
+                          </button>
+                      </TooltipButton>
+                    </div>
+                  );
+                })}
               </div>
-              <span className="font-bold text-foreground text-lg tracking-tight">Coloanex</span>
-            </Link>
-
-            {variant === "public" && (
-              <div className="hidden lg:flex items-center gap-6">
-                {publicNavLinks.map((link) => (
-                  <button
-                    key={link.label}
-                    type="button"
-                    onClick={() => handleNavClick(link)}
-                    className={navLinkClass(link.to, link.anchor)}
-                  >
-                    {link.label}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="hidden lg:flex items-center gap-3">
-              <ThemeSwitcher />
-              {user ? (
-                <>
-                  <NotificationsDropdown />
-                  <Link to={userHomeRoute}>
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-4 cursor-pointer h-9">
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Button
-                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full px-4 cursor-pointer h-9 border-0"
-                    onClick={handleLogout}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="ghost"
-                    className="text-foreground hover:bg-muted cursor-pointer"
-                    onClick={() => setIsAuthModalOpen(true)}
-                  >
-                    Login
-                  </Button>
-                  <Button
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-5 cursor-pointer"
-                    onClick={() => setIsAuthModalOpen(true)}
-                  >
-                    Get Started
-                  </Button>
-                </>
-              )}
             </div>
 
-            <div className="lg:hidden flex items-center gap-1.5">
-              <ThemeSwitcher />
-              {user && <NotificationsDropdown />}
-              {!user && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2.5 text-xs"
-                  onClick={() => setIsAuthModalOpen(true)}
+            {/* Right: Actions */}
+            <div className="flex items-center justify-end gap-2">
+              <div className="hidden lg:flex items-center gap-2">
+                <TooltipButton title="Switch Theme">
+                   <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors cursor-pointer">
+                     <ThemeSwitcher />
+                   </div>
+                </TooltipButton>
+                
+                {user ? (
+                  <>
+                    <TooltipButton title="Notifications">
+                       <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors cursor-pointer relative">
+                         <NotificationsDropdown />
+                       </div>
+                    </TooltipButton>
+                    
+                    <TooltipButton title="Dashboard">
+                       <Link to={userHomeRoute} className="cursor-pointer">
+                          <div className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors cursor-pointer">
+                             <LayoutDashboard className="w-5 h-5" />
+                          </div>
+                       </Link>
+                    </TooltipButton>
+
+                    <TooltipButton title="Account">
+                       <div className="relative cursor-pointer">
+                          <ProfileDropdown avatarOnly={true} />
+                       </div>
+                    </TooltipButton>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="ghost"
+                      className="rounded-full h-10 px-5 font-bold hover:bg-muted cursor-pointer"
+                      onClick={() => setIsAuthModalOpen(true)}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 px-6 rounded-full font-bold transition-all hover:scale-105 cursor-pointer"
+                      onClick={() => setIsAuthModalOpen(true)}
+                    >
+                      Get Started
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Mobile Trigger */}
+              <div className="lg:hidden flex items-center gap-2">
+                <ThemeSwitcher />
+                {user && <NotificationsDropdown />}
+                <button
+                  className="w-10 h-10 rounded-full bg-muted/60 flex items-center justify-center hover:bg-muted transition-colors cursor-pointer"
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 >
-                  Login
-                </Button>
-              )}
-              <button
-                className="p-2 text-foreground hover:text-primary cursor-pointer"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+                  {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -208,7 +285,7 @@ export default function Header({ variant }: SharedHeaderProps) {
             className="fixed inset-0 bg-black/55 animate-in fade-in duration-300"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="relative w-[78%] sm:w-[72%] max-w-[300px] h-full bg-[#08162b] border-r border-[#12355f] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+          <div className="relative w-[78%] sm:w-[72%] max-w-[300px] h-full bg-[#08162b] border-r border-[#12355f] shadow-none flex flex-col animate-in slide-in-from-left duration-300">
             <div className="flex items-center justify-between px-4 h-14 border-b border-border/30">
               <Link
                 to={variant === "borrower" ? "/dashboard" : "/"}
