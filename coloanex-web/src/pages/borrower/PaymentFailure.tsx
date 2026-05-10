@@ -34,24 +34,23 @@ export default function BorrowerPaymentFailure() {
   return (
     <BorrowerLayout>
       <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4 py-12">
-        <div className="w-full rounded-xl border border-border bg-card p-6 text-center shadow-lg sm:p-8">
+        <div className="w-full rounded-xl border border-border bg-card p-6 text-center shadow-none sm:p-8">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-500/10">
             <XCircle className="h-10 w-10 text-red-600" />
           </div>
 
           <div className="mt-5 space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">
-              Payment Failed
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              Repayment Failed
             </h1>
             {amount && (
-              <p className="text-xl font-semibold text-muted-foreground flex items-center justify-center gap-1">
+              <p className="text-2xl font-bold text-muted-foreground flex items-center justify-center gap-1 tracking-tight">
                 <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
                 {Number(amount).toLocaleString()}
               </p>
             )}
-            <p className="text-sm leading-6 text-muted-foreground">
-              We could not verify your repayment payment. No installment update
-              was confirmed.
+            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider leading-relaxed">
+              We could not verify your repayment payment. <br /> No installment update was confirmed.
             </p>
           </div>
 
