@@ -573,7 +573,7 @@ export default function DashboardLayout({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className={cn("container mx-auto p-4 md:p-8", className)}
+            className={cn("container mx-auto p-4 md:p-8 shadow-none", className)}
           >
             {isLoading ? (
               <div className="space-y-6">
