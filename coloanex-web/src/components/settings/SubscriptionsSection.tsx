@@ -44,20 +44,20 @@ export default function SubscriptionsSection({
         <CardContent className="pt-6 space-y-6">
           <div className={cn(
             "p-5 rounded-2xl border transition-all duration-300",
-            activeSub ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/5 border-border"
+            activeSub ? "bg-primary/5 border-primary/20" : "bg-muted/5 border-border"
           )}>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shrink-0">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-black uppercase tracking-tight text-foreground">
-                      {activeSub ? `${activeSub.plan} Tier` : "No Active Infrastructure"}
+                    <p className="text-sm font-black tracking-tight text-foreground">
+                      {activeSub ? `${activeSub.plan} tier` : "No active infrastructure"}
                     </p>
                     {activeSub && (
-                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">Active</span>
+                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold  tracking-wider">Active</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground font-medium mt-0.5">
@@ -69,7 +69,7 @@ export default function SubscriptionsSection({
               </div>
               <Button
                 onClick={goToPricing}
-                className="h-10 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-bold px-6 transition-all active:scale-95"
+                className="h-10 rounded-xl bg-primary hover:bg-primary/90 font-bold px-6 transition-all active:scale-95"
               >
                 Refine Tier <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -87,7 +87,7 @@ export default function SubscriptionsSection({
                          <stat.icon className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div className="min-w-0">
-                         <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">{stat.label}</p>
+                         <p className="text-[9px] font-bold text-muted-foreground  tracking-widest leading-none mb-1">{stat.label}</p>
                          <p className="text-xs font-bold truncate leading-tight">{stat.value}</p>
                       </div>
                    </div>
@@ -97,11 +97,11 @@ export default function SubscriptionsSection({
           </div>
 
           <div className="space-y-3">
-             <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Archive: Past Indices</Label>
+             <Label className="text-[10px] font-bold  tracking-wider text-muted-foreground ml-1">Archive: past indices</Label>
              <div className="grid grid-cols-1 gap-2">
                 {subscriptionStats.length === 0 ? (
                    <div className="p-8 rounded-2xl border border-dashed border-border/40 bg-muted/5 text-center text-muted-foreground">
-                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Zero historical records</p>
+                      <p className="text-[10px] font-bold  tracking-widest opacity-40">Zero historical records</p>
                    </div>
                 ) : (
                   subscriptionStats.map((sub) => (
@@ -120,7 +120,7 @@ export default function SubscriptionsSection({
                             <div className="flex items-center gap-2">
                                <p className="text-xs font-bold truncate">{sub.plan} Plan</p>
                                <span className={cn(
-                                 "text-[8px] px-1.5 py-0.5 rounded font-black uppercase tracking-tighter",
+                                 "text-[8px] px-1.5 py-0.5 rounded font-black  tracking-tighter",
                                  sub.lifecycleStatus === "EXPIRED" ? "bg-destructive/10 text-destructive" :
                                  sub.lifecycleStatus === "LIMIT_EXCEEDED" ? "bg-amber-500/10 text-amber-600" :
                                  "bg-emerald-500/10 text-emerald-600"
@@ -136,7 +136,7 @@ export default function SubscriptionsSection({
                            <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 rounded-lg text-[10px] font-bold uppercase tracking-tighter hover:text-primary hover:bg-primary/10 transition-all"
+                              className="h-8 rounded-lg text-[10px] font-bold  tracking-tighter hover:text-primary hover:bg-primary/10 transition-all"
                               onClick={() => void handleSelectSubscription(sub.id)}
                               disabled={isSelectingSubscription}
                            >
@@ -175,11 +175,11 @@ export default function SubscriptionsSection({
 
                    return (
                      <div key={plan.id} className={cn(
-                       "flex flex-col p-4 rounded-2xl border transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:translate-y-[-2px]",
+                       "flex flex-col p-4 rounded-2xl border transition-all duration-300 translate-y-[-2px]",
                        accent.card
                      )}>
                         <div className="flex items-center justify-between gap-2 mb-4">
-                           <span className={cn("text-[8px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest", accent.chip)}>{plan.scope}</span>
+                           <span className={cn("text-[8px] px-2 py-0.5 rounded-full font-black  tracking-widest", accent.chip)}>{plan.scope}</span>
                            {status && status === "BOUGHT" && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
                         </div>
                         <div className="mb-4">
@@ -191,7 +191,7 @@ export default function SubscriptionsSection({
                               {plan.currency === "NPR" ? "Rs. " : plan.currency}
                            </span>
                            <span className="text-lg font-black tracking-tight leading-none">{Number(plan.price).toLocaleString()}</span>
-                           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter ml-1">/ {plan.billingCycle}</span>
+                           <span className="text-[10px] text-muted-foreground font-bold  tracking-tighter ml-1">/ {plan.billingCycle}</span>
                         </div>
                         <Button
                            className={cn("w-full h-9 rounded-xl font-bold text-xs transition-all active:scale-95", accent.button)}
