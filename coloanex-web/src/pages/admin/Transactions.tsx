@@ -235,6 +235,9 @@ export default function Transactions() {
       new Set(metamaskWallets.map((wallet) => wallet.address.toLowerCase())),
     [metamaskWallets],
   );
+  const hasEthereumProvider =
+    typeof window !== "undefined" && Boolean((window as any).ethereum);
+  const canMatchOnChain = metamaskAddresses.size > 0 && hasEthereumProvider;
 
   const metamaskHistoryTxHashes = useMemo(
     () =>
@@ -250,11 +253,12 @@ export default function Transactions() {
   );
 
   useEffect(() => {
-    const ethereum = (window as any).ethereum;
-    if (!ethereum || metamaskHistoryTxHashes.length === 0) {
+    if (!canMatchOnChain || metamaskHistoryTxHashes.length === 0) {
       setOnChainMetaMaskMatches({});
       return;
     }
+
+    const ethereum = (window as any).ethereum;
 
     let cancelled = false;
 
@@ -291,14 +295,15 @@ export default function Transactions() {
       cancelled = true;
     };
   }, [
+    canMatchOnChain,
     metamaskHistoryTxHashes.join("|"),
     Array.from(metamaskAddresses).join("|"),
   ]);
 
   const metamaskTableTransactions = useMemo(() => {
     // Super admins should see all transactions, other users only see their wallet matches
-    if (isSuperAdmin) return transactions;
-    
+    if (isSuperAdmin || !canMatchOnChain) return transactions;
+
     return transactions.filter((transaction) => {
       const hash = ((transaction as any).blockchainTxHash ||
         (transaction as any).blockchain_tx_hash ||
@@ -306,7 +311,7 @@ export default function Transactions() {
       if (!hash) return false;
       return onChainMetaMaskMatches[hash] === true;
     });
-  }, [transactions, onChainMetaMaskMatches, isSuperAdmin]);
+  }, [transactions, onChainMetaMaskMatches, isSuperAdmin, canMatchOnChain]);
 
   // Calculate To Give and To Receive based on transaction flow
   const { toGive, toReceive } = useMemo(() => {
@@ -871,7 +876,7 @@ export default function Transactions() {
                 });
               }
             }}
-             className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all ${
+            className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border transition-all ${
               hasBlockchainTx
                 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20 cursor-pointer"
                 : "bg-destructive/10 text-destructive border-destructive/20 cursor-default"
@@ -923,30 +928,30 @@ export default function Transactions() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
-               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
-               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+              <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+              <div className="h-8 w-32 bg-surface-bright rounded-md" />
             </div>
             <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
-               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
-               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+              <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+              <div className="h-8 w-32 bg-surface-bright rounded-md" />
             </div>
             <div className="h-32 rounded-xl border border-border/50 bg-card p-4 animate-pulse">
-               <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
-               <div className="h-8 w-32 bg-surface-bright rounded-md" />
+              <div className="h-5 w-24 bg-surface-bright rounded-md mb-4" />
+              <div className="h-8 w-32 bg-surface-bright rounded-md" />
             </div>
           </div>
 
           <div>
-             <div className="h-8 w-48 bg-surface-bright rounded-md mb-4 animate-pulse" />
-             <div className="h-[400px] rounded-xl border border-border/50 bg-card p-4 animate-pulse">
-               <div className="h-12 w-full bg-surface-bright/50 rounded-md mb-4" />
-               <div className="space-y-3">
-                 <div className="h-10 w-full bg-surface-bright rounded-md" />
-                 <div className="h-10 w-full bg-surface-bright rounded-md" />
-                 <div className="h-10 w-full bg-surface-bright rounded-md" />
-                 <div className="h-10 w-full bg-surface-bright rounded-md" />
-               </div>
-             </div>
+            <div className="h-8 w-48 bg-surface-bright rounded-md mb-4 animate-pulse" />
+            <div className="h-[400px] rounded-xl border border-border/50 bg-card p-4 animate-pulse">
+              <div className="h-12 w-full bg-surface-bright/50 rounded-md mb-4" />
+              <div className="space-y-3">
+                <div className="h-10 w-full bg-surface-bright rounded-md" />
+                <div className="h-10 w-full bg-surface-bright rounded-md" />
+                <div className="h-10 w-full bg-surface-bright rounded-md" />
+                <div className="h-10 w-full bg-surface-bright rounded-md" />
+              </div>
+            </div>
           </div>
         </div>
       </DashboardLayout>
@@ -1108,7 +1113,8 @@ export default function Transactions() {
                       MetaMask Not Connected
                     </p>
                     <p className="text-sm text-muted-foreground/80 font-medium">
-                      You are currently disconnected. Link your wallet to perform on-chain operations.
+                      You are currently disconnected. Link your wallet to
+                      perform on-chain operations.
                     </p>
                   </div>
                 </div>
