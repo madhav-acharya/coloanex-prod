@@ -13,6 +13,8 @@ import { AuthService, AuthTokens } from './auth.service';
 import { UsersService } from '../users/users.service';
 import type { CreateUserForSignupDto } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
+import { CompleteProfileDto } from './dto/complete-profile.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
