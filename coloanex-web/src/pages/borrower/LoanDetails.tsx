@@ -192,13 +192,13 @@ export default function LoanDetails() {
       <div className="max-w-7xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
           <div className="space-y-2">
-            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer uppercase tracking-widest">
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary transition-colors cursor-pointer  tracking-wider">
               <ChevronLeft className="w-4 h-4" /> Back
             </button>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Loan Facility</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Loan Facility</h1>
           </div>
           {canRepay && (
-            <Button onClick={handlePaySelected} className="rounded-xl h-12 px-8 font-bold shadow-sm">
+            <Button onClick={handlePaySelected} className="rounded-xl h-12 px-8 font-bold shadow-none">
                <CreditCard className="w-4 h-4 mr-2" /> Make Repayment
             </Button>
           )}
@@ -209,19 +209,19 @@ export default function LoanDetails() {
         ) : (
           <div className="grid lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-8 space-y-8">
-              <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-sm">
+              <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-none">
                 <div className="flex flex-col sm:flex-row justify-between gap-6 pb-8 border-b border-border/40">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0">
                        <FileText className="w-6 h-6" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-foreground">{loan.purpose || "Facility Details"}</h2>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Reference: {loan.id.slice(0,10)}</p>
+                      <h2 className="text-lg font-bold text-foreground">{loan.purpose || "Facility Details"}</h2>
+                      <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mt-0.5">Reference: {loan.id.slice(0,10)}</p>
                     </div>
                   </div>
                   <div className="flex flex-col sm:items-end gap-2">
-                    <span className={cn("px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest", statusTheme.className)}>
+                    <span className={cn("px-3 py-1 rounded-full text-[11px] font-bold  tracking-wider", statusTheme.className)}>
                        {statusTheme.label}
                     </span>
                     <BlockchainStatusBadge blockchainTxHash={(resolvedContract as any)?.blockchainTxHash} />
@@ -230,8 +230,8 @@ export default function LoanDetails() {
 
                 <div className="pt-8 grid sm:grid-cols-2 gap-10">
                    <div>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5">Approved Capital</p>
-                      <h2 className="text-4xl font-bold text-foreground tracking-tight">{money(loan.approvedAmount ?? loan.requestedAmount)}</h2>
+                      <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mb-1.5">Approved Capital</p>
+                      <h2 className="text-2xl font-bold text-foreground tracking-tight">{money(loan.approvedAmount ?? loan.requestedAmount)}</h2>
                       <div className="mt-4 flex gap-6">
                         <Metric small label="Rate" value={`${(loan as any).interestRate || "12.5"}%`} />
                         <Metric small label="Duration" value={`${loan.approvedTermMonths || loan.requestedTermMonths} Mo`} />
@@ -244,9 +244,9 @@ export default function LoanDetails() {
                 </div>
               </div>
 
-              <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-sm">
+              <div className="bg-background border border-border/60 rounded-2xl overflow-hidden shadow-none">
                  <div className="p-6 border-b border-border/40 bg-muted/5 flex items-center justify-between">
-                    <h3 className="text-sm font-bold uppercase tracking-wider">Repayment Schedule</h3>
+                    <h3 className="text-sm font-bold  tracking-wider">Repayment Schedule</h3>
                     <Badge variant="outline" className="rounded-lg">{payableSchedules.length} Items Pending</Badge>
                  </div>
                  <div className="divide-y divide-border/40 max-h-[500px] overflow-y-auto">
@@ -270,12 +270,12 @@ export default function LoanDetails() {
                                 </div>
                                 <div>
                                    <p className="text-xs font-bold text-foreground">Installment #{s.installmentNumber}</p>
-                                   <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{format(new Date(s.dueDate), "MMM dd, yyyy")}</p>
+                                   <p className="text-[11px] text-muted-foreground  tracking-wider font-semibold">{format(new Date(s.dueDate), "MMM dd, yyyy")}</p>
                                 </div>
                              </div>
                              <div className="text-right">
                                 <p className="text-sm font-bold text-foreground">{money(getScheduleDueAmount(s))}</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">{isPaid ? "Received" : "Upcoming"}</p>
+                                <p className="text-[11px] font-bold  tracking-wider text-muted-foreground mt-0.5">{isPaid ? "Received" : "Upcoming"}</p>
                              </div>
                           </div>
                        )
@@ -284,12 +284,12 @@ export default function LoanDetails() {
               </div>
 
               {collateralEntries.length > 0 && (
-                <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-sm space-y-6">
-                   <h3 className="text-sm font-bold uppercase tracking-wider">Collateral Artifacts</h3>
+                <div className="bg-background border border-border/60 rounded-2xl p-8 shadow-none space-y-6">
+                   <h3 className="text-sm font-bold  tracking-wider">Collateral Artifacts</h3>
                    <div className="grid sm:grid-cols-2 gap-6">
                       {collateralEntries.map((e, idx) => (
                         <div key={idx} className="space-y-2">
-                           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{titleCase(e.key)}</p>
+                           <p className="text-[11px] font-bold text-muted-foreground  tracking-wider">{titleCase(e.key)}</p>
                            <div className="p-4 rounded-xl bg-muted/10 border border-border/40 font-semibold text-sm break-all">
                               {String(e.value)}
                            </div>
@@ -301,17 +301,17 @@ export default function LoanDetails() {
             </div>
 
             <div className="lg:col-span-4 space-y-6">
-               <div className={cn("p-6 rounded-2xl border border-border/60 shadow-sm space-y-4", statusTheme.tone)}>
+               <div className={cn("p-6 rounded-2xl border border-border/60 shadow-none space-y-4", statusTheme.tone)}>
                   <div className="flex items-center gap-3">
                      <statusTheme.icon className="w-5 h-5 shrink-0" />
-                     <h4 className="font-bold text-sm uppercase tracking-wider">Status: {statusTheme.label}</h4>
+                     <h4 className="font-bold text-sm  tracking-wider">Status: {statusTheme.label}</h4>
                   </div>
                   <p className="text-xs font-medium leading-relaxed opacity-80">Repayments are monitored via smart contracts for transparent and immediate settlement verification.</p>
                </div>
 
-               <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm space-y-8">
+               <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-none space-y-8">
                   <div>
-                     <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Lending Partner</h3>
+                     <h3 className="text-xs font-bold  tracking-wider text-muted-foreground mb-4">Lending Partner</h3>
                      <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-muted/40 border border-border/40 flex items-center justify-center text-primary"><Building2 className="w-5 h-5" /></div>
                         <p className="text-sm font-bold text-foreground truncate">{loan.tenantId.slice(0,10)} CAP</p>
@@ -327,11 +327,11 @@ export default function LoanDetails() {
 
                   <div className="pt-6 border-t border-border/40 space-y-3">
                      <Link to={`/lenders/${loan.tenantId}`} className="block">
-                        <Button variant="outline" className="w-full rounded-xl text-xs font-bold uppercase tracking-widest h-11">Partner Info</Button>
+                        <Button variant="outline" className="w-full rounded-xl text-xs font-bold  tracking-wider h-11">Partner Info</Button>
                      </Link>
                      {resolvedContract && (
                        <Link to={`/contracts/${contractId}`} className="block">
-                         <Button className="w-full rounded-xl text-xs font-bold uppercase tracking-widest h-11">View Contract</Button>
+                         <Button className="w-full rounded-xl text-xs font-bold  tracking-wider h-11">View Contract</Button>
                        </Link>
                      )}
                   </div>
@@ -343,7 +343,7 @@ export default function LoanDetails() {
 
       {showGatewayPicker && (
          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-background/60 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="w-full max-w-sm bg-background rounded-2xl border border-border shadow-2xl overflow-hidden scale-in-95">
+            <div className="w-full max-w-sm bg-background rounded-2xl border border-border shadow-none overflow-hidden scale-in-95">
                <div className="p-6 border-b border-border/40 flex items-center justify-between">
                   <h3 className="font-bold text-lg">Select Wallet</h3>
                   <button onClick={() => setShowGatewayPicker(false)} className="rounded-lg p-1.5 hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
@@ -354,10 +354,10 @@ export default function LoanDetails() {
                   
                   <div className="pt-6 mt-4 border-t border-border/40">
                      <div className="flex items-center justify-between mb-6 px-1">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Payable</span>
+                        <span className="text-[11px] font-bold  text-muted-foreground tracking-wider">Payable</span>
                         <span className="font-bold text-xl">{money(selectedAmount)}</span>
                      </div>
-                     <Button onClick={handleGatewayPayment} className="w-full h-12 rounded-xl font-bold uppercase tracking-widest text-xs">Confirm Transaction</Button>
+                     <Button onClick={handleGatewayPayment} className="w-full h-12 rounded-xl font-bold  tracking-wider text-xs">Confirm Transaction</Button>
                   </div>
                </div>
             </div>
@@ -370,10 +370,10 @@ export default function LoanDetails() {
 function Metric({ label, value, sub, small }: { label: string; value: any; sub?: string; small?: boolean }) {
   return (
     <div>
-      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">{label}</p>
+      <p className="text-[11px] font-bold text-muted-foreground  tracking-wider mb-1 opacity-60">{label}</p>
       <div className="flex items-baseline gap-1">
-        <span className={cn("font-bold text-foreground", small ? "text-xl" : "text-2xl")}>{value}</span>
-        {sub && <span className="text-[10px] font-bold text-muted-foreground">{sub}</span>}
+        <span className={cn("font-bold text-foreground", small ? "text-lg" : "text-xl")}>{value}</span>
+        {sub && <span className="text-[11px] font-bold text-muted-foreground">{sub}</span>}
       </div>
     </div>
   );
@@ -385,7 +385,7 @@ function Progress({ label, done }: { label: string; done: boolean }) {
        <div className={cn("w-4 h-4 rounded-full border flex items-center justify-center", done ? "bg-emerald-500 border-emerald-500 text-white" : "border-border/60")}>
           <CheckCircle2 className="w-2.5 h-2.5" />
        </div>
-       <span className="text-[10px] font-bold uppercase tracking-widest text-foreground">{label}</span>
+       <span className="text-[11px] font-bold  tracking-wider text-foreground">{label}</span>
     </div>
   );
 }
