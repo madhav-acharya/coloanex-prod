@@ -45,13 +45,13 @@ export default function BorrowerDashboard() {
     <BorrowerLayout>
       <div className="max-w-6xl mx-auto space-y-10 pb-12">
         <section className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border/40 pb-8 mt-4">
-          <div className="space-y-1.5">
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">{greeting}, {user?.fullName?.split(" ")[0]}</h2>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Overview</h1>
+          <div className="space-y-1">
+            <h2 className="text-xs font-bold text-muted-foreground  tracking-wider">{greeting}, {user?.fullName?.split(" ")[0]}</h2>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">Overview</h1>
           </div>
           <Button 
             onClick={() => navigate("/lenders")}
-            className="rounded-xl h-11 px-6 font-semibold shadow-sm hover:translate-y-[-1px] transition-all"
+            className="rounded-xl h-11 px-6 font-semibold shadow-none hover:translate-y-[-1px] transition-all"
           >
             <Plus className="w-4 h-4 mr-2" /> New Application
           </Button>
@@ -78,10 +78,10 @@ export default function BorrowerDashboard() {
           />
           <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 flex flex-col justify-between group cursor-pointer hover:bg-primary/10 transition-colors" onClick={() => navigate("/my-loans")}>
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">Total Loans</span>
-              <ChevronRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" />
+              <span className="text-[11px] font-bold text-primary  tracking-wider">Total Loans</span>
+              <ChevronRight className="w-3.5 h-3.5 text-primary group-hover:translate-x-1 transition-transform" />
             </div>
-            <p className="text-3xl font-bold text-foreground mt-2">{loansData?.total || 0}</p>
+            <p className="text-2xl font-bold text-foreground mt-1">{loansData?.total || 0}</p>
           </div>
         </div>
 
@@ -104,7 +104,7 @@ export default function BorrowerDashboard() {
                   <div 
                     key={loan.id} 
                     onClick={() => navigate(`/my-loans/${loan.id}`)}
-                    className="group bg-background border border-border/60 hover:border-primary/30 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:bg-muted/5 shadow-sm hover:shadow-md"
+                    className="group bg-background border border-border/60 hover:border-primary/30 rounded-2xl p-4 flex items-center justify-between cursor-pointer transition-all hover:bg-muted/5 shadow-none hover:shadow-none"
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center shrink-0">
@@ -115,7 +115,7 @@ export default function BorrowerDashboard() {
                           {loan.purpose || "Loan Request"}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full bg-muted/60 text-[10px] font-bold uppercase tracking-wider">{formatStatus(loan.status)}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-muted/60 text-[11px] font-bold  tracking-wider">{formatStatus(loan.status)}</span>
                           <span>•</span>
                           <span>{loan.createdAt ? format(new Date(loan.createdAt), "MMM dd, yyyy") : ""}</span>
                         </p>
@@ -123,11 +123,11 @@ export default function BorrowerDashboard() {
                     </div>
                     <div className="text-right flex items-center gap-6">
                       <div className="hidden sm:block">
-                        <p className="text-lg font-bold text-foreground flex items-center gap-0.5">
-                          <IconCurrencyRupeeNepalese className="w-4 h-4 text-primary" />
+                        <p className="text-base font-bold text-foreground flex items-center gap-0.5">
+                          <IconCurrencyRupeeNepalese className="w-3.5 h-3.5 text-primary" />
                           {Number(loan.requestedAmount || 0).toLocaleString("en-IN")}
                         </p>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Amount</p>
+                        <p className="text-[11px] font-bold text-muted-foreground  tracking-wider">Amount</p>
                       </div>
                       <div className="w-8 h-8 rounded-full border border-border/60 flex items-center justify-center text-muted-foreground group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
                         <ChevronRight className="w-4 h-4" />
@@ -157,7 +157,7 @@ export default function BorrowerDashboard() {
                   <div 
                     key={lender.id} 
                     onClick={() => navigate(`/lenders/${lender.id}`)}
-                    className="p-3 rounded-2xl bg-muted/20 border border-transparent hover:border-border/60 hover:bg-background transition-all flex items-center gap-4 cursor-pointer group shadow-sm hover:shadow-md"
+                    className="p-3 rounded-2xl bg-muted/20 border border-transparent hover:border-border/60 hover:bg-background transition-all flex items-center gap-4 cursor-pointer group shadow-none hover:shadow-none"
                   >
                     <div className="w-10 h-10 rounded-xl bg-background border border-border/40 flex items-center justify-center overflow-hidden shrink-0 text-lg font-bold text-primary">
                       {lender.logo ? <img src={lender.logo} alt={lender.name} className="w-full h-full object-cover" /> : lender.name.charAt(0).toUpperCase()}
@@ -166,7 +166,7 @@ export default function BorrowerDashboard() {
                       <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{lender.name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className={cn("w-1.5 h-1.5 rounded-full", lender.isActive ? "bg-emerald-500" : "bg-muted-foreground/30")} />
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{lender.isActive ? "Active" : "Inactive"}</span>
+                        <span className="text-[11px] font-bold text-muted-foreground  tracking-wider">{lender.isActive ? "Active" : "Inactive"}</span>
                       </div>
                     </div>
                     <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
@@ -183,13 +183,13 @@ export default function BorrowerDashboard() {
 
 function MetricCard({ title, value, icon, color }: { title: string; value: number | string; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+    <div className="bg-background border border-border/60 rounded-2xl p-6 shadow-none flex flex-col justify-between">
       <div className={cn("inline-flex items-center justify-center w-10 h-10 rounded-xl mb-4", color)}>
         {icon}
       </div>
       <div>
-        <p className="text-2xl font-bold text-foreground tracking-tight leading-none">{value}</p>
-        <p className="text-xs font-semibold text-muted-foreground mt-2 uppercase tracking-wider">{title}</p>
+        <p className="text-xl font-bold text-foreground tracking-tight leading-none">{value}</p>
+        <p className="text-[11px] font-bold text-muted-foreground mt-2  tracking-wider">{title}</p>
       </div>
     </div>
   );
