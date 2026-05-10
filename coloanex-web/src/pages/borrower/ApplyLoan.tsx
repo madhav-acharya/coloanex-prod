@@ -40,6 +40,7 @@ import {
   Truck,
   Upload,
   Wrench,
+  Zap,
 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -371,7 +372,7 @@ export function ApplyLoanModal({
                     <div key={s.id} className="relative z-10 flex flex-col items-center gap-2">
                       <div
                         className={cn(
-                          "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-sm",
+                          "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 shadow-none",
                           isDone
                             ? "bg-primary border-primary text-primary-foreground"
                             : isActive
@@ -387,7 +388,7 @@ export function ApplyLoanModal({
                       </div>
                       <span
                         className={cn(
-                          "text-[10px] font-bold uppercase tracking-wider text-center hidden sm:block",
+                          "text-[11px] font-bold  tracking-wider text-center hidden sm:block",
                           isActive ? "text-primary" : "text-muted-foreground",
                         )}
                       >
@@ -399,13 +400,43 @@ export function ApplyLoanModal({
               </div>
             </div>
 
+            {!blockchainAccess.canRunBlockchain && (
+              <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-8 text-center rounded-3xl animate-in fade-in duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
+                  <Zap className="w-8 h-8 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">Subscription Required</h3>
+                <p className="text-sm text-muted-foreground mb-8 max-w-[300px]">
+                  {blockchainAccess.reason || "You need an active subscription to execute blockchain transactions in platform mode."}
+                </p>
+                <div className="flex flex-col w-full gap-3 px-4">
+                  <Button 
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate("/profile?section=subscriptions");
+                    }}
+                    className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold text-sm shadow-none border-none"
+                  >
+                    Upgrade Subscription
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    onClick={() => onOpenChange(false)}
+                    className="w-full h-12 rounded-xl font-bold text-sm text-muted-foreground"
+                  >
+                    Maybe Later
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-6">
               {step === 1 && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                   {isLoanBlocked && (
                     <div className="bg-destructive/10 text-destructive text-xs font-bold p-3 rounded-xl border border-destructive/20 flex gap-2 items-center">
                       <AlertCircle className="w-4 h-4 shrink-0" />
-                      You already have a {existingLoan?.status} loan request for this institution.
+                      You already have a {existingLoan?.status?.toLowerCase()?.replace(/_/g, " ")} loan request for this institution.
                     </div>
                   )}
 
@@ -415,7 +446,7 @@ export function ApplyLoanModal({
                         <ShieldCheck className="w-4 h-4 text-primary" />
                       </div>
                       <div className="space-y-0">
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Lender Recommendation</p>
+                        <p className="text-[11px] font-bold text-primary  tracking-wider">Lender Recommendation</p>
                         <p className="text-xs text-foreground/80 leading-tight">
                           Aim for a Loan-to-Value (LTV) ratio under <span className="text-primary font-bold">70%</span> for prioritized approval.
                         </p>
@@ -427,13 +458,13 @@ export function ApplyLoanModal({
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 pb-1 border-b border-border/40">
                         <Building2 className="w-3.5 h-3.5 text-primary" />
-                        <h3 className="text-xs font-bold text-foreground">Basic Requirements</h3>
+                        <h3 className="text-sm font-bold text-foreground">Basic Requirements</h3>
                       </div>
                     </div>
 
                     {!isLockedTenant && (
                       <div className="space-y-1.5">
-                        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">
                           Target Institution <span className="text-destructive">*</span>
                         </Label>
                         <Select
@@ -455,7 +486,7 @@ export function ApplyLoanModal({
                     )}
 
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">
                         Requested Amount (NPR) <span className="text-destructive">*</span>
                       </Label>
                       <Input
@@ -468,7 +499,7 @@ export function ApplyLoanModal({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <Label className="text-[11px] font-bold  tracking-wider text-muted-foreground">
                         Duration (Months) <span className="text-destructive">*</span>
                       </Label>
                       <Input
@@ -484,7 +515,7 @@ export function ApplyLoanModal({
                     <div className="space-y-4 mt-2">
                       <div className="flex items-center gap-2 pb-1 border-b border-border/40">
                         <FileText className="w-3.5 h-3.5 text-primary" />
-                        <h3 className="text-xs font-bold text-foreground">Facility Purpose</h3>
+                        <h3 className="text-sm font-bold text-foreground">Facility Purpose</h3>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {LOAN_PURPOSE_OPTIONS.map((option) => {
@@ -498,7 +529,7 @@ export function ApplyLoanModal({
                               className={cn(
                                 "group rounded-xl border p-2 text-left transition-all duration-200 cursor-pointer relative",
                                 isSelected
-                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-none"
                                   : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10",
                               )}
                             >
@@ -510,7 +541,7 @@ export function ApplyLoanModal({
                                   <Icon className="w-3 h-3" />
                                 </div>
                                 <p className={cn(
-                                  "text-[10px] font-bold leading-tight",
+                                  "text-[11px] font-bold leading-tight",
                                   isSelected ? "text-primary" : "text-foreground/80 group-hover:text-foreground",
                                 )}>
                                   {option.label}
@@ -544,18 +575,18 @@ export function ApplyLoanModal({
                           className={cn(
                             "group rounded-xl border p-4 flex flex-col items-center gap-2 transition-all duration-200 cursor-pointer relative",
                             isSelected
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-none"
                               : "border-border bg-muted/5 hover:border-primary/30 hover:bg-muted/10",
                           )}
                         >
                           <div className={cn(
                             "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200",
-                            isSelected ? "bg-primary text-primary-foreground shadow-md scale-105" : "bg-background border border-border group-hover:border-primary/30 text-muted-foreground",
+                            isSelected ? "bg-primary text-primary-foreground shadow-none scale-105" : "bg-background border border-border group-hover:border-primary/30 text-muted-foreground",
                           )}>
                             <Icon className="w-5 h-5" />
                           </div>
                           <span className={cn(
-                            "text-[10px] font-bold uppercase tracking-wider",
+                            "text-[11px] font-bold  tracking-wider",
                             isSelected ? "text-primary" : "text-foreground/80 group-hover:text-foreground",
                           )}>
                             {option.label}
@@ -582,7 +613,7 @@ export function ApplyLoanModal({
                   <div className="grid grid-cols-1 gap-8 items-start">
                     <div className="space-y-5">
                       <div className="space-y-2.5">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <Label className="text-xs font-bold  tracking-wider text-muted-foreground">
                           Estimated Value (NPR) <span className="text-destructive">*</span>
                         </Label>
                         <div className="relative">
@@ -598,7 +629,7 @@ export function ApplyLoanModal({
                         </div>
                       </div>
                       <div className="space-y-2.5">
-                        <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        <Label className="text-xs font-bold  tracking-wider text-muted-foreground">
                           Description & Features <span className="text-destructive">*</span>
                         </Label>
                         <textarea
@@ -612,7 +643,7 @@ export function ApplyLoanModal({
                     </div>
 
                     <div className="space-y-3">
-                      <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      <Label className="text-xs font-bold  tracking-wider text-muted-foreground">
                         Supporting Evidence <span className="text-destructive">*</span>
                       </Label>
                       <label className="group h-[230px] rounded-xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-muted/5 hover:border-primary/40 hover:bg-muted/10 transition-all duration-300">
@@ -622,35 +653,40 @@ export function ApplyLoanModal({
                           className="hidden"
                           onChange={(e) => uploadCollateral(e.target.files?.[0] || null)}
                         />
-                        {formData.collateralImageUrl ? (
-                          <div className="relative w-full h-full">
-                            <img
-                              src={formData.collateralImageUrl}
-                              alt="Collateral"
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white">
-                              <div className="flex flex-col items-center gap-2">
-                                <Upload className="w-8 h-8" />
-                                <p className="text-[10px] font-bold uppercase tracking-widest">Update Document</p>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center gap-3 text-muted-foreground p-6 text-center">
-                            <div className="w-12 h-12 rounded-full bg-background border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:text-primary transition-all duration-300">
-                              <ImagePlus className="w-6 h-6" />
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[11px] font-bold text-foreground">
-                                {isUploading ? "Uploading..." : "Upload Asset Photo"}
-                              </p>
-                              <p className="text-[10px] leading-tight text-muted-foreground max-w-[150px]">
-                                JPG or PNG. High resolution images speed up appraisal.
-                              </p>
-                            </div>
-                          </div>
-                        )}
+                         {isUploading ? (
+                           <div className="flex flex-col items-center gap-3 text-primary animate-pulse p-6">
+                             <div className="w-12 h-12 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                             <p className="text-[11px] font-bold">Uploading Asset Photo...</p>
+                           </div>
+                         ) : formData.collateralImageUrl ? (
+                           <div className="relative w-full h-full">
+                             <img
+                               src={formData.collateralImageUrl}
+                               alt="Collateral"
+                               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                             />
+                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white">
+                               <div className="flex flex-col items-center gap-2">
+                                 <Upload className="w-8 h-8" />
+                                 <p className="text-[11px] font-bold  tracking-wider">Update Document</p>
+                               </div>
+                             </div>
+                           </div>
+                         ) : (
+                           <div className="flex flex-col items-center gap-3 text-muted-foreground p-6 text-center">
+                             <div className="w-12 h-12 rounded-full bg-background border border-border flex items-center justify-center group-hover:border-primary/40 group-hover:text-primary transition-all duration-300">
+                               <ImagePlus className="w-6 h-6" />
+                             </div>
+                             <div className="space-y-1">
+                               <p className="text-[11px] font-bold text-foreground">
+                                 Upload Asset Photo
+                               </p>
+                               <p className="text-[11px] leading-tight text-muted-foreground max-w-[150px]">
+                                 JPG or PNG. High resolution images speed up appraisal.
+                               </p>
+                             </div>
+                           </div>
+                         )}
                       </label>
                     </div>
                   </div>
@@ -676,9 +712,9 @@ export function ApplyLoanModal({
                       <div key={row.label} className="p-3 rounded-xl border border-border/40 bg-muted/5 flex flex-col gap-1.5 transition-all hover:bg-muted/10">
                         <div className="flex items-center gap-1.5">
                           <row.icon className="w-3 h-3 text-primary/70" />
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{row.label}</span>
+                          <span className="text-[11px] font-bold text-muted-foreground  tracking-wider">{row.label}</span>
                         </div>
-                        <p className="text-xs font-bold text-foreground truncate">{row.value}</p>
+                        <p className="text-sm font-bold text-foreground truncate">{row.value}</p>
                       </div>
                     ))}
                   </div>
