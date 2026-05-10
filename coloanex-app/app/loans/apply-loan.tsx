@@ -20,6 +20,7 @@ import {
   AppHeader,
   BlockchainProcessingModal,
   CurrencyIcon,
+  SubscriptionBlockingOverlay,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
@@ -547,12 +548,7 @@ export default function LoanApplicationScreen() {
               onPress={pickImage}
               disabled={uploadingImage}
             >
-              {collateralImage ? (
-                <Image
-                  source={{ uri: collateralImage }}
-                  style={styles.uploadedImage}
-                />
-              ) : uploadingImage ? (
+              {uploadingImage ? (
                 <>
                   <ActivityIndicator size="large" color={colors.primary} />
                   <Text
@@ -561,6 +557,11 @@ export default function LoanApplicationScreen() {
                     Uploading...
                   </Text>
                 </>
+              ) : collateralImage ? (
+                <Image
+                  source={{ uri: collateralImage }}
+                  style={styles.uploadedImage}
+                />
               ) : (
                 <>
                   <Ionicons
@@ -756,6 +757,8 @@ export default function LoanApplicationScreen() {
           />
         )}
       </View>
+
+      <SubscriptionBlockingOverlay />
 
       <Modal
         visible={prefillModal}
