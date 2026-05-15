@@ -16,7 +16,6 @@ const isUploadEndpoint = (args: unknown) => {
   return url.includes("/cloudinary-uploads/");
 };
 
-// Base query with authentication
 const baseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
   prepareHeaders: (headers, { getState, endpoint }) => {
