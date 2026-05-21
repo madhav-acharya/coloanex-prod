@@ -381,7 +381,6 @@ export class LoansService {
           tenantId,
         );
       } catch (error) {
-        // Email sending failed, but don't block loan creation
         this.logger.error('Failed to send loan submission email', error);
       }
     }
