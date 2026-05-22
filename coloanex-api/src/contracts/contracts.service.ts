@@ -247,7 +247,6 @@ export class ContractsService {
       throw new ForbiddenException('Only tenant users can create contracts');
     }
 
-    // Verify loan exists and belongs to tenant
     const loan = await this.prisma.loan.findUnique({
       where: { id: createContractDto.loanId },
       include: { borrower: true },
