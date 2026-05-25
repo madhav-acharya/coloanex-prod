@@ -262,7 +262,7 @@ export class ContractsService {
       );
     }
 
-    // Check if contract already exists for this loans
+    // Check if contract already exists for this loan
     const existingContract = await this.prisma.contract.findUnique({
       where: { loanId: createContractDto.loanId },
     });
