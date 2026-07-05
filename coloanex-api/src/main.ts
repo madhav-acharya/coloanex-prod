@@ -8,7 +8,7 @@ import { useContainer } from 'class-validator';
 ) {
   return this.toString();
 };
-// main gateway for the application....
+// main gateway for the application.
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
