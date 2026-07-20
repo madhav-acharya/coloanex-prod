@@ -178,13 +178,18 @@ export class WalletsService {
     return { message: 'Wallet deleted' };
   }
 
-  updateGasPaymentMode(userId: string, gasPaymentMode: string) {
-    return this.updateGasPaymentModeInternal(userId, gasPaymentMode);
+  updateGasPaymentMode(
+    userId: string,
+    gasPaymentMode: string,
+    platform: 'WEB' | 'APP' = 'WEB',
+  ) {
+    return this.updateGasPaymentModeInternal(userId, gasPaymentMode, platform);
   }
 
   private async updateGasPaymentModeInternal(
     userId: string,
     gasPaymentMode: string,
+    platform: 'WEB' | 'APP' = 'WEB',
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -198,18 +203,25 @@ export class WalletsService {
     const roleNames = user.roles.map((r) => r.role.name);
     const isBorrower = roleNames.includes('Borrower');
 
-    if (isBorrower && gasPaymentMode !== 'PLATFORM_WALLET') {
+    if (
+      isBorrower &&
+      platform === 'APP' &&
+      gasPaymentMode !== 'PLATFORM_WALLET'
+    ) {
       throw new BadRequestException(
-        'Borrowers must use PLATFORM_WALLET gas mode on app flows.',
+        'Wallet mode is not supported in the app. Please switch to Platform Mode (subscription mode).',
       );
     }
+
+    const resolvedMode =
+      isBorrower && platform === 'APP'
+        ? 'PLATFORM_WALLET'
+        : gasPaymentMode;
 
     return this.prisma.user.update({
       where: { id: userId },
       data: {
-        gasPaymentMode: isBorrower
-          ? ('PLATFORM_WALLET' as never)
-          : (gasPaymentMode as never),
+        gasPaymentMode: resolvedMode as never,
       },
       select: { id: true, gasPaymentMode: true },
     });

@@ -32,6 +32,7 @@ export class WalletsController {
     return this.walletsService.updateGasPaymentMode(
       req.user.sub,
       dto.gasPaymentMode,
+      dto.platform || 'WEB',
     );
   }
 
