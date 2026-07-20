@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BoneBlock } from "@/components/shared/Bone";
 import Landing from "@/pages/public/Landing";
 import Login from "@/pages/public/Login";
 import Signup from "@/pages/public/Signup";
@@ -34,10 +34,12 @@ export const PublicRouteWrapper = ({ children }: PublicRouteProps) => {
 
   if (isAuthenticated && hasToken && (isLoading || !user)) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <Skeleton className="w-12 h-12 rounded-xl" />
-          <Skeleton className="w-32 h-4 rounded" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
+        <div className="w-full max-w-sm space-y-3">
+          <BoneBlock className="w-14 h-14 rounded-2xl mx-auto" />
+          <BoneBlock className="h-4 w-2/3 rounded mx-auto" />
+          <BoneBlock className="h-3 w-full rounded" />
+          <BoneBlock className="h-3 w-5/6 rounded mx-auto" />
         </div>
       </div>
     );
