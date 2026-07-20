@@ -1,191 +1,127 @@
-import { Badge } from "@/components/ui/badge";
+import PublicLayout from "@/components/layouts/PublicLayout";
+import { PageShell } from "@/components/shared/PageShell";
+import { useRevealOnView } from "@/hooks/useReveal";
+import { cn } from "@/lib/utils";
 import {
   ShieldCheck,
+  Fingerprint,
+  KeyRound,
   Lock,
+  Server,
   Eye,
-  Database,
-  Globe,
-  Key,
-  Fingerprint
 } from "lucide-react";
-import { motion } from "framer-motion";
-import PublicLayout from "@/components/layouts/PublicLayout";
 
 interface SecurityProps {
-  isSubcomponent?: boolean;
+  showHeader?: boolean;
   showFooter?: boolean;
+  isSubcomponent?: boolean;
 }
 
-export default function Security({ isSubcomponent = false, showFooter = true }: SecurityProps) {
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  };
+const pillars = [
+  {
+    icon: ShieldCheck,
+    title: "Permissioned access",
+    desc: "JWT sessions, role permissions, and tenant scoping on every protected route.",
+  },
+  {
+    icon: Fingerprint,
+    title: "KYC integrity",
+    desc: "Documented verification with on-chain status updates when blockchain is enabled.",
+  },
+  {
+    icon: KeyRound,
+    title: "Gas mode control",
+    desc: "Platform sponsorship via subscription or user wallet signing on web — never ambiguous.",
+  },
+  {
+    icon: Lock,
+    title: "Encrypted credentials",
+    desc: "Payment gateway secrets and wallet material stay server-side with controlled access.",
+  },
+  {
+    icon: Server,
+    title: "Tenant isolation",
+    desc: "Data and actions stay inside the institution boundary — no cross-tenant leakage.",
+  },
+  {
+    icon: Eye,
+    title: "Activity visibility",
+    desc: "Operators can review key actions and statuses without guessing what happened.",
+  },
+];
 
-  const stagger = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
-
-  const securityFeatures = [
-    {
-      icon: <Lock className="w-5 h-5" />,
-      title: "AES-256 Encryption",
-      desc: "All data at rest and in transit is encrypted using military-grade AES-256 protocols."
-    },
-    {
-      icon: <Fingerprint className="w-5 h-5" />,
-      title: "Biometric Auth",
-      desc: "Native support for FaceID and TouchID to ensure only authorized personnel access the ledger."
-    },
-    {
-      icon: <Database className="w-5 h-5" />,
-      title: "Immutable Ledger",
-      desc: "Every loan event is notarized on a private blockchain, making historical data impossible to alter."
-    },
-    {
-      icon: <Eye className="w-5 h-5" />,
-      title: "Real-time Monitoring",
-      desc: "Continuous automated scanning for anomalous transaction patterns and multi-sig failures."
-    }
-  ];
+export default function Security({
+  showHeader = true,
+  showFooter = true,
+  isSubcomponent = false,
+}: SecurityProps) {
+  const ref = useRevealOnView();
 
   const content = (
-    <div className="bg-background text-foreground">
-      {!isSubcomponent && (
-        <div className="pt-20 pb-8 md:pt-32 md:pb-12 text-center border-b border-border/20">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="max-w-4xl mx-auto px-4 sm:px-6"
-          >
-            <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-emerald-500/10 px-4 py-1.5 mb-6">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
-              <span className="text-emerald-500 text-[10px] md:text-xs font-black tracking-widest uppercase">
-                Bank-Grade Protection
-              </span>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <h1 className="text-3xl md:text-5xl font-black mb-6 leading-[1.1] uppercase tracking-widest">
-                Hardened <span className="text-primary">Protocols</span>
-              </h1>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
-                Our infrastructure is built on a foundation of zero-trust architecture and cryptographic finality.
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
+    <div
+      ref={ref as React.RefObject<HTMLDivElement>}
+      className={cn(
+        "relative text-foreground",
+        isSubcomponent ? "py-16 sm:py-20 md:py-28" : "pt-24 pb-20",
       )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 md:pb-28 pt-8">
-        {isSubcomponent && (
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="mb-12 text-center"
+    >
+      <PageShell className="relative z-10 space-y-10 sm:space-y-12 md:space-y-16">
+        <div className="max-w-2xl">
+          <p
+            data-reveal
+            className="text-xs font-bold uppercase tracking-[0.22em] text-primary mb-3 leading-normal"
           >
-            <Badge variant="outline" className="mb-4 py-1.5 px-4 text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase font-black tracking-widest">
-              Security
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-black uppercase tracking-widest">
-              Hardened <span className="text-primary">Protocols</span>
-            </h2>
-          </motion.div>
-        )}
+            Security
+          </p>
+          <h2
+            data-reveal
+            className="text-2xl sm:text-3xl md:text-5xl font-extrabold font-[family-name:var(--font-headline)] leading-snug mb-4 sm:mb-5"
+          >
+            Trust is a product feature
+          </h2>
+          <p
+            data-reveal
+            className="text-sm sm:text-base md:text-lg text-muted-foreground leading-relaxed mb-5 max-w-lg"
+          >
+            Hardened auth, auditable money movement, and blockchain anchoring
+            when you need cryptographic finality.
+          </p>
+          <ul data-reveal className="space-y-2 text-sm text-foreground/85">
+            <li>• Role-aware APIs and route guards</li>
+            <li>• Clear separation of platform vs user gas</li>
+            <li>• Gateway callbacks verified before state changes</li>
+          </ul>
+        </div>
 
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeIn}
-          className="relative w-full h-[180px] md:h-[320px] overflow-hidden mb-12 md:mb-20"
-        >
-          <img
-            src="/static/anyone.png"
-            className="w-full h-full object-cover opacity-60 scale-105"
-            alt="Security Infrastructure"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-          <div className="absolute bottom-6 md:bottom-10 left-4 sm:left-8 md:left-12 max-w-md">
-            <h2 className="text-xl md:text-3xl font-black uppercase tracking-widest text-foreground">
-              Zero-Trust <span className="text-emerald-500 underline decoration-primary decoration-4 underline-offset-8">Philosophy</span>
-            </h2>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={stagger}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {securityFeatures.map((feature, idx) => (
-            <motion.div
-              key={idx}
-              variants={fadeIn}
-              className="bg-muted/10 border border-border/30 p-6 md:p-8 transition-all group hover:border-emerald-500/30 hover:bg-muted/20"
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+          {pillars.map((p) => (
+            <div
+              key={p.title}
+              className="rounded-2xl border border-border/50 bg-card/85 p-4 sm:p-5 md:p-6 flex gap-3 sm:gap-4"
             >
-              <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 mb-6 group-hover:scale-110 transition-transform">
-                {feature.icon}
-              </div>
-              <h3 className="text-sm md:text-base font-black mb-3 uppercase tracking-widest group-hover:text-primary transition-colors">
-                {feature.title}
-              </h3>
-              <p className="text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">
-                {feature.desc}
-              </p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-
-      <motion.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={fadeIn}
-        className="w-full bg-primary/5 border-y border-primary/10 py-12 md:py-20 text-center"
-      >
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-            <Badge className="bg-emerald-500/20 text-emerald-500 mb-6 px-4 py-1 text-[10px] font-black uppercase tracking-widest">
-              Global Compliance
-            </Badge>
-            <h2 className="text-2xl md:text-4xl font-black mb-8 uppercase tracking-widest text-foreground">
-              Built for <span className="text-primary">Jurisdictional</span> Flexibility
-            </h2>
-            <p className="text-sm md:text-lg text-muted-foreground mb-12 leading-relaxed font-medium">
-              Our protocol supports regional data sovereignty requirements, ensuring that sensitive borrower information never leaves your specified jurisdiction.
-            </p>
-            <div className="flex justify-center gap-8 md:gap-16 flex-wrap">
-              <div className="flex flex-col items-center gap-2">
-                <Globe className="w-7 h-7 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">GDPR Ready</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <ShieldCheck className="w-7 h-7 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">SOC2 Compliant</span>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <Key className="w-7 h-7 text-primary" />
-                <span className="text-[10px] font-bold uppercase tracking-tighter">ISO 27001</span>
+              <div data-reveal className="flex gap-3 sm:gap-4 w-full">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <p.icon className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-foreground mb-1.5 leading-snug text-base sm:text-lg">
+                    {p.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {p.desc}
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          ))}
+        </div>
+      </PageShell>
     </div>
   );
 
   if (isSubcomponent) return content;
-
   return (
-    <PublicLayout showFooter={showFooter}>
+    <PublicLayout showHeader={showHeader} showFooter={showFooter}>
       {content}
     </PublicLayout>
   );
