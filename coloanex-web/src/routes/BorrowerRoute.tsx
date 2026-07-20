@@ -14,6 +14,11 @@ import BorrowerPaymentFailure from "@/pages/borrower/PaymentFailure";
 import BorrowerKycStatus from "@/pages/borrower/BorrowerKycStatus";
 import KycOverview from "@/pages/borrower/KycOverview";
 import Settings from "@/pages/borrower/Settings";
+import BorrowerAnalytics from "@/pages/borrower/Analytics";
+import BorrowerTransactions from "@/pages/borrower/Transactions";
+import BorrowerContracts from "@/pages/borrower/Contracts";
+import BorrowerRules from "@/pages/borrower/Rules";
+import BorrowerActivityLogs from "@/pages/borrower/ActivityLogs";
 
 interface BorrowerRouteProps {
   children: React.ReactNode;
@@ -92,10 +97,42 @@ export const BorrowerRoutes = () => {
         }
       />
       <Route
+        path="/contracts"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerContracts />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
         path="/contracts/:id"
         element={
           <BorrowerRouteWrapper>
             <ContractDetails />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/transactions"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerTransactions />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/rules"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerRules />
+          </BorrowerRouteWrapper>
+        }
+      />
+      <Route
+        path="/activity-logs"
+        element={
+          <BorrowerRouteWrapper>
+            <BorrowerActivityLogs />
           </BorrowerRouteWrapper>
         }
       />
@@ -151,7 +188,7 @@ export const BorrowerRoutes = () => {
         path="/analytics"
         element={
           <BorrowerRouteWrapper>
-            <Navigate to="/my-loans" replace />
+            <BorrowerAnalytics />
           </BorrowerRouteWrapper>
         }
       />
