@@ -1,10 +1,21 @@
 import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
 import PublicLayout from "@/components/layouts/PublicLayout";
-import { ArrowRight, CheckCircle, Star, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import {
+  ArrowRight,
+  ArrowDown,
+  Building2,
+  Wallet,
+  FileCheck2,
+  Radio,
+  Globe2,
+  BadgeCheck,
+} from "lucide-react";
+import { PageShell } from "@/components/shared/PageShell";
+import { StatCounter } from "@/components/shared/StatCounter";
+import { useRevealOnMount, useRevealOnView } from "@/hooks/useReveal";
+import { useScrollProgress } from "@/hooks/useParallax";
 import Features from "./Features";
 import HowItWorks from "./HowItWorks";
 import Security from "./Security";
@@ -14,399 +25,311 @@ interface LandingProps {
   isSubcomponent?: boolean;
 }
 
+const rails = [
+  {
+    icon: Building2,
+    title: "Institution workspaces",
+    desc: "Tenants, roles, and lending rules isolated per organization with audit trails.",
+  },
+  {
+    icon: FileCheck2,
+    title: "KYC to contract",
+    desc: "Document capture, verification status, and contract generation in one flow.",
+  },
+  {
+    icon: Wallet,
+    title: "Repayment rails",
+    desc: "eSewa and Khalti collection with installment schedules and receipts.",
+  },
+  {
+    icon: Radio,
+    title: "On-chain settlement",
+    desc: "Optional EVM writes for loans, KYC, and payments with gas mode control.",
+  },
+];
+
 export default function Landing({ isSubcomponent = false }: LandingProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const heroRef = useRevealOnMount([]);
+  const midRef = useRevealOnView();
+  const railsRef = useRevealOnView();
+  const progress = useScrollProgress();
 
   useEffect(() => {
     if (isSubcomponent) return;
     const path = location.pathname;
-    let targetId = "";
-    if (path === "/features") targetId = "features";
-    else if (path === "/how-it-works") targetId = "how-it-works";
-    else if (path === "/security") targetId = "security";
-    else if (path === "/pricing") targetId = "pricing";
-    if (targetId) {
-      const el = document.getElementById(targetId);
-      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
+    const map: Record<string, string> = {
+      "/features": "features",
+      "/how-it-works": "how-it-works",
+      "/security": "security",
+      "/pricing": "pricing",
+    };
+    const id = map[path];
+    if (id) {
+      const el = document.getElementById(id);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 80);
     } else {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [isSubcomponent, location.pathname]);
 
-  const stats = [
-    { value: "500+", label: "Lending Institutions" },
-    { value: "12M+", label: "API Requests/Mo" },
-    { value: "99.99%", label: "Uptime SLA" },
-    { value: "$5B+", label: "Total Volume" },
-  ];
-
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  };
-
-  const stagger = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-  };
-
   const content = (
-    <div id="home" className="text-foreground">
-      <div id="home_container">
-        <section
-          id="home"
-          className="relative min-h-[80vh] md:min-h-[88vh] flex items-center overflow-hidden border-b border-border/10"
-        >
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-8 md:gap-12 items-center w-full py-16"
-          >
-            <div className="max-w-xl">
-              <motion.div
-                variants={fadeIn}
-                className="inline-flex items-center gap-2 bg-primary/5 border border-primary/10 px-4 py-1.5 mb-6 md:mb-8"
-              >
-                <Star className="w-4 h-4 text-primary fill-primary" />
-                <span className="text-primary text-[10px] md:text-xs font-bold tracking-widest uppercase">
-                  Lending OS for Institutions
-                </span>
-              </motion.div>
-              <motion.h1
-                variants={fadeIn}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-foreground leading-[1.1] mb-6 md:mb-8"
-              >
-                The Protocol for
-                <br />
-                <span className="text-primary">Next-Gen</span> Lending.
-              </motion.h1>
-              <motion.p
-                variants={fadeIn}
-                className="text-muted-foreground text-sm md:text-lg leading-relaxed font-medium mb-8 md:mb-10"
-              >
-                CoLoanEx provides the infrastructure for banks, fintechs, and microfinance to deploy autonomous lending workflows — from digital KYC to blockchain settlement.
-              </motion.p>
-              <motion.div variants={fadeIn} className="flex flex-wrap gap-4">
-                <Button
-                  size="lg"
-                  className="h-11 md:h-14 px-6 md:px-8 text-sm md:text-base bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
-                  onClick={() => navigate("/signup")}
-                >
-                  Start Building <ArrowRight className="ml-2 w-4 md:w-5 h-4 md:h-5" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="h-11 md:h-14 px-6 md:px-8 text-sm md:text-base text-foreground border-border hover:bg-muted font-bold"
-                  onClick={() => document.getElementById("infrastructure")?.scrollIntoView({ behavior: "smooth" })}
-                >
-                  View Infrastructure
-                </Button>
-              </motion.div>
+    <div id="home" className="text-foreground overflow-x-hidden">
+      <div
+        className="fixed top-0 left-0 h-[2px] z-[90] bg-primary origin-left"
+        style={{ transform: `scaleX(${progress})` }}
+      />
 
-              <motion.div
-                variants={fadeIn}
-                className="flex flex-wrap items-center gap-4 md:gap-6 mt-8 md:mt-12"
-              >
-                {["Multi-Tenant", "Smart Contracts", "SDK Integrated"].map((tag) => (
-                  <div
-                    key={tag}
-                    className="flex items-center gap-2 text-foreground/60 text-[10px] md:text-xs font-bold uppercase tracking-wider"
-                  >
-                    <CheckCircle className="w-3.5 md:w-4 h-3.5 md:h-4 text-primary" />
-                    {tag}
-                  </div>
-                ))}
-              </motion.div>
-            </div>
+      <section
+        ref={heroRef as React.RefObject<HTMLElement>}
+        id="home"
+        className="relative min-h-[100svh] flex items-center border-b border-border/30"
+      >
+        <div className="pointer-events-none absolute -top-28 -right-16 h-[50vh] w-[50vh] rounded-full bg-primary/12 blur-[100px]" />
+        <div className="pointer-events-none absolute bottom-[-12%] left-[-10%] h-[42vh] w-[42vh] rounded-full bg-emerald-600/10 blur-[110px]" />
 
-            <motion.div
-              variants={fadeIn}
-              className="relative p-4 md:p-8 flex justify-center"
+        <PageShell className="relative z-10 w-full pt-20 pb-28 sm:py-24 md:py-28">
+          <div className="max-w-2xl">
+            <p
+              data-reveal
+              className="text-primary font-[family-name:var(--font-headline)] text-3xl min-[360px]:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-snug mb-4 sm:mb-5"
             >
-              <img
-                src="/static/loan.png"
-                alt="Lending Platform"
-                className="relative w-full max-w-[440px] md:max-w-[560px] object-contain organic-glow"
-              />
-            </motion.div>
-          </motion.div>
-        </section>
-
-        <section className="py-12 md:py-20 border-b border-border/10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 md:gap-16 items-center"
-          >
-            <motion.div
-              variants={fadeIn}
-              className="order-2 lg:order-1 relative flex items-center justify-center p-4 md:p-8"
+              CoLoanEx
+            </p>
+            <h1
+              data-reveal
+              className="text-xl min-[360px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-snug mb-4 sm:mb-5"
             >
-              <img
-                src="/static/anyone.png"
-                alt="Unified Dashboard"
-                className="w-full h-auto max-w-[380px] md:max-w-[480px] object-contain organic-glow"
-              />
-            </motion.div>
-            <motion.div variants={fadeIn} className="order-1 lg:order-2">
-              <Badge
-                variant="outline"
-                className="mb-4 py-1.5 px-4 text-[10px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase font-black tracking-widest"
-              >
-                Command Center
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-black mb-6 leading-tight uppercase tracking-widest">
-                Unified <span className="text-primary">Dashboard</span>
-              </h2>
-              <p className="text-sm md:text-base text-muted-foreground mb-8 leading-relaxed font-medium">
-                Monitor your entire credit portfolio from a single pane of glass. Real-time analytics, borrower health scores, and automated alerting.
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border border-border/20 bg-muted/10">
-                  <div className="text-primary font-black mb-1 text-xs md:text-sm">REAL-TIME</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tighter">Live data</div>
-                </div>
-                <div className="p-4 border border-border/20 bg-muted/10">
-                  <div className="text-primary font-black mb-1 text-xs md:text-sm">ALERTS</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-tighter">Risk detection</div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </section>
-
-        <section
-          id="services"
-          className="py-12 md:py-20 bg-background border-b border-border/20"
-        >
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-          >
-            <motion.div
-              variants={fadeIn}
-              className="text-center mb-12 md:mb-16 max-w-2xl mx-auto"
+              Lending infrastructure that settles on-chain.
+            </h1>
+            <p
+              data-reveal
+              className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mb-5 sm:mb-6 leading-relaxed"
             >
-              <Badge
-                variant="outline"
-                className="mb-4 py-1 px-3 border-primary/20 text-primary text-[10px] font-black uppercase tracking-[0.2em]"
-              >
-                Core Infrastructure
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-black mb-4">Modular Lending Modules</h2>
-              <p className="text-sm md:text-base text-muted-foreground">
-                Integrated vertical stacks for high-frequency institutional grade lending.
-              </p>
-            </motion.div>
-
-            <div className="space-y-16 md:space-y-28">
-              <motion.div
-                variants={fadeIn}
-                className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center"
-              >
-                <div className="relative flex items-center justify-center p-4 md:p-8">
-                  <img
-                    src="/static/verify.png"
-                    alt="Identity Infrastructure"
-                    className="w-full h-auto max-w-[380px] md:max-w-[480px] object-contain organic-glow"
-                  />
-                </div>
-                <div>
-                  <h3 className="text-xl md:text-2xl font-black mb-4">Identity & KYC Engine</h3>
-                  <p className="text-sm md:text-base text-muted-foreground mb-6 leading-relaxed">
-                    Deploy white-labeled KYC flows with regional identity providers. Automate risk scoring and document verification.
-                  </p>
-                  <ul className="space-y-3 mb-8">
-                    {["Biometric Identity Verification", "Automated AML/Sanctions Screening", "Global Document Compliance"].map((f) => (
-                      <li key={f} className="flex items-center gap-3 text-xs md:text-sm font-bold text-foreground/80">
-                        <CheckCircle className="w-4 h-4 text-primary shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant="link" className="p-0 text-primary text-sm font-black group h-auto" onClick={() => navigate("/how-it-works")}>
-                    View Integration Suite <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
-              </motion.div>
-
-              <motion.div
-                variants={fadeIn}
-                className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center"
-              >
-                <div className="order-2 lg:order-1">
-                  <h3 className="text-lg md:text-xl font-black mb-3">Blockchain Settlement</h3>
-                  <p className="text-xs md:text-sm text-muted-foreground mb-4 leading-relaxed">
-                    Secure distributed trust ledger. Smart contracts automate interest, repayment triggers, and collateral liquidation.
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    {["Deterministic Interest Engines", "Cross-Chain Asset Settlement", "Immutable Audit Logging"].map((f) => (
-                      <li key={f} className="flex items-center gap-2 text-[10px] md:text-xs font-bold text-foreground/80">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant="link" className="p-0 text-emerald-500 text-sm font-black group h-auto" onClick={() => navigate("/security")}>
-                    View Protocol Details <ArrowRight className="ml-1 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
-                <div className="order-1 lg:order-2 relative flex items-center justify-center p-4 md:p-8">
-                  <img
-                    src="/static/contracts.png"
-                    alt="Smart Ledger"
-                    className="w-full h-auto max-w-[380px] md:max-w-[480px] object-contain organic-glow"
-                  />
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </section>
-
-        <section
-          id="infrastructure"
-          className="py-12 md:py-20 border-b border-border/10"
-        >
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={stagger}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-12 md:gap-16 items-center"
-          >
-            <motion.div variants={fadeIn}>
-              <Badge
-                variant="outline"
-                className="mb-4 py-1.5 px-4 text-[10px] bg-primary/10 text-primary border-primary/20 uppercase font-black tracking-widest"
-              >
-                Base Layer
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-black mb-6 leading-tight uppercase tracking-widest">
-                Hardened <span className="text-primary">Architecture</span>
-              </h2>
-              <p className="text-sm md:text-base text-muted-foreground mb-8 leading-relaxed font-medium">
-                The CoLoanEx protocol is built on a distributed ledger that ensures 100% auditability and zero single points of failure.
-              </p>
+              KYC, contracts, repayments, and subscriptions — one protocol for
+              institutions and borrowers across Nepal and beyond.
+            </p>
+            <ul
+              data-reveal
+              className="hidden min-[400px]:block space-y-2 sm:space-y-2.5 mb-6 sm:mb-8 text-sm md:text-base text-foreground/85"
+            >
+              <li className="flex gap-2 items-start">
+                <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0 mt-0.5" />
+                Multi-tenant lender workspaces with role permissions
+              </li>
+              <li className="flex gap-2 items-start">
+                <BadgeCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0 mt-0.5" />
+                Borrower discovery, applications, and installment capture
+              </li>
+              <li className="hidden sm:flex gap-2 items-start">
+                <BadgeCheck className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                Blockchain anchoring when your policy requires finality
+              </li>
+            </ul>
+            <div data-reveal className="flex flex-col min-[400px]:flex-row flex-wrap gap-2.5 sm:gap-3">
               <Button
-                variant="outline"
-                className="font-bold uppercase text-[10px] tracking-widest h-10 md:h-11 px-5 md:px-6 border-border/30"
-                onClick={() => navigate("/security")}
+                size="lg"
+                className="h-11 sm:h-12 md:h-14 px-5 sm:px-7 rounded-2xl font-bold text-sm sm:text-base w-full min-[400px]:w-auto"
+                onClick={() => navigate("/signup")}
               >
-                Security Framework
+                Get started <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
-            </motion.div>
-            <motion.div
-              variants={fadeIn}
-              className="relative flex items-center justify-center p-4 md:p-8"
-            >
-              <img
-                src="/static/blocks.png"
-                alt="Deterministic Infrastructure"
-                className="w-full h-auto max-w-[380px] md:max-w-[480px] object-contain organic-glow"
-              />
-            </motion.div>
-          </motion.div>
-        </section>
-
-        <section className="py-12 md:py-16 bg-muted/5 border-b border-border/10">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
-              {stats.map((s) => (
-                <motion.div variants={fadeIn} key={s.label}>
-                  <div className="text-2xl md:text-3xl font-black text-primary mb-2">{s.value}</div>
-                  <div className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{s.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </section>
-      </div>
-
-      <div id="how-it-works">
-        <HowItWorks isSubcomponent={true} />
-      </div>
-
-      <div id="features">
-        <Features isSubcomponent={true} />
-      </div>
-
-      <div className="border-t border-border/10 w-full" />
-      <section className="py-12 md:py-24 border-b border-border/10">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={stagger}
-          className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8"
-        >
-          <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center">
-            <motion.div variants={fadeIn}>
-              <Badge
+              <Button
+                size="lg"
                 variant="outline"
-                className="mb-4 py-1.5 px-4 text-[10px] bg-primary/10 text-primary border-primary/20 uppercase font-black tracking-widest"
+                className="h-11 sm:h-12 md:h-14 px-5 sm:px-7 rounded-2xl font-bold text-sm sm:text-base w-full min-[400px]:w-auto"
+                onClick={() =>
+                  document
+                    .getElementById("how-it-works")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
               >
-                Network Coverage
-              </Badge>
-              <h2 className="text-2xl md:text-3xl font-black mb-6 leading-tight uppercase tracking-widest">
-                Global <span className="text-primary">Ecosystem</span>
-              </h2>
-              <motion.p
-                variants={fadeIn}
-                className="text-sm md:text-base text-muted-foreground mb-8 leading-relaxed font-medium"
-              >
-                Connect with a worldwide network of institutional lenders, credit bureaus, and regional partners.
-              </motion.p>
-              <div className="flex flex-wrap gap-3 md:gap-4">
-                {["Bank Grade", "KYC Verified", "Multi-Region"].map((tag) => (
-                  <motion.div
-                    variants={fadeIn}
-                    key={tag}
-                    className="px-3 md:px-4 py-1.5 md:py-2 border border-border/20 bg-muted/10 text-[9px] md:text-[10px] font-black uppercase tracking-widest"
-                  >
-                    {tag}
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-            <motion.div
-              variants={fadeIn}
-              className="relative flex items-center justify-center p-4 md:p-8"
-            >
-              <img
-                src="/static/person.png"
-                alt="Global Ecosystem"
-                className="w-full h-auto max-w-[320px] md:max-w-[420px] object-contain organic-glow"
-              />
-            </motion.div>
+                See how it works
+              </Button>
+            </div>
           </div>
-        </motion.div>
+
+          <button
+            type="button"
+            onClick={() =>
+              document
+                .getElementById("services")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="mt-10 sm:mt-14 md:mt-20 hidden sm:inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors"
+          >
+            Scroll <ArrowDown className="w-4 h-4 animate-bounce" />
+          </button>
+        </PageShell>
       </section>
 
-      <div id="security" className="border-t border-border/10">
+      <section
+        id="services"
+        ref={midRef as React.RefObject<HTMLElement>}
+        className="relative py-16 sm:py-20 md:py-28 border-b border-border/30"
+      >
+        <PageShell className="relative z-10 max-w-3xl">
+          <p
+            data-reveal
+            className="text-xs font-bold uppercase tracking-[0.22em] text-primary mb-3 leading-normal"
+          >
+            Platform
+          </p>
+          <h2
+            data-reveal
+            className="text-2xl sm:text-3xl md:text-5xl font-extrabold font-[family-name:var(--font-headline)] mb-4 sm:mb-5 leading-snug"
+          >
+            One stack for credit ops
+          </h2>
+          <p
+            data-reveal
+            className="text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8 max-w-md"
+          >
+            From borrower discovery to disbursement and installment capture —
+            with subscription-backed gas sponsorship or user wallet mode on web.
+          </p>
+          <div data-reveal className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-3 mb-8">
+            {[
+              ["Rules engine", "Publish eligibility and pricing"],
+              ["Contract desk", "Generate and track signatures"],
+              ["Payments", "eSewa / Khalti + receipts"],
+              ["Gas modes", "Platform or user wallet"],
+            ].map(([t, d]) => (
+              <div
+                key={t}
+                className="rounded-xl border border-border/40 bg-card/80 p-4"
+              >
+                <p className="font-bold text-sm text-foreground leading-snug">
+                  {t}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  {d}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div data-reveal>
+            <Link
+              to="/features"
+              className="text-sm font-bold text-primary inline-flex items-center gap-1 hover:underline"
+            >
+              Explore features <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </PageShell>
+      </section>
+
+      <section
+        ref={railsRef as React.RefObject<HTMLElement>}
+        className="relative py-16 sm:py-20 md:py-28 border-b border-border/30"
+      >
+        <PageShell className="relative z-10">
+          <div className="max-w-2xl mb-8 sm:mb-10 md:mb-14">
+            <p
+              data-reveal
+              className="text-xs font-bold uppercase tracking-[0.22em] text-primary mb-3"
+            >
+              Operating model
+            </p>
+            <h2
+              data-reveal
+              className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-[family-name:var(--font-headline)] leading-snug mb-4"
+            >
+              Built around real lending work
+            </h2>
+            <p
+              data-reveal
+              className="text-muted-foreground text-sm sm:text-base leading-relaxed"
+            >
+              Each module maps to a job your team already does — without
+              stitching five vendors together.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5">
+            {rails.map((r) => (
+              <div
+                key={r.title}
+                className="rounded-2xl border border-border/50 bg-card/85 p-4 sm:p-5 md:p-6"
+              >
+                <div data-reveal>
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3 sm:mb-4">
+                    <r.icon className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-foreground mb-2 leading-snug">
+                    {r.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {r.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </PageShell>
+      </section>
+
+      <section className="relative py-12 sm:py-16 md:py-24 border-b border-border/30">
+        <PageShell className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+          <StatCounter value={500} suffix="+" label="Institutions" />
+          <StatCounter
+            value={12000000}
+            suffix="+"
+            label="API calls / mo"
+            format="compact"
+          />
+          <StatCounter value={99} suffix=".99%" label="Uptime" />
+          <div className="rounded-2xl border border-border/50 bg-card/70 p-4 sm:p-5 md:p-7">
+            <p className="text-xl sm:text-2xl md:text-4xl font-extrabold text-primary font-[family-name:var(--font-headline)] leading-snug">
+              NPR+
+            </p>
+            <p className="text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest text-muted-foreground mt-2 leading-normal">
+              Settlements
+            </p>
+          </div>
+        </PageShell>
+      </section>
+
+      <section className="relative py-14 sm:py-16 md:py-20 border-b border-border/30">
+        <PageShell className="relative z-10 max-w-3xl">
+          <div className="flex items-center gap-2 text-primary mb-3">
+            <Globe2 className="w-5 h-5" />
+            <p className="text-xs font-bold uppercase tracking-[0.2em]">
+              Nepal-ready, globally extendable
+            </p>
+          </div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-[family-name:var(--font-headline)] leading-snug mb-4">
+            Local payment rails. Protocol-grade settlement.
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-5 sm:mb-6 max-w-xl">
+            Collect in NPR through familiar gateways while keeping loan state,
+            KYC status, and repayment events consistent across web and mobile
+            borrowers.
+          </p>
+          <Button
+            className="rounded-xl h-11 font-bold w-full min-[400px]:w-auto"
+            onClick={() => navigate("/signup")}
+          >
+            Create your workspace
+          </Button>
+        </PageShell>
+      </section>
+
+      <div id="how-it-works">
+        <HowItWorks isSubcomponent />
+      </div>
+      <div id="features">
+        <Features isSubcomponent />
+      </div>
+      <div id="security">
         <Security isSubcomponent />
       </div>
-
-      <div id="pricing" className="border-t border-border/10">
+      <div id="pricing">
         <Pricing isSubcomponent />
       </div>
     </div>
   );
 
   if (isSubcomponent) return content;
-
-  return <PublicLayout showFooter={true}>{content}</PublicLayout>;
+  return <PublicLayout showFooter>{content}</PublicLayout>;
 }
