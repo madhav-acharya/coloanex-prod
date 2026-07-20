@@ -11,3 +11,5 @@ export { ToastProvider, useToast } from "./Toast";
 export { CurrencyIcon } from "./CurrencyIcon";
 export { BlockchainProcessingModal } from "./BlockchainProcessingModal";
 export { SubscriptionBlockingOverlay } from "./SubscriptionBlockingOverlay";
+export { GasModeWarningBanner } from "./GasModeWarningBanner";
+export { GasModeBlockingOverlay } from "./GasModeBlockingOverlay";

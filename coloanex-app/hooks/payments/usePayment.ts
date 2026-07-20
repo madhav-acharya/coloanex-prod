@@ -19,6 +19,8 @@ export interface InitiateOptions {
   type: TransactionType;
   successUrl: string;
   failureUrl: string;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
 }
 
 export interface InitiateResult {
@@ -33,6 +35,8 @@ export interface VerifyOptions {
   type: TransactionType;
   contractId?: string;
   paymentScheduleId?: string;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
+  platform?: "WEB" | "APP";
 }
 
 export interface LookupResult {
@@ -51,6 +55,8 @@ export const usePayment = (gateway: PaymentGateway): UsePaymentResult => {
         const result = await paymentsApi.initiatePayment({
           ...options,
           gateway,
+          gasPaymentMode: options.gasPaymentMode ?? "PLATFORM_WALLET",
+          platform: options.platform ?? "APP",
         });
         return result;
       } finally {
@@ -67,6 +73,8 @@ export const usePayment = (gateway: PaymentGateway): UsePaymentResult => {
         const result = await paymentsApi.verifyPayment({
           ...options,
           gateway,
+          gasPaymentMode: options.gasPaymentMode ?? "PLATFORM_WALLET",
+          platform: options.platform ?? "APP",
         });
         return result.success;
       } finally {

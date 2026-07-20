@@ -76,7 +76,8 @@ export default function PaymentCallbackScreen() {
           totalAmount,
           gateway,
           type: isSubscriptionPayment ? "FEE" : "INSTALLMENT_PAYMENT",
-          gasPaymentMode: isSubscriptionPayment ? "PLATFORM_WALLET" : undefined,
+          gasPaymentMode: "PLATFORM_WALLET",
+          platform: "APP",
           contractId,
           paymentScheduleId,
         });
@@ -127,9 +128,8 @@ export default function PaymentCallbackScreen() {
               totalAmount,
               gateway,
               type: isSubscriptionPayment ? "FEE" : "INSTALLMENT_PAYMENT",
-              gasPaymentMode: isSubscriptionPayment
-                ? "PLATFORM_WALLET"
-                : undefined,
+              gasPaymentMode: "PLATFORM_WALLET",
+              platform: "APP",
               contractId,
               paymentScheduleId,
             });

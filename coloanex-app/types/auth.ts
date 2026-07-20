@@ -11,6 +11,7 @@ export interface AuthUser {
   phone?: string;
   profileImage?: string;
   isActive: boolean;
+  gasPaymentMode?: "USER_WALLET" | "PLATFORM_WALLET";
   lastActiveAt?: string;
   roles: {
     roleId: string;

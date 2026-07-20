@@ -17,6 +17,7 @@ import { lendersApi, notificationsApi } from "@/api";
 import type { Lender } from "@/types";
 import { useTheme } from "@/hooks/useTheme";
 import { useAppSelector } from "@/store/hooks";
+import { GasModeWarningBanner } from "@/components/ui";
 
 type QuickAction = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -177,6 +178,8 @@ export default function HomeScreen() {
             </Text>
           </View>
         </View>
+
+        <GasModeWarningBanner />
 
         <View style={[styles.section, { marginTop: spacing.md }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
