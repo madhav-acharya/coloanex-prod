@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,9 @@ import { cn } from "@/lib/utils";
 import { useGetMyWalletsQuery } from "@/apis/walletsApi";
 import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
 import { useNavigate } from "react-router-dom";
+import { Bone } from "@/components/shared/Bone";
+
+const SceneCanvas = lazy(() => import("@/components/shared/SceneCanvas"));
 
 const GENDER_OPTIONS = ["Male", "Female", "Other"];
 const MARITAL_STATUS_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
@@ -461,15 +464,24 @@ export function KycVerificationModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto rounded-xl"
+        className="sm:max-w-3xl p-0 max-h-[92vh] overflow-y-auto rounded-2xl border-border bg-card relative"
         onInteractOutside={(e) => e.preventDefault()}
       >
+        <div className="relative h-16 overflow-hidden rounded-t-2xl">
+          <Suspense fallback={null}>
+            <SceneCanvas
+              variant="crystal"
+              density={22}
+              className="opacity-50 h-16"
+            />
+          </Suspense>
+        </div>
         {!blockchainAccess.canRunBlockchain && (
-          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-8 text-center rounded-xl animate-in fade-in duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-6">
-              <Zap className="w-8 h-8 text-amber-600" />
+          <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm p-8 text-center rounded-2xl animate-in fade-in duration-300">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+              <Zap className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Subscription Required</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 font-[family-name:var(--font-headline)]">Subscription Required</h3>
             <p className="text-sm text-muted-foreground mb-8 max-w-[350px]">
               {blockchainAccess.reason || "KYC verification requires on-chain anchoring. Please upgrade your subscription to continue in platform-sponsored mode."}
             </p>
@@ -494,15 +506,18 @@ export function KycVerificationModal({
           </div>
         )}
 
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40">
+        <DialogHeader className="px-6 pt-4 pb-4 border-b border-border/40">
           <div className="space-y-1">
-            <DialogTitle className="text-xl font-bold tracking-tight">KYC Verification</DialogTitle>
+            <DialogTitle className="text-xl font-bold tracking-tight font-[family-name:var(--font-headline)]">
+              KYC Verification
+            </DialogTitle>
             <DialogDescription className="text-sm">
               Complete your identity verification to unlock full platform features.
             </DialogDescription>
           </div>
         </DialogHeader>
 
+        <Bone name="borrower-kyc-verification" loading={false}>
         <div className="px-6 py-6">
           <div className="mb-8 overflow-hidden">
             <div className="flex items-center justify-between relative px-2">
@@ -912,7 +927,7 @@ export function KycVerificationModal({
                                 <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
                                   <Upload className="w-5 h-5" />
                                 </div>
-                                <span className="text-[11px] font-bold  tracking-wider leading-tight">Passport Size Photo</span>
+                                <span className="text-xs font-bold tracking-wide leading-snug">Passport Size Photo</span>
                               </div>
                             )}
                          </label>
@@ -936,7 +951,7 @@ export function KycVerificationModal({
                                 <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center bg-background">
                                   <Upload className="w-5 h-5" />
                                 </div>
-                                <span className="text-[11px] font-bold  tracking-wider leading-tight">Live Selfie with ID</span>
+                                <span className="text-xs font-bold tracking-wide leading-snug">Live Selfie with ID</span>
                               </div>
                             )}
                          </label>
@@ -1037,6 +1052,7 @@ export function KycVerificationModal({
             </div>
           </form>
         </div>
+        </Bone>
       </DialogContent>
     </Dialog>
   );

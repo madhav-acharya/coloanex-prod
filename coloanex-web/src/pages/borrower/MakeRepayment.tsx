@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
-  Link,
   useParams,
   useNavigate,
   useSearchParams,
@@ -18,7 +16,7 @@ import { useGetMyWalletsQuery } from "@/apis/walletsApi";
 import { useListMySubscriptionsQuery } from "@/apis/subscriptionsApi";
 import { useEsewaPayment } from "@/hooks/useEsewaPayment";
 import { useKhaltiPayment } from "@/hooks/useKhaltiPayment";
-import { Calendar, CheckCircle2, CreditCard, Info, X } from "lucide-react";
+import { Calendar, CheckCircle2, CreditCard, Info, X, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -27,6 +25,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageShell } from "@/components/shared/PageShell";
+import { SectionHeader } from "@/components/shared/SectionHeader";
+import { GlassCard } from "@/components/shared/GlassCard";
+import { Bone } from "@/components/shared/Bone";
+import { ParallaxLayer } from "@/components/shared/ParallaxLayer";
+import { useRevealOnMount } from "@/hooks/useReveal";
+import { cn } from "@/lib/utils";
+
+const SceneCanvas = lazy(() => import("@/components/shared/SceneCanvas"));
 
 type Gateway = "KHALTI" | "ESEWA";
 
@@ -55,6 +62,7 @@ export default function MakeRepayment() {
   const preselectedParam = searchParams.get("selected");
   const { toast } = useToast();
   const { user } = useAuth();
+  const revealRef = useRevealOnMount([]);
   const [gateway, setGateway] = useState<Gateway>("KHALTI");
   const [showGatewayPicker, setShowGatewayPicker] = useState(false);
 
@@ -249,211 +257,211 @@ export default function MakeRepayment() {
 
   return (
     <BorrowerLayout>
-      <Dialog
-        open
-        onOpenChange={(open) => {
-          if (!open) navigate(`/borrower/my-loans/${id}`);
-        }}
-      >
-        <DialogContent className="sm:max-w-2xl p-0 max-h-[calc(100dvh-8.5rem)] sm:max-h-[90vh] overflow-y-auto mb-20 sm:mb-0 rounded-xl border border-border bg-card shadow-none">
-          <DialogHeader>
-            <div className="px-4 sm:px-6 pt-5">
-              <DialogTitle>Make a Repayment</DialogTitle>
-              <DialogDescription>
-                Review the selected installments and complete payment securely.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
+      <div className="relative overflow-hidden min-h-[70vh]">
+        <Suspense fallback={null}>
+          <SceneCanvas
+            variant="orb"
+            density={22}
+            className="opacity-40 h-[260px]"
+          />
+        </Suspense>
+        <PageShell narrow className="relative z-10 space-y-8 pb-16 pt-6">
+          <ParallaxLayer speed={0.2} clamp={100}>
+            <SectionHeader
+              title="Make a Repayment"
+              description="Review installments and complete payment securely"
+              actions={
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate(`/my-loans/${id}`)}
+                  className="rounded-2xl h-11 text-muted-foreground"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Loan Detail
+                </Button>
+              }
+            />
+          </ParallaxLayer>
 
-          <div className="px-4 sm:px-6 pb-24 sm:pb-5 space-y-4">
-            <Link
-              to={`/borrower/my-loans/${id}`}
-              className="text-[11px] font-bold text-primary hover:underline block  tracking-wider"
-            >
-              &larr; Back to Loan Detail
-            </Link>
-
-            {isLoading || !loan ? (
-              <Card className="rounded-xl border-border/30 bg-white/70 shadow-none">
-                <CardContent className="p-8 text-center">
-                  <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Loading repayment details...
-                  </p>
-                </CardContent>
-              </Card>
-            ) : !resolvedContract ? (
-              <Card className="rounded-xl border-red-500/20 bg-white/70 shadow-none">
-                <CardContent className="p-6 text-center">
-                  <Info className="w-10 h-10 text-amber-500 mx-auto mb-2" />
-                  <h2 className="text-base font-bold mb-1">Contract Pending</h2>
-                  <p className="text-sm text-muted-foreground">
-                    There is no active contract generated for this loan yet.
-                  </p>
-                </CardContent>
-              </Card>
+          <Bone
+            name="borrower-make-repayment"
+            loading={isLoading || isLoadingSchedules}
+            minHeight={360}
+          >
+            {!loan ? null : !resolvedContract ? (
+              <GlassCard className="p-8 text-center space-y-3">
+                <Info className="w-10 h-10 text-muted-foreground mx-auto" />
+                <h2 className="text-base font-bold font-[family-name:var(--font-headline)]">
+                  Contract Pending
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  There is no active contract generated for this loan yet.
+                </p>
+              </GlassCard>
             ) : (
-              <div className="space-y-4">
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Loan Purpose
-                        </p>
-                        <p className="font-bold text-sm mt-1">
-                          {loan.purpose || "Loan Repayment"}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          Contract: {resolvedContract.contractNumber}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-[11px]">
-                        {loan.status.replace(/_/g, " ")}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="rounded-xl border border-border bg-muted/10 p-3 flex items-start gap-2">
-                      <Info className="w-4 h-4 text-primary mt-0.5" />
-                      <p className="text-[11px] font-bold text-muted-foreground  tracking-wider">
-                        Select one or more installments and click Pay Selected.
+              <div
+                ref={revealRef as React.RefObject<HTMLDivElement>}
+                className="space-y-4"
+              >
+                <GlassCard className="p-4 sm:p-5 space-y-3" data-reveal>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Loan Purpose
+                      </p>
+                      <p className="font-bold text-sm mt-1 text-foreground">
+                        {loan.purpose || "Loan Repayment"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Contract: {resolvedContract.contractNumber}
                       </p>
                     </div>
+                    <Badge variant="outline" className="text-[11px] rounded-lg">
+                      {loan.status.replace(/_/g, " ")}
+                    </Badge>
+                  </div>
+                </GlassCard>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold">
-                          Repayment Installments
-                        </h3>
-                        <span className="text-[11px] font-bold text-muted-foreground  tracking-wider">
-                          {payableSchedules.length} due
-                        </span>
+                <GlassCard className="p-4 sm:p-5 space-y-4" data-reveal>
+                  <div className="rounded-2xl border border-border bg-muted/20 p-3 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <p className="text-[11px] font-bold text-muted-foreground tracking-wider">
+                      Select one or more installments and click Pay Selected.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold font-[family-name:var(--font-headline)]">
+                        Repayment Installments
+                      </h3>
+                      <span className="text-[11px] font-bold text-muted-foreground tracking-wider">
+                        {payableSchedules.length} due
+                      </span>
+                    </div>
+
+                    {payableSchedules.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <CheckCircle2 className="w-8 h-8 text-primary mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          All installments are paid.
+                        </p>
                       </div>
-
-                      {isLoadingSchedules ? (
-                        <div className="py-8 text-center text-sm text-muted-foreground">
-                          Loading schedules...
-                        </div>
-                      ) : payableSchedules.length === 0 ? (
-                        <div className="py-8 text-center">
-                          <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            All installments are paid.
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {visibleSchedules.map((schedule) => {
-                            const checked = selectedScheduleIds.includes(
-                              schedule.id,
-                            );
-                            return (
-                              <button
-                                key={schedule.id}
-                                type="button"
-                                onClick={() => toggleSchedule(schedule.id)}
-                                className={`w-full rounded-xl border px-3 py-2.5 text-left shadow-none transition-all hover:-translate-y-0.5 ${
-                                  checked
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border bg-white/70 hover:bg-white"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-2.5 min-w-0">
-                                    <div
-                                      className={`w-4 h-4 rounded border ${checked ? "bg-primary border-primary" : "border-border/60"}`}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-bold text-foreground">
-                                        Installment {schedule.installmentNumber}
-                                      </p>
-                                      <p className="text-[11px] font-bold text-muted-foreground mt-0.5 inline-flex items-center gap-1  tracking-wider">
-                                        <Calendar className="w-3" />
-                                        Due{" "}
-                                        {new Date(
-                                          schedule.dueDate,
-                                        ).toLocaleDateString()}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                    <p className="text-sm font-semibold text-foreground">
-                                      {formatMoney(
-                                        getScheduleDueAmount(
-                                          schedule as unknown as Record<
-                                            string,
-                                            unknown
-                                          >,
-                                        ),
-                                      )}
+                    ) : (
+                      <div className="space-y-2">
+                        {visibleSchedules.map((schedule) => {
+                          const checked = selectedScheduleIds.includes(
+                            schedule.id,
+                          );
+                          return (
+                            <button
+                              key={schedule.id}
+                              type="button"
+                              onClick={() => toggleSchedule(schedule.id)}
+                              className={cn(
+                                "w-full rounded-2xl border px-3 py-3 text-left transition-all min-h-[56px]",
+                                checked
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border bg-card/80 hover:bg-card",
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div
+                                    className={cn(
+                                      "w-4 h-4 rounded border shrink-0",
+                                      checked
+                                        ? "bg-primary border-primary"
+                                        : "border-border/60",
+                                    )}
+                                  />
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-bold text-foreground">
+                                      Installment {schedule.installmentNumber}
+                                    </p>
+                                    <p className="text-[11px] font-bold text-muted-foreground mt-0.5 inline-flex items-center gap-1 tracking-wider">
+                                      <Calendar className="w-3" />
+                                      Due{" "}
+                                      {new Date(
+                                        schedule.dueDate,
+                                      ).toLocaleDateString()}
                                     </p>
                                   </div>
                                 </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-xl border-border/30 bg-white/75 shadow-none">
-                  <CardContent className="p-4 space-y-3">
-                    <h3 className="text-sm font-semibold">Payment Summary</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-none">
-                        <p className="text-xs text-muted-foreground">
-                          Selected installments
-                        </p>
-                        <p className="text-lg font-bold mt-1 tracking-tight">
-                          {selectedScheduleIds.length}
-                        </p>
+                                <div className="text-right shrink-0">
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {formatMoney(
+                                      getScheduleDueAmount(
+                                        schedule as unknown as Record<
+                                          string,
+                                          unknown
+                                        >,
+                                      ),
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
-                      <div className="rounded-xl border border-border bg-white/70 p-3 shadow-none">
-                        <p className="text-xs text-muted-foreground">
-                          Total payable
-                        </p>
-                        <p className="text-lg font-bold mt-1">
-                          {formatMoney(selectedAmount)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm rounded-xl border border-border bg-white/70 p-3 shadow-none">
-                      <span className="text-muted-foreground">Method</span>
-                      <span className="font-bold inline-flex items-center gap-1  tracking-wider text-[11px]">
-                        <CreditCard className="w-3.5 h-3.5" /> Payment Gateway
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                    )}
+                  </div>
+                </GlassCard>
 
-                <div className="flex justify-end">
+                <GlassCard className="p-4 sm:p-5 space-y-3" data-reveal>
+                  <h3 className="text-sm font-semibold font-[family-name:var(--font-headline)]">
+                    Payment Summary
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl border border-border bg-card/80 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Selected installments
+                      </p>
+                      <p className="text-lg font-bold mt-1 tracking-tight text-foreground">
+                        {selectedScheduleIds.length}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-border bg-card/80 p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Total payable
+                      </p>
+                      <p className="text-lg font-bold mt-1 text-foreground">
+                        {formatMoney(selectedAmount)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-sm rounded-2xl border border-border bg-card/80 p-3">
+                    <span className="text-muted-foreground">Method</span>
+                    <span className="font-bold inline-flex items-center gap-1 tracking-wider text-[11px] text-foreground">
+                      <CreditCard className="w-3.5 h-3.5" /> Payment Gateway
+                    </span>
+                  </div>
+                </GlassCard>
+
+                <div className="flex justify-end pt-2">
                   <Button
                     type="button"
                     onClick={handlePaySelected}
                     disabled={selectedScheduleIds.length === 0 || gatewayBusy}
-                    className="h-10"
+                    className="h-11 rounded-2xl px-8"
                   >
                     {gatewayBusy ? "Redirecting..." : "Pay Selected"}
                   </Button>
                 </div>
               </div>
             )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          </Bone>
+        </PageShell>
+      </div>
 
       <Dialog open={showGatewayPicker} onOpenChange={setShowGatewayPicker}>
-        <DialogContent className="sm:max-w-md z-[160]">
+        <DialogContent className="sm:max-w-md z-[160] rounded-2xl border-border bg-card">
           <DialogHeader>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <DialogTitle>Payment Method</DialogTitle>
+                <DialogTitle className="font-[family-name:var(--font-headline)]">
+                  Payment Method
+                </DialogTitle>
                 <DialogDescription>
                   Select your preferred gateway
                 </DialogDescription>
@@ -461,6 +469,7 @@ export default function MakeRepayment() {
               <Button
                 variant="ghost"
                 size="icon"
+                className="rounded-xl"
                 onClick={() => setShowGatewayPicker(false)}
               >
                 <X className="w-4 h-4" />
@@ -473,7 +482,10 @@ export default function MakeRepayment() {
               <Button
                 type="button"
                 variant="outline"
-                className={`h-24 flex flex-col gap-2 transition-all ${gateway === "KHALTI" ? "border-primary bg-primary/5" : ""}`}
+                className={cn(
+                  "h-24 flex flex-col gap-2 rounded-2xl transition-all",
+                  gateway === "KHALTI" && "border-primary bg-primary/5",
+                )}
                 onClick={() => setGateway("KHALTI")}
               >
                 <img src="/images/khalti.png" alt="Khalti" className="h-8" />
@@ -482,7 +494,10 @@ export default function MakeRepayment() {
               <Button
                 type="button"
                 variant="outline"
-                className={`h-24 flex flex-col gap-2 transition-all ${gateway === "ESEWA" ? "border-primary bg-primary/5" : ""}`}
+                className={cn(
+                  "h-24 flex flex-col gap-2 rounded-2xl transition-all",
+                  gateway === "ESEWA" && "border-primary bg-primary/5",
+                )}
                 onClick={() => setGateway("ESEWA")}
               >
                 <img src="/images/esewa.png" alt="eSewa" className="h-8" />
@@ -490,9 +505,9 @@ export default function MakeRepayment() {
               </Button>
             </div>
 
-            <div className="rounded-xl border border-border bg-white/70 p-3 text-sm flex items-center justify-between shadow-none">
+            <div className="rounded-2xl border border-border bg-card/80 p-3 text-sm flex items-center justify-between">
               <span className="text-muted-foreground">Amount</span>
-              <span className="font-semibold">
+              <span className="font-semibold text-foreground">
                 {formatMoney(selectedAmount)}
               </span>
             </div>
@@ -501,12 +516,14 @@ export default function MakeRepayment() {
               <Button
                 type="button"
                 variant="ghost"
+                className="rounded-2xl"
                 onClick={() => setShowGatewayPicker(false)}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
+                className="rounded-2xl"
                 onClick={handleGatewayPayment}
                 disabled={gatewayBusy}
               >

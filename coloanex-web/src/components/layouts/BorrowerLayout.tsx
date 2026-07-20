@@ -19,7 +19,7 @@ export default function BorrowerLayout({
       <main className="bg-background">
         <div
           className={cn(
-            "container mx-auto p-4 md:p-6 pt-20 md:pt-24 pb-24 lg:pb-8 max-w-7xl shadow-none",
+            "container mx-auto p-4 md:p-6 pt-[72px] md:pt-[76px] pb-24 lg:pb-8 max-w-7xl shadow-none",
             className,
           )}
         >
