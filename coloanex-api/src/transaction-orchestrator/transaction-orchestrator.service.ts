@@ -50,20 +50,12 @@ export class TransactionOrchestratorService {
       ? input.userRoles
       : user.roles.map((r) => r.role.name);
     const isBorrower = userRoles.includes('Borrower');
-    const effectivePlatform: 'APP' | 'WEB' = isBorrower ? 'APP' : 'WEB';
-
-    if (input.platform === 'WEB' && isBorrower) {
-      return {
-        eligible: false,
-        denialReason:
-          'Borrower blockchain actions are restricted to the mobile app (APP) platform.',
-        scope: 'NONE',
-        plan: 'NONE',
-        gasPaymentMode: 'PLATFORM_WALLET',
-        gasPayer: 'PLATFORM',
-        featureFlags: {},
-      };
-    }
+    const effectivePlatform: 'APP' | 'WEB' =
+      input.platform === 'APP' || input.platform === 'WEB'
+        ? input.platform
+        : isBorrower
+          ? 'APP'
+          : 'WEB';
 
     if (input.platform === 'APP' && !isBorrower) {
       return {
@@ -85,7 +77,7 @@ export class TransactionOrchestratorService {
       return {
         eligible: false,
         denialReason:
-          'USER_WALLET mode is not allowed on mobile app. Mobile borrowers always use PLATFORM_WALLET.',
+          'Wallet mode is not supported in the app. Please switch to Platform Mode (subscription mode).',
         scope: 'NONE',
         plan: 'NONE',
         gasPaymentMode: 'PLATFORM_WALLET',
