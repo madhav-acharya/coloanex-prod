@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { ethers } from "ethers";
 import BorrowerLayout from "@/components/layouts/BorrowerLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +41,7 @@ import {
   formatGasPaymentMode,
   getBlockchainAccessSnapshot,
 } from "@/utils/blockchainAccess";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -67,10 +67,18 @@ import {
   FileBadge,
 } from "lucide-react";
 import WalletSection from "@/components/settings/WalletSection";
+import { ExpiryBanner } from "@/components/shared/ExpiryBanner";
 import SubscriptionsSection from "@/components/settings/SubscriptionsSection";
 import PaymentConfigSection from "@/components/settings/PaymentConfigSection";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
+import { PageShell } from "@/components/shared/PageShell";
+import { SectionHeader } from "@/components/shared/SectionHeader";
+import { Bone } from "@/components/shared/Bone";
+import { ParallaxLayer } from "@/components/shared/ParallaxLayer";
+import { useRevealOnMount } from "@/hooks/useReveal";
+
+const SceneCanvas = lazy(() => import("@/components/shared/SceneCanvas"));
 
 const gatewayLogoByType: Record<"ESEWA" | "KHALTI", string> = {
   ESEWA: "/images/esewa.png",
@@ -126,6 +134,7 @@ export default function Settings() {
   const { mode, setTheme } = useTheme();
 
   const [activeSection, setActiveSection] = useState<string>("account");
+  const revealRef = useRevealOnMount([activeSection]);
   const [activeDialog, setActiveDialog] = useState<string | null>(null);
   const [updateUser, { isLoading }] = useUpdateUserMutation();
   const [createWallet, { isLoading: isCreatingWallet }] =
@@ -553,7 +562,10 @@ export default function Settings() {
     const previousMode = gasPaymentMode;
     setGasPaymentMode(modeToSet);
     try {
-      await updateGasMode({ gasPaymentMode: modeToSet }).unwrap();
+      await updateGasMode({
+        gasPaymentMode: modeToSet,
+        platform: "WEB",
+      }).unwrap();
       if (user)
         updateAuthUser({ ...(user as any), gasPaymentMode: modeToSet } as any);
       toast.success("Gas mode updated");
@@ -646,8 +658,19 @@ export default function Settings() {
   if (!user) {
     return (
       <BorrowerLayout>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <div className="relative overflow-hidden min-h-[50vh]">
+          <Suspense fallback={null}>
+            <SceneCanvas
+              variant="lattice"
+              density={22}
+              className="opacity-30 h-[200px]"
+            />
+          </Suspense>
+          <PageShell className="relative z-10 py-16">
+            <Bone name="borrower-settings-loading" loading={true} minHeight={200}>
+              <div />
+            </Bone>
+          </PageShell>
         </div>
       </BorrowerLayout>
     );
@@ -716,10 +739,30 @@ export default function Settings() {
   if (accountSections.has(activeSection)) {
     return (
       <BorrowerLayout>
-        <div className="settings-shell shadow-none grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-          <Card className="hidden lg:block rounded-2xl border-border bg-card/50 backdrop-blur-sm lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex flex-col ">
+        <div className="relative overflow-hidden min-h-[70vh]">
+          <Suspense fallback={null}>
+            <SceneCanvas
+              variant="network"
+              density={22}
+              className="opacity-35 h-[220px]"
+            />
+          </Suspense>
+          <PageShell className="relative z-10 space-y-6 pb-16 pt-6">
+            <ParallaxLayer speed={0.18} clamp={80}>
+              <SectionHeader
+                title="Settings"
+                description="Account, security, wallets, and billing"
+              />
+            </ParallaxLayer>
+            <Bone name="borrower-settings-detail" loading={false}>
+              <div
+                ref={revealRef as React.RefObject<HTMLDivElement>}
+                className="settings-shell shadow-none grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]"
+                data-reveal
+              >
+          <Card className="hidden lg:block rounded-2xl border-border bg-card/80 backdrop-blur-md lg:sticky lg:top-24 lg:h-[calc(100vh-140px)] flex flex-col ">
             <CardContent className="p-4 flex-1 h-full flex flex-col space-y-5 custom-scrollbar">
-              <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-background/50 shrink-0">
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-border bg-card/50 shrink-0">
                 <Avatar className="h-10 w-10 ring-2 ring-primary/10">
                   <AvatarImage src={user?.profileImage} alt={user?.fullName} />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
@@ -756,8 +799,8 @@ export default function Settings() {
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="text-left min-w-0">
-                           <p className={cn("text-[11px] font-bold truncate tracking-wider", isActive ? "text-primary" : "text-foreground/80")}>{option.title}</p>
-                           <p className="text-[11px] font-bold text-muted-foreground/60 truncate leading-none mt-1 tracking-tighter">{option.description}</p>
+                           <p className={cn("text-xs font-bold truncate tracking-wide leading-snug", isActive ? "text-primary" : "text-foreground/80")}>{option.title}</p>
+                           <p className="text-xs font-medium text-muted-foreground/70 truncate leading-normal mt-1">{option.description}</p>
                         </div>
                       </div>
                       {option.badge}
@@ -782,6 +825,29 @@ export default function Settings() {
 
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {activeSection === "account" && (
+              <>
+              <Card className="rounded-2xl border-border bg-card/30 mb-0">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-bold">Workspace</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-4">
+                  {[
+                    { to: "/analytics", label: "Analytics" },
+                    { to: "/transactions", label: "Transactions" },
+                    { to: "/contracts", label: "Contracts" },
+                    { to: "/rules", label: "Rules" },
+                    { to: "/activity-logs", label: "Activity" },
+                  ].map((item) => (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className="rounded-xl border border-border/50 bg-background/60 px-3 py-2.5 text-xs font-bold text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </CardContent>
+              </Card>
               <Card className="rounded-2xl border-border bg-card/30 backdrop-blur-sm overflow-hidden  border-t border-t-border/60">
                 <CardHeader className="pb-4 border-b border-border/40 bg-muted/5">
                   <div className="flex items-center gap-2">
@@ -838,6 +904,7 @@ export default function Settings() {
                   </form>
                 </CardContent>
               </Card>
+              </>
             )}
 
             {activeSection === "password" && (
@@ -1000,16 +1067,29 @@ export default function Settings() {
             )}
 
             {activeSection === "subscriptions" && (
-              <SubscriptionsSection
-                subscriptionStats={subscriptionStats}
-                plans={plans}
-                planAccentByCode={planAccentByCode}
-                isSelectingSubscription={isSelectingSubscription}
-                isPurchasingSubscription={isPurchasingSubscription}
-                handleSelectSubscription={handleSelectSubscription}
-                handleBuyPlanFromSettings={handleBuyPlanFromSettings}
-                goToPricing={() => navigate(pricingPath)}
-              />
+              <div className="space-y-4">
+                <ExpiryBanner
+                  status={
+                    hasLimitReached
+                      ? "LIMIT_EXCEEDED"
+                      : hasActiveSubscription
+                        ? "BOUGHT"
+                        : "EXPIRED"
+                  }
+                  endsAt={selectedSubscription?.endsAt}
+                  onAction={() => navigate(pricingPath)}
+                />
+                <SubscriptionsSection
+                  subscriptionStats={subscriptionStats}
+                  plans={plans}
+                  planAccentByCode={planAccentByCode}
+                  isSelectingSubscription={isSelectingSubscription}
+                  isPurchasingSubscription={isPurchasingSubscription}
+                  handleSelectSubscription={handleSelectSubscription}
+                  handleBuyPlanFromSettings={handleBuyPlanFromSettings}
+                  goToPricing={() => navigate(pricingPath)}
+                />
+              </div>
             )}
 
             {activeSection === "payment-config" && showPaymentConfig && (
@@ -1077,6 +1157,9 @@ export default function Settings() {
               </Card>
             )}
           </div>
+              </div>
+            </Bone>
+          </PageShell>
         </div>
       </BorrowerLayout>
     );
@@ -1084,8 +1167,28 @@ export default function Settings() {
 
   return (
     <BorrowerLayout>
-      <div className="mx-auto max-w-5xl space-y-6">
-        <Card className="settings-shell shadow-none rounded-xl border-border bg-card/75">
+      <div className="relative overflow-hidden min-h-[70vh]">
+        <Suspense fallback={null}>
+          <SceneCanvas
+            variant="subtle"
+            density={22}
+            className="opacity-35 h-[220px]"
+          />
+        </Suspense>
+        <PageShell className="relative z-10 space-y-6 pb-16 pt-6">
+          <ParallaxLayer speed={0.18} clamp={80}>
+            <SectionHeader
+              title="Settings"
+              description="Account, security, wallets, and billing"
+            />
+          </ParallaxLayer>
+          <Bone name="borrower-settings-home" loading={false}>
+            <div
+              ref={revealRef as React.RefObject<HTMLDivElement>}
+              className="mx-auto max-w-5xl space-y-6"
+              data-reveal
+            >
+        <Card className="settings-shell shadow-none rounded-2xl border-border bg-card/80 backdrop-blur-md">
           <CardContent className="p-4 sm:p-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14 ring-2 ring-primary/25">
@@ -1095,7 +1198,7 @@ export default function Settings() {
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold leading-none truncate">
+                <p className="text-base font-semibold leading-snug truncate font-[family-name:var(--font-headline)]">
                   {user?.fullName}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -1103,9 +1206,9 @@ export default function Settings() {
                 </p>
                 <div className="mt-2 flex items-center gap-2">
                   <Badge
-                    className={`rounded-full border text-[11px] ${
+                    className={`rounded-lg border text-[11px] ${
                       user?.isActive
-                        ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/20"
+                        ? "bg-primary/15 text-primary border-primary/20"
                         : "bg-destructive/15 text-destructive border-destructive/20"
                     }`}
                   >
@@ -1183,6 +1286,9 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+            </div>
+          </Bone>
+        </PageShell>
       </div>
 
       <Dialog
