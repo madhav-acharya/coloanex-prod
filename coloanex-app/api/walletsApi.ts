@@ -41,12 +41,14 @@ export const walletsApi = {
 
   updateGasMode: async (
     gasPaymentMode: "USER_WALLET" | "PLATFORM_WALLET",
+    platform: "WEB" | "APP" = "APP",
   ): Promise<{
     id: string;
     gasPaymentMode: "USER_WALLET" | "PLATFORM_WALLET";
   }> => {
     const response = await client.patch("/wallets/gas-mode", {
       gasPaymentMode,
+      platform,
     });
     return response.data;
   },
