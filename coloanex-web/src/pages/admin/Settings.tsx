@@ -557,7 +557,10 @@ export default function Settings() {
     const previousMode = gasPaymentMode;
     setGasPaymentMode(modeToSet);
     try {
-      await updateGasMode({ gasPaymentMode: modeToSet }).unwrap();
+      await updateGasMode({
+        gasPaymentMode: modeToSet,
+        platform: "WEB",
+      }).unwrap();
       if (user)
         updateAuthUser({ ...(user as any), gasPaymentMode: modeToSet } as any);
       toast.success("Gas mode updated");
