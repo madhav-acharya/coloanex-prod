@@ -18,7 +18,7 @@ import { spacing, borderRadius } from "@/constants/theme";
 import { useTheme } from "@/hooks/useTheme";
 import { useKhaltiPayment, useEsewaPayment } from "@/hooks/payments";
 import { loansApi, contractsApi, paymentSchedulesApi } from "@/api";
-import { useToast, BlockchainProcessingModal } from "@/components/ui";
+import { useToast, BlockchainProcessingModal, GasModeWarningBanner, GasModeBlockingOverlay } from "@/components/ui";
 import type { Loan } from "@/types";
 import type { Contract } from "@/api/contractsApi";
 import type { PaymentGateway } from "@/api/paymentsApi";
@@ -154,6 +154,8 @@ export default function MakeRepaymentScreen() {
           paymentMode === "installment"
             ? params.scheduleId || undefined
             : undefined,
+        gasPaymentMode: "PLATFORM_WALLET",
+        platform: "APP",
       });
 
       setBlockchainStep("database");
@@ -235,6 +237,8 @@ export default function MakeRepaymentScreen() {
               paymentMode === "installment"
                 ? params.scheduleId || undefined
                 : undefined,
+            gasPaymentMode: "PLATFORM_WALLET",
+            platform: "APP",
           });
 
           if (success) {
@@ -333,6 +337,8 @@ export default function MakeRepaymentScreen() {
         type: "INSTALLMENT_PAYMENT",
         successUrl: resolvedSuccessUrl,
         failureUrl: resolvedFailureUrl,
+        gasPaymentMode: "PLATFORM_WALLET",
+        platform: "APP",
       });
 
       let finalPaymentUrl = result.paymentUrl;
@@ -449,6 +455,8 @@ export default function MakeRepaymentScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AppHeader title="Make Payment" showThemeToggle={false} />
+      <GasModeWarningBanner />
+      <GasModeBlockingOverlay />
 
       <ScrollView
         style={styles.scroll}
