@@ -21,6 +21,8 @@ import {
   BlockchainProcessingModal,
   CurrencyIcon,
   SubscriptionBlockingOverlay,
+  GasModeWarningBanner,
+  GasModeBlockingOverlay,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { loansApi, lendersApi } from "@/api";
@@ -276,6 +278,8 @@ export default function LoanApplicationScreen() {
         onBackPress={handleBack}
         showThemeToggle={false}
       />
+
+      <GasModeWarningBanner />
 
       {/* Progress Indicator */}
       <View style={styles.progressContainer}>
@@ -759,6 +763,7 @@ export default function LoanApplicationScreen() {
       </View>
 
       <SubscriptionBlockingOverlay />
+      <GasModeBlockingOverlay />
 
       <Modal
         visible={prefillModal}
