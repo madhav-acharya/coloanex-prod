@@ -8,7 +8,7 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import DashboardLayout from "@/components/layouts/DashboardLayout";
 import { useAuth } from "@/hooks/useAuth";
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { format, subMonths } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +43,8 @@ import {
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Calendar } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
+
+const AmbientScene = lazy(() => import("@/components/shared/AmbientScene"));
 
 const COLORS = [
   "#16A34A",
@@ -313,8 +315,15 @@ const Dashboard = () => {
       title="Dashboard"
       description="Overview of your account and recent activities."
     >
-      <div className="space-y-6">
-        <Card>
+      <div className="relative space-y-6">
+        <Suspense fallback={null}>
+          <AmbientScene
+            variant="dashboard"
+            density={18}
+            className="opacity-30 h-[200px]"
+          />
+        </Suspense>
+        <Card className="relative z-10">
           <CardContent className="p-6">
             <div className="flex items-center gap-4 flex-wrap">
               <label className="text-sm font-medium text-foreground">
