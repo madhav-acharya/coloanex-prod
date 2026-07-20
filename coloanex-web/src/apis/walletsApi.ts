@@ -41,12 +41,18 @@ export const walletsApi = baseApi.injectEndpoints({
         id: string;
         gasPaymentMode: "USER_WALLET" | "PLATFORM_WALLET";
       },
-      { gasPaymentMode: "USER_WALLET" | "PLATFORM_WALLET" }
+      {
+        gasPaymentMode: "USER_WALLET" | "PLATFORM_WALLET";
+        platform?: "WEB" | "APP";
+      }
     >({
       query: (body) => ({
         url: "/wallets/gas-mode",
         method: "PATCH",
-        body,
+        body: {
+          gasPaymentMode: body.gasPaymentMode,
+          platform: body.platform || "WEB",
+        },
       }),
       invalidatesTags: ["Wallets", "Transactions", "Auth"],
     }),

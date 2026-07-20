@@ -6,7 +6,7 @@ export interface SubscriptionPlan {
   name: string;
   scope: "USER" | "TENANT";
   description?: string;
-  features?: string[];
+  features?: string[] | Record<string, unknown>;
   price: number;
   maxTransactions: number;
   currency: string;
