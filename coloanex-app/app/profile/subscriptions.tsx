@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { Card, Button, useToast } from "@/components/ui";
+import { Card, Button, useToast, GasModeWarningBanner } from "@/components/ui";
 import AppHeader from "@/components/ui/AppHeader";
 import { spacing, borderRadius } from "@/constants/theme";
 import { subscriptionsApi } from "@/api";
@@ -295,6 +295,8 @@ export default function ProfileSubscriptionsScreen() {
       style={[styles.container, { backgroundColor: colors.surface }]}
     >
       <AppHeader title="Subscriptions" showThemeToggle={false} />
+
+      <GasModeWarningBanner />
 
       <ScrollView
         style={styles.content}
