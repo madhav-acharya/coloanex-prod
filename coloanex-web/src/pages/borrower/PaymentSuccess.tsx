@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
@@ -19,12 +19,20 @@ import {
   parseKhaltiCallbackParams,
 } from "@/hooks/useKhaltiPayment";
 import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing-modal";
+import { PageShell } from "@/components/shared/PageShell";
+import { GlassCard } from "@/components/shared/GlassCard";
+import { Bone } from "@/components/shared/Bone";
+import { ParallaxLayer } from "@/components/shared/ParallaxLayer";
+import { useRevealOnMount } from "@/hooks/useReveal";
+
+const SceneCanvas = lazy(() => import("@/components/shared/SceneCanvas"));
 
 type VerifyStep = "gateway" | "blockchain" | "account" | "done";
 
 export default function BorrowerPaymentSuccess() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const revealRef = useRevealOnMount([]);
   const { verifyFromCallback: verifyEsewa } = useEsewaPayment();
   const { verifyFromCallback: verifyKhalti } = useKhaltiPayment();
   const [lookupPayment] = useLookupPaymentMutation();
@@ -61,7 +69,10 @@ export default function BorrowerPaymentSuccess() {
         sessionStorage.getItem(sessionKey) || localStorage.getItem(localKey);
       if (!raw) return null;
       try {
-        return JSON.parse(raw) as { transactionUuid?: string; amount?: number };
+        return JSON.parse(raw) as {
+          transactionUuid?: string;
+          amount?: number;
+        };
       } catch {
         return null;
       }
@@ -111,9 +122,7 @@ export default function BorrowerPaymentSuccess() {
           ) {
             return { success: false, transactionId: null, status: "FAILED" };
           }
-        } catch {
-
-        }
+        } catch {}
 
         if (i < attempts - 1) {
           await sleep(2000);
@@ -244,50 +253,67 @@ export default function BorrowerPaymentSuccess() {
 
   return (
     <BorrowerLayout>
-      <div className="mx-auto flex min-h-[70vh] max-w-2xl items-center justify-center px-4 py-12">
-        <div className="w-full rounded-xl border border-border bg-card p-6 text-center shadow-none sm:p-8">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="h-10 w-10 text-emerald-600" />
-          </div>
-
-          <div className="mt-5 space-y-2">
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              Repayment Successful
-            </h1>
-            {amount && (
-              <p className="text-2xl font-bold text-emerald-600 flex items-center justify-center gap-1 tracking-tight">
-                <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
-                {Number(amount).toLocaleString()}
-              </p>
-            )}
-            <p className="text-[11px] font-bold text-muted-foreground  tracking-wider leading-relaxed">
-              Your gateway payment has been verified and the selected
-              installments were updated.
-            </p>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button
-              className="w-full"
-              onClick={() =>
-                navigate(
-                  loanId
-                    ? `/borrower/my-loans/${loanId}`
-                    : "/borrower/my-loans",
-                )
-              }
-            >
-              View Loan Details
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full border-border bg-muted/20"
-              onClick={() => navigate("/borrower/dashboard")}
-            >
-              Go to Dashboard
-            </Button>
-          </div>
-        </div>
+      <div className="relative overflow-hidden min-h-[70vh]">
+        <Suspense fallback={null}>
+          <SceneCanvas
+            variant="orb"
+            density={22}
+            className="opacity-45 h-[320px]"
+          />
+        </Suspense>
+        <PageShell narrow className="relative z-10 flex min-h-[70vh] items-center justify-center pb-16 pt-6">
+          <Bone name="borrower-payment-success" loading={false}>
+            <ParallaxLayer speed={0.15} clamp={60}>
+              <GlassCard className="w-full max-w-lg p-6 sm:p-10 text-center">
+                <div
+                  ref={revealRef as React.RefObject<HTMLDivElement>}
+                  className="space-y-6"
+                  data-reveal
+                >
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+                    <CheckCircle2 className="h-10 w-10 text-primary" />
+                  </div>
+                  <div className="space-y-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight font-[family-name:var(--font-headline)]">
+                      Repayment Successful
+                    </h1>
+                    {amount && (
+                      <p className="text-2xl font-bold text-primary flex items-center justify-center gap-1 tracking-tight">
+                        <IconCurrencyRupeeNepalese className="inline h-5 w-5" />
+                        {Number(amount).toLocaleString()}
+                      </p>
+                    )}
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Your gateway payment has been verified and the selected
+                      installments were updated.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row pt-2">
+                    <Button
+                      className="w-full rounded-2xl h-11"
+                      onClick={() =>
+                        navigate(
+                          loanId
+                            ? `/borrower/my-loans/${loanId}`
+                            : "/borrower/my-loans",
+                        )
+                      }
+                    >
+                      View Loan Details
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-2xl h-11 border-border"
+                      onClick={() => navigate("/borrower/dashboard")}
+                    >
+                      Go to Dashboard
+                    </Button>
+                  </div>
+                </div>
+              </GlassCard>
+            </ParallaxLayer>
+          </Bone>
+        </PageShell>
       </div>
     </BorrowerLayout>
   );
