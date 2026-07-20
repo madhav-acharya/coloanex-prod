@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense } from "react";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +58,9 @@ import { BlockchainProcessingModal } from "@/components/ui/blockchain-processing
 import { useUploadSingleMutation } from "@/apis/uploadApi";
 import { cn } from "@/lib/utils";
 import type { ComponentType } from "react";
+import { Bone } from "@/components/shared/Bone";
+
+const SceneCanvas = lazy(() => import("@/components/shared/SceneCanvas"));
 
 const COLLATERAL_OPTIONS: Array<{
   label: string;
@@ -346,13 +349,24 @@ export function ApplyLoanModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-xl p-0 max-h-[92vh] overflow-y-auto rounded-xl"
+          className="sm:max-w-xl p-0 max-h-[92vh] overflow-y-auto rounded-2xl border-border bg-card relative"
           onInteractOutside={(e) => e.preventDefault()}
         >
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40">
+          <div className="relative h-16 overflow-hidden rounded-t-2xl">
+            <Suspense fallback={null}>
+              <SceneCanvas
+                variant="helix"
+                density={22}
+                className="opacity-50 h-16"
+              />
+            </Suspense>
+          </div>
+          <DialogHeader className="px-6 pt-4 pb-4 border-b border-border/40">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <DialogTitle className="text-xl font-bold tracking-tight">Apply for a Loan</DialogTitle>
+                <DialogTitle className="text-xl font-bold tracking-tight font-[family-name:var(--font-headline)]">
+                  Apply for a Loan
+                </DialogTitle>
                 <DialogDescription className="text-sm">
                   Complete your financing requirements in a few simple steps.
                 </DialogDescription>
@@ -360,6 +374,7 @@ export function ApplyLoanModal({
             </div>
           </DialogHeader>
 
+          <Bone name="borrower-apply-loan" loading={false}>
           <div className="px-6 py-6">
             <div className="mb-8 overflow-hidden">
               <div className="flex items-center justify-between relative px-2">
@@ -447,7 +462,7 @@ export function ApplyLoanModal({
                       </div>
                       <div className="space-y-0">
                         <p className="text-[11px] font-bold text-primary  tracking-wider">Lender Recommendation</p>
-                        <p className="text-xs text-foreground/80 leading-tight">
+                        <p className="text-xs text-foreground/80 leading-relaxed">
                           Aim for a Loan-to-Value (LTV) ratio under <span className="text-primary font-bold">70%</span> for prioritized approval.
                         </p>
                       </div>
@@ -541,7 +556,7 @@ export function ApplyLoanModal({
                                   <Icon className="w-3 h-3" />
                                 </div>
                                 <p className={cn(
-                                  "text-[11px] font-bold leading-tight",
+                                  "text-xs font-bold leading-snug",
                                   isSelected ? "text-primary" : "text-foreground/80 group-hover:text-foreground",
                                 )}>
                                   {option.label}
@@ -678,10 +693,10 @@ export function ApplyLoanModal({
                                <ImagePlus className="w-6 h-6" />
                              </div>
                              <div className="space-y-1">
-                               <p className="text-[11px] font-bold text-foreground">
+                               <p className="text-xs font-bold text-foreground leading-snug">
                                  Upload Asset Photo
                                </p>
-                               <p className="text-[11px] leading-tight text-muted-foreground max-w-[150px]">
+                               <p className="text-xs leading-relaxed text-muted-foreground max-w-[150px]">
                                  JPG or PNG. High resolution images speed up appraisal.
                                </p>
                              </div>
@@ -790,6 +805,7 @@ export function ApplyLoanModal({
               </div>
             </div>
           </div>
+          </Bone>
         </DialogContent>
       </Dialog>
 
