@@ -22,6 +22,8 @@ import {
   CurrencyIcon,
   BlockchainProcessingModal,
   SubscriptionBlockingOverlay,
+  GasModeWarningBanner,
+  GasModeBlockingOverlay,
 } from "@/components/ui";
 import { useTheme } from "@/hooks/useTheme";
 import { kycApi } from "@/api";
@@ -597,11 +599,14 @@ export default function KYCVerificationScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.surface }]}>
       <SubscriptionBlockingOverlay />
+      <GasModeBlockingOverlay />
       <AppHeader
         title="KYC Verification"
         onBackPress={handleBack}
         showThemeToggle={false}
       />
+
+      <GasModeWarningBanner />
 
       <View
         style={[styles.progressContainer, { backgroundColor: colors.card }]}
