@@ -27,17 +27,20 @@ export const formatGasPaymentMode = (mode?: string | null): string => {
   return GAS_MODE_LABELS.NOT_CONFIGURED;
 };
 
-export const getBlockchainAccessSnapshot = (params: {
+export function getBlockchainAccessSnapshot(params: {
   gasPaymentMode?: string | null;
   wallets?: Wallet[];
   subscriptions?: Subscription[];
-}): BlockchainAccessSnapshot => {
+}): BlockchainAccessSnapshot {
   const wallets = params.wallets ?? [];
   const subscriptions = params.subscriptions ?? [];
 
   const hasWallet = wallets.some((wallet) => wallet.isActive !== false);
   const now = Date.now();
   const activeSubscriptions = subscriptions.filter((subscription) => {
+    if (subscription.lifecycleStatus === "EXPIRED") return false;
+    if (subscription.lifecycleStatus === "LIMIT_EXCEEDED") return false;
+    if (subscription.lifecycleStatus === "BOUGHT") return true;
     if (subscription.status !== "ACTIVE") return false;
 
     const startsAt = subscription.startsAt
@@ -54,10 +57,10 @@ export const getBlockchainAccessSnapshot = (params: {
 
   const hasActiveSubscription = activeSubscriptions.length > 0;
   const hasSubscriptionCapacity = activeSubscriptions.some((subscription) => {
+    if (subscription.lifecycleStatus === "LIMIT_EXCEEDED") return false;
     const maxTransactions = Number(subscription.planRef?.maxTransactions || 0);
     const usageCount = Number(subscription.usageCount || 0);
 
-    // maxTransactions <= 0 means unlimited usage for that plan.
     if (maxTransactions <= 0) return true;
     return usageCount < maxTransactions;
   });
@@ -75,8 +78,10 @@ export const getBlockchainAccessSnapshot = (params: {
       hasWallet,
       hasActiveSubscription,
       hasSubscriptionCapacity,
-      canRunBlockchain: hasWallet, // User mode MUST have a wallet
-      reason: !hasWallet ? "Connect your MetaMask wallet to execute transactions in User Wallet mode." : undefined
+      canRunBlockchain: hasWallet,
+      reason: !hasWallet
+        ? "Connect your MetaMask wallet to execute transactions in User Wallet mode."
+        : undefined,
     };
   }
 
@@ -126,4 +131,4 @@ export const getBlockchainAccessSnapshot = (params: {
     reason:
       "Connect a wallet for User Wallet mode or activate a subscription for Platform Sponsored mode.",
   };
-};
+}
