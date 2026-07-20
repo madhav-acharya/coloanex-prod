@@ -9,7 +9,6 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { IconCurrencyRupeeNepalese } from "@tabler/icons-react";
 
 type Variant = "borrower" | "public";
 
@@ -62,7 +61,7 @@ export function BottomNavbar({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[120] md:hidden">
-      <nav className="flex items-center justify-around border-t border-border/40 bg-background/95 backdrop-blur-xl px-2 h-16 pb-safe safe-area-bottom">
+      <nav className="flex items-stretch justify-between border-t border-border/40 bg-background/95 backdrop-blur-xl px-1 min-[360px]:px-2 h-14 min-[360px]:h-16 pb-[env(safe-area-inset-bottom)]">
         {tabs.map((tab) => {
           const active = isActive(tab);
           const Icon = tab.icon;
@@ -71,30 +70,23 @@ export function BottomNavbar({
             <Link
               key={tab.path}
               to={tab.path}
-              className="relative flex flex-col items-center justify-center gap-1.5 h-full px-4 transition-all overflow-hidden"
+              className="relative flex-1 min-w-0 flex flex-col items-center justify-center gap-0.5 min-[360px]:gap-1 h-full px-0.5 transition-all"
             >
               {active && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-b-full transition-all duration-300" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 min-[360px]:w-10 h-0.5 min-[360px]:h-1 bg-primary rounded-b-full" />
               )}
-              <div
+              <Icon
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center transition-all",
+                  "shrink-0 transition-all",
                   active
-                    ? "text-primary"
-                    : "text-muted-foreground/70"
+                    ? "w-5 h-5 min-[360px]:w-6 min-[360px]:h-6 text-primary"
+                    : "w-[18px] h-[18px] min-[360px]:w-5 min-[360px]:h-5 text-muted-foreground/70",
                 )}
-              >
-                <Icon
-                  className={cn(
-                    "transition-all",
-                    active ? "w-6 h-6" : "w-5.5 h-5.5"
-                  )}
-                />
-              </div>
+              />
               <span
                 className={cn(
-                  "text-[10px] font-bold leading-none tracking-tight transition-colors",
-                  active ? "text-primary" : "text-muted-foreground/60"
+                  "text-[9px] min-[360px]:text-[10px] font-bold leading-tight tracking-tight truncate max-w-full px-0.5",
+                  active ? "text-primary" : "text-muted-foreground/60",
                 )}
               >
                 {tab.label}
