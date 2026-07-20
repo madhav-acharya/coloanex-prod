@@ -1,16 +1,18 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  CheckCircle2,
-  MousePointerClick,
-  ShieldCheck,
-  Zap,
-  Star
-} from "lucide-react";
-import { motion } from "framer-motion";
-import PublicLayout from "@/components/layouts/PublicLayout";
-import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import PublicLayout from "@/components/layouts/PublicLayout";
+import { PageShell } from "@/components/shared/PageShell";
+import { useRevealOnView } from "@/hooks/useReveal";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  ArrowRight,
+  UserPlus,
+  WalletCards,
+  ShieldCheck,
+  FileSignature,
+  Banknote,
+  Link2,
+} from "lucide-react";
 
 interface HowItWorksProps {
   showHeader?: boolean;
@@ -18,188 +20,169 @@ interface HowItWorksProps {
   isSubcomponent?: boolean;
 }
 
+const steps = [
+  {
+    n: "01",
+    title: "Create your account",
+    desc: "Sign up as a lender institution or borrower. Lenders configure an organization workspace; borrowers prepare a personal profile.",
+    icon: UserPlus,
+  },
+  {
+    n: "02",
+    title: "Connect payments and plan",
+    desc: "Attach eSewa or Khalti credentials and choose a subscription plan when you need platform-sponsored gas for on-chain writes.",
+    icon: WalletCards,
+  },
+  {
+    n: "03",
+    title: "Complete KYC",
+    desc: "Borrowers submit identity documents and selfies. Lenders review and approve verification before credit can move.",
+    icon: ShieldCheck,
+  },
+  {
+    n: "04",
+    title: "Publish rules and apply",
+    desc: "Lenders publish eligibility and pricing rules. Borrowers discover lenders, open applications, and attach required details.",
+    icon: FileSignature,
+  },
+  {
+    n: "05",
+    title: "Contract and disburse",
+    desc: "Approved loans produce contracts and schedules. Funds move through your configured rails with clear status tracking.",
+    icon: Banknote,
+  },
+  {
+    n: "06",
+    title: "Repay and settle on-chain",
+    desc: "Installments are collected via gateways. When blockchain is enabled, loan, KYC, and payment events follow your gas mode policy.",
+    icon: Link2,
+  },
+];
+
 export default function HowItWorks({
   showHeader = true,
   showFooter = true,
-  isSubcomponent = false
+  isSubcomponent = false,
 }: HowItWorksProps) {
   const navigate = useNavigate();
-
-  const fadeIn = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-  };
-
-  const stagger = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.15 } },
-  };
+  const ref = useRevealOnView();
 
   const content = (
-    <div className={cn(
-      "bg-background text-foreground",
-      isSubcomponent && "py-12 md:py-24"
-    )}>
-      {!isSubcomponent && (
-        <div className="pt-20 pb-8 md:pt-32 md:pb-12 text-center border-b border-border/20">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-            className="max-w-4xl mx-auto px-4 sm:px-6"
-          >
-            <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-primary/5 border border-primary/10 px-4 py-1.5 mb-6">
-              <Star className="w-4 h-4 text-primary fill-primary" />
-              <span className="text-primary text-[10px] md:text-xs font-black tracking-widest uppercase">
-                The Protocol
-              </span>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <h1 className="text-3xl md:text-5xl font-black mb-6 leading-[1.1] uppercase tracking-widest">
-                Modular <span className="text-primary">Operations</span>
-              </h1>
-            </motion.div>
-            <motion.div variants={fadeIn}>
-              <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto font-medium">
-                Autonomous tenant activation and debt settlement orchestrating the lending lifecycle.
-              </p>
-            </motion.div>
-          </motion.div>
-        </div>
+    <div
+      ref={ref as React.RefObject<HTMLDivElement>}
+      className={cn(
+        "relative text-foreground",
+        isSubcomponent ? "py-16 sm:py-20 md:py-28" : "pt-24 pb-20",
       )}
+    >
+      <PageShell className="relative z-10">
+        <div className="max-w-2xl mx-auto text-center mb-10 sm:mb-14 md:mb-16">
+          <p
+            data-reveal
+            className="text-xs font-bold uppercase tracking-[0.22em] text-primary mb-3 leading-normal"
+          >
+            How it works
+          </p>
+          <h2
+            data-reveal
+            className="text-2xl sm:text-3xl md:text-5xl font-extrabold font-[family-name:var(--font-headline)] leading-snug mb-4"
+          >
+            From signup to settled credit
+          </h2>
+          <p
+            data-reveal
+            className="text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed"
+          >
+            Six steps that mirror how CoLoanEx actually runs — onboarding,
+            KYC, underwriting, contracts, repayments, and optional on-chain
+            settlement.
+          </p>
+        </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 md:space-y-28 pb-12 md:pb-20 pt-8">
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={stagger}
-          className="grid lg:grid-cols-2 gap-10 md:gap-16 items-center"
-        >
-          <motion.div variants={fadeIn}>
-            <Badge className="bg-primary/10 text-primary mb-4 px-3 py-1 text-[10px] font-black uppercase tracking-widest leading-none">
-              Phase 1
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-black mb-6 leading-tight uppercase tracking-widest text-foreground">
-              Infrastructure Activation
-            </h2>
-            <p className="text-sm md:text-base text-muted-foreground mb-8 leading-relaxed font-medium">
-              Initialize your isolated lending environment. Configure parameters and compliance logic in your dedicated tenant space.
-            </p>
-            <div className="space-y-5">
-              {[
-                { icon: <ShieldCheck className="w-4 h-4" />, title: "Isolation", desc: "Cryptographically siloed environment." },
-                { icon: <MousePointerClick className="w-4 h-4" />, title: "Deployment", desc: "Commit parameters to the blockchain instantly." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="w-10 h-10 bg-background/50 border border-border/30 flex items-center justify-center text-primary shrink-0">
-                    {item.icon}
+        <div className="relative max-w-5xl mx-auto">
+          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-px bg-border/60 md:-translate-x-1/2" />
+
+          <div className="space-y-8 sm:space-y-10 md:space-y-12">
+            {steps.map((step, i) => {
+              const left = i % 2 === 0;
+              const Icon = step.icon;
+              return (
+                <div
+                  key={step.n}
+                  className={cn(
+                    "relative grid md:grid-cols-2 gap-4 md:gap-10 items-stretch",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "pl-10 md:pl-0",
+                      left ? "md:pr-10 md:text-right" : "md:col-start-2 md:pl-10",
+                    )}
+                  >
+                    <div
+                      data-reveal
+                      className={cn(
+                        "rounded-2xl border border-border/50 bg-card/85 p-5 sm:p-6 h-full",
+                        left ? "md:ml-auto" : "",
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "flex items-center gap-3 mb-3",
+                          left ? "md:flex-row-reverse" : "",
+                        )}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                          Step {step.n}
+                        </p>
+                      </div>
+                      <h3
+                        className={cn(
+                          "text-lg sm:text-xl font-bold text-foreground leading-snug mb-2",
+                        )}
+                      >
+                        {step.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {step.desc}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black mb-1 uppercase tracking-widest">{item.title}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
+
+                  <div
+                    className={cn(
+                      "hidden md:block",
+                      left ? "md:col-start-2" : "md:col-start-1 md:row-start-1",
+                    )}
+                  />
+
+                  <div className="absolute left-4 md:left-1/2 top-6 md:top-1/2 -translate-x-1/2 md:-translate-y-1/2 z-10">
+                    <div className="w-3.5 h-3.5 rounded-full bg-primary ring-4 ring-background" />
                   </div>
                 </div>
-              ))}
-            </div>
-          </motion.div>
-
-          <motion.div variants={fadeIn} className="relative flex items-center justify-center p-4 md:p-8">
-            <img
-              src="/static/contracts.png"
-              alt="Infrastructure Activation"
-              className="w-full h-auto max-w-[400px] md:max-w-[500px] object-contain organic-glow"
-            />
-          </motion.div>
-        </motion.section>
-
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={stagger}
-          className="grid lg:grid-cols-2 gap-10 md:gap-16 items-center"
-        >
-          <motion.div variants={fadeIn} className="order-2 lg:order-1 relative flex items-center justify-center p-4 md:p-8">
-            <img
-              src="/static/verify.png"
-              alt="Validation Engine"
-              className="w-full h-auto max-w-[400px] md:max-w-[500px] object-contain organic-glow"
-            />
-          </motion.div>
-
-          <motion.div variants={fadeIn} className="order-1 lg:order-2">
-            <Badge className="bg-primary/10 text-primary mb-4 px-3 py-1 text-[10px] font-black uppercase tracking-widest leading-none">
-              Phase 2
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-black mb-6 leading-tight uppercase tracking-widest text-foreground">
-              Validation & Settlement
-            </h2>
-            <p className="text-sm md:text-base text-muted-foreground mb-8 leading-relaxed font-medium">
-              AI-driven artifacts validation and risk scoring for automated disbursement.
-            </p>
-            <div className="space-y-5">
-              {[
-                { icon: <Zap className="w-4 h-4" />, title: "Verifications", desc: "Integrated OCR and biometric engine." },
-                { icon: <CheckCircle2 className="w-4 h-4" />, title: "Finality", desc: "Every transition notarized on the blockchain." },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="w-10 h-10 bg-background/50 border border-border/30 flex items-center justify-center text-primary shrink-0">
-                    {item.icon}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black mb-1 uppercase tracking-widest">{item.title}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed font-medium">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        </motion.section>
+              );
+            })}
+          </div>
+        </div>
 
         {!isSubcomponent && (
-          <div className="w-full border-y border-border/20 bg-muted/5">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={stagger}
-              className="py-16 md:py-24 px-4 sm:px-6 lg:px-8 text-center"
+          <div data-reveal className="mt-12 text-center">
+            <Button
+              className="rounded-2xl h-12 px-8 font-bold w-full min-[400px]:w-auto"
+              onClick={() => navigate("/signup")}
             >
-              <div className="max-w-3xl mx-auto">
-                <h2 className="text-2xl md:text-4xl lg:text-5xl font-black mb-6 text-foreground leading-tight uppercase tracking-widest">
-                  Ready to Deploy Your Own Node?
-                </h2>
-                <p className="text-sm md:text-lg text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-                  Experience the transparency and efficiency of a blockchain-backed lending protocol.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button
-                    size="lg"
-                    className="h-12 md:h-14 px-8 text-xs md:text-sm bg-primary text-primary-foreground hover:bg-primary/90 font-black uppercase tracking-widest"
-                    onClick={() => navigate("/signup")}
-                  >
-                    Architecture Demo
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-12 md:h-14 px-8 text-xs md:text-sm border-border text-foreground hover:bg-muted font-black uppercase tracking-widest"
-                  >
-                    Technical Docs
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
+              Start now <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
           </div>
         )}
-      </div>
+      </PageShell>
     </div>
   );
 
   if (isSubcomponent) return content;
-
   return (
     <PublicLayout showHeader={showHeader} showFooter={showFooter}>
       {content}
