@@ -1371,9 +1371,13 @@ export class UsersService {
   }
 
   async updateMyGasPaymentMode(
-    dto: { gasPaymentMode: 'PLATFORM_WALLET' | 'USER_WALLET' },
+    dto: {
+      gasPaymentMode: 'PLATFORM_WALLET' | 'USER_WALLET';
+      platform?: 'WEB' | 'APP';
+    },
     currentUser: JwtPayload,
   ) {
+    const platform = dto.platform || 'WEB';
     const user = await this.prisma.user.findUnique({
       where: { id: currentUser.sub },
       include: {
@@ -1390,16 +1394,23 @@ export class UsersService {
     }
 
     const roleNames = user.roles.map((r) => r.role.name);
-    if (roleNames.includes('Borrower')) {
-      if (user.gasPaymentMode !== 'PLATFORM_WALLET') {
-        await this.prisma.user.update({
-          where: { id: currentUser.sub },
-          data: { gasPaymentMode: 'PLATFORM_WALLET' as never },
-        });
+    const isBorrower = roleNames.includes('Borrower');
+
+    if (isBorrower && platform === 'APP') {
+      if (dto.gasPaymentMode !== 'PLATFORM_WALLET') {
+        throw new ForbiddenException(
+          'Wallet mode is not supported in the app. Please switch to Platform Mode (subscription mode).',
+        );
       }
-      throw new ForbiddenException(
-        'Borrowers always use PLATFORM_WALLET and cannot change gas payment mode.',
-      );
+      const updated = await this.prisma.user.update({
+        where: { id: currentUser.sub },
+        data: { gasPaymentMode: 'PLATFORM_WALLET' as never },
+        select: { id: true, gasPaymentMode: true },
+      });
+      return {
+        id: updated.id,
+        gasPaymentMode: updated.gasPaymentMode,
+      };
     }
 
     const updated = await this.prisma.user.update({
